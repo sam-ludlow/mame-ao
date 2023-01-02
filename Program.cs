@@ -11,8 +11,13 @@ namespace mame_ao
 	{
 		static void Main(string[] args)
 		{
+			if (args.Length != 1)
+			{
+				Console.WriteLine("usage: mame-ao.exe <mame machine name>");
+				return;
+			}
 			MameAOProcessor proc = new MameAOProcessor();
-			proc.Run("mrdo");
+			proc.Run(args[0]);
 		}
 	}
 }
