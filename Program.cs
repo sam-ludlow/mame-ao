@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Spludlow.MameAO;
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
@@ -10,6 +11,8 @@ namespace mame_ao
 	{
 		static void Main(string[] args)
 		{
+			MameAOProcessor proc = new MameAOProcessor();
+			proc.Run("mrdo");
 		}
 	}
 }
