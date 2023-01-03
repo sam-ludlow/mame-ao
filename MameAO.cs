@@ -60,7 +60,7 @@ namespace Spludlow.MameAO
 		{
 
 			_RootDirectory = Environment.CurrentDirectory;
-			_RootDirectory = @"D:\MameAO";
+			//_RootDirectory = @"D:\MameAO";
 
 			_StoreDirectory = Path.Combine(_RootDirectory, "_STORE");
 
