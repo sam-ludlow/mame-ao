@@ -1,8 +1,6 @@
 # mame-ao
 
-NOTE: This is early dev. Does not currently find all machines required, only works with parents without depenancies.
-
-TODO: handle all roms depenancies, start mame automaiticaly, installer
+TODO: start mame automaiticaly, maybe some UI or shell style?, installer
 
 Automatically download all MAME assetts.
 
