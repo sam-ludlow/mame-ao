@@ -56,11 +56,16 @@ namespace Spludlow.MameAO
 
 		}
 
+
+		HashSet<string> _AvailableDownloadMachines = new HashSet<string>();
+
+
 		public void Run(string machineName)
 		{
 
 			_RootDirectory = Environment.CurrentDirectory;
-			//_RootDirectory = @"D:\MameAO";
+			
+		//	_RootDirectory = @"D:\MameAO";
 
 			_StoreDirectory = Path.Combine(_RootDirectory, "_STORE");
 
@@ -81,7 +86,26 @@ namespace Spludlow.MameAO
 				File.WriteAllText(metadataCacheFilename, PrettyJSON(Query("https://archive.org/metadata/mame-merged")), Encoding.UTF8);
 			}
 
+			Console.Write($"Loading metadata JSON {metadataCacheFilename} ...");
+
 			dynamic metadata = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText(metadataCacheFilename, Encoding.UTF8));
+
+			Console.WriteLine("...done.");
+
+
+			string find = "mame-merged/";
+			foreach (dynamic file in metadata.files)
+			{
+				string name = (string)file.name;
+				if (name.StartsWith(find) == true && name.EndsWith(".zip") == true)
+				{
+					name = name.Substring(find.Length);
+					name = name.Substring(0, name.Length - 4);
+					_AvailableDownloadMachines.Add(name);
+				}
+			}
+
+
 
 			string title = metadata.metadata.title;
 			string version = title.Substring(5, 5).Trim();
@@ -120,103 +144,171 @@ namespace Spludlow.MameAO
 
 			}
 
+			Console.Write($"Loading machine XML {machineXmlFilename} ...");
+
 			XElement machineDoc = XElement.Load(machineXmlFilename);
 
-			var result = machineDoc.Descendants("machine")
-					  .Where(e => e.Attribute("name").Value == machineName);
+			Console.WriteLine("...done.");
 
-			if (result.Count() == 0)
+
+
+
+
+
+			XElement machine = machineDoc.Descendants("machine")
+					  .Where(e => e.Attribute("name").Value == machineName).FirstOrDefault();
+
+			if (machine == null)
 				throw new ApplicationException("machine not found");
-			if (result.Count() > 1)
-				throw new ApplicationException("machine multiple matches found");
 
-			XElement machine = result.First();
 
-			HashSet<string> requiredRoms = new HashSet<string>();
-			HashSet<string> missingRoms = new HashSet<string>();
+			HashSet<string> requiredMachines = new HashSet<string>();
 
-			foreach (XElement rom in machine.Descendants("rom"))
+
+			FindAllMachines(machineName, machineDoc, requiredMachines);
+
+
+			foreach (string requiredMachineName in requiredMachines)
 			{
-				string romName = ((string)rom.Attribute("name")).Trim();
-				string sha1 = ((string)rom.Attribute("sha1")).Trim();
+				XElement requiredMachine = machineDoc.Descendants("machine")
+					.Where(e => e.Attribute("name").Value == requiredMachineName).FirstOrDefault();
 
-				Console.WriteLine($"{romName}\t{sha1}\t{_RomHashStore.Exists(sha1)}");
+				HashSet<string> requiredRoms = new HashSet<string>();
+				HashSet<string> missingRoms = new HashSet<string>();
 
-				if (sha1 != null && sha1.Length == 40)
+				foreach (XElement rom in requiredMachine.Descendants("rom"))
 				{
-					requiredRoms.Add(sha1);
+					string romName = ((string)rom.Attribute("name")).Trim();
+					string sha1 = ((string)rom.Attribute("sha1")).Trim();
 
-					if (_RomHashStore.Exists(sha1) == false)
-						missingRoms.Add(sha1);
+					Console.WriteLine($"{romName}\t{sha1}\t{_RomHashStore.Exists(sha1)}");
+
+					if (sha1 != null && sha1.Length == 40)
+					{
+						requiredRoms.Add(sha1);
+
+						if (_RomHashStore.Exists(sha1) == false)
+							missingRoms.Add(sha1);
+					}
+
 				}
+
+
+
+				if (missingRoms.Count > 0)
+				{
+
+					if (_AvailableDownloadMachines.Contains(requiredMachineName) == true)
+					{
+
+						//	TODO: cache these against version !!!
+						string downloadMachineUrl = $"https://archive.org/download/mame-merged/mame-merged/{requiredMachineName}.zip";
+
+						using (TempDirectory tempDir = new TempDirectory())
+						{
+							string archiveFilename = Path.Combine(tempDir.Path, Path.GetFileName(downloadMachineUrl));
+							string extractDirectory = Path.Combine(tempDir.Path, "OUT");
+							Directory.CreateDirectory(extractDirectory);
+
+							File.WriteAllBytes(archiveFilename, Download(downloadMachineUrl));
+
+							ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
+
+							ClearAttributes(tempDir.Path);
+
+							foreach (string romFilename in Directory.GetFiles(extractDirectory, "*", SearchOption.AllDirectories))
+							{
+
+								//	Only load if required in whole on mame ???
+
+								bool imported = _RomHashStore.Add(romFilename);
+
+								Console.WriteLine($"IMPORT: {romFilename}");
+							}
+						}
+					}
+
+
+				}
+
+
+
 
 			}
 
-			if (missingRoms.Count > 0)
+
+			foreach (string requiredMachineName in requiredMachines)
 			{
-				string[] downloadMachines = new string[] { machineName };
+				XElement requiredMachine = machineDoc.Descendants("machine")
+					.Where(e => e.Attribute("name").Value == requiredMachineName).FirstOrDefault();
 
-				foreach (string downloadMachine in downloadMachines)
+				foreach (XElement rom in requiredMachine.Descendants("rom"))
 				{
-					string downloadMachineUrl = $"https://archive.org/download/mame-merged/mame-merged/{downloadMachine}.zip";
+					string romName = ((string)rom.Attribute("name")).Trim();
+					string sha1 = ((string)rom.Attribute("sha1")).Trim();
+					//string merge = (string)rom.Attribute("merge");
 
-					using (TempDirectory tempDir = new TempDirectory())
+					if (sha1 != null)	// && sha1.Length == 40 && merge == null)
 					{
-						string archiveFilename = Path.Combine(tempDir.Path, Path.GetFileName(downloadMachineUrl));
-						string extractDirectory = Path.Combine(tempDir.Path, "OUT");
-						Directory.CreateDirectory(extractDirectory);
+						string romFilename = Path.Combine(_VersionDirectory, "roms", requiredMachineName, romName);
+						string romDirectory = Path.GetDirectoryName(romFilename);
+						if (Directory.Exists(romDirectory) == false)
+							Directory.CreateDirectory(romDirectory);
 
-						File.WriteAllBytes(archiveFilename, Download(downloadMachineUrl));
-
-						ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
-
-						ClearAttributes(tempDir.Path);
-
-						foreach (string romFilename in Directory.GetFiles(extractDirectory, "*", SearchOption.AllDirectories))
+						if (_RomHashStore.Exists(sha1) == true)
 						{
+							if (File.Exists(romFilename) == false)
+							{
+								Console.WriteLine($"CREATE: {romFilename}");
 
-							//	Only load if required in whole on mame ???
-
-							bool imported = _RomHashStore.Add(romFilename);
-
-							Console.WriteLine($"IMPORT: {romFilename}");
+								File.Copy(_RomHashStore.Filename(sha1), romFilename);
+							}
+						}
+						else
+						{
+							Console.WriteLine($"MISSING: {romName}");
 						}
 					}
 				}
 			}
 
-			foreach (XElement rom in machine.Descendants("rom"))
-			{
-				string romName = ((string)rom.Attribute("name")).Trim();
-				string sha1 = ((string)rom.Attribute("sha1")).Trim();
-				string merge = (string)rom.Attribute("merge");
-
-				if (sha1 != null && sha1.Length == 40 && merge == null)
-				{
-					string romFilename = Path.Combine(_VersionDirectory, "roms", machineName, romName);
-					string romDirectory = Path.GetDirectoryName(romFilename);
-					if (Directory.Exists(romDirectory) == false)
-						Directory.CreateDirectory(romDirectory);
-
-					if (_RomHashStore.Exists(sha1) == true)
-					{
-						if (File.Exists(romFilename) == false)
-						{
-							Console.WriteLine($"CREATE: {romFilename}");
-
-							File.Copy(_RomHashStore.Filename(sha1), romFilename);
-						}
-					}
-					else
-					{
-						Console.WriteLine($"MISSING: {romName}");
-					}
-				}
-			}
 
 
 
 
+
+
+
+		}
+
+		public static void FindAllMachines(string machineName, XElement machineDoc, HashSet<string> requiredMachines)
+		{
+			XElement machine = machineDoc.Descendants("machine").Where(e => e.Attribute("name").Value == machineName).FirstOrDefault();
+
+			if (machine == null)
+				throw new ApplicationException("machine not found: " + machineName);
+
+			bool hasRoms = (machine.Descendants("rom").Count() > 0);
+
+			if (hasRoms == false)
+				return;
+
+			if (requiredMachines.Add(machineName) == false)
+				return;
+
+			Console.WriteLine($"FindAllMachines {machineName}");
+
+			string romof = machine.Attribute("romof")?.Value;
+
+			if (romof != null)
+				FindAllMachines(romof, machineDoc, requiredMachines);
+
+			//	<device_ref name="m68000"/>
+
+			foreach (XElement device_ref in machine.Descendants("device_ref"))
+				FindAllMachines(device_ref.Attribute("name").Value, machineDoc, requiredMachines);
+
+			//	romof
 		}
 		public static void ClearAttributes(string directory)
 		{

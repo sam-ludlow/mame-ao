@@ -18,6 +18,8 @@ namespace mame_ao
 			}
 			MameAOProcessor proc = new MameAOProcessor();
 			proc.Run(args[0]);
+
+			//proc.Run("1944d");
 		}
 	}
 }
