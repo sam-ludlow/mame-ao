@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using System.IO;
 
 namespace Spludlow
@@ -68,7 +67,6 @@ namespace Spludlow
 		}
 		public bool Add(string filename, bool move, string sha1)
 		{
-			//	May already have
 			if (sha1 == null)
 				sha1 = this._HashMethod(filename);
 
@@ -151,9 +149,6 @@ namespace Spludlow
 
 		private string StoreFilename(string sha1, bool writeMode)
 		{
-			//if (sha1.Length != 40)
-			//	throw new ApplicationException("Bad sha1: " + sha1);
-
 			string filename = GetFileName(this._StoreDirectory, sha1);
 
 			if (writeMode == true)
@@ -179,6 +174,5 @@ namespace Spludlow
 
 			return path.ToString();
 		}
-
 	}
 }

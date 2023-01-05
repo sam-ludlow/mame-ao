@@ -1,25 +1,20 @@
-﻿using Spludlow.MameAO;
-using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System;
 
-namespace mame_ao
+namespace Spludlow.MameAO
 {
 	internal class Program
 	{
 		static void Main(string[] args)
 		{
-			if (args.Length != 1)
-			{
-				Console.WriteLine("usage: mame-ao.exe <mame machine name>");
-				return;
-			}
-			MameAOProcessor proc = new MameAOProcessor();
-			proc.Run(args[0]);
+			string directory = Environment.CurrentDirectory;
+			if (args.Length > 0)
+				directory = args[0];
 
-			//proc.Run("1944d");
+			MameAOProcessor proc = new MameAOProcessor(directory);
+
+			proc.Start();
+
+			proc.Run();
 		}
 	}
 }
