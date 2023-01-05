@@ -177,9 +177,11 @@ namespace Spludlow.MameAO
 				}
 				else
 				{
-					machine = line.Substring(0, index).ToLower();
+					machine = line.Substring(0, index);
 					arguments = line.Substring(index + 1);
 				}
+
+				machine = machine.ToLower();
 
 				try
 				{
@@ -267,12 +269,12 @@ namespace Spludlow.MameAO
 
 				foreach (XElement rom in requiredMachine.Descendants("rom"))
 				{
-					string romName = ((string)rom.Attribute("name")).Trim();
-					string sha1 = ((string)rom.Attribute("sha1")).Trim();
+					string romName = (string)rom.Attribute("name");
+					string sha1 = (string)rom.Attribute("sha1");
 
 					Console.WriteLine($"Checking ROM: {_RomHashStore.Exists(sha1)}\t{requiredMachineName}\t{romName}\t{sha1}");
 
-					if (sha1 != null && sha1.Length == 40)
+					if (sha1 != null)
 					{
 						if (_RomHashStore.Exists(sha1) == false)
 							missingRoms.Add(sha1);
@@ -325,8 +327,8 @@ namespace Spludlow.MameAO
 
 				foreach (XElement rom in requiredMachine.Descendants("rom"))
 				{
-					string romName = ((string)rom.Attribute("name")).Trim();
-					string sha1 = ((string)rom.Attribute("sha1")).Trim();
+					string romName = (string)rom.Attribute("name");
+					string sha1 = (string)rom.Attribute("sha1");
 
 					if (sha1 != null)
 					{
