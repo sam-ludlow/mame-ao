@@ -4,6 +4,8 @@ Run MAME as easily as posibble, just download this and run.
 
 Automatically downloads all MAME binaries (from github) and ROMS (from archive.org) on the fly.
 
+Hardest part is finding the machine name (the short name/code) find them here: http://adb.arcadeitalia.net/lista_mame.php
+
 ## Installation & Usage
 
 - create an empty directory e.g. "C:\MameAO"
