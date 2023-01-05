@@ -177,7 +177,7 @@ namespace Spludlow.MameAO
 				}
 				else
 				{
-					machine = line.Substring(0, index);
+					machine = line.Substring(0, index).ToLower();
 					arguments = line.Substring(index + 1);
 				}
 
