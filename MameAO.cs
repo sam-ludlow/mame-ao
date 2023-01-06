@@ -9,7 +9,7 @@ using System.Data;
 using System.IO.Compression;
 using System.Diagnostics;
 using System.Xml.Linq;
-
+using System.Reflection;
 
 namespace Spludlow.MameAO
 {
@@ -38,7 +38,9 @@ namespace Spludlow.MameAO
 
 		public void Start()
 		{
-			Console.WriteLine("Welcome to Spludlow MAME Shell");
+			Version version = Assembly.GetExecutingAssembly().GetName().Version;
+
+			Console.WriteLine($"Welcome to Spludlow MAME Shell V{version.Major}.{version.Minor}");
 			Console.WriteLine("");
 			Console.WriteLine("Give it a moment the first time you run");
 			Console.WriteLine("");
@@ -318,7 +320,7 @@ namespace Spludlow.MameAO
 							foreach (string romFilename in Directory.GetFiles(extractDirectory, "*", SearchOption.AllDirectories))
 							{
 								bool imported = _RomHashStore.Add(romFilename);
-								Console.WriteLine($"Store Import: {imported} {requiredMachineName}/{Path.GetFileName(romFilename)}");
+								Console.WriteLine($"Store Import: {imported} {requiredMachineName}{romFilename.Substring(extractDirectory.Length)}");
 							}
 						}
 					}
