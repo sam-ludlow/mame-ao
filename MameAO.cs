@@ -44,6 +44,7 @@ namespace Spludlow.MameAO
 			Console.WriteLine("");
 			Console.WriteLine("Usage: type the MAME machine name and press enter e.g. \"mrdo\"");
 			Console.WriteLine("You can also supply MAME arguments e.g. \"mrdo -window\"");
+			Console.WriteLine("Use dot to run mame without a machine e.g. \".\", or with paramters \". -window\"");
 			Console.WriteLine("");
 			Console.WriteLine("! NO support for CHD or SL yet !");
 			Console.WriteLine("");
@@ -185,10 +186,18 @@ namespace Spludlow.MameAO
 
 				try
 				{
-					if (machine != "")
-						GetRoms(machine);
+					if (machine.StartsWith(".") == true)
+					{
+						RunMame(binFilename, arguments);
+					}
+					else
+					{
+						if (machine != "")
+							GetRoms(machine);
 
-					RunMame(binFilename, machine + " " + arguments);
+						RunMame(binFilename, machine + " " + arguments);
+					}
+
 				}
 				catch (ApplicationException ee)
 				{
