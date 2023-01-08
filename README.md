@@ -13,3 +13,11 @@ Hardest part is finding the machine name (the short name/code) find them here: h
 - double click "mame-ao.exe"
 - wait for the MAME Shell to start
 - enter a machine name and press enter e.g. "mrdo"
+
+## Symbolic Links - Save disk space
+
+To be able to create symbolic links you have to grant permission.
+
+- Run "gpedit"
+- Go to "Computer Configuration\Windows Settings\Security Settings\Local Policies\User Rights Assignment\Create symbolic links"
+- Add the required user or group. You will need to re-start for settings to take effect.

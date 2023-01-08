@@ -10,6 +10,7 @@ using System.IO.Compression;
 using System.Diagnostics;
 using System.Xml.Linq;
 using System.Reflection;
+using System.Security.Cryptography;
 
 namespace Spludlow.MameAO
 {
@@ -22,11 +23,13 @@ namespace Spludlow.MameAO
 		private string _VersionDirectory;
 		private string _Version;
 
+		private bool _LinkingEnabled = false;
+
 		private XElement _MachineDoc;
 
 		private Spludlow.HashStore _RomHashStore;
 
-		HashSet<string> _AvailableDownloadMachines = new HashSet<string>();
+		HashSet<string> _AvailableDownloadMachines;
 
 		public MameAOProcessor(string rootDirectory)
 		{
@@ -40,7 +43,7 @@ namespace Spludlow.MameAO
 		{
 			Version version = Assembly.GetExecutingAssembly().GetName().Version;
 
-			Console.WriteLine($"Welcome to Spludlow MAME Shell V{version.Major}.{version.Minor}");
+			Console.WriteLine($"Welcome to Spludlow MAME Shell V{version.Major}.{version.Minor} https://github.com/sam-ludlow/mame-ao");
 			Console.WriteLine("");
 			Console.WriteLine("Give it a moment the first time you run");
 			Console.WriteLine("");
@@ -52,6 +55,31 @@ namespace Spludlow.MameAO
 			Console.WriteLine("");
 			Console.WriteLine($"Data Directory: {_RootDirectory}");
 			Console.WriteLine("");
+
+			//
+			// Symbolic Links check
+			//
+
+			string linkFilename = Path.Combine(_RootDirectory, @"_LINK_TEST.txt");
+			string targetFilename = Path.Combine(_RootDirectory, @"_TARGET_TEST.txt");
+
+			if (File.Exists(linkFilename) == true)
+				File.Delete(linkFilename);
+			File.WriteAllText(targetFilename, "TEST");
+
+			Tools.LinkFiles(new string[][] { new string[] { linkFilename, targetFilename } });
+
+			_LinkingEnabled = File.Exists(linkFilename);
+
+			if (File.Exists(linkFilename) == true)
+				File.Delete(linkFilename);
+			if (File.Exists(targetFilename) == true)
+				File.Delete(targetFilename);
+
+			Console.WriteLine($"Symbolic Links Enabled: {_LinkingEnabled}");
+			if (_LinkingEnabled == false)
+				Console.WriteLine("!!! You can save a lot of disk space by enabling symbolic links, see the README.");
+			Console.WriteLine();
 
 			//
 			// Hash Store
@@ -81,7 +109,7 @@ namespace Spludlow.MameAO
 			dynamic metadata = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText(metadataCacheFilename, Encoding.UTF8));
 			Console.WriteLine("...done.");
 
-
+			_AvailableDownloadMachines = new HashSet<string>();
 			string find = "mame-merged/";
 			foreach (dynamic file in metadata.files)
 			{
@@ -303,8 +331,8 @@ namespace Spludlow.MameAO
 						
 						using (TempDirectory tempDir = new TempDirectory())
 						{
-							string archiveFilename = Path.Combine(tempDir._Path, Path.GetFileName(downloadMachineUrl));
-							string extractDirectory = Path.Combine(tempDir._Path, "OUT");
+							string archiveFilename = Path.Combine(tempDir.Path, Path.GetFileName(downloadMachineUrl));
+							string extractDirectory = Path.Combine(tempDir.Path, "OUT");
 							Directory.CreateDirectory(extractDirectory);
 
 							Console.Write($"Downloading ROM ZIP {downloadMachineUrl} ...");
@@ -315,7 +343,7 @@ namespace Spludlow.MameAO
 							ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
 							Console.WriteLine($"...done");
 
-							Tools.ClearAttributes(tempDir._Path);
+							Tools.ClearAttributes(tempDir.Path);
 
 							foreach (string romFilename in Directory.GetFiles(extractDirectory, "*", SearchOption.AllDirectories))
 							{
@@ -330,6 +358,11 @@ namespace Spludlow.MameAO
 			//
 			// Copy ROMs from hash store to MAME rom directory if required
 			//
+
+			//	linkTargetFilenames
+
+			List<string[]> romStoreFilenames = new List<string[]>();
+
 			int missingCount = 0;
 			foreach (string requiredMachineName in requiredMachines)
 			{
@@ -353,7 +386,7 @@ namespace Spludlow.MameAO
 							if (File.Exists(romFilename) == false)
 							{
 								Console.WriteLine($"Place ROM: {requiredMachineName}\t{romName}");
-								File.Copy(_RomHashStore.Filename(sha1), romFilename);
+								romStoreFilenames.Add(new string[] { romFilename, _RomHashStore.Filename(sha1) });
 							}
 						}
 						else
@@ -363,6 +396,16 @@ namespace Spludlow.MameAO
 						}
 					}
 				}
+			}
+
+			if (_LinkingEnabled == true)
+			{
+				Tools.LinkFiles(romStoreFilenames.ToArray());
+			}
+			else
+			{
+				foreach (string[] romStoreFilename in romStoreFilenames)
+					File.Copy(romStoreFilename[1], romStoreFilename[0]);
 			}
 
 			if (missingCount == 0)
