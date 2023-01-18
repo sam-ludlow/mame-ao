@@ -239,6 +239,7 @@ namespace Spludlow.MameAO
 		public void RunMame(string binFilename, string arguments)
 		{
 			Console.WriteLine($"Starting MAME: {arguments} {binFilename} ...");
+			Console.WriteLine();
 
 			string directory = Path.GetDirectoryName(binFilename);
 
@@ -270,6 +271,7 @@ namespace Spludlow.MameAO
 				process.BeginOutputReadLine();
 				process.WaitForExit();
 
+				Console.WriteLine();
 				if (process.ExitCode == 0)
 					Console.WriteLine("...MAME Exit OK.");
 				else
@@ -408,10 +410,37 @@ namespace Spludlow.MameAO
 					File.Copy(romStoreFilename[1], romStoreFilename[0]);
 			}
 
+			Console.WriteLine();
+
 			if (missingCount == 0)
-				Console.WriteLine("Looking good to run MAME.");
+				Console.WriteLine("ROMs look good to run MAME.");
 			else
 				Console.WriteLine("Missing ROMs I doubt MAME will run.");
+
+			Console.WriteLine();
+
+			XElement[] disks = machine.Elements("disk").ToArray();
+			
+			if (disks.Length > 0)
+			{
+				Console.WriteLine("Warning, this machine uses CHD you will have to manually obtain and place. CHD is not yet supported.");
+				Console.WriteLine();
+			}
+
+			XElement[] features = machine.Elements("feature").ToArray();
+
+			Console.WriteLine($"Name:           {machine.Attribute("name").Value}");
+			Console.WriteLine($"Description:    {machine.Element("description")?.Value}");
+			Console.WriteLine($"Year:           {machine.Element("year")?.Value}");
+			Console.WriteLine($"Manufacturer:   {machine.Element("manufacturer")?.Value}");
+			Console.WriteLine($"Status:         {machine.Element("driver")?.Attribute("status")?.Value}");
+			if (features.Length > 0)
+			{
+				foreach (XElement feature in features)
+					Console.WriteLine($"Feature issue:  {feature.Attribute("type")?.Value} {feature.Attribute("status")?.Value}");
+			}
+			Console.WriteLine();
+
 		}
 
 		public static void FindAllMachines(string machineName, XElement machineDoc, HashSet<string> requiredMachines)
