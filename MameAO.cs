@@ -10,7 +10,6 @@ using System.IO.Compression;
 using System.Diagnostics;
 using System.Xml.Linq;
 using System.Reflection;
-using System.Security.Cryptography;
 
 namespace Spludlow.MameAO
 {
@@ -26,6 +25,7 @@ namespace Spludlow.MameAO
 		private bool _LinkingEnabled = false;
 
 		private XElement _MachineDoc;
+		private XElement _SoftwareDoc;
 
 		private Spludlow.HashStore _RomHashStore;
 
@@ -49,7 +49,9 @@ namespace Spludlow.MameAO
 			Console.WriteLine("");
 			Console.WriteLine("Usage: type the MAME machine name and press enter e.g. \"mrdo\"");
 			Console.WriteLine("You can also supply MAME arguments e.g. \"mrdo -window\"");
+			Console.WriteLine("");
 			Console.WriteLine("Use dot to run mame without a machine e.g. \".\", or with paramters \". -window\"");
+			Console.WriteLine("If you have alreay loaded a machine (in current version) you can use the MAME UI, filter on avaialable.");
 			Console.WriteLine("");
 			Console.WriteLine("! NO support for CHD or SL yet !");
 			Console.WriteLine("");
@@ -93,25 +95,14 @@ namespace Spludlow.MameAO
 			_RomHashStore = new HashStore(storeDirectory, Tools.SHA1HexFile);
 
 			//
-			// Archive.org meta data
+			// Archive.org machine meta data
 			//
-			string metadataUrl = "https://archive.org/metadata/mame-merged";
-			string metadataCacheFilename = Path.Combine(_RootDirectory, "_metadata_mame-merged.json");
 
-			if (File.Exists(metadataCacheFilename) == false || (DateTime.Now - File.GetLastWriteTime(metadataCacheFilename) > TimeSpan.FromHours(3)))
-			{
-				Console.Write($"Downloading metadata JSON {metadataCacheFilename} ...");
-				File.WriteAllText(metadataCacheFilename, Tools.PrettyJSON(Tools.Query(_HttpClient, metadataUrl)), Encoding.UTF8);
-				Console.WriteLine("...done.");
-			}
-
-			Console.Write($"Loading metadata JSON {metadataCacheFilename} ...");
-			dynamic metadata = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText(metadataCacheFilename, Encoding.UTF8));
-			Console.WriteLine("...done.");
-
+			dynamic machineMetadata = GetArchiveOrgMeteData("machine", "https://archive.org/metadata/mame-merged", Path.Combine(_RootDirectory, "_machine_metadata.json"));
+			
 			_AvailableDownloadMachines = new HashSet<string>();
 			string find = "mame-merged/";
-			foreach (dynamic file in metadata.files)
+			foreach (dynamic file in machineMetadata.files)
 			{
 				string name = (string)file.name;
 				if (name.StartsWith(find) == true && name.EndsWith(".zip") == true)
@@ -122,7 +113,7 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			string title = metadata.metadata.title;
+			string title = machineMetadata.metadata.title;
 			_Version = title.Substring(5, 5).Trim();
 			_Version = _Version.Replace(".", "");
 
@@ -130,6 +121,19 @@ namespace Spludlow.MameAO
 			Console.WriteLine($"Version:\t{_Version}");
 
 			_VersionDirectory = Path.Combine(_RootDirectory, _Version);
+
+			//
+			// Archive.org software meta data
+			//
+
+			dynamic softwareMetadata = GetArchiveOrgMeteData("machine", "https://archive.org/metadata/mame-sl", Path.Combine(_RootDirectory, "_software_metadata.json"));
+
+			title = softwareMetadata.metadata.title;
+			string softwareVersion = title.Substring(8, 5).Trim();
+			softwareVersion = _Version.Replace(".", "");
+
+			Console.WriteLine($"Software Metadata Title:\t{title}");
+			Console.WriteLine($"Software Version:\t{softwareVersion}");
 
 			//
 			// MAME Binaries
@@ -142,12 +146,9 @@ namespace Spludlow.MameAO
 
 			string binFilename = Path.Combine(_VersionDirectory, "mame.exe");
 
-			string machineXmlFilename = Path.Combine(_VersionDirectory, "_machine.xml");
-
 			if (Directory.Exists(_VersionDirectory) == false)
 			{
 				Console.WriteLine($"New MAME version: {_Version}");
-
 				Directory.CreateDirectory(_VersionDirectory);
 			}
 
@@ -166,20 +167,49 @@ namespace Spludlow.MameAO
 			}
 
 			//
-			// MAME XML
+			// MAME Machine XML
 			//
 
-			if (File.Exists(machineXmlFilename) == false)
+			_MachineDoc = ExtractMameXml("machine", "-listxml", binFilename, Path.Combine(_VersionDirectory, "_machine.xml"));
+
+			//
+			// MAME Software XML
+			//
+
+			_SoftwareDoc = ExtractMameXml("software", "-listsoftware", binFilename, Path.Combine(_VersionDirectory, "_software.xml"));
+
+		}
+
+		private dynamic GetArchiveOrgMeteData(string name, string metadataUrl, string metadataCacheFilename)
+		{
+			if (File.Exists(metadataCacheFilename) == false || (DateTime.Now - File.GetLastWriteTime(metadataCacheFilename) > TimeSpan.FromHours(3)))
 			{
-				Console.Write($"Extracting MAME machine XML {machineXmlFilename} ...");
-				ExtractXML(binFilename, machineXmlFilename, "-listxml");
+				Console.Write($"Downloading {name} metadata JSON {metadataUrl} ...");
+				File.WriteAllText(metadataCacheFilename, Tools.PrettyJSON(Tools.Query(_HttpClient, metadataUrl)), Encoding.UTF8);
 				Console.WriteLine("...done.");
 			}
-				
-			Console.Write($"Loading MAME machine XML {machineXmlFilename} ...");
-			_MachineDoc = XElement.Load(machineXmlFilename);
+
+			Console.Write($"Loading {name} metadata JSON {metadataCacheFilename} ...");
+			dynamic metadata = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText(metadataCacheFilename, Encoding.UTF8));
 			Console.WriteLine("...done.");
 
+			return metadata;
+		}
+
+		private XElement ExtractMameXml(string name, string argument, string binFilename, string filename)
+		{
+			if (File.Exists(filename) == false)
+			{
+				Console.Write($"Extracting MAME {name} XML {filename} ...");
+				ExtractXML(binFilename, filename, argument);
+				Console.WriteLine("...done.");
+			}
+
+			Console.Write($"Loading MAME {name} XML {filename} ...");
+			XElement doc = XElement.Load(filename);
+			Console.WriteLine("...done.");
+
+			return doc;
 		}
 
 		public void Run()
@@ -360,8 +390,6 @@ namespace Spludlow.MameAO
 			//
 			// Copy ROMs from hash store to MAME rom directory if required
 			//
-
-			//	linkTargetFilenames
 
 			List<string[]> romStoreFilenames = new List<string[]>();
 
