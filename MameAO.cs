@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Net.Http;
-using Newtonsoft.Json;
 using System.IO;
 using System.Data;
 using System.IO.Compression;
@@ -11,7 +10,8 @@ using System.Diagnostics;
 using System.Xml.Linq;
 using System.Reflection;
 using System.Web;
-using System.Security.Policy;
+
+using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
 {
@@ -130,7 +130,6 @@ namespace Spludlow.MameAO
 			_Version = title.Substring(5, 5).Trim();
 			_Version = _Version.Replace(".", "");
 
-			Console.WriteLine($"Metadata Title:\t{title}");
 			Console.WriteLine($"Version:\t{_Version}");
 
 			_VersionDirectory = Path.Combine(_RootDirectory, _Version);
@@ -153,8 +152,10 @@ namespace Spludlow.MameAO
 			string softwareVersion = title.Substring(8, 5).Trim();
 			softwareVersion = _Version.Replace(".", "");
 
-			Console.WriteLine($"Software Metadata Title:\t{title}");
 			Console.WriteLine($"Software Version:\t{softwareVersion}");
+
+			if (_Version != softwareVersion)
+				Console.WriteLine("!!! Software lists on archive.org version mismatch, you may have problems.");
 
 			//
 			// MAME Binaries
@@ -297,9 +298,22 @@ namespace Spludlow.MameAO
 				{
 					Console.WriteLine("SHELL ERROR: " + ee.Message);
 				}
+				catch (Exception ee)
+				{
+					Console.WriteLine();
+					Console.WriteLine("!!! FATAL ERROR: " + ee.Message);
+					Console.WriteLine();
+					Console.WriteLine(ee.ToString());
+					Console.WriteLine();
+					Console.WriteLine("Press any key to continue, program has crashed and will exit.");
+					Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
+					Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
+
+					Console.ReadKey();
+					Environment.Exit(1);
+				}
 			}
 		}
-
 
 		public void RunMame(string binFilename, string arguments)
 		{
@@ -344,7 +358,6 @@ namespace Spludlow.MameAO
 			}
 		}
 
-
 		private void FindAllSoftware(XElement software, XElement softwareList, HashSet<string> requiredSoftwares)
 		{
 			requiredSoftwares.Add(software.Attribute("name").Value);
@@ -359,7 +372,6 @@ namespace Spludlow.MameAO
 				FindAllSoftware(parentSoftware, softwareList, requiredSoftwares);
 			}
 		}
-
 
 		public void GetRoms(string machineName, string softwareName)
 		{
@@ -413,6 +425,9 @@ namespace Spludlow.MameAO
 
 				if (softwareFound == 0)
 					throw new ApplicationException($"Did not find software: {machineName}, {softwareName}");
+
+				if (softwareFound > 1)
+					Console.WriteLine("! Warning more than one software found, not sure which MAME will use. This can happern if the same name apears in different lists e.g. disk & cassette.");
 			}
 
 			//
@@ -485,20 +500,18 @@ namespace Spludlow.MameAO
 
 				foreach (XElement rom in requiredMachine.Descendants("rom"))
 				{
-					string romName = (string)rom.Attribute("name");
+					string romName = rom.Attribute("name")?.Value;
+					string sha1 = rom.Attribute("sha1")?.Value;
 
-					if (romName == null)
+					if (romName == null || sha1 == null)
 						continue;
 
-					string sha1 = (string)rom.Attribute("sha1");
+					bool inStore = _RomHashStore.Exists(sha1);
 
-					Console.WriteLine($"Checking ROM: {_RomHashStore.Exists(sha1)}\t{requiredMachineName}\t{romName}\t{sha1}");
+					Console.WriteLine($"Checking machine ROM: {inStore}\t{requiredMachineName}\t{romName}\t{sha1}");
 
-					if (sha1 != null)
-					{
-						if (_RomHashStore.Exists(sha1) == false)
-							missingRoms.Add(sha1);
-					}
+					if (inStore == false)
+						missingRoms.Add(sha1);
 				}
 
 				//
@@ -510,28 +523,7 @@ namespace Spludlow.MameAO
 					{
 						string downloadMachineUrl = $"https://archive.org/download/mame-merged/mame-merged/{requiredMachineName}.zip";
 
-						using (TempDirectory tempDir = new TempDirectory())
-						{
-							string archiveFilename = Path.Combine(tempDir.Path, Path.GetFileName(downloadMachineUrl));
-							string extractDirectory = Path.Combine(tempDir.Path, "OUT");
-							Directory.CreateDirectory(extractDirectory);
-
-							Console.Write($"Downloading ROM ZIP {downloadMachineUrl} ...");
-							File.WriteAllBytes(archiveFilename, Tools.Download(_HttpClient, downloadMachineUrl));
-							Console.WriteLine($"...done");
-
-							Console.Write($"Extracting ROM ZIP {archiveFilename} ...");
-							ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
-							Console.WriteLine($"...done");
-
-							Tools.ClearAttributes(tempDir.Path);
-
-							foreach (string romFilename in Directory.GetFiles(extractDirectory, "*", SearchOption.AllDirectories))
-							{
-								bool imported = _RomHashStore.Add(romFilename);
-								Console.WriteLine($"Store Import: {imported} {requiredMachineName}{romFilename.Substring(extractDirectory.Length)}");
-							}
-						}
+						ImportRoms(downloadMachineUrl, $"machine:{requiredMachineName}");
 					}
 				}
 			}
@@ -548,29 +540,29 @@ namespace Spludlow.MameAO
 
 				foreach (XElement rom in requiredMachine.Descendants("rom"))
 				{
-					string romName = (string)rom.Attribute("name");
-					string sha1 = (string)rom.Attribute("sha1");
+					string romName = rom.Attribute("name")?.Value;
+					string sha1 = rom.Attribute("sha1")?.Value;
 
-					if (sha1 != null)
+					if (romName == null || sha1 == null)
+						continue;
+
+					string romFilename = Path.Combine(_VersionDirectory, "roms", requiredMachineName, romName);
+					string romDirectory = Path.GetDirectoryName(romFilename);
+					if (Directory.Exists(romDirectory) == false)
+						Directory.CreateDirectory(romDirectory);
+
+					if (_RomHashStore.Exists(sha1) == true)
 					{
-						string romFilename = Path.Combine(_VersionDirectory, "roms", requiredMachineName, romName);
-						string romDirectory = Path.GetDirectoryName(romFilename);
-						if (Directory.Exists(romDirectory) == false)
-							Directory.CreateDirectory(romDirectory);
-
-						if (_RomHashStore.Exists(sha1) == true)
+						if (File.Exists(romFilename) == false)
 						{
-							if (File.Exists(romFilename) == false)
-							{
-								Console.WriteLine($"Place software ROM: {requiredMachineName}\t{romName}");
-								romStoreFilenames.Add(new string[] { romFilename, _RomHashStore.Filename(sha1) });
-							}
+							Console.WriteLine($"Place machine ROM: {requiredMachineName}\t{romName}");
+							romStoreFilenames.Add(new string[] { romFilename, _RomHashStore.Filename(sha1) });
 						}
-						else
-						{
-							Console.WriteLine($"Missing machine ROM: {requiredMachineName}\t{romName}\t{sha1}");
-							++missingCount;
-						}
+					}
+					else
+					{
+						Console.WriteLine($"Missing machine ROM: {requiredMachineName}\t{romName}\t{sha1}");
+						++missingCount;
 					}
 				}
 			}
@@ -618,17 +610,16 @@ namespace Spludlow.MameAO
 			foreach (XElement rom in dataarea.Elements("rom"))
 			{
 				string romName = rom.Attribute("name")?.Value;
-
-				if (romName == null)
-					continue;
-
 				string sha1 = rom.Attribute("sha1")?.Value;
+
+				if (romName == null || sha1 == null)
+					continue;
 
 				bool inStore = _RomHashStore.Exists(sha1);
 
 				Console.WriteLine($"Checking Software ROM: {inStore}\t{softwareListName}\t{requiredSoftwareName}\t{romName}\t{sha1}");
 
-				if (sha1 != null && inStore == false)
+				if (inStore == false)
 					missingRoms.Add(sha1);
 			}
 
@@ -643,28 +634,7 @@ namespace Spludlow.MameAO
 
 				string downloadSoftwareUrl = $"https://archive.org/download/mame-sl/mame-sl/{listEnc}.zip/{listEnc}{slashEnc}{softEnc}.zip";
 
-				using (TempDirectory tempDir = new TempDirectory())
-				{
-					string archiveFilename = Path.Combine(tempDir.Path, "archive.zip");
-					string extractDirectory = Path.Combine(tempDir.Path, "OUT");
-					Directory.CreateDirectory(extractDirectory);
-
-					Console.Write($"Downloading ROM ZIP {downloadSoftwareUrl} ...");
-					File.WriteAllBytes(archiveFilename, Tools.Download(_HttpClient, downloadSoftwareUrl));
-					Console.WriteLine($"...done");
-
-					Console.Write($"Extracting ROM ZIP {archiveFilename} ...");
-					ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
-					Console.WriteLine($"...done");
-
-					Tools.ClearAttributes(tempDir.Path);
-
-					foreach (string romFilename in Directory.GetFiles(extractDirectory, "*", SearchOption.AllDirectories))
-					{
-						bool imported = _RomHashStore.Add(romFilename);
-						Console.WriteLine($"Store Import: {imported} {softwareListName}/{requiredSoftwareName}{romFilename.Substring(extractDirectory.Length)}");
-					}
-				}
+				ImportRoms(downloadSoftwareUrl, $"software:{softwareListName}, {requiredSoftwareName}");
 			}
 
 			//
@@ -674,38 +644,66 @@ namespace Spludlow.MameAO
 			int missingCount = 0;
 			foreach (XElement rom in software.Descendants("rom"))
 			{
-				string romName = (string)rom.Attribute("name");
-				string sha1 = (string)rom.Attribute("sha1");
+				string romName = rom.Attribute("name")?.Value;
+				string sha1 = rom.Attribute("sha1")?.Value;
 
-				if (sha1 != null)
+				if (romName == null || sha1 == null)
+					continue;
+
+				string romFilename = Path.Combine(_VersionDirectory, "roms", softwareListName, softwareName, romName);
+				string romDirectory = Path.GetDirectoryName(romFilename);
+				if (Directory.Exists(romDirectory) == false)
+					Directory.CreateDirectory(romDirectory);
+
+				if (_RomHashStore.Exists(sha1) == true)
 				{
-					string romFilename = Path.Combine(_VersionDirectory, "roms", softwareListName, softwareName, romName);
-					string romDirectory = Path.GetDirectoryName(romFilename);
-					if (Directory.Exists(romDirectory) == false)
-						Directory.CreateDirectory(romDirectory);
-
-					if (_RomHashStore.Exists(sha1) == true)
+					if (File.Exists(romFilename) == false)
 					{
-						if (File.Exists(romFilename) == false)
-						{
-							Console.WriteLine($"Place software ROM: {softwareListName}\t{softwareName}\t{romName}");
-							romStoreFilenames.Add(new string[] { romFilename, _RomHashStore.Filename(sha1) });
-						}
+						Console.WriteLine($"Place software ROM: {softwareListName}\t{softwareName}\t{romName}");
+						romStoreFilenames.Add(new string[] { romFilename, _RomHashStore.Filename(sha1) });
 					}
-					else
-					{
-						Console.WriteLine($"Missing machine ROM: {softwareListName}\t{softwareName}\t{romName}\t{sha1}");
-						++missingCount;
-					}
+				}
+				else
+				{
+					Console.WriteLine($"Missing software ROM: {softwareListName}\t{softwareName}\t{romName}\t{sha1}");
+					++missingCount;
 				}
 			}
 
 			return missingCount;
 		}
 
+		private void ImportRoms(string url, string name)
+		{
+			using (TempDirectory tempDir = new TempDirectory())
+			{
+				string archiveFilename = Path.Combine(tempDir.Path, "archive.zip");
+				string extractDirectory = Path.Combine(tempDir.Path, "OUT");
+				Directory.CreateDirectory(extractDirectory);
+
+				Console.Write($"Downloading {name} ROM ZIP {url} ...");
+				File.WriteAllBytes(archiveFilename, Tools.Download(_HttpClient, url));
+				Console.WriteLine($"...done");
+
+				Console.Write($"Extracting {name} ROM ZIP {archiveFilename} ...");
+				ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
+				Console.WriteLine($"...done");
+
+				Tools.ClearAttributes(tempDir.Path);
+
+				foreach (string romFilename in Directory.GetFiles(extractDirectory, "*", SearchOption.AllDirectories))
+				{
+					bool imported = _RomHashStore.Add(romFilename);
+					Console.WriteLine($"Store Import: {imported} {name} {romFilename.Substring(extractDirectory.Length)}");
+				}
+			}
+		}
 
 		public static void FindAllMachines(string machineName, XElement machineDoc, HashSet<string> requiredMachines)
 		{
+			if (requiredMachines.Contains(machineName) == true)
+				return;
+
 			XElement machine = machineDoc.Descendants("machine").Where(e => e.Attribute("name").Value == machineName).FirstOrDefault();
 
 			if (machine == null)
@@ -713,11 +711,8 @@ namespace Spludlow.MameAO
 
 			bool hasRoms = (machine.Descendants("rom").Count() > 0);
 
-			if (hasRoms == false)
-				return;
-
-			if (requiredMachines.Add(machineName) == false)
-				return;
+			if (hasRoms == true)
+				requiredMachines.Add(machineName);
 
 			string romof = machine.Attribute("romof")?.Value;
 
