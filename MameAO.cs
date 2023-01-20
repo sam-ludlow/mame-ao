@@ -486,6 +486,10 @@ namespace Spludlow.MameAO
 				foreach (XElement rom in requiredMachine.Descendants("rom"))
 				{
 					string romName = (string)rom.Attribute("name");
+
+					if (romName == null)
+						continue;
+
 					string sha1 = (string)rom.Attribute("sha1");
 
 					Console.WriteLine($"Checking ROM: {_RomHashStore.Exists(sha1)}\t{requiredMachineName}\t{romName}\t{sha1}");
@@ -613,7 +617,11 @@ namespace Spludlow.MameAO
 
 			foreach (XElement rom in dataarea.Elements("rom"))
 			{
-				string romName = rom.Attribute("name").Value;
+				string romName = rom.Attribute("name")?.Value;
+
+				if (romName == null)
+					continue;
+
 				string sha1 = rom.Attribute("sha1")?.Value;
 
 				bool inStore = _RomHashStore.Exists(sha1);
