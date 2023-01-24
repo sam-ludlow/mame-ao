@@ -73,6 +73,41 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static long DownloadStream(HttpClient client, string url, string filename)
+		{
+			long total = 0;
+			byte[] buffer = new byte[1024 * 1024];
+
+			using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{url}"))
+			{
+				Task<HttpResponseMessage> requestTask = client.SendAsync(requestMessage);
+				requestTask.Wait();
+				HttpResponseMessage responseMessage = requestTask.Result;
+
+				responseMessage.EnsureSuccessStatusCode();
+
+				Task<Stream> responseContentTask = responseMessage.Content.ReadAsStreamAsync();
+				responseContentTask.Wait();
+
+				using (Stream sourceStream = responseContentTask.Result)
+				{
+					using (FileStream targetStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
+					{
+						int bytesRead;
+						while ((bytesRead = sourceStream.Read(buffer, 0, buffer.Length)) > 0)
+						{
+							total += bytesRead;
+							targetStream.Write(buffer, 0, bytesRead);
+
+							//Console.Write(".");	//	Not showing until new line ???
+						}
+					}
+				}
+			}
+
+			return total;
+		}
+
 		public static void LinkFiles(string[][] linkTargetFilenames)
 		{
 			HashSet<string> linkDirectories = new HashSet<string>();
