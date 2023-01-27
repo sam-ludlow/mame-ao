@@ -746,9 +746,18 @@ namespace Spludlow.MameAO
 				string extractDirectory = Path.Combine(tempDir.Path, "OUT");
 				Directory.CreateDirectory(extractDirectory);
 
-				Console.Write($"Downloading {name} ROM ZIP size:{expectedSize} url:{url} ...");
+				Console.Write($"Downloading {name} ROM ZIP size:{Tools.DataSize(expectedSize)} url:{url} ...");
+				DateTime startTime = DateTime.Now;
 				size = Tools.DownloadStream(_HttpClient, url, archiveFilename);
+				TimeSpan took = DateTime.Now - startTime;
 				Console.WriteLine($"...done");
+
+				if (size != expectedSize)
+					Console.WriteLine($"Unexpected downloaded file size expext:{expectedSize} actual{size}");
+
+				decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
+
+				Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
 
 				Console.Write($"Extracting {name} ROM ZIP {archiveFilename} ...");
 				ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);

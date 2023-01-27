@@ -5,6 +5,7 @@ using System.IO;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 using Newtonsoft.Json;
@@ -99,7 +100,7 @@ namespace Spludlow.MameAO
 							total += bytesRead;
 							targetStream.Write(buffer, 0, bytesRead);
 
-							//Console.Write(".");	//	Not showing until new line ???
+							//Console.Write(".");	//	Not showing until out this method, stops working after above task.waits ???
 						}
 					}
 				}
@@ -164,6 +165,42 @@ namespace Spludlow.MameAO
 					process.WaitForExit();
 				}
 			}
+		}
+
+		private static string[] _SystemOfUnits =
+		{
+			"Bytes (B)",
+			"Kilobytes (KiB)",
+			"Megabytes (MiB)",
+			"Gigabytes (GiB)",
+			"Terabytes (TiB)",
+			"Petabytes (PiB)",
+			"Exabytes (EiB)"
+		};
+
+		public static string DataSize(long sizeBytes)
+		{
+			return DataSize((ulong)sizeBytes);
+		}
+		public static string DataSize(ulong sizeBytes)
+		{
+			for (int index = 0; index < _SystemOfUnits.Length; ++index)
+			{
+				ulong nextUnit = (ulong)Math.Pow(2, (index + 1) * 10);
+
+				if (sizeBytes < nextUnit || nextUnit == 0 || index == (_SystemOfUnits.Length - 1))
+				{
+					ulong unit = (ulong)Math.Pow(2, index * 10);
+					decimal result = (decimal)sizeBytes / (decimal)unit;
+					int decimalPlaces = 0;
+					if (result <= 9.9M)
+						decimalPlaces = 1;
+					result = Math.Round(result, decimalPlaces);
+					return result.ToString() + " " + _SystemOfUnits[index];
+				}
+			}
+
+			throw new ApplicationException("Failed to find Data Size: " + sizeBytes.ToString());
 		}
 	}
 
