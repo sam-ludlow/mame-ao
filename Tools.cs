@@ -2,10 +2,10 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
 using Newtonsoft.Json;
@@ -57,40 +57,22 @@ namespace Spludlow.MameAO
 				return responseBody;
 			}
 		}
-		public static byte[] Download(HttpClient client, string url)
-		{
-			using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{url}"))
-			{
-				Task<HttpResponseMessage> requestTask = client.SendAsync(requestMessage);
-				requestTask.Wait();
-				HttpResponseMessage responseMessage = requestTask.Result;
 
-				responseMessage.EnsureSuccessStatusCode();
-
-				Task<byte[]> responseMessageTask = responseMessage.Content.ReadAsByteArrayAsync();
-				responseMessageTask.Wait();
-
-				return responseMessageTask.Result;
-			}
-		}
-
-		public static long DownloadStream(HttpClient client, string url, string filename)
+		public static long Download(string url, string filename, long progressSize, int timeoutMinutes)
 		{
 			long total = 0;
-			byte[] buffer = new byte[1024 * 1024];
+			byte[] buffer = new byte[64 * 1024];
 
-			using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{url}"))
+			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
+			request.Method = "GET";
+
+			request.Timeout = timeoutMinutes * (60 * 1000);
+
+			long progress = 0;
+
+			using (WebResponse response = request.GetResponse())
 			{
-				Task<HttpResponseMessage> requestTask = client.SendAsync(requestMessage);
-				requestTask.Wait();
-				HttpResponseMessage responseMessage = requestTask.Result;
-
-				responseMessage.EnsureSuccessStatusCode();
-
-				Task<Stream> responseContentTask = responseMessage.Content.ReadAsStreamAsync();
-				responseContentTask.Wait();
-
-				using (Stream sourceStream = responseContentTask.Result)
+				using (Stream sourceStream = response.GetResponseStream())
 				{
 					using (FileStream targetStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
 					{
@@ -100,7 +82,15 @@ namespace Spludlow.MameAO
 							total += bytesRead;
 							targetStream.Write(buffer, 0, bytesRead);
 
-							//Console.Write(".");	//	Not showing until out this method, stops working after above task.waits ???
+							if (progressSize > 0)
+							{
+								progress += bytesRead;
+								if (progress >= progressSize)
+								{
+									Console.Write(".");
+									progress = 0;
+								}
+							}
 						}
 					}
 				}

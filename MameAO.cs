@@ -30,35 +30,23 @@ namespace Spludlow.MameAO
 		private XElement _SoftwareDoc;
 
 		private Spludlow.HashStore _RomHashStore;
+		private Spludlow.HashStore _DiskHashStore;
+
+		private string _DownloadTempDirectory;
 
 		Dictionary<string, long> _AvailableDownloadMachines;
+		Dictionary<string, long> _AvailableDownloadMachineDisks;
 		Dictionary<string, long> _AvailableDownloadSoftwareLists;
+		Dictionary<string, long> _AvailableDownloadSoftwareListDisks;
+
+		private MameChdMan _MameChdMan;
+
+		private long _DownloadDotSize = 1024 * 1024;
 
 		public MameAOProcessor(string rootDirectory)
 		{
 			_RootDirectory = rootDirectory;
-
 			_HttpClient = new HttpClient();
-			_HttpClient.Timeout = TimeSpan.FromMinutes(15);
-		}
-
-		private Dictionary<string, long> AvailableFilesInMetadata(string find, dynamic metadata)
-		{
-			Dictionary<string, long> result = new Dictionary<string, long>();
-
-			foreach (dynamic file in metadata.files)
-			{
-				string name = (string)file.name;
-				if (name.StartsWith(find) == true && name.EndsWith(".zip") == true)
-				{
-					name = name.Substring(find.Length);
-					name = name.Substring(0, name.Length - 4);
-					long size = Int64.Parse((string)file.size);
-					result.Add(name, size);
-				}
-			}
-
-			return result;
 		}
 
 		public void Start()
@@ -70,15 +58,17 @@ namespace Spludlow.MameAO
 			Console.WriteLine("Give it a moment the first time you run");
 			Console.WriteLine("");
 			Console.WriteLine("Usage: type the MAME machine name and press enter e.g. \"mrdo\"");
+			Console.WriteLine("       or a CHD e.g. \"gauntleg\"");
 			Console.WriteLine("       or with MAME arguments e.g. \"mrdo -window\"");
 			Console.WriteLine("");
 			Console.WriteLine("SL usage: type the MAME machine name and the software name and press enter e.g. \"a2600 et\"");
+			Console.WriteLine("       or a CHD e.g. \"cdimono1 aidsawar\" (Note: Not all CHD SLs are not currently available)");
 			Console.WriteLine("       or with MAME arguments e.g. \"a2600 et -window\"");
 			Console.WriteLine("");
 			Console.WriteLine("Use dot to run mame without a machine e.g. \".\", or with paramters \". -window\"");
 			Console.WriteLine("If you have alreay loaded a machine (in current MAME version) you can use the MAME UI, filter on avaialable.");
 			Console.WriteLine("");
-			Console.WriteLine("! NO support for CHD yet !");
+			Console.WriteLine("WARNING: Large downloads like CHD will take a while, each dot represents 1 MiB (about a floppy disk) you do the maths.");
 			Console.WriteLine("");
 			Console.WriteLine($"Data Directory: {_RootDirectory}");
 			Console.WriteLine("");
@@ -109,17 +99,6 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 
 			//
-			// Hash Store
-			//
-
-			string storeDirectory = Path.Combine(_RootDirectory, "_STORE");
-
-			if (Directory.Exists(storeDirectory) == false)
-				Directory.CreateDirectory(storeDirectory);
-
-			_RomHashStore = new HashStore(storeDirectory, Tools.SHA1HexFile);
-
-			//
 			// Archive.org machine meta data
 			//
 
@@ -142,6 +121,24 @@ namespace Spludlow.MameAO
 			}
 
 			//
+			// Archive.org machine CHD meta data
+			//
+
+			dynamic machineDiskMetadata = GetArchiveOrgMeteData("machine disk", "https://archive.org/metadata/mame-chds-roms-extras-complete", Path.Combine(_RootDirectory, "_machine_disk_metadata.json"));
+
+			_AvailableDownloadMachineDisks = AvailableDiskFilesInMetadata(machineDiskMetadata);
+
+			title = machineDiskMetadata.metadata.title;
+			string machineDiskVersion = title.Substring(5, 5).Trim();
+			machineDiskVersion = machineDiskVersion.Replace(".", "");
+
+			Console.WriteLine($"Machine Disk Version:\t{machineDiskVersion}");
+
+			if (_Version != machineDiskVersion)
+				Console.WriteLine("!!! Machine disks (CHD) on archive.org version mismatch, you may have problems.");
+
+
+			//
 			// Archive.org software meta data
 			//
 
@@ -151,12 +148,23 @@ namespace Spludlow.MameAO
 
 			title = softwareMetadata.metadata.title;
 			string softwareVersion = title.Substring(8, 5).Trim();
-			softwareVersion = _Version.Replace(".", "");
+			softwareVersion = softwareVersion.Replace(".", "");
 
 			Console.WriteLine($"Software Version:\t{softwareVersion}");
 
 			if (_Version != softwareVersion)
 				Console.WriteLine("!!! Software lists on archive.org version mismatch, you may have problems.");
+
+			//
+			// Archive.org software CHD meta data
+			//
+
+			dynamic softwareDiskMetadata = GetArchiveOrgMeteData("software disk", "https://archive.org/metadata/mame-software-list-chds-2", Path.Combine(_RootDirectory, "_software_disk_metadata.json"));
+
+			_AvailableDownloadSoftwareListDisks = AvailableDiskFilesInMetadata(softwareDiskMetadata);
+
+			// Not bothering with version for SL disks at the moment !!!
+
 
 			//
 			// MAME Binaries
@@ -178,7 +186,7 @@ namespace Spludlow.MameAO
 			if (File.Exists(binCacheFilename) == false)
 			{
 				Console.Write($"Downloading MAME binaries {binUrl} ...");
-				File.WriteAllBytes(binCacheFilename, Tools.Download(_HttpClient, binUrl));
+				Tools.Download(binUrl, binCacheFilename, _DownloadDotSize, 10);
 				Console.WriteLine("...done.");
 			}
 
@@ -188,6 +196,32 @@ namespace Spludlow.MameAO
 				RunSelfExtract(binCacheFilename);
 				Console.WriteLine("...done.");
 			}
+
+			//
+			// CHD Manager
+			//
+
+			_MameChdMan = new MameChdMan(_VersionDirectory);
+
+			//
+			// Hash Stores
+			//
+
+			string directory = Path.Combine(_RootDirectory, "_STORE");
+			if (Directory.Exists(directory) == false)
+				Directory.CreateDirectory(directory);
+			_RomHashStore = new HashStore(directory, Tools.SHA1HexFile);
+
+			directory = Path.Combine(_RootDirectory, "_STORE_DISK");
+			
+			if (Directory.Exists(directory) == false)
+				Directory.CreateDirectory(directory);
+			_DiskHashStore = new HashStore(directory, _MameChdMan.Hash);
+
+			directory = Path.Combine(_RootDirectory, "_TEMP");
+			if (Directory.Exists(directory) == false)
+				Directory.CreateDirectory(directory);
+			_DownloadTempDirectory = directory;
 
 			//
 			// MAME Machine XML
@@ -201,6 +235,42 @@ namespace Spludlow.MameAO
 
 			_SoftwareDoc = ExtractMameXml("software", "-listsoftware", binFilename, Path.Combine(_VersionDirectory, "_software.xml"));
 
+		}
+
+		private Dictionary<string, long> AvailableFilesInMetadata(string find, dynamic metadata)
+		{
+			Dictionary<string, long> result = new Dictionary<string, long>();
+
+			foreach (dynamic file in metadata.files)
+			{
+				string name = (string)file.name;
+				if (name.StartsWith(find) == true && name.EndsWith(".zip") == true)
+				{
+					name = name.Substring(find.Length);
+					name = name.Substring(0, name.Length - 4);
+					long size = Int64.Parse((string)file.size);
+					result.Add(name, size);
+				}
+			}
+
+			return result;
+		}
+
+		private Dictionary<string, long> AvailableDiskFilesInMetadata(dynamic metadata)
+		{
+			Dictionary<string, long> result = new Dictionary<string, long>();
+
+			foreach (dynamic file in metadata.files)
+			{
+				string name = (string)file.name;
+				if (name.EndsWith(".chd") == true)
+				{
+					long size = Int64.Parse((string)file.size);
+					result.Add(name.Substring(0, name.Length - 4), size);
+				}
+			}
+
+			return result;
 		}
 
 		private dynamic GetArchiveOrgMeteData(string name, string metadataUrl, string metadataCacheFilename)
@@ -381,9 +451,13 @@ namespace Spludlow.MameAO
 			//
 			missingCount += GetRomsMachine(machineName, romStoreFilenames);
 
+			//
+			// Machine Disks
+			//
+			missingCount += GetDisksMachine(machineName, romStoreFilenames);
 
 			//
-			// Software ROMSs
+			// Software ROMSs & Disks
 			//
 			if (softwareName != "")
 			{
@@ -404,6 +478,9 @@ namespace Spludlow.MameAO
 						if (findSoftware.Attribute("name").Value == softwareName)
 						{
 							missingCount += GetRomsSoftware(findSoftware, romStoreFilenames);
+
+							missingCount += GetDiskSoftware(findSoftware, romStoreFilenames);
+
 							++softwareFound;
 						}
 					}
@@ -440,14 +517,6 @@ namespace Spludlow.MameAO
 				Console.WriteLine("Missing ROMs I doubt MAME will run.");
 
 			Console.WriteLine();
-
-			XElement[] disks = machine.Elements("disk").ToArray();
-			
-			if (disks.Length > 0)
-			{
-				Console.WriteLine("Warning, this machine uses CHD you will have to manually obtain and place. CHD is not yet supported.");
-				Console.WriteLine();
-			}
 
 			XElement[] features = machine.Elements("feature").ToArray();
 
@@ -564,6 +633,235 @@ namespace Spludlow.MameAO
 			return missingCount;
 		}
 
+		private int GetDisksMachine(string machineName, List<string[]> romStoreFilenames)
+		{
+			// think don't need to look for parents ?
+			XElement machine = _MachineDoc.Descendants("machine").Where(e => e.Attribute("name").Value == machineName).FirstOrDefault();
+
+			if (machine == null)
+				throw new ApplicationException("GetDisksMachine machine not found: " + machineName);
+
+			XElement[] disks = machine.Elements("disk").ToArray();
+
+			if (disks.Length == 0)
+				return 0;
+
+
+			//
+			// See if Disks are in the hash store
+			//
+			HashSet<XElement> missingDisks = new HashSet<XElement>();
+
+			foreach (XElement disk in disks)
+			{
+				string name = disk.Attribute("name")?.Value;
+				string sha1 = disk.Attribute("sha1")?.Value;
+
+				if (disk == null || sha1 == null)
+					continue;
+
+				bool inStore = _DiskHashStore.Exists(sha1);
+
+				Console.WriteLine($"Checking machine Disk: {inStore}\t{machineName}\t{name}\t{sha1}");
+
+				if (inStore == false)
+					missingDisks.Add(disk);
+			}
+
+			//
+			// If not then download and import into hash store
+			//
+			if (missingDisks.Count > 0)
+			{
+				foreach (XElement disk in missingDisks)
+				{
+					string diskName = disk.Attribute("name")?.Value;
+					string sha1 = disk.Attribute("sha1")?.Value;
+
+					string key = $"{machineName}/{diskName}";
+
+					if (_AvailableDownloadMachineDisks.ContainsKey(key) == false)
+						throw new ApplicationException($"Available Download Machine Disks not found key:{key}");
+
+					long size = _AvailableDownloadMachineDisks[key];
+
+					// check size ????
+
+					string diskNameEnc = Uri.EscapeUriString(diskName);
+					string diskUrl = $"https://archive.org/download/mame-chds-roms-extras-complete/{machineName}/{diskNameEnc}.chd";
+
+					string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + diskName);
+
+					Console.Write($"Downloading {key} Machine Disk. size:{Tools.DataSize(size)} url:{diskUrl} ...");
+					DateTime startTime = DateTime.Now;
+					long downloadSize = Tools.Download(diskUrl, tempFilename, _DownloadDotSize, 3 * 60);
+					TimeSpan took = DateTime.Now - startTime;
+					Console.WriteLine($"...done");
+
+					if (size != downloadSize)
+						Console.WriteLine($"Unexpected downloaded file size expect:{size} actual:{downloadSize}");
+
+					bool imported = _DiskHashStore.Add(tempFilename, true);
+
+					Console.WriteLine($"Disk Store Import: {imported} {key}");
+				}
+			}
+
+			//
+			// Check and place
+			//
+
+			int missing = 0;
+
+			foreach (XElement disk in disks)
+			{
+				string name = disk.Attribute("name")?.Value;
+				string sha1 = disk.Attribute("sha1")?.Value;
+
+				if (disk == null || sha1 == null)
+					continue;
+
+				string filename = Path.Combine(_VersionDirectory, "roms", machineName, name + ".chd");
+				string directory = Path.GetDirectoryName(filename);
+
+				if (Directory.Exists(directory) == false)
+					Directory.CreateDirectory(directory);
+
+				if (_DiskHashStore.Exists(sha1) == true)
+				{
+					if (File.Exists(filename) == false)
+					{
+						Console.WriteLine($"Place machine Disk: {machineName}\t{name}");
+						romStoreFilenames.Add(new string[] { filename, _DiskHashStore.Filename(sha1) });
+					}
+				}
+				else
+				{
+					Console.WriteLine($"Missing machine Disk: {machineName}\t{name}\t{sha1}");
+					++missing;
+				}
+			}
+
+			return missing;
+		}
+
+		private int GetDiskSoftware(XElement software, List<string[]> romStoreFilenames)
+		{
+			// think don't need to look for parents ?
+
+			XElement softwareList = software.Parent;
+
+			string softwareListName = softwareList.Attribute("name").Value;
+			string softwareName = software.Attribute("name").Value;
+
+
+			XElement diskarea = software.Element("part")?.Element("diskarea");
+
+			if (diskarea == null)
+				return 0;
+
+			XElement[] disks = diskarea.Elements("disk").ToArray();
+
+			//
+			// See if Disks are in the hash store
+			//
+			HashSet<XElement> missingDisks = new HashSet<XElement>();
+
+			foreach (XElement disk in disks)
+			{
+				string name = disk.Attribute("name")?.Value;
+				string sha1 = disk.Attribute("sha1")?.Value;
+
+				if (disk == null || sha1 == null)
+					continue;
+
+				bool inStore = _DiskHashStore.Exists(sha1);
+
+				Console.WriteLine($"Checking software Disk: {inStore}\t{softwareListName}\t{softwareName}\t{name}\t{sha1}");
+
+				if (inStore == false)
+					missingDisks.Add(disk);
+			}
+
+
+			//
+			// If not then download and import into hash store
+			//
+			if (missingDisks.Count > 0)
+			{
+				foreach (XElement disk in missingDisks)
+				{
+					string diskName = disk.Attribute("name")?.Value;
+					string sha1 = disk.Attribute("sha1")?.Value;
+
+					string key = $"{softwareListName}/{softwareName}/{diskName}";
+
+					if (_AvailableDownloadSoftwareListDisks.ContainsKey(key) == false)
+						throw new ApplicationException($"Software list disk not on archive.org {key}");
+
+					long size = _AvailableDownloadSoftwareListDisks[key];
+
+					//check size ????
+
+					string nameEnc = Uri.EscapeUriString(diskName);
+					string url = $"https://archive.org/download/mame-software-list-chds-2/{softwareListName}/{softwareName}/{nameEnc}.chd";
+
+					string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + diskName);
+
+					Console.Write($"Downloading {key} Software Disk. size:{Tools.DataSize(size)} url:{url} ...");
+					DateTime startTime = DateTime.Now;
+					long downloadSize = Tools.Download(url, tempFilename, _DownloadDotSize, 3 * 60);
+					TimeSpan took = DateTime.Now - startTime;
+					Console.WriteLine($"...done");
+
+					if (size != downloadSize)
+						Console.WriteLine($"Unexpected downloaded file size expect:{size} actual:{downloadSize}");
+
+					bool imported = _DiskHashStore.Add(tempFilename, true);
+
+					Console.WriteLine($"Disk Store Import: {imported} {key}");
+				}
+			}
+
+
+			//
+			// Check and place
+			//
+
+			int missing = 0;
+
+			foreach (XElement disk in disks)
+			{
+				string name = disk.Attribute("name")?.Value;
+				string sha1 = disk.Attribute("sha1")?.Value;
+
+				if (disk == null || sha1 == null)
+					continue;
+
+				string filename = Path.Combine(_VersionDirectory, "roms", softwareListName, softwareName, name + ".chd");
+				string directory = Path.GetDirectoryName(filename);
+
+				if (Directory.Exists(directory) == false)
+					Directory.CreateDirectory(directory);
+
+				if (_DiskHashStore.Exists(sha1) == true)
+				{
+					if (File.Exists(filename) == false)
+					{
+						Console.WriteLine($"Place software Disk: {softwareListName}\t{softwareName}\t{name}");
+						romStoreFilenames.Add(new string[] { filename, _DiskHashStore.Filename(sha1) });
+					}
+				}
+				else
+				{
+					Console.WriteLine($"Missing softwsre Disk: {softwareListName}\t{softwareName}\t{name}\t{sha1}");
+					++missing;
+				}
+			}
+
+			return missing;
+		}
+
 		private int GetRomsSoftware(XElement software, List<string[]> romStoreFilenames)
 		{
 			XElement softwareList = software.Parent;
@@ -572,9 +870,6 @@ namespace Spludlow.MameAO
 			string softwareName = software.Attribute("name").Value;
 
 			Console.WriteLine($"SOFTWARE list:{softwareListName} software:{software.Attribute("name").Value} ");
-
-			if (_AvailableDownloadSoftwareLists.ContainsKey(softwareListName) == false)
-				throw new ApplicationException($"Software list not on archive.org {softwareListName}");
 
 			//
 			// Find parent software set
@@ -591,14 +886,22 @@ namespace Spludlow.MameAO
 
 			Console.WriteLine($"Required software: {softwareName} => {requiredSoftwareName}");
 
+			// !!!!!!! Think the parent should only be used for DL not checking missing ?????
+
 			//
-			// Check ROMs in store on SHA1
+			// Find and check has roms
 			//
 			XElement dataarea = requiredSoftware.Element("part")?.Element("dataarea");
 
 			if (dataarea == null)
-				throw new ApplicationException($"Did not find dataarea:{dataarea}");
+				return 0;
 
+			if (_AvailableDownloadSoftwareLists.ContainsKey(softwareListName) == false)
+				throw new ApplicationException($"Software list not on archive.org {softwareListName}");
+
+			//
+			// Check ROMs in store on SHA1
+			//
 			HashSet<string> missingRoms = new HashSet<string>();
 
 			foreach (XElement rom in dataarea.Elements("rom"))
@@ -748,12 +1051,12 @@ namespace Spludlow.MameAO
 
 				Console.Write($"Downloading {name} ROM ZIP size:{Tools.DataSize(expectedSize)} url:{url} ...");
 				DateTime startTime = DateTime.Now;
-				size = Tools.DownloadStream(_HttpClient, url, archiveFilename);
+				size = Tools.Download(url, archiveFilename, _DownloadDotSize, 30);
 				TimeSpan took = DateTime.Now - startTime;
 				Console.WriteLine($"...done");
 
 				if (size != expectedSize)
-					Console.WriteLine($"Unexpected downloaded file size expext:{expectedSize} actual{size}");
+					Console.WriteLine($"Unexpected downloaded file size expect:{expectedSize} actual:{size}");
 
 				decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
 
