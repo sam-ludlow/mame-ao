@@ -14,6 +14,12 @@ Hardest part is finding the machine name (the short name/code) find them here: h
 - wait for the MAME Shell to start
 - enter a machine name and press enter e.g. "mrdo"
 
+## Known issues
+
+CHD machines & software lists don't work properly for non parents, using the parent should be fine.
+
+Will be fixed in next release
+
 ## Symbolic Links - Save disk space
 
 To be able to create symbolic links you have to grant permission.
