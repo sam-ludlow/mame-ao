@@ -16,7 +16,7 @@ Hardest part is finding the machine name (the short name/code) find them here: h
 
 ## Known issues
 
-CHD machines & software lists don't work properly for non parents, using the parent should be fine.
+CHD SL (software lists) may not work properly for non parents, using the parent should be fine.
 
 Will be fixed in next release
 

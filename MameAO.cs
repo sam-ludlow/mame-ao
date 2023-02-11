@@ -15,7 +15,6 @@ using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
 {
-
 	public class MameAOProcessor
 	{
 		private HttpClient _HttpClient;
@@ -635,7 +634,6 @@ namespace Spludlow.MameAO
 
 		private int GetDisksMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			// think don't need to look for parents ?
 			XElement machine = _MachineDoc.Descendants("machine").Where(e => e.Attribute("name").Value == machineName).FirstOrDefault();
 
 			if (machine == null)
@@ -646,6 +644,7 @@ namespace Spludlow.MameAO
 			if (disks.Length == 0)
 				return 0;
 
+			string parentMachineName = machine.Attribute("cloneof")?.Value;
 
 			//
 			// See if Disks are in the hash store
@@ -678,19 +677,31 @@ namespace Spludlow.MameAO
 					string diskName = disk.Attribute("name")?.Value;
 					string sha1 = disk.Attribute("sha1")?.Value;
 
-					string key = $"{machineName}/{diskName}";
+					string merge = disk.Attribute("merge")?.Value;
+
+					string availableMachineName = machineName;
+					string availableDiskName = diskName;
+
+					if (merge != null)
+					{
+						if (parentMachineName == null)
+							throw new ApplicationException($"machine disk merge without parent {machineName}");
+
+						availableMachineName = parentMachineName;
+						availableDiskName = merge;
+					}
+
+					string key = $"{availableMachineName}/{availableDiskName}";
 
 					if (_AvailableDownloadMachineDisks.ContainsKey(key) == false)
 						throw new ApplicationException($"Available Download Machine Disks not found key:{key}");
 
 					long size = _AvailableDownloadMachineDisks[key];
 
-					// check size ????
+					string diskNameEnc = Uri.EscapeUriString(availableDiskName);
+					string diskUrl = $"https://archive.org/download/mame-chds-roms-extras-complete/{availableMachineName}/{diskNameEnc}.chd";
 
-					string diskNameEnc = Uri.EscapeUriString(diskName);
-					string diskUrl = $"https://archive.org/download/mame-chds-roms-extras-complete/{machineName}/{diskNameEnc}.chd";
-
-					string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + diskName);
+					string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + availableDiskName);
 
 					Console.Write($"Downloading {key} Machine Disk. size:{Tools.DataSize(size)} url:{diskUrl} ...");
 					DateTime startTime = DateTime.Now;
