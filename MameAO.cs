@@ -694,7 +694,13 @@ namespace Spludlow.MameAO
 					string key = $"{availableMachineName}/{availableDiskName}";
 
 					if (_AvailableDownloadMachineDisks.ContainsKey(key) == false)
-						throw new ApplicationException($"Available Download Machine Disks not found key:{key}");
+					{
+						availableMachineName = parentMachineName;
+						key = $"{availableMachineName}/{availableDiskName}";
+
+						if (_AvailableDownloadMachineDisks.ContainsKey(key) == false)
+							throw new ApplicationException($"Available Download Machine Disks not found key:{key}");
+					}
 
 					long size = _AvailableDownloadMachineDisks[key];
 
