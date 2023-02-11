@@ -644,7 +644,7 @@ namespace Spludlow.MameAO
 			if (disks.Length == 0)
 				return 0;
 
-			string parentMachineName = machine.Attribute("cloneof")?.Value;
+			string parentMachineName = machine.Attribute("romof")?.Value;
 
 			//
 			// See if Disks are in the hash store
