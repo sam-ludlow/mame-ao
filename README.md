@@ -2,7 +2,7 @@
 
 Run MAME as easily as posibble, just download this and run.
 
-Automatically downloads all MAME binaries (from github) and ROMS (from archive.org) on the fly.
+Automatically downloads all MAME binaries (from github.com) and ROMS (from archive.org) on the fly.
 
 Hardest part is finding the machine name (the short name/code) find them here: http://adb.arcadeitalia.net/lista_mame.php
 
@@ -16,9 +16,8 @@ Hardest part is finding the machine name (the short name/code) find them here: h
 
 ## Known issues
 
-CHD SL (software lists) may not work properly for non parents, using the parent should be fine.
-
-Will be fixed in next release
+- Uses about 1.3 Gb RAM
+- Not all CHD SL (Software list) disks are available in the source https://archive.org/download/mame-software-list-chds-2/
 
 ## Symbolic Links - Save disk space
 

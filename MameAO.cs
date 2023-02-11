@@ -764,13 +764,10 @@ namespace Spludlow.MameAO
 
 		private int GetDiskSoftware(XElement software, List<string[]> romStoreFilenames)
 		{
-			// think don't need to look for parents ?
-
 			XElement softwareList = software.Parent;
 
 			string softwareListName = softwareList.Attribute("name").Value;
 			string softwareName = software.Attribute("name").Value;
-
 
 			XElement diskarea = software.Element("part")?.Element("diskarea");
 
@@ -800,18 +797,22 @@ namespace Spludlow.MameAO
 					missingDisks.Add(disk);
 			}
 
-
 			//
 			// If not then download and import into hash store
 			//
 			if (missingDisks.Count > 0)
 			{
+				string downloadSoftwareName = softwareName;
+				string parentSoftwareName = software.Attribute("cloneof")?.Value;
+				if (parentSoftwareName != null)
+					downloadSoftwareName = parentSoftwareName;
+
 				foreach (XElement disk in missingDisks)
 				{
 					string diskName = disk.Attribute("name")?.Value;
 					string sha1 = disk.Attribute("sha1")?.Value;
 
-					string key = $"{softwareListName}/{softwareName}/{diskName}";
+					string key = $"{softwareListName}/{downloadSoftwareName}/{diskName}";
 
 					if (_AvailableDownloadSoftwareListDisks.ContainsKey(key) == false)
 						throw new ApplicationException($"Software list disk not on archive.org {key}");
@@ -821,7 +822,7 @@ namespace Spludlow.MameAO
 					//check size ????
 
 					string nameEnc = Uri.EscapeUriString(diskName);
-					string url = $"https://archive.org/download/mame-software-list-chds-2/{softwareListName}/{softwareName}/{nameEnc}.chd";
+					string url = $"https://archive.org/download/mame-software-list-chds-2/{softwareListName}/{downloadSoftwareName}/{nameEnc}.chd";
 
 					string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + diskName);
 
