@@ -16,6 +16,37 @@ namespace Spludlow.MameAO
 	{
 		private static SHA1Managed _SHA1Managed = new SHA1Managed();
 
+		public static void ConsoleRule(char ch)
+		{
+			Console.WriteLine(new String(ch, Console.WindowWidth - 1));
+		}
+
+		public static void ConsoleHeading(char ch, string line)
+		{
+			ConsoleHeading(ch, new string[] { line });
+		}
+		public static void ConsoleHeading(char ch, string[] lines)
+		{
+			ConsoleRule(ch);
+
+			foreach (string line in lines)
+			{
+				int pad = Console.WindowWidth - 3 - line.Length;
+				int odd = pad % 2;
+				pad = pad / 2;
+
+				Console.Write(ch);
+				Console.Write(new String(' ', pad));
+				Console.Write(line);
+				Console.Write(new String(' ', pad + odd));
+				Console.Write(ch);
+				Console.WriteLine();
+			}
+
+			ConsoleRule(ch);
+		}
+
+
 		public static string SHA1HexFile(string filename)
 		{
 			using (FileStream stream = File.OpenRead(filename))

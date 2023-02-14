@@ -38,6 +38,16 @@ namespace Spludlow.MameAO
 		Dictionary<string, long> _AvailableDownloadSoftwareLists;
 		Dictionary<string, long> _AvailableDownloadSoftwareListDisks;
 
+		private char _c = '#';
+
+		public enum MameSetType
+		{
+			MachineRom,
+			MachineDisk,
+			SoftwareRow,
+			SoftwareDisk,
+		};
+
 		private MameChdMan _MameChdMan;
 
 		private long _DownloadDotSize = 1024 * 1024;
@@ -52,7 +62,10 @@ namespace Spludlow.MameAO
 		{
 			Version version = Assembly.GetExecutingAssembly().GetName().Version;
 
-			Console.WriteLine($"Welcome to Spludlow MAME Shell V{version.Major}.{version.Minor} https://github.com/sam-ludlow/mame-ao");
+			Tools.ConsoleHeading(_c, new string[] {
+				$"Welcome to Spludlow MAME Shell V{version.Major}.{version.Minor}",
+				"https://github.com/sam-ludlow/mame-ao",
+			});
 			Console.WriteLine("");
 			Console.WriteLine("Give it a moment the first time you run");
 			Console.WriteLine("");
@@ -69,6 +82,13 @@ namespace Spludlow.MameAO
 			Console.WriteLine("");
 			Console.WriteLine("WARNING: Large downloads like CHD will take a while, each dot represents 1 MiB (about a floppy disk) you do the maths.");
 			Console.WriteLine("");
+
+			Tools.ConsoleHeading(_c, "Initializing");
+			Console.WriteLine("");
+
+			//
+			// Root Directory
+			//
 			Console.WriteLine($"Data Directory: {_RootDirectory}");
 			Console.WriteLine("");
 
@@ -234,6 +254,7 @@ namespace Spludlow.MameAO
 
 			_SoftwareDoc = ExtractMameXml("software", "-listsoftware", binFilename, Path.Combine(_VersionDirectory, "_software.xml"));
 
+			Console.WriteLine("");
 		}
 
 		private Dictionary<string, long> AvailableFilesInMetadata(string find, dynamic metadata)
@@ -305,6 +326,7 @@ namespace Spludlow.MameAO
 		}
 		public void Run()
 		{
+			Tools.ConsoleHeading(_c, "Shell ready for commands");
 			Console.WriteLine("");
 
 			string binFilename = Path.Combine(_VersionDirectory, "mame.exe");
@@ -317,7 +339,7 @@ namespace Spludlow.MameAO
 
 				if (line.Length == 0)
 					continue;
-
+	
 				string machine;
 				string software = "";
 				string arguments = "";
@@ -387,7 +409,11 @@ namespace Spludlow.MameAO
 
 		public void RunMame(string binFilename, string arguments)
 		{
-			Console.WriteLine($"Starting MAME: {arguments} {binFilename} ...");
+			Tools.ConsoleHeading(_c, new string[] {
+				"Starting MAME",
+				binFilename,
+				arguments,
+			});
 			Console.WriteLine();
 
 			string directory = Path.GetDirectoryName(binFilename);
@@ -407,13 +433,13 @@ namespace Spludlow.MameAO
 				process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
 				{
 					if (e.Data != null)
-						Console.WriteLine($"MAME:{e.Data}");
+						Console.WriteLine($"MAME output:{e.Data}");
 				});
 
 				process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
 				{
 					if (e.Data != null)
-						Console.WriteLine($"MAME ERROR:{e.Data}");
+						Console.WriteLine($"MAME error:{e.Data}");
 				});
 
 				process.Start();
@@ -422,14 +448,19 @@ namespace Spludlow.MameAO
 
 				Console.WriteLine();
 				if (process.ExitCode == 0)
-					Console.WriteLine("...MAME Exit OK.");
+					Console.WriteLine("MAME Shell Exit OK.");
 				else
-					Console.WriteLine($"...MAME Exit BAD: {process.ExitCode}");
+					Console.WriteLine($"MAME Shell Exit BAD: {process.ExitCode}");
 			}
+
+			Console.WriteLine();
 		}
 
 		public void GetRoms(string machineName, string softwareName)
 		{
+			Tools.ConsoleHeading(_c, "Asset Acquisition");
+			Console.WriteLine();
+
 			//
 			// Machine
 			//
@@ -505,16 +536,16 @@ namespace Spludlow.MameAO
 					File.Copy(romStoreFilename[1], romStoreFilename[0]);
 			}
 
+			Console.WriteLine();
+
 			//
 			// Info
 			//
-			Console.WriteLine();
-
-			if (missingCount == 0)
-				Console.WriteLine("ROMs look good to run MAME.");
-			else
-				Console.WriteLine("Missing ROMs I doubt MAME will run.");
-
+			Tools.ConsoleHeading(_c, new string[] {
+				"Machine Information",
+				"",
+				missingCount == 0 ? "Everything looks good to run MAME" : "!!! Missing ROM & Disk files. I doubt MAME will run !!!",
+			});
 			Console.WriteLine();
 
 			XElement[] features = machine.Elements("feature").ToArray();
@@ -533,8 +564,8 @@ namespace Spludlow.MameAO
 				Console.WriteLine($"Feature issue:  {feature.Attribute("type")?.Value} {feature.Attribute("status")?.Value}");
 			foreach (XElement softwarelist in softwarelists)
 				Console.WriteLine($"Software list:  {softwarelist.Attribute("name")?.Value}");
-			Console.WriteLine();
 
+			Console.WriteLine();
 		}
 
 		private int GetRomsMachine(string machineName, List<string[]> romStoreFilenames)
