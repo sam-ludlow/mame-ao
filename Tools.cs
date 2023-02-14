@@ -46,7 +46,6 @@ namespace Spludlow.MameAO
 			ConsoleRule(ch);
 		}
 
-
 		public static string SHA1HexFile(string filename)
 		{
 			using (FileStream stream = File.OpenRead(filename))

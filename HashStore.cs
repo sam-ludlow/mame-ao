@@ -19,14 +19,14 @@ namespace Spludlow
 
 		public HashStore(string storeDirectory, HashMethod hashMethod)
 		{
-			this._StoreDirectory = storeDirectory;
+			_StoreDirectory = storeDirectory;
 
-			this._HashMethod = hashMethod;
+			_HashMethod = hashMethod;
 
-			if (Directory.Exists(this._StoreDirectory) == false)
-				Directory.CreateDirectory(this._StoreDirectory);
+			if (Directory.Exists(_StoreDirectory) == false)
+				Directory.CreateDirectory(_StoreDirectory);
 
-			this.Refresh();
+			Refresh();
 		}
 
 
@@ -34,32 +34,32 @@ namespace Spludlow
 		{
 			get
 			{
-				lock (this._Lock)
+				lock (_Lock)
 				{
-					return this._HashSet.Count;
+					return _HashSet.Count;
 				}
 			}
 		}
 
 		public void Refresh()
 		{
-			lock (this._Lock)
+			lock (_Lock)
 			{
-				this._HashSet = new HashSet<string>();
+				_HashSet = new HashSet<string>();
 
-				foreach (string filename in Directory.GetFiles(this._StoreDirectory, "*", SearchOption.AllDirectories))
-					this._HashSet.Add(Path.GetFileName(filename));
+				foreach (string filename in Directory.GetFiles(_StoreDirectory, "*", SearchOption.AllDirectories))
+					_HashSet.Add(Path.GetFileName(filename));
 			}
 		}
 
 		public string Hash(string filename)
 		{
-			return this._HashMethod(filename);
+			return _HashMethod(filename);
 		}
 
 		public bool Add(string filename)
 		{
-			return this.Add(filename, false);
+			return Add(filename, false);
 		}
 		public bool Add(string filename, bool move)
 		{
@@ -68,22 +68,22 @@ namespace Spludlow
 		public bool Add(string filename, bool move, string sha1)
 		{
 			if (sha1 == null)
-				sha1 = this._HashMethod(filename);
+				sha1 = _HashMethod(filename);
 
 			bool adding = false;
 
-			lock (this._Lock)
+			lock (_Lock)
 			{
-				if (this._HashSet.Contains(sha1) == false)
+				if (_HashSet.Contains(sha1) == false)
 				{
 					adding = true;
-					this._HashSet.Add(sha1);
+					_HashSet.Add(sha1);
 				}
 			}
 
 			if (adding == true)
 			{
-				string storeFilename = this.StoreFilename(sha1, true);
+				string storeFilename = StoreFilename(sha1, true);
 				if (move == false)
 					File.Copy(filename, storeFilename);
 				else
@@ -97,14 +97,14 @@ namespace Spludlow
 		{
 			bool deleting = false;
 
-			lock (this._Lock)
+			lock (_Lock)
 			{
-				if (this._HashSet.Contains(sha1) == true)
+				if (_HashSet.Contains(sha1) == true)
 				{
 					deleting = true;
-					this._HashSet.Remove(sha1);
+					_HashSet.Remove(sha1);
 
-					string storeFilename = this.StoreFilename(sha1, false);
+					string storeFilename = StoreFilename(sha1, false);
 					File.Delete(storeFilename);
 				}
 			}
@@ -114,42 +114,42 @@ namespace Spludlow
 
 		public bool Exists(string sha1)
 		{
-			lock (this._Lock)
+			lock (_Lock)
 			{
-				return this._HashSet.Contains(sha1);
+				return _HashSet.Contains(sha1);
 			}
 		}
 
 		public string Filename(string sha1)
 		{
-			if (this.Exists(sha1) == false)
+			if (Exists(sha1) == false)
 				return null;
 
-			return this.StoreFilename(sha1, false);
+			return StoreFilename(sha1, false);
 		}
 
 		public string[] Hashes()
 		{
-			lock (this._Lock)
+			lock (_Lock)
 			{
-				return this._HashSet.ToArray();
+				return _HashSet.ToArray();
 			}
 		}
 
 		public string[] FileNames()
 		{
-			string[] hashes = this.Hashes();
+			string[] hashes = Hashes();
 			string[] fileNames = new string[hashes.Length];
 
 			for (int index = 0; index < hashes.Length; ++index)
-				fileNames[index] = this.StoreFilename(hashes[index], false);
+				fileNames[index] = StoreFilename(hashes[index], false);
 
 			return fileNames;
 		}
 
 		private string StoreFilename(string sha1, bool writeMode)
 		{
-			string filename = GetFileName(this._StoreDirectory, sha1);
+			string filename = GetFileName(_StoreDirectory, sha1);
 
 			if (writeMode == true)
 			{

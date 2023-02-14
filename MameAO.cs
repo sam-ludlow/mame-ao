@@ -25,8 +25,8 @@ namespace Spludlow.MameAO
 
 		private bool _LinkingEnabled = false;
 
-		private XElement _MachineDoc;
-		private XElement _SoftwareDoc;
+		private Dictionary<string, XElement> _MachineElements;
+		private Dictionary<string, XElement> _SoftwareListElements;
 
 		private Spludlow.HashStore _RomHashStore;
 		private Spludlow.HashStore _DiskHashStore;
@@ -246,13 +246,22 @@ namespace Spludlow.MameAO
 			// MAME Machine XML
 			//
 
-			_MachineDoc = ExtractMameXml("machine", "-listxml", binFilename, Path.Combine(_VersionDirectory, "_machine.xml"));
+			XElement machineDoc = ExtractMameXml("machine", "-listxml", binFilename, Path.Combine(_VersionDirectory, "_machine.xml"));
+
+			_MachineElements = new Dictionary<string, XElement>();
+
+			foreach (XElement machine in machineDoc.Elements("machine"))
+				_MachineElements.Add(machine.Attribute("name").Value, machine);
 
 			//
 			// MAME Software XML
 			//
 
-			_SoftwareDoc = ExtractMameXml("software", "-listsoftware", binFilename, Path.Combine(_VersionDirectory, "_software.xml"));
+			XElement softwareDoc = ExtractMameXml("software", "-listsoftware", binFilename, Path.Combine(_VersionDirectory, "_software.xml"));
+
+			_SoftwareListElements = new Dictionary<string, XElement>();
+			foreach (XElement softwarelist in softwareDoc.Elements("softwarelist"))
+				_SoftwareListElements.Add(softwarelist.Attribute("name").Value, softwarelist);
 
 			Console.WriteLine("");
 		}
@@ -389,6 +398,7 @@ namespace Spludlow.MameAO
 				catch (ApplicationException ee)
 				{
 					Console.WriteLine("SHELL ERROR: " + ee.Message);
+					Console.WriteLine();
 				}
 				catch (Exception ee)
 				{
@@ -456,6 +466,20 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 		}
 
+		public XElement GetMachine(string name)
+		{
+			if (_MachineElements.ContainsKey(name) == false)
+				return null;
+			return _MachineElements[name];
+		}
+
+		public XElement GetSoftwareList(string name)
+		{
+			if (_SoftwareListElements.ContainsKey(name) == false)
+				return null;
+			return _SoftwareListElements[name];
+		}
+
 		public void GetRoms(string machineName, string softwareName)
 		{
 			Tools.ConsoleHeading(_c, "Asset Acquisition");
@@ -464,11 +488,9 @@ namespace Spludlow.MameAO
 			//
 			// Machine
 			//
-			XElement machine = _MachineDoc.Descendants("machine")
-					  .Where(e => e.Attribute("name").Value == machineName).FirstOrDefault();
-
+			XElement machine = GetMachine(machineName);
 			if (machine == null)
-				throw new ApplicationException("machine not found");
+				throw new ApplicationException($"Machine not found: {machineName}");
 
 			XElement[] softwarelists = machine.Elements("softwarelist").ToArray();
 
@@ -497,9 +519,8 @@ namespace Spludlow.MameAO
 				{
 					string softwarelistName = machineSoftwarelist.Attribute("name").Value;
 
-					XElement softwarelist = _SoftwareDoc.Descendants("softwarelist")
-						.Where(e => e.Attribute("name").Value == softwarelistName).FirstOrDefault();
-
+					XElement softwarelist = GetSoftwareList(softwarelistName);
+						
 					if (softwarelist == null)
 						throw new ApplicationException($"Software list on machine but not in SL {softwarelistName}");
 
@@ -520,7 +541,11 @@ namespace Spludlow.MameAO
 					throw new ApplicationException($"Did not find software: {machineName}, {softwareName}");
 
 				if (softwareFound > 1)
-					Console.WriteLine("! Warning more than one software found, not sure which MAME will use. This can happern if the same name apears in different lists e.g. disk & cassette.");
+				{
+					Console.WriteLine();
+					Console.WriteLine("!!! Warning more than one software found, not sure which MAME will use. This can happern if the same name apears in different lists e.g. disk & cassette.");
+					Console.WriteLine();
+				}
 			}
 
 			//
@@ -575,14 +600,15 @@ namespace Spludlow.MameAO
 			//
 			HashSet<string> requiredMachines = new HashSet<string>();
 
-			FindAllMachines(machineName, _MachineDoc, requiredMachines);
+			FindAllMachines(machineName, requiredMachines);
 
 			Console.WriteLine($"Required machines (parent/bios/device): {String.Join(", ", requiredMachines.ToArray())}");
 
 			foreach (string requiredMachineName in requiredMachines)
 			{
-				XElement requiredMachine = _MachineDoc.Descendants("machine")
-					.Where(e => e.Attribute("name").Value == requiredMachineName).FirstOrDefault();
+				XElement requiredMachine = GetMachine(requiredMachineName);
+				if (requiredMachine == null)
+					throw new ApplicationException("requiredMachine not found: " + requiredMachineName);
 
 				//
 				// See if ROMS are in the hash store
@@ -628,8 +654,9 @@ namespace Spludlow.MameAO
 
 			foreach (string requiredMachineName in requiredMachines)
 			{
-				XElement requiredMachine = _MachineDoc.Descendants("machine")
-					.Where(e => e.Attribute("name").Value == requiredMachineName).FirstOrDefault();
+				XElement requiredMachine = GetMachine(requiredMachineName);
+				if (requiredMachine == null)
+					throw new ApplicationException("requiredMachine not found: " + requiredMachineName);
 
 				foreach (XElement rom in requiredMachine.Descendants("rom"))
 				{
@@ -665,8 +692,7 @@ namespace Spludlow.MameAO
 
 		private int GetDisksMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			XElement machine = _MachineDoc.Descendants("machine").Where(e => e.Attribute("name").Value == machineName).FirstOrDefault();
-
+			XElement machine = GetMachine(machineName);
 			if (machine == null)
 				throw new ApplicationException("GetDisksMachine machine not found: " + machineName);
 
@@ -1127,13 +1153,12 @@ namespace Spludlow.MameAO
 			return size;
 		}
 
-		public static void FindAllMachines(string machineName, XElement machineDoc, HashSet<string> requiredMachines)
+		public void FindAllMachines(string machineName, HashSet<string> requiredMachines)
 		{
 			if (requiredMachines.Contains(machineName) == true)
 				return;
 
-			XElement machine = machineDoc.Descendants("machine").Where(e => e.Attribute("name").Value == machineName).FirstOrDefault();
-
+			XElement machine = GetMachine(machineName);
 			if (machine == null)
 				throw new ApplicationException("FindAllMachines machine not found: " + machineName);
 
@@ -1145,10 +1170,10 @@ namespace Spludlow.MameAO
 			string romof = machine.Attribute("romof")?.Value;
 
 			if (romof != null)
-				FindAllMachines(romof, machineDoc, requiredMachines);
+				FindAllMachines(romof, requiredMachines);
 
 			foreach (XElement device_ref in machine.Descendants("device_ref"))
-				FindAllMachines(device_ref.Attribute("name").Value, machineDoc, requiredMachines);
+				FindAllMachines(device_ref.Attribute("name").Value, requiredMachines);
 		}
 
 		public void RunSelfExtract(string filename)
