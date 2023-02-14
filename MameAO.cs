@@ -38,7 +38,8 @@ namespace Spludlow.MameAO
 		Dictionary<string, long> _AvailableDownloadSoftwareLists;
 		Dictionary<string, long> _AvailableDownloadSoftwareListDisks;
 
-		private char _c = '#';
+		private char _h1 = '#';
+		private char _h2 = '.';
 
 		public enum MameSetType
 		{
@@ -62,7 +63,7 @@ namespace Spludlow.MameAO
 		{
 			Version version = Assembly.GetExecutingAssembly().GetName().Version;
 
-			Tools.ConsoleHeading(_c, new string[] {
+			Tools.ConsoleHeading(_h1, new string[] {
 				$"Welcome to Spludlow MAME Shell V{version.Major}.{version.Minor}",
 				"https://github.com/sam-ludlow/mame-ao",
 			});
@@ -83,7 +84,7 @@ namespace Spludlow.MameAO
 			Console.WriteLine("WARNING: Large downloads like CHD will take a while, each dot represents 1 MiB (about a floppy disk) you do the maths.");
 			Console.WriteLine("");
 
-			Tools.ConsoleHeading(_c, "Initializing");
+			Tools.ConsoleHeading(_h1, "Initializing");
 			Console.WriteLine("");
 
 			//
@@ -335,7 +336,7 @@ namespace Spludlow.MameAO
 		}
 		public void Run()
 		{
-			Tools.ConsoleHeading(_c, "Shell ready for commands");
+			Tools.ConsoleHeading(_h1, "Shell ready for commands");
 			Console.WriteLine("");
 
 			string binFilename = Path.Combine(_VersionDirectory, "mame.exe");
@@ -419,7 +420,7 @@ namespace Spludlow.MameAO
 
 		public void RunMame(string binFilename, string arguments)
 		{
-			Tools.ConsoleHeading(_c, new string[] {
+			Tools.ConsoleHeading(_h1, new string[] {
 				"Starting MAME",
 				binFilename,
 				arguments,
@@ -482,7 +483,7 @@ namespace Spludlow.MameAO
 
 		public void GetRoms(string machineName, string softwareName)
 		{
-			Tools.ConsoleHeading(_c, "Asset Acquisition");
+			Tools.ConsoleHeading(_h1, "Asset Acquisition");
 			Console.WriteLine();
 
 			//
@@ -566,7 +567,7 @@ namespace Spludlow.MameAO
 			//
 			// Info
 			//
-			Tools.ConsoleHeading(_c, new string[] {
+			Tools.ConsoleHeading(_h1, new string[] {
 				"Machine Information",
 				"",
 				missingCount == 0 ? "Everything looks good to run MAME" : "!!! Missing ROM & Disk files. I doubt MAME will run !!!",
@@ -602,7 +603,14 @@ namespace Spludlow.MameAO
 
 			FindAllMachines(machineName, requiredMachines);
 
-			Console.WriteLine($"Required machines (parent/bios/device): {String.Join(", ", requiredMachines.ToArray())}");
+			if (requiredMachines.Count == 0)
+				return 0;
+
+			Tools.ConsoleHeading(_h2, new string[] {
+				"Machine ROM",
+				$"{machineName}",
+				$"required machines: {String.Join(", ", requiredMachines.ToArray())}",
+			});
 
 			foreach (string requiredMachineName in requiredMachines)
 			{
@@ -701,7 +709,10 @@ namespace Spludlow.MameAO
 			if (disks.Length == 0)
 				return 0;
 
-			string parentMachineName = machine.Attribute("romof")?.Value;
+			Tools.ConsoleHeading(_h2, new string[] {
+				"Machine Disk",
+				$"{machineName}",
+			});
 
 			//
 			// See if Disks are in the hash store
@@ -729,6 +740,8 @@ namespace Spludlow.MameAO
 			//
 			if (missingDisks.Count > 0)
 			{
+				string parentMachineName = machine.Attribute("romof")?.Value;
+
 				foreach (XElement disk in missingDisks)
 				{
 					string diskName = disk.Attribute("name")?.Value;
@@ -826,12 +839,16 @@ namespace Spludlow.MameAO
 			string softwareListName = softwareList.Attribute("name").Value;
 			string softwareName = software.Attribute("name").Value;
 
-			XElement diskarea = software.Element("part")?.Element("diskarea");
+			IEnumerable<XElement> disks = software.Descendants("disk");
+			int diskCount = disks.Count();
 
-			if (diskarea == null)
+			if (diskCount == 0)
 				return 0;
 
-			XElement[] disks = diskarea.Elements("disk").ToArray();
+			Tools.ConsoleHeading(_h2, new string[] {
+				"Software Disk",
+				$"{softwareListName} / {softwareName}",
+			});
 
 			//
 			// See if Disks are in the hash store
@@ -876,8 +893,6 @@ namespace Spludlow.MameAO
 
 					long size = _AvailableDownloadSoftwareListDisks[key];
 
-					//check size ????
-
 					string nameEnc = Uri.EscapeUriString(diskName);
 					string url = $"https://archive.org/download/mame-software-list-chds-2/{softwareListName}/{downloadSoftwareName}/{nameEnc}.chd";
 
@@ -897,7 +912,6 @@ namespace Spludlow.MameAO
 					Console.WriteLine($"Disk Store Import: {imported} {key}");
 				}
 			}
-
 
 			//
 			// Check and place
@@ -944,32 +958,16 @@ namespace Spludlow.MameAO
 			string softwareListName = softwareList.Attribute("name").Value;
 			string softwareName = software.Attribute("name").Value;
 
-			Console.WriteLine($"SOFTWARE list:{softwareListName} software:{software.Attribute("name").Value} ");
+			IEnumerable<XElement> roms = software.Descendants("rom");
+			int romCount = roms.Count();
 
-			//
-			// Find parent software set
-			//
-			XElement requiredSoftware = software;
-			string cloneof = null;
-			while ((cloneof = requiredSoftware.Attribute("cloneof")?.Value) != null)
-			{
-				requiredSoftware = softwareList.Descendants("software").Where(e => e.Attribute("name").Value == cloneof).FirstOrDefault();
-				if (requiredSoftware == null)
-					throw new ApplicationException($"Did not find software cloneof parent: {cloneof}");
-			}
-			string requiredSoftwareName = requiredSoftware.Attribute("name").Value;
-
-			Console.WriteLine($"Required software: {softwareName} => {requiredSoftwareName}");
-
-			// !!!!!!! Think the parent should only be used for DL not checking missing ?????
-
-			//
-			// Find and check has roms
-			//
-			XElement dataarea = requiredSoftware.Element("part")?.Element("dataarea");
-
-			if (dataarea == null)
+			if (romCount == 0)
 				return 0;
+
+			Tools.ConsoleHeading(_h2, new string[] {
+				"Software ROM",
+				$"{softwareListName} / {softwareName}",
+			});
 
 			if (_AvailableDownloadSoftwareLists.ContainsKey(softwareListName) == false)
 				throw new ApplicationException($"Software list not on archive.org {softwareListName}");
@@ -979,7 +977,7 @@ namespace Spludlow.MameAO
 			//
 			HashSet<string> missingRoms = new HashSet<string>();
 
-			foreach (XElement rom in dataarea.Elements("rom"))
+			foreach (XElement rom in roms)
 			{
 				string romName = rom.Attribute("name")?.Value;
 				string sha1 = rom.Attribute("sha1")?.Value;
@@ -989,7 +987,7 @@ namespace Spludlow.MameAO
 
 				bool inStore = _RomHashStore.Exists(sha1);
 
-				Console.WriteLine($"Checking Software ROM: {inStore}\t{softwareListName}\t{requiredSoftwareName}\t{romName}\t{sha1}");
+				Console.WriteLine($"Checking Software ROM: {inStore}\t{softwareListName}\t{softwareName}\t{romName}\t{sha1}");
 
 				if (inStore == false)
 					missingRoms.Add(sha1);
@@ -1000,6 +998,11 @@ namespace Spludlow.MameAO
 			//
 			if (missingRoms.Count > 0)
 			{
+				string requiredSoftwareName = softwareName;
+				string parentSoftwareName = software.Attribute("cloneof")?.Value;
+				if (parentSoftwareName != null)
+					requiredSoftwareName = parentSoftwareName;
+
 				string listEnc = Uri.EscapeUriString(softwareListName);
 				string softEnc = Uri.EscapeUriString(requiredSoftwareName);
 				string slashEnc = HttpUtility.UrlEncode("/");
@@ -1021,7 +1024,7 @@ namespace Spludlow.MameAO
 			//
 
 			int missingCount = 0;
-			foreach (XElement rom in software.Descendants("rom"))
+			foreach (XElement rom in roms)
 			{
 				string romName = rom.Attribute("name")?.Value;
 				string sha1 = rom.Attribute("sha1")?.Value;
