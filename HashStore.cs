@@ -8,12 +8,12 @@ namespace Spludlow
 {
 	public class HashStore
 	{
-		private string _StoreDirectory;
+		private readonly string _StoreDirectory;
 		private HashSet<string> _HashSet;
 
-		private HashMethod _HashMethod;
+		private readonly HashMethod _HashMethod;
 
-		private object _Lock = new object();
+		private readonly object _Lock = new object();
 
 		public delegate string HashMethod(string filename);
 

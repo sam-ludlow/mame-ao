@@ -14,7 +14,18 @@ namespace Spludlow.MameAO
 {
 	public class Tools
 	{
-		private static SHA1Managed _SHA1Managed = new SHA1Managed();
+		private static readonly string[] _SystemOfUnits =
+		{
+			"Bytes (B)",
+			"Kilobytes (KiB)",
+			"Megabytes (MiB)",
+			"Gigabytes (GiB)",
+			"Terabytes (TiB)",
+			"Petabytes (PiB)",
+			"Exabytes (EiB)"
+		};
+
+		private static readonly SHA1Managed _SHA1Managed = new SHA1Managed();
 
 		public static void ConsoleRule(char ch)
 		{
@@ -33,7 +44,7 @@ namespace Spludlow.MameAO
 			{
 				int pad = Console.WindowWidth - 3 - line.Length;
 				int odd = pad % 2;
-				pad = pad / 2;
+				pad /= 2;
 
 				Console.Write(ch);
 				Console.Write(new String(' ', pad));
@@ -168,10 +179,12 @@ namespace Spludlow.MameAO
 
 				string input = "chcp 65001" + Environment.NewLine + batchFilename + Environment.NewLine;
 
-				ProcessStartInfo startInfo = new ProcessStartInfo("cmd.exe");
-				startInfo.UseShellExecute = false;
-				startInfo.CreateNoWindow = true;
-				startInfo.RedirectStandardInput = true;
+				ProcessStartInfo startInfo = new ProcessStartInfo("cmd.exe")
+				{
+					UseShellExecute = false,
+					CreateNoWindow = true,
+					RedirectStandardInput = true,
+				};
 
 				using (Process process = new Process())
 				{
@@ -186,17 +199,6 @@ namespace Spludlow.MameAO
 				}
 			}
 		}
-
-		private static string[] _SystemOfUnits =
-		{
-			"Bytes (B)",
-			"Kilobytes (KiB)",
-			"Megabytes (MiB)",
-			"Gigabytes (GiB)",
-			"Terabytes (TiB)",
-			"Petabytes (PiB)",
-			"Exabytes (EiB)"
-		};
 
 		public static string DataSize(long sizeBytes)
 		{
@@ -226,8 +228,8 @@ namespace Spludlow.MameAO
 
 	public class TempDirectory : IDisposable
 	{
-		private string _LockFilePath;
-		private string _Path;
+		private readonly string _LockFilePath;
+		private readonly string _Path;
 
 		public TempDirectory()
 		{

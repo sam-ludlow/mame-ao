@@ -8,7 +8,7 @@ namespace Spludlow.MameAO
 {
 	public class MameChdMan
 	{
-		private string _ChdManPath;
+		private readonly string _ChdManPath;
 
 		public MameChdMan(string mameBinPath)
 		{
@@ -82,7 +82,7 @@ namespace Spludlow.MameAO
 						{
 							++count;
 						}
-						key = key + count;
+						key += count;
 					}
 
 					result.Add(key, value);
@@ -97,13 +97,14 @@ namespace Spludlow.MameAO
 			StringBuilder output = new StringBuilder();
 			StringBuilder errorOutput = new StringBuilder();
 
-			ProcessStartInfo startInfo = new ProcessStartInfo(_ChdManPath);
-
-			startInfo.Arguments = arguments;
-			startInfo.UseShellExecute = false;
-			startInfo.RedirectStandardOutput = true;
-			startInfo.RedirectStandardError = true;
-			startInfo.StandardOutputEncoding = Encoding.UTF8;
+			ProcessStartInfo startInfo = new ProcessStartInfo(_ChdManPath)
+			{
+				Arguments = arguments,
+				UseShellExecute = false,
+				RedirectStandardOutput = true,
+				RedirectStandardError = true,
+				StandardOutputEncoding = Encoding.UTF8,
+			};
 
 			using (Process process = new Process())
 			{

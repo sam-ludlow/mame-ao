@@ -9,7 +9,6 @@ using System.IO.Compression;
 using System.Diagnostics;
 using System.Xml.Linq;
 using System.Reflection;
-using System.Web;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -19,9 +18,9 @@ namespace Spludlow.MameAO
 {
 	public class MameAOProcessor
 	{
-		private HttpClient _HttpClient;
+		private readonly HttpClient _HttpClient;
 
-		private string _RootDirectory;
+		private readonly string _RootDirectory;
 		private string _VersionDirectory;
 		private string _Version;
 
@@ -35,13 +34,14 @@ namespace Spludlow.MameAO
 
 		private string _DownloadTempDirectory;
 
-		Dictionary<string, long> _AvailableDownloadMachines;
-		Dictionary<string, long> _AvailableDownloadMachineDisks;
-		Dictionary<string, long> _AvailableDownloadSoftwareLists;
-		Dictionary<string, long> _AvailableDownloadSoftwareListDisks;
+		private MameChdMan _MameChdMan;
 
-		private char _h1 = '#';
-		private char _h2 = '.';
+		private readonly long _DownloadDotSize = 1024 * 1024;
+
+		private readonly string _ListenAddress = "http://127.0.0.1:12380/";
+
+		private readonly char _h1 = '#';
+		private readonly char _h2 = '.';
 
 		public enum MameSetType
 		{
@@ -54,39 +54,42 @@ namespace Spludlow.MameAO
 		public class MameSourceSet
 		{
 			public MameSetType SetType;
-			public string Metadata;
-			public string Download;
-			public string HtmlSizes;
+			public string MetadataUrl;
+			public string DownloadUrl;
+			public string HtmlSizesUrl;
+			public Dictionary<string, long> AvailableDownloadSizes;
 		}
 
-		private MameSourceSet[] _MameSourceSets = new MameSourceSet[] {
+		private readonly string _BinariesDownloadUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
+
+		private readonly MameSourceSet[] _MameSourceSets = new MameSourceSet[] {
 			new MameSourceSet
 			{
 				SetType = MameSetType.MachineRom,
-				Metadata = "https://archive.org/metadata/mame-merged",
-				Download = "https://archive.org/download/mame-merged/mame-merged/@MACHINE@.zip",
-				HtmlSizes = null,
+				MetadataUrl = "https://archive.org/metadata/mame-merged",
+				DownloadUrl = "https://archive.org/download/mame-merged/mame-merged/@MACHINE@.zip",
+				HtmlSizesUrl = null,
 			},
 			new MameSourceSet
 			{
 				SetType = MameSetType.MachineDisk,
-				Metadata = "https://archive.org/metadata/mame-chds-roms-extras-complete",
-				Download = "https://archive.org/download/mame-chds-roms-extras-complete/@MACHINE@/@DISK@.chd",
-				HtmlSizes = null,
+				MetadataUrl = "https://archive.org/metadata/mame-chds-roms-extras-complete",
+				DownloadUrl = "https://archive.org/download/mame-chds-roms-extras-complete/@MACHINE@/@DISK@.chd",
+				HtmlSizesUrl = null,
 			},
 			new MameSourceSet
 			{
 				SetType = MameSetType.SoftwareRom,
-				Metadata = "https://archive.org/metadata/mame-sl",
-				Download = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/@LIST@%2f@SOFTWARE@.zip",
-				HtmlSizes = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/",
+				MetadataUrl = "https://archive.org/metadata/mame-sl",
+				DownloadUrl = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/@LIST@%2f@SOFTWARE@.zip",
+				HtmlSizesUrl = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/",
 			},
 			new MameSourceSet
 			{
 				SetType = MameSetType.SoftwareDisk,
-				Metadata = "https://archive.org/metadata/mame-software-list-chds-2",
-				Download = "https://archive.org/download/mame-software-list-chds-2/@LIST@/@SOFTWARE@/@DISK@.chd",
-				HtmlSizes = null,
+				MetadataUrl = "https://archive.org/metadata/mame-software-list-chds-2",
+				DownloadUrl = "https://archive.org/download/mame-software-list-chds-2/@LIST@/@SOFTWARE@/@DISK@.chd",
+				HtmlSizesUrl = null,
 			},
 		};
 
@@ -98,16 +101,10 @@ namespace Spludlow.MameAO
 				select sourceSet).ToArray();
 
 			if (results.Length == 0)
-				throw new ApplicationException($"Did not find any source sets: {type.ToString()}");
+				throw new ApplicationException($"Did not find any source sets: {type}");
 
 			return results;
 		}
-
-		private MameChdMan _MameChdMan;
-
-		private long _DownloadDotSize = 1024 * 1024;
-
-		private string _ListenAddress = "http://127.0.0.1:12380/";
 
 		public MameAOProcessor(string rootDirectory)
 		{
@@ -117,10 +114,10 @@ namespace Spludlow.MameAO
 
 		public void Start()
 		{
-			Version version = Assembly.GetExecutingAssembly().GetName().Version;
+			Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
 
 			Tools.ConsoleHeading(_h1, new string[] {
-				$"Welcome to Spludlow MAME Shell V{version.Major}.{version.Minor}",
+				$"Welcome to Spludlow MAME Shell V{assemblyVersion.Major}.{assemblyVersion.Minor}",
 				"https://github.com/sam-ludlow/mame-ao",
 			});
 			Console.WriteLine("");
@@ -175,79 +172,87 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 
 			//
-			// Archive.org machine meta data
+			// Prepare sources
 			//
 
-			dynamic machineMetadata = GetArchiveOrgMeteData("machine", "https://archive.org/metadata/mame-merged", Path.Combine(_RootDirectory, "_machine_metadata.json"));
-			
-			_AvailableDownloadMachines = AvailableFilesInMetadata("mame-merged/", machineMetadata);
-
-			string title = machineMetadata.metadata.title;
-			_Version = title.Substring(5, 5).Trim();
-			_Version = _Version.Replace(".", "");
-
-			Console.WriteLine($"Version:\t{_Version}");
-
-			_VersionDirectory = Path.Combine(_RootDirectory, _Version);
-
-			if (Directory.Exists(_VersionDirectory) == false)
+			foreach (MameSetType setType in Enum.GetValues(typeof(MameSetType)))
 			{
-				Console.WriteLine($"New MAME version: {_Version}");
-				Directory.CreateDirectory(_VersionDirectory);
+				Tools.ConsoleHeading(_h2, $"Prepare source: {setType}");
+
+				MameSourceSet sourceSet = GetSourceSets(setType)[0];
+
+				string setTypeName = setType.ToString();
+				string metadataFilename = Path.Combine(_RootDirectory, $"_metadata_{setTypeName}.json");
+
+				dynamic metadata = GetArchiveOrgMeteData(setTypeName, sourceSet.MetadataUrl, metadataFilename);
+
+				string title = metadata.metadata.title;
+				string version = "";
+
+				switch (setType)
+				{
+					case MameSetType.MachineRom:
+						version = title.Substring(5, 5);
+
+						sourceSet.AvailableDownloadSizes = AvailableFilesInMetadata("mame-merged/", metadata);
+						break;
+
+					case MameSetType.MachineDisk:
+						version = title.Substring(5, 5);
+
+						sourceSet.AvailableDownloadSizes = AvailableDiskFilesInMetadata(metadata);
+						break;
+
+					case MameSetType.SoftwareRom:
+						version = title.Substring(8, 5);
+
+						sourceSet.AvailableDownloadSizes = AvailableFilesInMetadata("mame-sl/", metadata);
+						break;
+
+					case MameSetType.SoftwareDisk:
+						version = title;
+
+						sourceSet.AvailableDownloadSizes = AvailableDiskFilesInMetadata(metadata);
+						break;
+				}
+
+				version = version.Replace(".", "").Trim();
+
+				Console.WriteLine($"Title:\t{title}");
+				Console.WriteLine($"Version:\t{version}");
+
+				if (setType == MameSetType.MachineRom)
+				{
+					_Version = version;
+
+					_VersionDirectory = Path.Combine(_RootDirectory, _Version);
+
+					if (Directory.Exists(_VersionDirectory) == false)
+					{
+						Console.WriteLine($"New MAME version: {_Version}");
+						Directory.CreateDirectory(_VersionDirectory);
+					}
+				}
+				else
+				{
+					if (setType != MameSetType.SoftwareDisk)	//	Source not kept up to date, like others (pot luck)
+					{
+						if (_Version != version)
+							Console.WriteLine($"!!! {setType} on archive.org version mismatch, expected:{_Version} got:{version}. You may have problems.");
+					}
+				}
 			}
-
-			//
-			// Archive.org machine CHD meta data
-			//
-
-			dynamic machineDiskMetadata = GetArchiveOrgMeteData("machine disk", "https://archive.org/metadata/mame-chds-roms-extras-complete", Path.Combine(_RootDirectory, "_machine_disk_metadata.json"));
-
-			_AvailableDownloadMachineDisks = AvailableDiskFilesInMetadata(machineDiskMetadata);
-
-			title = machineDiskMetadata.metadata.title;
-			string machineDiskVersion = title.Substring(5, 5).Trim();
-			machineDiskVersion = machineDiskVersion.Replace(".", "");
-
-			Console.WriteLine($"Machine Disk Version:\t{machineDiskVersion}");
-
-			if (_Version != machineDiskVersion)
-				Console.WriteLine("!!! Machine disks (CHD) on archive.org version mismatch, you may have problems.");
-
-
-			//
-			// Archive.org software meta data
-			//
-
-			dynamic softwareMetadata = GetArchiveOrgMeteData("software", "https://archive.org/metadata/mame-sl", Path.Combine(_RootDirectory, "_software_metadata.json"));
-
-			_AvailableDownloadSoftwareLists = AvailableFilesInMetadata("mame-sl/", softwareMetadata);
-
-			title = softwareMetadata.metadata.title;
-			string softwareVersion = title.Substring(8, 5).Trim();
-			softwareVersion = softwareVersion.Replace(".", "");
-
-			Console.WriteLine($"Software Version:\t{softwareVersion}");
-
-			if (_Version != softwareVersion)
-				Console.WriteLine("!!! Software lists on archive.org version mismatch, you may have problems.");
-
-			//
-			// Archive.org software CHD meta data
-			//
-
-			dynamic softwareDiskMetadata = GetArchiveOrgMeteData("software disk", "https://archive.org/metadata/mame-software-list-chds-2", Path.Combine(_RootDirectory, "_software_disk_metadata.json"));
-
-			_AvailableDownloadSoftwareListDisks = AvailableDiskFilesInMetadata(softwareDiskMetadata);
-
-			// Not bothering with version for SL disks at the moment !!!
-
 
 			//
 			// MAME Binaries
 			//
 
-			string binUrl = "https://github.com/mamedev/mame/releases/download/mame@/mame@b_64bit.exe";
-			binUrl = binUrl.Replace("@", _Version);
+			string binUrl = _BinariesDownloadUrl.Replace("@VERSION@", _Version);
+
+			Tools.ConsoleHeading(_h2, new string[] {
+				"MAME",
+				binUrl,
+			});
 
 			string binCacheFilename = Path.Combine(_VersionDirectory, "_" + Path.GetFileName(binUrl));
 
@@ -405,13 +410,15 @@ namespace Spludlow.MameAO
 			listener.Prefixes.Add(_ListenAddress);
 
 			listener.Start();
-			
+
+			Task runTask = null;
+
 			Task listenTask = new Task(() => {
 
-				HttpListenerContext context;
-
-				while ((context = listener.GetContext()) != null)
+				while (true)
 				{
+					HttpListenerContext context = listener.GetContext();
+
 					string machine = context.Request.QueryString["machine"];
 					string software = context.Request.QueryString["software"];
 					string arguments = context.Request.QueryString["arguments"];
@@ -420,6 +427,11 @@ namespace Spludlow.MameAO
 
 					if (machine == null || context.Request.Url.AbsoluteUri.StartsWith(_ListenAddress + "?") == false)
 						responseText = "BAD";
+
+					if (runTask != null && runTask.Status != TaskStatus.RanToCompletion)
+						responseText = "BUSY";
+
+					context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
 
 					byte[] responseBuffer = Encoding.UTF8.GetBytes(responseText);
 					using (Stream responseStream = context.Response.OutputStream)
@@ -439,7 +451,10 @@ namespace Spludlow.MameAO
 						});
 						Console.WriteLine();
 
-						RunStart($"{machine} {software} {arguments}");
+						runTask = new Task(() => {
+							RunStart($"{machine} {software} {arguments}");
+						});
+						runTask.Start();
 					}
 				}
 			});
@@ -557,13 +572,14 @@ namespace Spludlow.MameAO
 
 			string directory = Path.GetDirectoryName(binFilename);
 
-			ProcessStartInfo startInfo = new ProcessStartInfo(binFilename);
-			startInfo.WorkingDirectory = directory;
-			startInfo.Arguments = arguments;
-
-			startInfo.UseShellExecute = false;
-			startInfo.RedirectStandardOutput = true;
-			startInfo.StandardOutputEncoding = Encoding.UTF8;
+			ProcessStartInfo startInfo = new ProcessStartInfo(binFilename)
+			{
+				WorkingDirectory = directory,
+				Arguments = arguments,
+				UseShellExecute = false,
+				RedirectStandardOutput = true,
+				StandardOutputEncoding = Encoding.UTF8,
+			};
 
 			using (Process process = new Process())
 			{
@@ -724,6 +740,8 @@ namespace Spludlow.MameAO
 
 		private int GetRomsMachine(string machineName, List<string[]> romStoreFilenames)
 		{
+			MameSourceSet soureSet = GetSourceSets(MameSetType.MachineRom)[0];
+
 			//
 			// Related/Required machines (parent/bios/devices)
 			//
@@ -772,11 +790,12 @@ namespace Spludlow.MameAO
 				//
 				if (missingRoms.Count > 0)
 				{
-					if (_AvailableDownloadMachines.ContainsKey(requiredMachineName) == true)
+					if (soureSet.AvailableDownloadSizes.ContainsKey(requiredMachineName) == true)
 					{
-						string downloadMachineUrl = $"https://archive.org/download/mame-merged/mame-merged/{requiredMachineName}.zip";
+						string downloadMachineUrl = soureSet.DownloadUrl;
+						downloadMachineUrl = downloadMachineUrl.Replace("@MACHINE@", requiredMachineName);
 
-						long size = _AvailableDownloadMachines[requiredMachineName];
+						long size = soureSet.AvailableDownloadSizes[requiredMachineName];
 
 						ImportRoms(downloadMachineUrl, $"machine:{requiredMachineName}", size);
 					}
@@ -828,6 +847,8 @@ namespace Spludlow.MameAO
 
 		private int GetDisksMachine(string machineName, List<string[]> romStoreFilenames)
 		{
+			MameSourceSet soureSet = GetSourceSets(MameSetType.MachineDisk)[0];
+
 			XElement machine = GetMachine(machineName);
 			if (machine == null)
 				throw new ApplicationException("GetDisksMachine machine not found: " + machineName);
@@ -882,35 +903,33 @@ namespace Spludlow.MameAO
 
 					if (merge != null)
 					{
-						if (parentMachineName == null)
-							throw new ApplicationException($"machine disk merge without parent {machineName}");
-
-						availableMachineName = parentMachineName;
+						availableMachineName = parentMachineName ?? throw new ApplicationException($"machine disk merge without parent {machineName}");
 						availableDiskName = merge;
 					}
 
 					string key = $"{availableMachineName}/{availableDiskName}";
 
-					if (_AvailableDownloadMachineDisks.ContainsKey(key) == false)
+					if (soureSet.AvailableDownloadSizes.ContainsKey(key) == false)
 					{
 						availableMachineName = parentMachineName;
 						key = $"{availableMachineName}/{availableDiskName}";
 
-						if (_AvailableDownloadMachineDisks.ContainsKey(key) == false)
+						if (soureSet.AvailableDownloadSizes.ContainsKey(key) == false)
 							throw new ApplicationException($"Available Download Machine Disks not found key:{key}");
 					}
 
-					long size = _AvailableDownloadMachineDisks[key];
+					long size = soureSet.AvailableDownloadSizes[key];
 
 					string diskNameEnc = Uri.EscapeUriString(availableDiskName);
-					string diskUrl = $"https://archive.org/download/mame-chds-roms-extras-complete/{availableMachineName}/{diskNameEnc}.chd";
+
+					string diskUrl = soureSet.DownloadUrl;
+					diskUrl = diskUrl.Replace("@MACHINE@", availableMachineName);
+					diskUrl = diskUrl.Replace("@DISK@", diskNameEnc);
 
 					string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + availableDiskName);
 
 					Console.Write($"Downloading {key} Machine Disk. size:{Tools.DataSize(size)} url:{diskUrl} ...");
-					DateTime startTime = DateTime.Now;
 					long downloadSize = Tools.Download(diskUrl, tempFilename, _DownloadDotSize, 3 * 60);
-					TimeSpan took = DateTime.Now - startTime;
 					Console.WriteLine($"...done");
 
 					if (size != downloadSize)
@@ -962,6 +981,8 @@ namespace Spludlow.MameAO
 
 		private int GetDiskSoftware(XElement software, List<string[]> romStoreFilenames)
 		{
+			MameSourceSet soureSet = GetSourceSets(MameSetType.SoftwareDisk)[0];
+
 			XElement softwareList = software.Parent;
 
 			string softwareListName = softwareList.Attribute("name").Value;
@@ -1016,20 +1037,22 @@ namespace Spludlow.MameAO
 
 					string key = $"{softwareListName}/{downloadSoftwareName}/{diskName}";
 
-					if (_AvailableDownloadSoftwareListDisks.ContainsKey(key) == false)
+					if (soureSet.AvailableDownloadSizes.ContainsKey(key) == false)
 						throw new ApplicationException($"Software list disk not on archive.org {key}");
 
-					long size = _AvailableDownloadSoftwareListDisks[key];
+					long size = soureSet.AvailableDownloadSizes[key];
 
 					string nameEnc = Uri.EscapeUriString(diskName);
-					string url = $"https://archive.org/download/mame-software-list-chds-2/{softwareListName}/{downloadSoftwareName}/{nameEnc}.chd";
+
+					string url = soureSet.DownloadUrl;
+					url = url.Replace("@LIST@", softwareListName);
+					url = url.Replace("@SOFTWARE@", downloadSoftwareName);
+					url = url.Replace("@DISK@", nameEnc);
 
 					string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + diskName);
 
 					Console.Write($"Downloading {key} Software Disk. size:{Tools.DataSize(size)} url:{url} ...");
-					DateTime startTime = DateTime.Now;
 					long downloadSize = Tools.Download(url, tempFilename, _DownloadDotSize, 3 * 60);
-					TimeSpan took = DateTime.Now - startTime;
 					Console.WriteLine($"...done");
 
 					if (size != downloadSize)
@@ -1081,6 +1104,8 @@ namespace Spludlow.MameAO
 
 		private int GetRomsSoftware(XElement software, List<string[]> romStoreFilenames)
 		{
+			MameSourceSet soureSet = GetSourceSets(MameSetType.SoftwareRom)[0];
+
 			XElement softwareList = software.Parent;
 
 			string softwareListName = softwareList.Attribute("name").Value;
@@ -1097,7 +1122,7 @@ namespace Spludlow.MameAO
 				$"{softwareListName} / {softwareName}",
 			});
 
-			if (_AvailableDownloadSoftwareLists.ContainsKey(softwareListName) == false)
+			if (soureSet.AvailableDownloadSizes.ContainsKey(softwareListName) == false)
 				throw new ApplicationException($"Software list not on archive.org {softwareListName}");
 
 			//
@@ -1133,11 +1158,12 @@ namespace Spludlow.MameAO
 
 				string listEnc = Uri.EscapeUriString(softwareListName);
 				string softEnc = Uri.EscapeUriString(requiredSoftwareName);
-				string slashEnc = HttpUtility.UrlEncode("/");
 
-				string downloadSoftwareUrl = $"https://archive.org/download/mame-sl/mame-sl/{listEnc}.zip/{listEnc}{slashEnc}{softEnc}.zip";
+				string downloadSoftwareUrl = soureSet.DownloadUrl;
+				downloadSoftwareUrl = downloadSoftwareUrl.Replace("@LIST@", listEnc);
+				downloadSoftwareUrl = downloadSoftwareUrl.Replace("@SOFTWARE@", softEnc);
 
-				Dictionary<string, long> softwareSizes = GetSoftwareSizes(softwareListName);
+				Dictionary<string, long> softwareSizes = GetSoftwareSizes(softwareListName, soureSet.HtmlSizesUrl);
 
 				if (softwareSizes.ContainsKey(requiredSoftwareName) == false)
 					throw new ApplicationException($"Did GetSoftwareSize {softwareListName}, {requiredSoftwareName} ");
@@ -1183,7 +1209,7 @@ namespace Spludlow.MameAO
 			return missingCount;
 		}
 
-		private Dictionary<string, long> GetSoftwareSizes(string listName)
+		private Dictionary<string, long> GetSoftwareSizes(string listName, string htmlSizesUrl)
 		{
 			string cacheDirectory = Path.Combine(_VersionDirectory, "_SoftwareSizes");
 			if (Directory.Exists(cacheDirectory) == false)
@@ -1194,7 +1220,8 @@ namespace Spludlow.MameAO
 			string html;
 			if (File.Exists(filename) == false)
 			{
-				html = Tools.Query(_HttpClient, $"https://archive.org/download/mame-sl/mame-sl/{listName}.zip/");
+				string url = htmlSizesUrl.Replace("@LIST@", listName);
+				html = Tools.Query(_HttpClient, url);
 				File.WriteAllText(filename, html, Encoding.UTF8);
 			}
 			else
@@ -1311,9 +1338,11 @@ namespace Spludlow.MameAO
 		{
 			string directory = Path.GetDirectoryName(filename);
 
-			ProcessStartInfo startInfo = new ProcessStartInfo(filename);
-			startInfo.WorkingDirectory = directory;
-			startInfo.Arguments = "-y";
+			ProcessStartInfo startInfo = new ProcessStartInfo(filename)
+			{
+				WorkingDirectory = directory,
+				Arguments = "-y",
+			};
 
 			using (Process process = new Process())
 			{
@@ -1333,12 +1362,14 @@ namespace Spludlow.MameAO
 
 			using (StreamWriter writer = new StreamWriter(outputFilename, false, Encoding.UTF8))
 			{
-				ProcessStartInfo startInfo = new ProcessStartInfo(binFilename);
-				startInfo.WorkingDirectory = directory;
-				startInfo.Arguments = arguments;
-				startInfo.UseShellExecute = false;
-				startInfo.RedirectStandardOutput = true;
-				startInfo.StandardOutputEncoding = Encoding.UTF8;
+				ProcessStartInfo startInfo = new ProcessStartInfo(binFilename)
+				{
+					WorkingDirectory = directory,
+					Arguments = arguments,
+					UseShellExecute = false,
+					RedirectStandardOutput = true,
+					StandardOutputEncoding = Encoding.UTF8,
+				};
 
 				using (Process process = new Process())
 				{
