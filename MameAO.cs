@@ -10,6 +10,8 @@ using System.Diagnostics;
 using System.Xml.Linq;
 using System.Reflection;
 using System.Web;
+using System.Net;
+using System.Threading.Tasks;
 
 using Newtonsoft.Json;
 
@@ -45,13 +47,67 @@ namespace Spludlow.MameAO
 		{
 			MachineRom,
 			MachineDisk,
-			SoftwareRow,
+			SoftwareRom,
 			SoftwareDisk,
 		};
+
+		public class MameSourceSet
+		{
+			public MameSetType SetType;
+			public string Metadata;
+			public string Download;
+			public string HtmlSizes;
+		}
+
+		private MameSourceSet[] _MameSourceSets = new MameSourceSet[] {
+			new MameSourceSet
+			{
+				SetType = MameSetType.MachineRom,
+				Metadata = "https://archive.org/metadata/mame-merged",
+				Download = "https://archive.org/download/mame-merged/mame-merged/@MACHINE@.zip",
+				HtmlSizes = null,
+			},
+			new MameSourceSet
+			{
+				SetType = MameSetType.MachineDisk,
+				Metadata = "https://archive.org/metadata/mame-chds-roms-extras-complete",
+				Download = "https://archive.org/download/mame-chds-roms-extras-complete/@MACHINE@/@DISK@.chd",
+				HtmlSizes = null,
+			},
+			new MameSourceSet
+			{
+				SetType = MameSetType.SoftwareRom,
+				Metadata = "https://archive.org/metadata/mame-sl",
+				Download = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/@LIST@%2f@SOFTWARE@.zip",
+				HtmlSizes = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/",
+			},
+			new MameSourceSet
+			{
+				SetType = MameSetType.SoftwareDisk,
+				Metadata = "https://archive.org/metadata/mame-software-list-chds-2",
+				Download = "https://archive.org/download/mame-software-list-chds-2/@LIST@/@SOFTWARE@/@DISK@.chd",
+				HtmlSizes = null,
+			},
+		};
+
+		private MameSourceSet[] GetSourceSets(MameSetType type)
+		{
+			MameSourceSet[] results =
+				(from sourceSet in _MameSourceSets
+				where sourceSet.SetType == type
+				select sourceSet).ToArray();
+
+			if (results.Length == 0)
+				throw new ApplicationException($"Did not find any source sets: {type.ToString()}");
+
+			return results;
+		}
 
 		private MameChdMan _MameChdMan;
 
 		private long _DownloadDotSize = 1024 * 1024;
+
+		private string _ListenAddress = "http://127.0.0.1:12380/";
 
 		public MameAOProcessor(string rootDirectory)
 		{
@@ -334,12 +390,77 @@ namespace Spludlow.MameAO
 
 			return doc;
 		}
+
+
+		private void StartListener()
+		{
+			if (HttpListener.IsSupported == false)
+			{
+				Console.WriteLine("!!! Http Listener Is not Supported");
+				return;
+			}
+
+			HttpListener listener = new HttpListener();
+
+			listener.Prefixes.Add(_ListenAddress);
+
+			listener.Start();
+			
+			Task listenTask = new Task(() => {
+
+				HttpListenerContext context;
+
+				while ((context = listener.GetContext()) != null)
+				{
+					string machine = context.Request.QueryString["machine"];
+					string software = context.Request.QueryString["software"];
+					string arguments = context.Request.QueryString["arguments"];
+
+					string responseText = "OK";
+
+					if (machine == null || context.Request.Url.AbsoluteUri.StartsWith(_ListenAddress + "?") == false)
+						responseText = "BAD";
+
+					byte[] responseBuffer = Encoding.UTF8.GetBytes(responseText);
+					using (Stream responseStream = context.Response.OutputStream)
+					{
+						context.Response.ContentLength64 = responseBuffer.Length;
+						responseStream.Write(responseBuffer, 0, responseBuffer.Length);
+					}
+
+					if (responseText == "OK")
+					{
+						Console.WriteLine();
+						Tools.ConsoleHeading(_h1, new string[] {
+							"Remote command recieved",
+							$"machine: {machine}",
+							$"software: {software}",
+							$"arguments: {arguments}",
+						});
+						Console.WriteLine();
+
+						RunStart($"{machine} {software} {arguments}");
+					}
+				}
+			});
+
+			listenTask.Start();
+
+			Tools.ConsoleHeading(_h1, new string[] {
+				"Remote Listener ready for commands",
+				_ListenAddress,
+				$"e.g. {_ListenAddress}?machine=a2600&software=et&arguments=-window"
+			
+			});
+			Console.WriteLine("");
+		}
+
 		public void Run()
 		{
+			StartListener();
+
 			Tools.ConsoleHeading(_h1, "Shell ready for commands");
 			Console.WriteLine("");
-
-			string binFilename = Path.Combine(_VersionDirectory, "mame.exe");
 
 			while (true)
 			{
@@ -349,72 +470,79 @@ namespace Spludlow.MameAO
 
 				if (line.Length == 0)
 					continue;
-	
-				string machine;
-				string software = "";
-				string arguments = "";
 
-				string[] parts = line.Split(new char[] {' '});
+				RunStart(line);
+			}
+		}
 
-				machine = parts[0];
+		public void RunStart(string line)
+		{
+			string binFilename = Path.Combine(_VersionDirectory, "mame.exe");
 
-				if (machine == ".")
+			string machine;
+			string software = "";
+			string arguments = "";
+
+			string[] parts = line.Split(new char[] { ' ' });
+
+			machine = parts[0];
+
+			if (machine == ".")
+			{
+				if (parts.Length > 1)
+					arguments = String.Join(" ", parts.Skip(1));
+			}
+			else
+			{
+				if (parts.Length >= 2)
 				{
-					if (parts.Length > 1)
-						arguments = String.Join(" ", parts.Skip(1));
-				}
-				else
-				{
-					if (parts.Length >= 2)
+					if (parts[1].StartsWith("-") == false)
 					{
-						if (parts[1].StartsWith("-") == false)
-						{
-							software = parts[1];
+						software = parts[1];
 
-							if (parts.Length > 2)
-								arguments = String.Join(" ", parts.Skip(2));
-						}
-						else
-						{
-							arguments = String.Join(" ", parts.Skip(1));
-						}
-					}
-				}
-
-				machine = machine.ToLower().Trim();
-				software = software.ToLower().Trim();
-
-				try
-				{
-					if (machine.StartsWith(".") == true)
-					{
-						RunMame(binFilename, arguments);
+						if (parts.Length > 2)
+							arguments = String.Join(" ", parts.Skip(2));
 					}
 					else
 					{
-						GetRoms(machine, software);
-						RunMame(binFilename, machine + " " + software + " " + arguments);
+						arguments = String.Join(" ", parts.Skip(1));
 					}
 				}
-				catch (ApplicationException ee)
-				{
-					Console.WriteLine("SHELL ERROR: " + ee.Message);
-					Console.WriteLine();
-				}
-				catch (Exception ee)
-				{
-					Console.WriteLine();
-					Console.WriteLine("!!! FATAL ERROR: " + ee.Message);
-					Console.WriteLine();
-					Console.WriteLine(ee.ToString());
-					Console.WriteLine();
-					Console.WriteLine("Press any key to continue, program has crashed and will exit.");
-					Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
-					Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
+			}
 
-					Console.ReadKey();
-					Environment.Exit(1);
+			machine = machine.ToLower().Trim();
+			software = software.ToLower().Trim();
+
+			try
+			{
+				if (machine.StartsWith(".") == true)
+				{
+					RunMame(binFilename, arguments);
 				}
+				else
+				{
+					GetRoms(machine, software);
+					RunMame(binFilename, machine + " " + software + " " + arguments);
+				}
+			}
+			catch (ApplicationException ee)
+			{
+				Console.WriteLine("SHELL ERROR: " + ee.Message);
+				Console.WriteLine();
+			}
+			catch (Exception ee)
+			{
+				Console.WriteLine();
+				Console.WriteLine("!!! FATAL ERROR: " + ee.Message);
+				Console.WriteLine();
+				Console.WriteLine(ee.ToString());
+				Console.WriteLine();
+				Console.WriteLine("Press any key to continue, program has crashed and will exit.");
+				Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
+				Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
+
+				Console.ReadKey();
+				Environment.Exit(1);
 			}
 		}
 
