@@ -9,9 +9,8 @@ using System.IO.Compression;
 using System.Diagnostics;
 using System.Xml.Linq;
 using System.Reflection;
-using System.Net;
-using System.Threading.Tasks;
 
+using System.Data.SQLite;
 using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
@@ -29,6 +28,9 @@ namespace Spludlow.MameAO
 		private Dictionary<string, XElement> _MachineElements;
 		private Dictionary<string, XElement> _SoftwareListElements;
 
+		public SQLiteConnection _MachineConnection;
+		public SQLiteConnection _SoftwareConnection;
+
 		private Spludlow.HashStore _RomHashStore;
 		private Spludlow.HashStore _DiskHashStore;
 
@@ -38,10 +40,10 @@ namespace Spludlow.MameAO
 
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
-		private readonly string _ListenAddress = "http://127.0.0.1:12380/";
+		public readonly string _ListenAddress = "http://127.0.0.1:12380/";
 
-		private readonly char _h1 = '#';
-		private readonly char _h2 = '.';
+		public readonly char _h1 = '#';
+		public readonly char _h2 = '.';
 
 		public enum MameSetType
 		{
@@ -93,6 +95,57 @@ namespace Spludlow.MameAO
 			},
 		};
 
+		private HashSet<string> machineTables = new HashSet<string>(new string[] {
+			"mame",
+			"machine",
+			"rom",
+			"device_ref",
+			//"sample",
+			//"chip",
+			//"display",
+			//"sound",
+			//"input",
+			//"control",
+			//"dipswitch",
+			//"diplocation",
+			//"dipvalue",
+			//"port",
+			"driver",
+			"feature",
+			//"biosset",
+			//"dipswitch_condition",
+			//"analog",
+			//"configuration",
+			//"confsetting",
+			//"device",
+			//"instance",
+			//"extension",
+			//"slot",
+			"softwarelist",
+			//"dipvalue_condition",
+			//"slotoption",
+			//"adjuster",
+			"disk",
+			//"ramoption",
+			//"configuration_condition",
+			//"confsetting_condition",
+			//"conflocation",
+		});
+
+		private HashSet<string> softwareTables = new HashSet<string>(new string[] {
+			"softwarelists",
+			"softwarelist",
+			"software",
+			//"info",
+			"part",
+			//"feature",
+			"dataarea",
+			"rom",
+			//"sharedfeat",
+			"diskarea",
+			"disk",
+		});
+
 		private MameSourceSet[] GetSourceSets(MameSetType type)
 		{
 			MameSourceSet[] results =
@@ -112,7 +165,30 @@ namespace Spludlow.MameAO
 			_HttpClient = new HttpClient();
 		}
 
-		public void Start()
+		public void Run()
+		{
+			try
+			{
+				Initialize();
+				Shell();
+			}
+			catch (Exception ee)
+			{
+				Console.WriteLine();
+				Console.WriteLine("!!! FATAL ERROR: " + ee.Message);
+				Console.WriteLine();
+				Console.WriteLine(ee.ToString());
+				Console.WriteLine();
+				Console.WriteLine("Press any key to continue, program has crashed and will exit.");
+				Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
+				Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
+
+				Console.ReadKey();
+				Environment.Exit(1);
+			}
+		}
+
+		public void Initialize()
 		{
 			Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
 
@@ -305,7 +381,7 @@ namespace Spludlow.MameAO
 			_DownloadTempDirectory = directory;
 
 			//
-			// MAME Machine XML
+			// MAME Machine XML & SQL
 			//
 
 			XElement machineDoc = ExtractMameXml("machine", "-listxml", binFilename, Path.Combine(_VersionDirectory, "_machine.xml"));
@@ -315,8 +391,10 @@ namespace Spludlow.MameAO
 			foreach (XElement machine in machineDoc.Elements("machine"))
 				_MachineElements.Add(machine.Attribute("name").Value, machine);
 
+			_MachineConnection = Database.DatabaseFromXML(machineDoc, Path.Combine(_VersionDirectory, "_machine.sqlite"), machineTables);
+
 			//
-			// MAME Software XML
+			// MAME Software XML & SQL
 			//
 
 			XElement softwareDoc = ExtractMameXml("software", "-listsoftware", binFilename, Path.Combine(_VersionDirectory, "_software.xml"));
@@ -324,6 +402,8 @@ namespace Spludlow.MameAO
 			_SoftwareListElements = new Dictionary<string, XElement>();
 			foreach (XElement softwarelist in softwareDoc.Elements("softwarelist"))
 				_SoftwareListElements.Add(softwarelist.Attribute("name").Value, softwarelist);
+
+			_SoftwareConnection = Database.DatabaseFromXML(softwareDoc, Path.Combine(_VersionDirectory, "_software.sqlite"), softwareTables);
 
 			Console.WriteLine("");
 		}
@@ -396,83 +476,18 @@ namespace Spludlow.MameAO
 			return doc;
 		}
 
-
-		private void StartListener()
+		public void Shell()
 		{
-			if (HttpListener.IsSupported == false)
-			{
-				Console.WriteLine("!!! Http Listener Is not Supported");
-				return;
-			}
-
-			HttpListener listener = new HttpListener();
-
-			listener.Prefixes.Add(_ListenAddress);
-
-			listener.Start();
-
-			Task runTask = null;
-
-			Task listenTask = new Task(() => {
-
-				while (true)
-				{
-					HttpListenerContext context = listener.GetContext();
-
-					string machine = context.Request.QueryString["machine"];
-					string software = context.Request.QueryString["software"];
-					string arguments = context.Request.QueryString["arguments"];
-
-					string responseText = "OK";
-
-					if (machine == null || context.Request.Url.AbsoluteUri.StartsWith(_ListenAddress + "?") == false)
-						responseText = "BAD";
-
-					if (runTask != null && runTask.Status != TaskStatus.RanToCompletion)
-						responseText = "BUSY";
-
-					context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-
-					byte[] responseBuffer = Encoding.UTF8.GetBytes(responseText);
-					using (Stream responseStream = context.Response.OutputStream)
-					{
-						context.Response.ContentLength64 = responseBuffer.Length;
-						responseStream.Write(responseBuffer, 0, responseBuffer.Length);
-					}
-
-					if (responseText == "OK")
-					{
-						Console.WriteLine();
-						Tools.ConsoleHeading(_h1, new string[] {
-							"Remote command recieved",
-							$"machine: {machine}",
-							$"software: {software}",
-							$"arguments: {arguments}",
-						});
-						Console.WriteLine();
-
-						runTask = new Task(() => {
-							RunStart($"{machine} {software} {arguments}");
-						});
-						runTask.Start();
-					}
-				}
-			});
-
-			listenTask.Start();
+			WebServer webServer = new WebServer(this);
+			webServer.StartListener();
 
 			Tools.ConsoleHeading(_h1, new string[] {
 				"Remote Listener ready for commands",
 				_ListenAddress,
-				$"e.g. {_ListenAddress}?machine=a2600&software=et&arguments=-window"
-			
+				$"e.g. {_ListenAddress}command?machine=a2600&software=et&arguments=-window"
+
 			});
 			Console.WriteLine("");
-		}
-
-		public void Run()
-		{
-			StartListener();
 
 			Tools.ConsoleHeading(_h1, "Shell ready for commands");
 			Console.WriteLine("");
@@ -486,11 +501,11 @@ namespace Spludlow.MameAO
 				if (line.Length == 0)
 					continue;
 
-				RunStart(line);
+				RunLine(line);
 			}
 		}
 
-		public void RunStart(string line)
+		public void RunLine(string line)
 		{
 			string binFilename = Path.Combine(_VersionDirectory, "mame.exe");
 
@@ -544,20 +559,6 @@ namespace Spludlow.MameAO
 			{
 				Console.WriteLine("SHELL ERROR: " + ee.Message);
 				Console.WriteLine();
-			}
-			catch (Exception ee)
-			{
-				Console.WriteLine();
-				Console.WriteLine("!!! FATAL ERROR: " + ee.Message);
-				Console.WriteLine();
-				Console.WriteLine(ee.ToString());
-				Console.WriteLine();
-				Console.WriteLine("Press any key to continue, program has crashed and will exit.");
-				Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
-				Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
-
-				Console.ReadKey();
-				Environment.Exit(1);
 			}
 		}
 

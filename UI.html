@@ -1,0 +1,73 @@
+﻿<!DOCTYPE html>
+
+<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<head>
+    <meta charset="utf-8" />
+    <title>MAME-AO</title>
+</head>
+<body>
+
+    <div id="resultsContainer">
+    </div>
+
+    <script type="text/javascript">
+
+        const _resultsContainer = document.getElementById('resultsContainer');
+
+        const serverUrl = 'http://127.0.0.1:12380';
+
+		const runCommand = async (name) => {
+			const response = await fetch(`http://127.0.0.1:12380/command?machine=${name}`);
+
+			const result = await response.text();
+
+			console.log(response.status + ' : ' + result);
+
+			if (response.status !== 200)
+				alert(result);
+		}
+
+		const renderHtmlTable = (data) => {
+
+			const table = document.createElement('table');
+
+			data.forEach((row) => {
+				const tableRow = document.createElement('tr');
+
+				let cell;
+
+				cell = document.createElement('td');
+				cell.innerHTML = `<a id="${row.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><img src="https://mame.spludlow.co.uk/snap/machine/${row.name}.jpg" loading="lazy" /></a>`;
+				tableRow.appendChild(cell);
+
+				cell = document.createElement('td');
+				cell.innerHTML = row.name;
+				tableRow.appendChild(cell);
+
+				cell = document.createElement('td');
+				cell.innerHTML = row.description;
+				tableRow.appendChild(cell);
+
+				table.appendChild(tableRow);
+			});
+
+			return table;
+		}
+
+        const setup = async () => {
+			const response = await fetch(`${serverUrl}/api/machines`);
+
+            const results = (await response.json()).results;
+
+			const resultsTable = renderHtmlTable(results);
+
+			resultsContainer.innerHTML = '';
+			resultsContainer.appendChild(resultsTable);
+        }
+
+        setup();
+
+    </script>
+
+</body>
+</html>
