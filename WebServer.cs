@@ -122,10 +122,29 @@ namespace Spludlow.MameAO
 
 		private void ApiMachines(HttpListenerContext context, StreamWriter writer)
 		{
+			string qs;
+
+			int offset = 0;
+			qs = context.Request.QueryString["offset"];
+			if (qs != null)
+				offset = Int32.Parse(qs);
+
+			int limit = 100;
+			qs = context.Request.QueryString["limit"];
+			if (qs != null)
+				limit = Int32.Parse(qs);
+
+			if (limit > 1000)
+				throw new ApplicationException("Limit is limited to 1000");
+
 			string commandText = "SELECT machine.name, machine.description, machine.year, machine.manufacturer, Count(softwarelist.softwarelist_Id) AS CountOfsoftwarelist_Id " +
 				"FROM (machine INNER JOIN driver ON machine.machine_Id = driver.machine_Id) LEFT JOIN softwarelist ON machine.machine_Id = softwarelist.machine_Id " +
 				"GROUP BY machine.name " +
-				"HAVING (((machine.cloneof) Is Null) AND ((driver.status)='good') AND ((machine.runnable)='yes') AND ((machine.isbios)='no') AND ((machine.isdevice)='no') AND ((machine.ismechanical)='no') AND ((COUNT(softwarelist.softwarelist_Id))=0));";
+				"HAVING (((machine.cloneof) Is Null) AND ((driver.status)='good') AND ((machine.runnable)='yes') AND ((machine.isbios)='no') AND ((machine.isdevice)='no') AND ((machine.ismechanical)='no') AND ((COUNT(softwarelist.softwarelist_Id))=0)) " +
+				"ORDER BY machine.description LIMIT @LIMIT OFFSET @OFFSET";
+
+			commandText = commandText.Replace("@LIMIT", limit.ToString());
+			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
 			DataSet dataSet = new DataSet();
 

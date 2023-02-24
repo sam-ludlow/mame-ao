@@ -489,6 +489,8 @@ namespace Spludlow.MameAO
 			});
 			Console.WriteLine("");
 
+			Process.Start(_ListenAddress);
+
 			Tools.ConsoleHeading(_h1, "Shell ready for commands");
 			Console.WriteLine("");
 

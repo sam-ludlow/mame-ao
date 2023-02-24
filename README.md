@@ -47,3 +47,28 @@ To be able to create symbolic links you have to grant permission.
 - Run "gpedit"
 - Go to "Computer Configuration\Windows Settings\Security Settings\Local Policies\User Rights Assignment\Create symbolic links"
 - Add the required user or group. You will need to re-start for settings to take effect.
+
+## Credits
+
+### MAME
+Emulator software
+https://www.mamedev.org/
+
+### Archive.org
+ROM & DISK download
+https://archive.org/
+
+### Progetto Snaps
+UI Images
+https://www.progettosnaps.net/snapshots/
+
+UI Genres
+https://www.progettosnaps.net/catver/
+
+### Newtonsoft
+JSON Library
+https://www.newtonsoft.com/json
+
+### SQLite
+SQL Database
+https://www.sqlite.org/

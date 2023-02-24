@@ -10,9 +10,13 @@
     <div id="resultsContainer">
     </div>
 
+	<a id="page_back" href="">BACK</a> &bull; <a id="page_next" href="">NEXT</a>
+
     <script type="text/javascript">
 
         const _resultsContainer = document.getElementById('resultsContainer');
+		const _page_back = document.getElementById('page_back');
+		const _page_next = document.getElementById('page_next');
 
         const serverUrl = 'http://127.0.0.1:12380';
 
@@ -54,8 +58,35 @@
 			return table;
 		}
 
-        const setup = async () => {
-			const response = await fetch(`${serverUrl}/api/machines`);
+		const setup = async () => {
+
+			let offset = 0;
+
+			let baseUrl = window.location.href;
+
+			if (window.location.href.includes('?')) {
+
+				baseUrl = window.location.href.split('?')[0];
+
+				const parts = window.location.href.split('?')[1].split('&');
+				const params = {};
+				parts.forEach((part) => {
+					const pair = part.split('=');
+					params[pair[0]] = pair[1];
+				});
+
+				console.log(params);
+
+				if (params['offset'])
+					offset = parseInt(params['offset'], 10);
+			}
+
+			let limit = 100;
+
+			_page_back.href = `${baseUrl}?offset=${offset - limit}`;
+			_page_next.href = `${baseUrl}?offset=${offset + limit}`;
+
+			const response = await fetch(`${serverUrl}/api/machines?offset=${offset}`);
 
             const results = (await response.json()).results;
 
