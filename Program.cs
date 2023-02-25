@@ -11,9 +11,6 @@ namespace Spludlow.MameAO
 				directory = args[0];
 
 			MameAOProcessor proc = new MameAOProcessor(directory);
-
-			proc.Start();
-
 			proc.Run();
 		}
 	}
