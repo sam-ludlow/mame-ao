@@ -53,7 +53,7 @@ namespace Spludlow.MameAO
 			Console.WriteLine("...done.");
 
 			Console.Write($"Adding extra data columns {document.Name.LocalName} ...");
-			AddDataExtras(dataSet);
+			AddDataExtras(dataSet, document.Name.LocalName);
 			Console.WriteLine("...done.");
 
 			Console.Write($"Creating SQLite {document.Name.LocalName} ...");
@@ -127,32 +127,33 @@ namespace Spludlow.MameAO
 			return connection;
 		}
 
-		public static void AddDataExtras(DataSet dataSet)
+		public static void AddDataExtras(DataSet dataSet, string name)
 		{
-			DataTable machineTable = dataSet.Tables["machine"];
-			DataTable romTable = dataSet.Tables["rom"];
-			DataTable diskTable = dataSet.Tables["disk"];
-			DataTable softwarelistTable = dataSet.Tables["softwarelist"];
-
-			machineTable.Columns.Add("ao_rom_count", typeof(int));
-			machineTable.Columns.Add("ao_disk_count", typeof(int));
-			machineTable.Columns.Add("ao_softwarelist_count", typeof(int));
-
-			foreach (DataRow machineRow in machineTable.Rows)
+			if (name == "mame")
 			{
-				long machine_id = (long)machineRow["machine_id"];
+				DataTable machineTable = dataSet.Tables["machine"];
+				DataTable romTable = dataSet.Tables["rom"];
+				DataTable diskTable = dataSet.Tables["disk"];
+				DataTable softwarelistTable = dataSet.Tables["softwarelist"];
 
-				DataRow[] romRows = romTable.Select($"machine_id={machine_id}");
-				DataRow[] diskRows = diskTable.Select($"machine_id={machine_id}");
-				DataRow[] softwarelistRows = softwarelistTable.Select($"machine_id={machine_id}");
+				machineTable.Columns.Add("ao_rom_count", typeof(int));
+				machineTable.Columns.Add("ao_disk_count", typeof(int));
+				machineTable.Columns.Add("ao_softwarelist_count", typeof(int));
 
-				machineRow["ao_rom_count"] = romRows.Length;
-				machineRow["ao_disk_count"] = diskRows.Length;
-				machineRow["ao_softwarelist_count"] = softwarelistRows.Length;
+				foreach (DataRow machineRow in machineTable.Rows)
+				{
+					long machine_id = (long)machineRow["machine_id"];
 
+					DataRow[] romRows = romTable.Select($"machine_id={machine_id}");
+					DataRow[] diskRows = diskTable.Select($"machine_id={machine_id}");
+					DataRow[] softwarelistRows = softwarelistTable.Select($"machine_id={machine_id}");
+
+					machineRow["ao_rom_count"] = romRows.Length;
+					machineRow["ao_disk_count"] = diskRows.Length;
+					machineRow["ao_softwarelist_count"] = softwarelistRows.Length;
+
+				}
 			}
-
-
 		}
 
 		public static DataSet ImportXML(XElement document, HashSet<string> keepTables)
