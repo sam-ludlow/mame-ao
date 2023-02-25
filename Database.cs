@@ -6,16 +6,42 @@ using System.IO;
 
 using System.Data.SQLite;
 using System.Net;
+using System.Runtime.CompilerServices;
 
 namespace Spludlow.MameAO
 {
 	public class Database
 	{
+		public static string[][] DataQueryProfiles = new string[][] {
+			new string[] { "Machines - not a clone, status good, without software",
+
+				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
+				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_softwarelist_count = 0)) " +
+				"ORDER BY machine.description " +
+				"LIMIT @LIMIT OFFSET @OFFSET",
+			},
+
+			new string[] { "Machines - not a clone, status good, with software",
+
+				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
+				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_softwarelist_count > 0)) " +
+				"ORDER BY machine.description " +
+				"LIMIT @LIMIT OFFSET @OFFSET",
+			},
+		};
+
+		
 		public static SQLiteConnection DatabaseFromXML(XElement document, string sqliteFilename, HashSet<string> keepTables)
 		{
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
 			SQLiteConnection connection = new SQLiteConnection(connectionString);
+
+
+			// TODO check version in DB
+
 
 			if (File.Exists(sqliteFilename) == true)
 				return connection;
@@ -24,6 +50,10 @@ namespace Spludlow.MameAO
 
 			Console.Write($"Importing XML {document.Name.LocalName} ...");
 			DataSet dataSet = ImportXML(document, keepTables);
+			Console.WriteLine("...done.");
+
+			Console.Write($"Adding extra data columns {document.Name.LocalName} ...");
+			AddDataExtras(dataSet);
 			Console.WriteLine("...done.");
 
 			Console.Write($"Creating SQLite {document.Name.LocalName} ...");
@@ -95,6 +125,34 @@ namespace Spludlow.MameAO
 			Console.WriteLine("...done.");
 
 			return connection;
+		}
+
+		public static void AddDataExtras(DataSet dataSet)
+		{
+			DataTable machineTable = dataSet.Tables["machine"];
+			DataTable romTable = dataSet.Tables["rom"];
+			DataTable diskTable = dataSet.Tables["disk"];
+			DataTable softwarelistTable = dataSet.Tables["softwarelist"];
+
+			machineTable.Columns.Add("ao_rom_count", typeof(int));
+			machineTable.Columns.Add("ao_disk_count", typeof(int));
+			machineTable.Columns.Add("ao_softwarelist_count", typeof(int));
+
+			foreach (DataRow machineRow in machineTable.Rows)
+			{
+				long machine_id = (long)machineRow["machine_id"];
+
+				DataRow[] romRows = romTable.Select($"machine_id={machine_id}");
+				DataRow[] diskRows = diskTable.Select($"machine_id={machine_id}");
+				DataRow[] softwarelistRows = softwarelistTable.Select($"machine_id={machine_id}");
+
+				machineRow["ao_rom_count"] = romRows.Length;
+				machineRow["ao_disk_count"] = diskRows.Length;
+				machineRow["ao_softwarelist_count"] = softwarelistRows.Length;
+
+			}
+
+
 		}
 
 		public static DataSet ImportXML(XElement document, HashSet<string> keepTables)

@@ -6,6 +6,9 @@ using System.Text;
 using System.Threading.Tasks;
 
 using System.Data.SQLite;
+using System.Web.UI.WebControls;
+using System.Collections.Generic;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Spludlow.MameAO
 {
@@ -57,6 +60,10 @@ namespace Spludlow.MameAO
 
 								case "/command":
 									Command(context, writer);
+									break;
+
+								case "/api/profiles":
+									ApiProfiles(context, writer);
 									break;
 
 								case "/api/machines":
@@ -120,6 +127,30 @@ namespace Spludlow.MameAO
 			writer.WriteLine("OK");
 		}
 
+		private void ApiProfiles(HttpListenerContext context, StreamWriter writer)
+		{
+			StringBuilder json = new StringBuilder();
+
+			json.AppendLine("{ \"results\": [");
+
+			for (int index = 0; index < Database.DataQueryProfiles.Length; ++index)
+			{
+				string name = Database.DataQueryProfiles[index][0];
+				string command = Database.DataQueryProfiles[index][1];
+
+				json.Append($"{{ \"name\": \"{name}\", \"command\": \"{command}\" }}");
+
+				json.AppendLine(index == (Database.DataQueryProfiles.Length - 1) ? "" : ",");
+			}
+
+			json.AppendLine("] }");
+
+			context.Response.Headers["Content-Type"] = "application/json";
+
+			writer.WriteLine(json.ToString());
+
+		}
+
 		private void ApiMachines(HttpListenerContext context, StreamWriter writer)
 		{
 			string qs;
@@ -137,11 +168,16 @@ namespace Spludlow.MameAO
 			if (limit > 1000)
 				throw new ApplicationException("Limit is limited to 1000");
 
-			string commandText = "SELECT machine.name, machine.description, machine.year, machine.manufacturer, Count(softwarelist.softwarelist_Id) AS CountOfsoftwarelist_Id " +
-				"FROM (machine INNER JOIN driver ON machine.machine_Id = driver.machine_Id) LEFT JOIN softwarelist ON machine.machine_Id = softwarelist.machine_Id " +
-				"GROUP BY machine.name " +
-				"HAVING (((machine.cloneof) Is Null) AND ((driver.status)='good') AND ((machine.runnable)='yes') AND ((machine.isbios)='no') AND ((machine.isdevice)='no') AND ((machine.ismechanical)='no') AND ((COUNT(softwarelist.softwarelist_Id))=0)) " +
-				"ORDER BY machine.description LIMIT @LIMIT OFFSET @OFFSET";
+			int profileIndex = 0;
+			qs = context.Request.QueryString["profile"];
+			if (qs != null)
+				profileIndex = Int32.Parse(qs);
+
+			if (profileIndex < 0 || profileIndex >= Database.DataQueryProfiles.Length)
+				throw new ApplicationException("Bad profile index");
+
+			string profileName = Database.DataQueryProfiles[profileIndex][0];
+			string commandText = Database.DataQueryProfiles[profileIndex][1];
 
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
@@ -155,7 +191,7 @@ namespace Spludlow.MameAO
 
 			StringBuilder json = new StringBuilder();
 
-			json.AppendLine("{ \"results\": [");
+			json.AppendLine($"{{ \"profile\": \"{profileName}\", \"results\": [");
 
 			for (int index = 0; index < dataSet.Tables[0].Rows.Count; ++index)
 			{
@@ -166,12 +202,15 @@ namespace Spludlow.MameAO
 
 				string name = (string)row["name"];
 				string description = (string)row["description"];
+				string year = row.IsNull("year") ? "" : (string)row["year"];
+				string manufacturer = row.IsNull("manufacturer") ? "" : (string)row["manufacturer"];
 
 				description = description.Replace("\"", "\\\"");
+				manufacturer = manufacturer.Replace("\"", "\\\"");
 
 				string image = $"https://mame.spludlow.co.uk/snap/machine/{name}.jpg";
 
-				json.Append($"{{ \"name\": \"{name}\", \"description\": \"{description}\", \"image\": \"{image}\" }}");
+				json.Append($"{{ \"name\": \"{name}\", \"description\": \"{description}\", \"year\": \"{year}\", \"manufacturer\": \"{manufacturer}\", \"image\": \"{image}\" }}");
 
 				json.AppendLine(last == true ? "" : ",");
 

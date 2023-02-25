@@ -2,26 +2,98 @@
 
 <html lang="en" xmlns="http://www.w3.org/1999/xhtml">
 <head>
-    <meta charset="utf-8" />
-    <title>MAME-AO</title>
+	<meta charset="utf-8" />
+	<style type="text/css">
+		body {
+			font-family: sans-serif;
+			font-size: small;
+			background-color: #c6eafb;
+		}
+
+		hr {
+			color: #00ADEF;
+			background-color: #00ADEF;
+			height: 6px;
+			border: none;
+			padding-left: 0px;
+		}
+
+		table {
+			border-collapse: collapse;
+			font-size: small;
+		}
+
+		th, td {
+			padding: 2px;
+			text-align: left;
+		}
+
+		table, th, td {
+			border: 1px solid black;
+		}
+
+		th {
+			background-color: #00ADEF;
+			color: white;
+		}
+
+		tr:nth-child(even) {
+			background-color: #b6daeb;
+		}
+
+		select {
+			width: 100px;
+			height: 20px;
+		}
+
+		div.busy {
+			position: fixed;
+			z-index: 100;
+			top: 0px;
+			right: 0px;
+			bottom: 0px;
+			left: 0px;
+			background: rgba(255, 255, 255, 0.5);
+		}
+
+		img.centered {
+			position: fixed;
+			top: 50%;
+			left: 50%;
+			margin-left: -192px;
+			margin-top: -178px;
+			width: 386px;
+			height: 356px;
+		}
+	</style>
+	<title>MAME-AO</title>
 </head>
 <body>
 
-    <div id="resultsContainer">
-    </div>
+	<h1>MAME-AO Let's GO...</h1>
+
+	<select id="selectProfile" style="width:512px;"></select>
+
+	<hr />
+
+	<div id="resultsContainer">
+	</div>
+
+	<hr />
 
 	<a id="page_back" href="">BACK</a> &bull; <a id="page_next" href="">NEXT</a>
 
-    <script type="text/javascript">
+	<script type="text/javascript">
 
-        const _resultsContainer = document.getElementById('resultsContainer');
+		const _selectProfile = document.getElementById('selectProfile');
+		const _resultsContainer = document.getElementById('resultsContainer');
 		const _page_back = document.getElementById('page_back');
 		const _page_next = document.getElementById('page_next');
 
-        const serverUrl = 'http://127.0.0.1:12380';
+		const serverUrl = 'http://127.0.0.1:12380';
 
 		const runCommand = async (name) => {
-			const response = await fetch(`http://127.0.0.1:12380/command?machine=${name}`);
+			const response = await fetch(`${serverUrl}/command?machine=${name}`);
 
 			const result = await response.text();
 
@@ -35,6 +107,18 @@
 
 			const table = document.createElement('table');
 
+			const headRow = document.createElement('tr');
+
+			const headings = ['', 'name', 'description', 'year', 'manufacturer',];
+
+			headings.forEach((heading) => {
+				const cell = document.createElement('th');
+				cell.innerHTML = heading;
+				headRow.appendChild(cell);
+			});
+			table.appendChild(headRow);
+
+
 			data.forEach((row) => {
 				const tableRow = document.createElement('tr');
 
@@ -45,11 +129,19 @@
 				tableRow.appendChild(cell);
 
 				cell = document.createElement('td');
-				cell.innerHTML = row.name;
+				cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Machine.aspx?name=${row.name}" target="_blank">${row.name}</a>`;
 				tableRow.appendChild(cell);
 
 				cell = document.createElement('td');
 				cell.innerHTML = row.description;
+				tableRow.appendChild(cell);
+
+				cell = document.createElement('td');
+				cell.innerHTML = row.year;
+				tableRow.appendChild(cell);
+
+				cell = document.createElement('td');
+				cell.innerHTML = row.manufacturer;
 				tableRow.appendChild(cell);
 
 				table.appendChild(tableRow);
@@ -58,9 +150,14 @@
 			return table;
 		}
 
+		const goLocation = () => {
+			document.location = `${serverUrl}/?profile=${_selectProfile.value}`;
+		}
+
 		const setup = async () => {
 
 			let offset = 0;
+			let profile = 0;
 
 			let baseUrl = window.location.href;
 
@@ -79,26 +176,44 @@
 
 				if (params['offset'])
 					offset = parseInt(params['offset'], 10);
+
+				if (params['profile'])
+					profile = parseInt(params['profile'], 10);
 			}
 
 			let limit = 100;
 
-			_page_back.href = `${baseUrl}?offset=${offset - limit}`;
-			_page_next.href = `${baseUrl}?offset=${offset + limit}`;
+			response = await fetch(`${serverUrl}/api/profiles`);
+			const profiles = (await response.json()).results;
 
-			const response = await fetch(`${serverUrl}/api/machines?offset=${offset}`);
+			profiles.forEach((profile, index) => {
+				const option = document.createElement('option');
+				option.value = index;
+				option.innerHTML = profile.name;
+				_selectProfile.appendChild(option);
+			});
 
-            const results = (await response.json()).results;
+			console.log('profile: ' + profile);
+
+			_selectProfile.selectedIndex = profile;
+
+			_selectProfile.onchange = goLocation;
+
+			_page_back.href = `${baseUrl}?profile=${profile}&offset=${offset - limit}`;
+			_page_next.href = `${baseUrl}?profile=${profile}&offset=${offset + limit}`;
+
+			response = await fetch(`${serverUrl}/api/machines?profile=${profile}&offset=${offset}`);
+			const results = (await response.json()).results;
 
 			const resultsTable = renderHtmlTable(results);
 
 			resultsContainer.innerHTML = '';
 			resultsContainer.appendChild(resultsTable);
-        }
+		}
 
-        setup();
+		setup();
 
-    </script>
+	</script>
 
 </body>
 </html>
