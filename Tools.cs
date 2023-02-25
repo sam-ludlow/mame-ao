@@ -43,6 +43,8 @@ namespace Spludlow.MameAO
 			foreach (string line in lines)
 			{
 				int pad = Console.WindowWidth - 3 - line.Length;
+				if (pad < 1)
+					pad = 1;
 				int odd = pad % 2;
 				pad /= 2;
 
