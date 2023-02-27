@@ -21,7 +21,9 @@ namespace Spludlow.MameAO
 
 		private readonly string _RootDirectory;
 		private string _VersionDirectory;
+
 		private string _Version;
+		private string _AssemblyVersion;
 
 		private bool _LinkingEnabled = false;
 
@@ -96,6 +98,7 @@ namespace Spludlow.MameAO
 		};
 
 		private HashSet<string> machineTables = new HashSet<string>(new string[] {
+			"ao_info",
 			"mame",
 			"machine",
 			"rom",
@@ -133,6 +136,7 @@ namespace Spludlow.MameAO
 		});
 
 		private HashSet<string> softwareTables = new HashSet<string>(new string[] {
+			"ao_info",
 			"softwarelists",
 			"softwarelist",
 			"software",
@@ -192,8 +196,10 @@ namespace Spludlow.MameAO
 		{
 			Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
 
+			_AssemblyVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}";
+
 			Tools.ConsoleHeading(_h1, new string[] {
-				$"Welcome to Spludlow MAME Shell V{assemblyVersion.Major}.{assemblyVersion.Minor}",
+				$"Welcome to Spludlow MAME Shell V{_AssemblyVersion}",
 				"https://github.com/sam-ludlow/mame-ao",
 			});
 			Console.WriteLine("");
@@ -391,7 +397,7 @@ namespace Spludlow.MameAO
 			foreach (XElement machine in machineDoc.Elements("machine"))
 				_MachineElements.Add(machine.Attribute("name").Value, machine);
 
-			_MachineConnection = Database.DatabaseFromXML(machineDoc, Path.Combine(_VersionDirectory, "_machine.sqlite"), machineTables);
+			_MachineConnection = Database.DatabaseFromXML(machineDoc, Path.Combine(_VersionDirectory, "_machine.sqlite"), machineTables, _AssemblyVersion);
 
 			//
 			// MAME Software XML & SQL
@@ -403,7 +409,7 @@ namespace Spludlow.MameAO
 			foreach (XElement softwarelist in softwareDoc.Elements("softwarelist"))
 				_SoftwareListElements.Add(softwarelist.Attribute("name").Value, softwarelist);
 
-			_SoftwareConnection = Database.DatabaseFromXML(softwareDoc, Path.Combine(_VersionDirectory, "_software.sqlite"), softwareTables);
+			_SoftwareConnection = Database.DatabaseFromXML(softwareDoc, Path.Combine(_VersionDirectory, "_software.sqlite"), softwareTables, _AssemblyVersion);
 
 			Console.WriteLine("");
 		}

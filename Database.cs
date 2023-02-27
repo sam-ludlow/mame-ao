@@ -32,19 +32,29 @@ namespace Spludlow.MameAO
 			},
 		};
 
-		
-		public static SQLiteConnection DatabaseFromXML(XElement document, string sqliteFilename, HashSet<string> keepTables)
+		public static SQLiteConnection DatabaseFromXML(XElement document, string sqliteFilename, HashSet<string> keepTables, string assemblyVersion)
 		{
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
 			SQLiteConnection connection = new SQLiteConnection(connectionString);
 
-
-			// TODO check version in DB
-
+			if (File.Exists(sqliteFilename) == true)
+			{
+				if (TableExists(connection, "ao_info") == true)
+				{
+					DataTable aoInfoTable = ExecuteFill(connection, "SELECT * FROM ao_info");
+					if (aoInfoTable.Rows.Count == 1)
+					{
+						string dbAssemblyVersion = (string)aoInfoTable.Rows[0]["assembly_version"];
+						if (dbAssemblyVersion == assemblyVersion)
+							return connection;
+					}
+				}
+				Console.WriteLine("Existing SQLite database is old version re-creating: " + sqliteFilename);
+			}
 
 			if (File.Exists(sqliteFilename) == true)
-				return connection;
+				File.Delete(sqliteFilename);
 
 			File.WriteAllBytes(sqliteFilename, new byte[0]);
 
@@ -53,7 +63,7 @@ namespace Spludlow.MameAO
 			Console.WriteLine("...done.");
 
 			Console.Write($"Adding extra data columns {document.Name.LocalName} ...");
-			AddDataExtras(dataSet, document.Name.LocalName);
+			AddDataExtras(dataSet, document.Name.LocalName, assemblyVersion);
 			Console.WriteLine("...done.");
 
 			Console.Write($"Creating SQLite {document.Name.LocalName} ...");
@@ -127,8 +137,14 @@ namespace Spludlow.MameAO
 			return connection;
 		}
 
-		public static void AddDataExtras(DataSet dataSet, string name)
+		public static void AddDataExtras(DataSet dataSet, string name, string assemblyVersion)
 		{
+			DataTable table = new DataTable("ao_info");
+			table.Columns.Add("ao_info_id", typeof(long));
+			table.Columns.Add("assembly_version", typeof(string));
+			table.Rows.Add(1L, assemblyVersion);
+			dataSet.Tables.Add(table);
+
 			if (name == "mame")
 			{
 				DataTable machineTable = dataSet.Tables["machine"];
@@ -153,6 +169,11 @@ namespace Spludlow.MameAO
 					machineRow["ao_softwarelist_count"] = softwarelistRows.Length;
 
 				}
+			}
+
+			if (name == "softwarelists")
+			{
+
 			}
 		}
 
@@ -231,6 +252,38 @@ namespace Spludlow.MameAO
 				if (childElement.HasAttributes == true || childElement.HasElements == true)
 					ImportXMLWork(childElement, dataSet, row, keepTables);
 			}
+		}
+
+		public static bool TableExists(SQLiteConnection connection, string tableName)
+		{
+			object obj = ExecuteScalar(connection, $"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}'");
+
+			if (obj == null || obj is DBNull)
+				return false;
+
+			return true;
+		}
+		public static object ExecuteScalar(SQLiteConnection connection, string commandText)
+		{
+			connection.Open();
+			try
+			{
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+					return command.ExecuteScalar();
+			}
+			finally
+			{
+				connection.Close();
+			}
+
+		}
+
+		public static DataTable ExecuteFill(SQLiteConnection connection, string commandText)
+		{
+			DataSet dataSet = new DataSet();
+			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, connection))
+				adapter.Fill(dataSet);
+			return dataSet.Tables[0];
 		}
 	}
 }
