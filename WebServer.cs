@@ -42,8 +42,6 @@ namespace Spludlow.MameAO
 
 					string path = context.Request.Url.AbsolutePath.ToLower();
 
-					Console.WriteLine("HttpMethod: " + context.Request.HttpMethod + " " + path);
-
 					using (StreamWriter writer = new StreamWriter(context.Response.OutputStream, Encoding.UTF8))
 					{
 						try
