@@ -6,9 +6,6 @@ using System.Text;
 using System.Threading.Tasks;
 
 using System.Data.SQLite;
-using System.Web.UI.WebControls;
-using System.Collections.Generic;
-using static System.Net.Mime.MediaTypeNames;
 
 namespace Spludlow.MameAO
 {
@@ -50,7 +47,7 @@ namespace Spludlow.MameAO
 							if (_RunTask != null && _RunTask.Status != TaskStatus.RanToCompletion)
 								throw new ApplicationException("I'm busy.");
 
-							string path = context.Request.Url.AbsolutePath.ToLower();
+								string path = context.Request.Url.AbsolutePath.ToLower();
 
 							switch (path)
 							{

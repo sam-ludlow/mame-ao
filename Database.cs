@@ -3,10 +3,9 @@ using System.Collections.Generic;
 using System.Data;
 using System.Xml.Linq;
 using System.IO;
+using System.Linq;
 
 using System.Data.SQLite;
-using System.Net;
-using System.Runtime.CompilerServices;
 
 namespace Spludlow.MameAO
 {
@@ -18,7 +17,7 @@ namespace Spludlow.MameAO
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
 				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_softwarelist_count = 0)) " +
-				"ORDER BY machine.description " +
+				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
 
@@ -27,12 +26,99 @@ namespace Spludlow.MameAO
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
 				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_softwarelist_count > 0)) " +
-				"ORDER BY machine.description " +
+				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
 		};
 
-		public static SQLiteConnection DatabaseFromXML(XElement document, string sqliteFilename, HashSet<string> keepTables, string assemblyVersion)
+		public SQLiteConnection _MachineConnection;
+		public SQLiteConnection _SoftwareConnection;
+
+		private Dictionary<string, DataRow[]> _DevicesRefs;
+
+		public Database(SQLiteConnection machineConnection, SQLiteConnection softwareConnection)
+		{
+			_MachineConnection = machineConnection;
+			_SoftwareConnection = softwareConnection;
+
+
+			// Cache device_ref to speed up machine dependancy resolution
+			DataTable device_ref_Table = Database.ExecuteFill(_MachineConnection, "SELECT * FROM device_ref");
+
+			_DevicesRefs = new Dictionary<string, DataRow[]>();
+
+			DataTable machineTable = Database.ExecuteFill(_MachineConnection, "SELECT machine_id, name FROM machine");
+			foreach (DataRow row in machineTable.Rows)
+			{
+				string machineName = (string)row["name"];
+
+				DataRow[] rows = device_ref_Table.Select("machine_id = " + (long)row["machine_id"]);
+
+				_DevicesRefs.Add(machineName, rows);
+			}
+		}
+
+		public DataRow GetMachine(string name)
+		{
+			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM machine WHERE name = '{name}'");
+			if (table.Rows.Count == 0)
+				return null;
+			return table.Rows[0];
+		}
+
+		public DataRow[] GetMachineSoftwareLists(DataRow machine)
+		{
+			long machine_id = (long)machine["machine_id"];
+			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM softwarelist WHERE machine_id = {machine_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
+		public DataRow[] GetMachineFeatures(DataRow machine)
+		{
+			long machine_id = (long)machine["machine_id"];
+			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM feature WHERE machine_id = {machine_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
+		public DataRow[] GetMachineDeviceRefs(string machineName)
+		{
+			return _DevicesRefs[machineName];
+		}
+
+
+		public DataRow GetSoftwareList(string name)
+		{
+			DataTable table = ExecuteFill(_SoftwareConnection, $"SELECT * FROM softwarelist WHERE name = '{name}'");
+			if (table.Rows.Count == 0)
+				return null;
+			return table.Rows[0];
+		}
+
+		public DataRow[] GetSoftwareListsSoftware(DataRow softwarelist)
+		{
+			long softwarelist_id = (long)softwarelist["softwarelist_id"];
+			DataTable table = ExecuteFill(_SoftwareConnection, $"SELECT * FROM software WHERE softwarelist_id = {softwarelist_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
+		public DataRow[] GetSoftwareRoms(DataRow software)
+		{
+			long software_id = (long)software["software_id"];
+			DataTable table = ExecuteFill(_SoftwareConnection,
+				"SELECT rom.* FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id " +
+				$"WHERE part.software_id = {software_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
+		public DataRow[] GetSoftwareDisks(DataRow software)
+		{
+			long software_id = (long)software["software_id"];
+			DataTable table = ExecuteFill(_SoftwareConnection,
+				"SELECT disk.* FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
+				$"WHERE part.software_id = {software_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
+		public static SQLiteConnection DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)
 		{
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
@@ -58,8 +144,12 @@ namespace Spludlow.MameAO
 
 			File.WriteAllBytes(sqliteFilename, new byte[0]);
 
+			Console.Write($"Loading XML {xmlFilename} ...");
+			XElement document = XElement.Load(xmlFilename);
+			Console.WriteLine("...done.");
+
 			Console.Write($"Importing XML {document.Name.LocalName} ...");
-			DataSet dataSet = ImportXML(document, keepTables);
+			DataSet dataSet = ReadXML.ImportXML(document);
 			Console.WriteLine("...done.");
 
 			Console.Write($"Adding extra data columns {document.Name.LocalName} ...");
@@ -78,7 +168,14 @@ namespace Spludlow.MameAO
 					{
 						string dataType = "TEXT";
 						if (column.ColumnName.EndsWith("_id") == true)
+						{
 							dataType = columnDefinitions.Count == 0 ? "INTEGER PRIMARY KEY" : "INTEGER";
+						}
+						else
+						{
+							if (column.DataType == typeof(int) || column.DataType == typeof(long))
+								dataType = "INTEGER";
+						}
 
 						columnDefinitions.Add($"\"{column.ColumnName}\" {dataType}");
 					}
@@ -127,6 +224,21 @@ namespace Spludlow.MameAO
 						throw;
 					}
 				}
+
+				if (document.Name.LocalName == "mame")
+				{
+					foreach (string commandText in new string[] {
+						"CREATE INDEX machine_name_index ON machine(name);"
+						})
+						using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+							command.ExecuteNonQuery();
+				}
+
+				if (document.Name.LocalName == "softwarelists")
+				{
+
+				}
+
 			}
 			finally
 			{
@@ -148,13 +260,16 @@ namespace Spludlow.MameAO
 			if (name == "mame")
 			{
 				DataTable machineTable = dataSet.Tables["machine"];
+
 				DataTable romTable = dataSet.Tables["rom"];
 				DataTable diskTable = dataSet.Tables["disk"];
 				DataTable softwarelistTable = dataSet.Tables["softwarelist"];
+				DataTable driverTable = dataSet.Tables["driver"];
 
 				machineTable.Columns.Add("ao_rom_count", typeof(int));
 				machineTable.Columns.Add("ao_disk_count", typeof(int));
 				machineTable.Columns.Add("ao_softwarelist_count", typeof(int));
+				machineTable.Columns.Add("ao_driver_status", typeof(string));
 
 				foreach (DataRow machineRow in machineTable.Rows)
 				{
@@ -163,10 +278,13 @@ namespace Spludlow.MameAO
 					DataRow[] romRows = romTable.Select($"machine_id={machine_id}");
 					DataRow[] diskRows = diskTable.Select($"machine_id={machine_id}");
 					DataRow[] softwarelistRows = softwarelistTable.Select($"machine_id={machine_id}");
+					DataRow[] driverRows = driverTable.Select($"machine_id={machine_id}");
 
 					machineRow["ao_rom_count"] = romRows.Length;
 					machineRow["ao_disk_count"] = diskRows.Length;
 					machineRow["ao_softwarelist_count"] = softwarelistRows.Length;
+					if (driverRows.Length == 1)
+						machineRow["ao_driver_status"] = (string)driverRows[0]["status"];
 
 				}
 			}
@@ -177,82 +295,7 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static DataSet ImportXML(XElement document, HashSet<string> keepTables)
-		{
-			DataSet dataSet = new DataSet();
 
-			ImportXMLWork(document, dataSet, null, keepTables);
-
-			return dataSet;
-		}
-		public static void ImportXMLWork(XElement element, DataSet dataSet, DataRow parentRow, HashSet<string> keepTables)
-		{
-			string tableName = element.Name.LocalName;
-
-			if (tableName == "condition")
-				tableName = $"{parentRow.Table.TableName}_{tableName}";
-			
-			if (keepTables != null && keepTables.Contains(tableName) == false)
-				return;
-
-			string forignKeyName = null;
-			if (parentRow != null)
-				forignKeyName = parentRow.Table.TableName + "_id";
-
-			DataTable table;
-
-			if (dataSet.Tables.Contains(tableName) == false)
-			{
-				table = new DataTable(tableName);
-				DataColumn pkColumn = table.Columns.Add(tableName + "_id", typeof(long));
-				pkColumn.AutoIncrement = true;
-				pkColumn.AutoIncrementSeed = 1;
-
-				table.PrimaryKey = new DataColumn[] { pkColumn };
-
-				if (parentRow != null)
-					table.Columns.Add(forignKeyName, parentRow.Table.Columns[forignKeyName].DataType);
-
-				dataSet.Tables.Add(table);
-			}
-			else
-			{
-				table = dataSet.Tables[tableName];
-			}
-
-			Dictionary<string, string> rowValues = new Dictionary<string, string>();
-
-			foreach (XAttribute attribute in element.Attributes())
-				rowValues.Add(attribute.Name.LocalName, attribute.Value);
-
-			foreach (XElement childElement in element.Elements())
-			{
-				if (childElement.HasAttributes == false && childElement.HasElements == false)
-					rowValues.Add(childElement.Name.LocalName, childElement.Value);
-			}
-
-			foreach (string columnName in rowValues.Keys)
-			{
-				if (table.Columns.Contains(columnName) == false)
-					table.Columns.Add(columnName, typeof(string));
-			}
-
-			DataRow row = table.NewRow();
-
-			if (parentRow != null)
-				row[forignKeyName] = parentRow[forignKeyName];
-
-			foreach (string columnName in rowValues.Keys)
-				row[columnName] = rowValues[columnName];
-
-			table.Rows.Add(row);
-
-			foreach (XElement childElement in element.Elements())
-			{
-				if (childElement.HasAttributes == true || childElement.HasElements == true)
-					ImportXMLWork(childElement, dataSet, row, keepTables);
-			}
-		}
 
 		public static bool TableExists(SQLiteConnection connection, string tableName)
 		{
@@ -270,6 +313,21 @@ namespace Spludlow.MameAO
 			{
 				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 					return command.ExecuteScalar();
+			}
+			finally
+			{
+				connection.Close();
+			}
+
+		}
+
+		public static int ExecuteNonQuery(SQLiteConnection connection, string commandText)
+		{
+			connection.Open();
+			try
+			{
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+					return command.ExecuteNonQuery();
 			}
 			finally
 			{

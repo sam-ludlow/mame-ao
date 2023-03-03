@@ -7,7 +7,6 @@ using System.IO;
 using System.Data;
 using System.IO.Compression;
 using System.Diagnostics;
-using System.Xml.Linq;
 using System.Reflection;
 
 using System.Data.SQLite;
@@ -27,11 +26,10 @@ namespace Spludlow.MameAO
 
 		private bool _LinkingEnabled = false;
 
-		private Dictionary<string, XElement> _MachineElements;
-		private Dictionary<string, XElement> _SoftwareListElements;
-
 		public SQLiteConnection _MachineConnection;
 		public SQLiteConnection _SoftwareConnection;
+
+		private Database _Database;
 
 		private Spludlow.HashStore _RomHashStore;
 		private Spludlow.HashStore _DiskHashStore;
@@ -96,59 +94,6 @@ namespace Spludlow.MameAO
 				HtmlSizesUrl = null,
 			},
 		};
-
-		private HashSet<string> machineTables = new HashSet<string>(new string[] {
-			"ao_info",
-			"mame",
-			"machine",
-			"rom",
-			"device_ref",
-			//"sample",
-			//"chip",
-			//"display",
-			//"sound",
-			//"input",
-			//"control",
-			//"dipswitch",
-			//"diplocation",
-			//"dipvalue",
-			//"port",
-			"driver",
-			"feature",
-			//"biosset",
-			//"dipswitch_condition",
-			//"analog",
-			//"configuration",
-			//"confsetting",
-			//"device",
-			//"instance",
-			//"extension",
-			//"slot",
-			"softwarelist",
-			//"dipvalue_condition",
-			//"slotoption",
-			//"adjuster",
-			"disk",
-			//"ramoption",
-			//"configuration_condition",
-			//"confsetting_condition",
-			//"conflocation",
-		});
-
-		private HashSet<string> softwareTables = new HashSet<string>(new string[] {
-			"ao_info",
-			"softwarelists",
-			"softwarelist",
-			"software",
-			//"info",
-			"part",
-			//"feature",
-			"dataarea",
-			"rom",
-			//"sharedfeat",
-			"diskarea",
-			"disk",
-		});
 
 		private MameSourceSet[] GetSourceSets(MameSetType type)
 		{
@@ -390,26 +335,41 @@ namespace Spludlow.MameAO
 			// MAME Machine XML & SQL
 			//
 
-			XElement machineDoc = ExtractMameXml("machine", "-listxml", binFilename, Path.Combine(_VersionDirectory, "_machine.xml"));
+			string machineXmlFilename = Path.Combine(_VersionDirectory, "_machine.xml");
 
-			_MachineElements = new Dictionary<string, XElement>();
+			if (File.Exists(machineXmlFilename) == false)
+			{
+				Console.Write($"Extracting MAME machine XML {machineXmlFilename} ...");
+				ExtractXML(binFilename, machineXmlFilename, "-listxml");
+				Console.WriteLine("...done.");
+			}
 
-			foreach (XElement machine in machineDoc.Elements("machine"))
-				_MachineElements.Add(machine.Attribute("name").Value, machine);
+			string machineDatabaseFilename = Path.Combine(_VersionDirectory, "_machine.sqlite");
 
-			_MachineConnection = Database.DatabaseFromXML(machineDoc, Path.Combine(_VersionDirectory, "_machine.sqlite"), machineTables, _AssemblyVersion);
+			_MachineConnection = Database.DatabaseFromXML(machineXmlFilename, machineDatabaseFilename, _AssemblyVersion);
 
 			//
 			// MAME Software XML & SQL
 			//
 
-			XElement softwareDoc = ExtractMameXml("software", "-listsoftware", binFilename, Path.Combine(_VersionDirectory, "_software.xml"));
+			string softwareXmlFilename = Path.Combine(_VersionDirectory, "_software.xml");
 
-			_SoftwareListElements = new Dictionary<string, XElement>();
-			foreach (XElement softwarelist in softwareDoc.Elements("softwarelist"))
-				_SoftwareListElements.Add(softwarelist.Attribute("name").Value, softwarelist);
+			if (File.Exists(softwareXmlFilename) == false)
+			{
+				Console.Write($"Extracting MAME software XML {softwareXmlFilename} ...");
+				ExtractXML(binFilename, softwareXmlFilename, "-listsoftware");
+				Console.WriteLine("...done.");
+			}
 
-			_SoftwareConnection = Database.DatabaseFromXML(softwareDoc, Path.Combine(_VersionDirectory, "_software.sqlite"), softwareTables, _AssemblyVersion);
+			string softwareDatabaseFilename = Path.Combine(_VersionDirectory, "_software.sqlite");
+
+			_SoftwareConnection = Database.DatabaseFromXML(softwareXmlFilename, softwareDatabaseFilename, _AssemblyVersion);
+
+			//
+			// Database
+			//
+
+			_Database = new Database(_MachineConnection, _SoftwareConnection);
 
 			Console.WriteLine("");
 		}
@@ -464,22 +424,6 @@ namespace Spludlow.MameAO
 			Console.WriteLine("...done.");
 
 			return metadata;
-		}
-
-		private XElement ExtractMameXml(string name, string argument, string binFilename, string filename)
-		{
-			if (File.Exists(filename) == false)
-			{
-				Console.Write($"Extracting MAME {name} XML {filename} ...");
-				ExtractXML(binFilename, filename, argument);
-				Console.WriteLine("...done.");
-			}
-
-			Console.Write($"Loading MAME {name} XML {filename} ...");
-			XElement doc = XElement.Load(filename);
-			Console.WriteLine("...done.");
-
-			return doc;
 		}
 
 		public void Shell()
@@ -620,20 +564,6 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 		}
 
-		public XElement GetMachine(string name)
-		{
-			if (_MachineElements.ContainsKey(name) == false)
-				return null;
-			return _MachineElements[name];
-		}
-
-		public XElement GetSoftwareList(string name)
-		{
-			if (_SoftwareListElements.ContainsKey(name) == false)
-				return null;
-			return _SoftwareListElements[name];
-		}
-
 		public void GetRoms(string machineName, string softwareName)
 		{
 			Tools.ConsoleHeading(_h1, "Asset Acquisition");
@@ -642,11 +572,11 @@ namespace Spludlow.MameAO
 			//
 			// Machine
 			//
-			XElement machine = GetMachine(machineName);
+			DataRow machine = _Database.GetMachine(machineName);
 			if (machine == null)
 				throw new ApplicationException($"Machine not found: {machineName}");
 
-			XElement[] softwarelists = machine.Elements("softwarelist").ToArray();
+			DataRow[] softwarelists = _Database.GetMachineSoftwareLists(machine);
 
 			List<string[]> romStoreFilenames = new List<string[]>();
 
@@ -669,26 +599,28 @@ namespace Spludlow.MameAO
 			{
 				int softwareFound = 0;
 
-				foreach (XElement machineSoftwarelist in softwarelists)
+				foreach (DataRow machineSoftwarelist in softwarelists)
 				{
-					string softwarelistName = machineSoftwarelist.Attribute("name").Value;
+					string softwarelistName = (string)machineSoftwarelist["name"];
 
-					XElement softwarelist = GetSoftwareList(softwarelistName);
+					DataRow softwarelist = _Database.GetSoftwareList(softwarelistName);
 						
 					if (softwarelist == null)
 						throw new ApplicationException($"Software list on machine but not in SL {softwarelistName}");
 
-					foreach (XElement findSoftware in softwarelist.Elements("software"))
+					foreach (DataRow findSoftware in _Database.GetSoftwareListsSoftware(softwarelist))
 					{
-						if (findSoftware.Attribute("name").Value == softwareName)
+						if ((string)findSoftware["name"] == softwareName)
 						{
-							missingCount += GetRomsSoftware(findSoftware, romStoreFilenames);
+							missingCount += GetRomsSoftware(softwarelist, findSoftware, romStoreFilenames);
 
-							missingCount += GetDiskSoftware(findSoftware, romStoreFilenames);
+							missingCount += GetDiskSoftware(softwarelist, findSoftware, romStoreFilenames);
 
 							++softwareFound;
 						}
 					}
+
+					// TODO : Find software depenacies (sharedfeat)
 				}
 
 				if (softwareFound == 0)
@@ -727,22 +659,22 @@ namespace Spludlow.MameAO
 			});
 			Console.WriteLine();
 
-			XElement[] features = machine.Elements("feature").ToArray();
+			DataRow[] features = _Database.GetMachineFeatures(machine);
 
-			Console.WriteLine($"Name:           {machine.Attribute("name").Value}");
-			Console.WriteLine($"Description:    {machine.Element("description")?.Value}");
-			Console.WriteLine($"Year:           {machine.Element("year")?.Value}");
-			Console.WriteLine($"Manufacturer:   {machine.Element("manufacturer")?.Value}");
-			Console.WriteLine($"Status:         {machine.Element("driver")?.Attribute("status")?.Value}");
-			Console.WriteLine($"isbios:         {machine.Attribute("isbios")?.Value}");
-			Console.WriteLine($"isdevice:       {machine.Attribute("isdevice")?.Value}");
-			Console.WriteLine($"ismechanical:   {machine.Attribute("ismechanical")?.Value}");
-			Console.WriteLine($"runnable:       {machine.Attribute("runnable")?.Value}");
+			Console.WriteLine($"Name:           {Tools.DataRowValue(machine, "name")}");
+			Console.WriteLine($"Description:    {Tools.DataRowValue(machine, "description")}");
+			Console.WriteLine($"Year:           {Tools.DataRowValue(machine, "year")}");
+			Console.WriteLine($"Manufacturer:   {Tools.DataRowValue(machine, "manufacturer")}");
+			Console.WriteLine($"Status:         {Tools.DataRowValue(machine, "ao_driver_status")}");
+			Console.WriteLine($"isbios:         {Tools.DataRowValue(machine, "isbios")}");
+			Console.WriteLine($"isdevice:       {Tools.DataRowValue(machine, "isdevice")}");
+			Console.WriteLine($"ismechanical:   {Tools.DataRowValue(machine, "ismechanical")}");
+			Console.WriteLine($"runnable:       {Tools.DataRowValue(machine, "runnable")}");
 
-			foreach (XElement feature in features)
-				Console.WriteLine($"Feature issue:  {feature.Attribute("type")?.Value} {feature.Attribute("status")?.Value}");
-			foreach (XElement softwarelist in softwarelists)
-				Console.WriteLine($"Software list:  {softwarelist.Attribute("name")?.Value}");
+			foreach (DataRow feature in features)
+				Console.WriteLine($"Feature issue:  {(string)feature["type"]} {(string)feature["status"]}");
+			foreach (DataRow softwarelist in softwarelists)
+				Console.WriteLine($"Software list:  {(string)softwarelist["name"]}");
 
 			Console.WriteLine();
 		}
@@ -756,7 +688,9 @@ namespace Spludlow.MameAO
 			//
 			HashSet<string> requiredMachines = new HashSet<string>();
 
+			Console.Write("Finding related machines...");
 			FindAllMachines(machineName, requiredMachines);
+			Console.WriteLine("...done.");
 
 			if (requiredMachines.Count == 0)
 				return 0;
@@ -769,7 +703,7 @@ namespace Spludlow.MameAO
 
 			foreach (string requiredMachineName in requiredMachines)
 			{
-				XElement requiredMachine = GetMachine(requiredMachineName);
+				DataRow requiredMachine = _Database.GetMachine(requiredMachineName);
 				if (requiredMachine == null)
 					throw new ApplicationException("requiredMachine not found: " + requiredMachineName);
 
@@ -778,17 +712,18 @@ namespace Spludlow.MameAO
 				//
 				HashSet<string> missingRoms = new HashSet<string>();
 
-				foreach (XElement rom in requiredMachine.Descendants("rom"))
+				long machine_id = (long)requiredMachine["machine_id"];
+				foreach (DataRow romRow in Database.ExecuteFill(_MachineConnection, "SELECT * FROM rom WHERE machine_id = " + machine_id).Rows)
 				{
-					string romName = rom.Attribute("name")?.Value;
-					string sha1 = rom.Attribute("sha1")?.Value;
+					string name = Tools.DataRowValue(romRow, "name");
+					string sha1 = Tools.DataRowValue(romRow, "sha1");
 
-					if (romName == null || sha1 == null)
+					if (name == null || sha1 == null)
 						continue;
 
 					bool inStore = _RomHashStore.Exists(sha1);
 
-					Console.WriteLine($"Checking machine ROM: {inStore}\t{requiredMachineName}\t{romName}\t{sha1}");
+					Console.WriteLine($"Checking machine ROM: {inStore}\t{requiredMachineName}\t{name}\t{sha1}");
 
 					if (inStore == false)
 						missingRoms.Add(sha1);
@@ -818,19 +753,20 @@ namespace Spludlow.MameAO
 
 			foreach (string requiredMachineName in requiredMachines)
 			{
-				XElement requiredMachine = GetMachine(requiredMachineName);
+				DataRow requiredMachine = _Database.GetMachine(requiredMachineName);
 				if (requiredMachine == null)
 					throw new ApplicationException("requiredMachine not found: " + requiredMachineName);
 
-				foreach (XElement rom in requiredMachine.Descendants("rom"))
+				long machine_id = (long)requiredMachine["machine_id"];
+				foreach (DataRow romRow in Database.ExecuteFill(_MachineConnection, "SELECT * FROM rom WHERE machine_id = " + machine_id).Rows)
 				{
-					string romName = rom.Attribute("name")?.Value;
-					string sha1 = rom.Attribute("sha1")?.Value;
+					string name = Tools.DataRowValue(romRow, "name");
+					string sha1 = Tools.DataRowValue(romRow, "sha1");
 
-					if (romName == null || sha1 == null)
+					if (name == null || sha1 == null)
 						continue;
 
-					string romFilename = Path.Combine(_VersionDirectory, "roms", requiredMachineName, romName);
+					string romFilename = Path.Combine(_VersionDirectory, "roms", requiredMachineName, name);
 					string romDirectory = Path.GetDirectoryName(romFilename);
 					if (Directory.Exists(romDirectory) == false)
 						Directory.CreateDirectory(romDirectory);
@@ -839,13 +775,13 @@ namespace Spludlow.MameAO
 					{
 						if (File.Exists(romFilename) == false)
 						{
-							Console.WriteLine($"Place machine ROM: {requiredMachineName}\t{romName}");
+							Console.WriteLine($"Place machine ROM: {requiredMachineName}\t{name}");
 							romStoreFilenames.Add(new string[] { romFilename, _RomHashStore.Filename(sha1) });
 						}
 					}
 					else
 					{
-						Console.WriteLine($"Missing machine ROM: {requiredMachineName}\t{romName}\t{sha1}");
+						Console.WriteLine($"Missing machine ROM: {requiredMachineName}\t{name}\t{sha1}");
 						++missingCount;
 					}
 				}
@@ -858,13 +794,15 @@ namespace Spludlow.MameAO
 		{
 			MameSourceSet soureSet = GetSourceSets(MameSetType.MachineDisk)[0];
 
-			XElement machine = GetMachine(machineName);
-			if (machine == null)
+			DataRow machineRow = _Database.GetMachine(machineName);
+			if (machineRow == null)
 				throw new ApplicationException("GetDisksMachine machine not found: " + machineName);
 
-			XElement[] disks = machine.Elements("disk").ToArray();
+			long machine_id = (long)machineRow["machine_id"];
 
-			if (disks.Length == 0)
+			DataRowCollection diskRows = Database.ExecuteFill(_MachineConnection, "SELECT * FROM disk WHERE machine_id = " + machine_id).Rows;
+
+			if (diskRows.Count == 0)
 				return 0;
 
 			Tools.ConsoleHeading(_h2, new string[] {
@@ -875,14 +813,14 @@ namespace Spludlow.MameAO
 			//
 			// See if Disks are in the hash store
 			//
-			HashSet<XElement> missingDisks = new HashSet<XElement>();
+			List<DataRow> missingDiskRows = new List<DataRow>();
 
-			foreach (XElement disk in disks)
+			foreach (DataRow diskRow in diskRows)
 			{
-				string name = disk.Attribute("name")?.Value;
-				string sha1 = disk.Attribute("sha1")?.Value;
+				string name = Tools.DataRowValue(diskRow, "name");
+				string sha1 = Tools.DataRowValue(diskRow, "sha1");
 
-				if (disk == null || sha1 == null)
+				if (name == null || sha1 == null)
 					continue;
 
 				bool inStore = _DiskHashStore.Exists(sha1);
@@ -890,25 +828,24 @@ namespace Spludlow.MameAO
 				Console.WriteLine($"Checking machine Disk: {inStore}\t{machineName}\t{name}\t{sha1}");
 
 				if (inStore == false)
-					missingDisks.Add(disk);
+					missingDiskRows.Add(diskRow);
 			}
 
 			//
 			// If not then download and import into hash store
 			//
-			if (missingDisks.Count > 0)
+			if (missingDiskRows.Count > 0)
 			{
-				string parentMachineName = machine.Attribute("romof")?.Value;
+				string parentMachineName = machineRow.IsNull("romof") ? null : (string)machineRow["romof"];
 
-				foreach (XElement disk in missingDisks)
+				foreach (DataRow diskRow in missingDiskRows)
 				{
-					string diskName = disk.Attribute("name")?.Value;
-					string sha1 = disk.Attribute("sha1")?.Value;
-
-					string merge = disk.Attribute("merge")?.Value;
+					string name = Tools.DataRowValue(diskRow, "name");
+					string sha1 = Tools.DataRowValue(diskRow, "sha1");
+					string merge = Tools.DataRowValue(diskRow, "merge");
 
 					string availableMachineName = machineName;
-					string availableDiskName = diskName;
+					string availableDiskName = name;
 
 					if (merge != null)
 					{
@@ -956,12 +893,12 @@ namespace Spludlow.MameAO
 
 			int missing = 0;
 
-			foreach (XElement disk in disks)
+			foreach (DataRow diskRow in diskRows)
 			{
-				string name = disk.Attribute("name")?.Value;
-				string sha1 = disk.Attribute("sha1")?.Value;
+				string name = Tools.DataRowValue(diskRow, "name");
+				string sha1 = Tools.DataRowValue(diskRow, "sha1");
 
-				if (disk == null || sha1 == null)
+				if (name == null || sha1 == null)
 					continue;
 
 				string filename = Path.Combine(_VersionDirectory, "roms", machineName, name + ".chd");
@@ -988,19 +925,16 @@ namespace Spludlow.MameAO
 			return missing;
 		}
 
-		private int GetDiskSoftware(XElement software, List<string[]> romStoreFilenames)
+		private int GetDiskSoftware(DataRow softwareList, DataRow software, List<string[]> romStoreFilenames)
 		{
 			MameSourceSet soureSet = GetSourceSets(MameSetType.SoftwareDisk)[0];
 
-			XElement softwareList = software.Parent;
+			string softwareListName = (string)softwareList["name"];
+			string softwareName = (string)software["name"];
 
-			string softwareListName = softwareList.Attribute("name").Value;
-			string softwareName = software.Attribute("name").Value;
+			DataRow[] disks = _Database.GetSoftwareDisks(software);
 
-			IEnumerable<XElement> disks = software.Descendants("disk");
-			int diskCount = disks.Count();
-
-			if (diskCount == 0)
+			if (disks.Length == 0)
 				return 0;
 
 			Tools.ConsoleHeading(_h2, new string[] {
@@ -1011,14 +945,14 @@ namespace Spludlow.MameAO
 			//
 			// See if Disks are in the hash store
 			//
-			HashSet<XElement> missingDisks = new HashSet<XElement>();
+			List<DataRow> missingDisks = new List<DataRow>();
 
-			foreach (XElement disk in disks)
+			foreach (DataRow disk in disks)
 			{
-				string name = disk.Attribute("name")?.Value;
-				string sha1 = disk.Attribute("sha1")?.Value;
+				string name = Tools.DataRowValue(disk, "name");
+				string sha1 = Tools.DataRowValue(disk, "sha1");
 
-				if (disk == null || sha1 == null)
+				if (name == null || sha1 == null)
 					continue;
 
 				bool inStore = _DiskHashStore.Exists(sha1);
@@ -1035,14 +969,14 @@ namespace Spludlow.MameAO
 			if (missingDisks.Count > 0)
 			{
 				string downloadSoftwareName = softwareName;
-				string parentSoftwareName = software.Attribute("cloneof")?.Value;
+				string parentSoftwareName = Tools.DataRowValue(software, "cloneof");
 				if (parentSoftwareName != null)
 					downloadSoftwareName = parentSoftwareName;
 
-				foreach (XElement disk in missingDisks)
+				foreach (DataRow disk in missingDisks)
 				{
-					string diskName = disk.Attribute("name")?.Value;
-					string sha1 = disk.Attribute("sha1")?.Value;
+					string diskName = Tools.DataRowValue(disk, "name");
+					string sha1 = Tools.DataRowValue(disk, "sha1");
 
 					string key = $"{softwareListName}/{downloadSoftwareName}/{diskName}";
 
@@ -1079,12 +1013,12 @@ namespace Spludlow.MameAO
 
 			int missing = 0;
 
-			foreach (XElement disk in disks)
+			foreach (DataRow disk in disks)
 			{
-				string name = disk.Attribute("name")?.Value;
-				string sha1 = disk.Attribute("sha1")?.Value;
+				string name = Tools.DataRowValue(disk, "name");
+				string sha1 = Tools.DataRowValue(disk, "sha1");
 
-				if (disk == null || sha1 == null)
+				if (name == null || sha1 == null)
 					continue;
 
 				string filename = Path.Combine(_VersionDirectory, "roms", softwareListName, softwareName, name + ".chd");
@@ -1111,19 +1045,16 @@ namespace Spludlow.MameAO
 			return missing;
 		}
 
-		private int GetRomsSoftware(XElement software, List<string[]> romStoreFilenames)
+		private int GetRomsSoftware(DataRow softwareList, DataRow software, List<string[]> romStoreFilenames)
 		{
 			MameSourceSet soureSet = GetSourceSets(MameSetType.SoftwareRom)[0];
 
-			XElement softwareList = software.Parent;
+			string softwareListName = (string)softwareList["name"];
+			string softwareName = (string)software["name"];
 
-			string softwareListName = softwareList.Attribute("name").Value;
-			string softwareName = software.Attribute("name").Value;
+			DataRow[] roms = _Database.GetSoftwareRoms(software);
 
-			IEnumerable<XElement> roms = software.Descendants("rom");
-			int romCount = roms.Count();
-
-			if (romCount == 0)
+			if (roms.Length == 0)
 				return 0;
 
 			Tools.ConsoleHeading(_h2, new string[] {
@@ -1139,10 +1070,10 @@ namespace Spludlow.MameAO
 			//
 			HashSet<string> missingRoms = new HashSet<string>();
 
-			foreach (XElement rom in roms)
+			foreach (DataRow rom in roms)
 			{
-				string romName = rom.Attribute("name")?.Value;
-				string sha1 = rom.Attribute("sha1")?.Value;
+				string romName = Tools.DataRowValue(rom, "name");
+				string sha1 = Tools.DataRowValue(rom, "sha1");
 
 				if (romName == null || sha1 == null)
 					continue;
@@ -1161,7 +1092,7 @@ namespace Spludlow.MameAO
 			if (missingRoms.Count > 0)
 			{
 				string requiredSoftwareName = softwareName;
-				string parentSoftwareName = software.Attribute("cloneof")?.Value;
+				string parentSoftwareName = Tools.DataRowValue(software, "cloneof");
 				if (parentSoftwareName != null)
 					requiredSoftwareName = parentSoftwareName;
 
@@ -1187,10 +1118,10 @@ namespace Spludlow.MameAO
 			//
 
 			int missingCount = 0;
-			foreach (XElement rom in roms)
+			foreach (DataRow rom in roms)
 			{
-				string romName = rom.Attribute("name")?.Value;
-				string sha1 = rom.Attribute("sha1")?.Value;
+				string romName = Tools.DataRowValue(rom, "name");
+				string sha1 = Tools.DataRowValue(rom, "sha1");
 
 				if (romName == null || sha1 == null)
 					continue;
@@ -1325,22 +1256,23 @@ namespace Spludlow.MameAO
 			if (requiredMachines.Contains(machineName) == true)
 				return;
 
-			XElement machine = GetMachine(machineName);
-			if (machine == null)
+			DataRow machineRow = _Database.GetMachine(machineName);
+
+			if (machineRow == null)
 				throw new ApplicationException("FindAllMachines machine not found: " + machineName);
 
-			bool hasRoms = (machine.Descendants("rom").Count() > 0);
+			bool hasRoms = (long)machineRow["ao_rom_count"] > 0;
 
 			if (hasRoms == true)
 				requiredMachines.Add(machineName);
 
-			string romof = machine.Attribute("romof")?.Value;
+			string romof = machineRow.IsNull("romof") ? null : (string)machineRow["romof"];
 
 			if (romof != null)
 				FindAllMachines(romof, requiredMachines);
 
-			foreach (XElement device_ref in machine.Descendants("device_ref"))
-				FindAllMachines(device_ref.Attribute("name").Value, requiredMachines);
+			foreach (DataRow row in _Database.GetMachineDeviceRefs(machineName))
+				FindAllMachines((string)row["name"], requiredMachines);
 		}
 
 		public void RunSelfExtract(string filename)

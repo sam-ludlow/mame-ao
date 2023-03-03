@@ -5,6 +5,7 @@ using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
+using System.Data;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -26,6 +27,13 @@ namespace Spludlow.MameAO
 		};
 
 		private static readonly SHA1Managed _SHA1Managed = new SHA1Managed();
+
+		public static string DataRowValue(DataRow row, string columnName)
+		{
+			if (row.IsNull(columnName))
+				return null;
+			return (string)row[columnName];
+		}
 
 		public static void ConsoleRule(char ch)
 		{

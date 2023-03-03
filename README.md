@@ -19,6 +19,12 @@ Find other machines / software (not currently available in UI) you are looking f
 - wait for the MAME Shell to start
 - enter a machine name and press enter e.g. "mrdo", or use the UI.
 
+## Important notes
+
+The first time you run it will take a while and use a lot of RAM.
+
+Please be patient, subsequent runs will not.
+
 ## UI
 
 After mame-ao has fully started browse to http://127.0.0.1:12380/. Just click on image.
@@ -32,12 +38,13 @@ Notes
 
 - Windows with .net framework 4.8
 - 32 bit / 64 bit (application is 32 bit keeps RAM usage down)
-- 1.4 Gb RAM free 
+- ??? Gb RAM free 
 
 ## Known issues
 
+- Software List dependencies don't work
 - UI needs improvement
-- Uses about 1.4 Gb RAM - TODO: Just use SQLite don't keep XML in memory
+- Uses about ??? Gb RAM
 - Not all CHD SL (Software list) disks are available in the source https://archive.org/download/mame-software-list-chds-2/
 
 ## Symbolic Links - Save disk space
