@@ -84,6 +84,12 @@ namespace Spludlow.MameAO
 			return _DevicesRefs[machineName];
 		}
 
+		public DataRow[] GetSoftwareListsSoftware(DataRow softwarelist)
+		{
+			long softwarelist_id = (long)softwarelist["softwarelist_id"];
+			DataTable table = ExecuteFill(_SoftwareConnection, $"SELECT * FROM software WHERE softwarelist_id = {softwarelist_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
 
 		public DataRow GetSoftwareList(string name)
 		{
@@ -91,13 +97,6 @@ namespace Spludlow.MameAO
 			if (table.Rows.Count == 0)
 				return null;
 			return table.Rows[0];
-		}
-
-		public DataRow[] GetSoftwareListsSoftware(DataRow softwarelist)
-		{
-			long softwarelist_id = (long)softwarelist["softwarelist_id"];
-			DataTable table = ExecuteFill(_SoftwareConnection, $"SELECT * FROM software WHERE softwarelist_id = {softwarelist_id}");
-			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
 		public DataRow[] GetSoftwareRoms(DataRow software)
@@ -115,6 +114,13 @@ namespace Spludlow.MameAO
 			DataTable table = ExecuteFill(_SoftwareConnection,
 				"SELECT disk.* FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
 				$"WHERE part.software_id = {software_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
+		public DataRow[] GetSoftwareSharedFeats(DataRow software)
+		{
+			long software_id = (long)software["software_id"];
+			DataTable table = ExecuteFill(_SoftwareConnection, $"SELECT * FROM sharedfeat WHERE software_id = {software_id}");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 

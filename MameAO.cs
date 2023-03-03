@@ -45,68 +45,7 @@ namespace Spludlow.MameAO
 		public readonly char _h1 = '#';
 		public readonly char _h2 = '.';
 
-		public enum MameSetType
-		{
-			MachineRom,
-			MachineDisk,
-			SoftwareRom,
-			SoftwareDisk,
-		};
-
-		public class MameSourceSet
-		{
-			public MameSetType SetType;
-			public string MetadataUrl;
-			public string DownloadUrl;
-			public string HtmlSizesUrl;
-			public Dictionary<string, long> AvailableDownloadSizes;
-		}
-
 		private readonly string _BinariesDownloadUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
-
-		private readonly MameSourceSet[] _MameSourceSets = new MameSourceSet[] {
-			new MameSourceSet
-			{
-				SetType = MameSetType.MachineRom,
-				MetadataUrl = "https://archive.org/metadata/mame-merged",
-				DownloadUrl = "https://archive.org/download/mame-merged/mame-merged/@MACHINE@.zip",
-				HtmlSizesUrl = null,
-			},
-			new MameSourceSet
-			{
-				SetType = MameSetType.MachineDisk,
-				MetadataUrl = "https://archive.org/metadata/mame-chds-roms-extras-complete",
-				DownloadUrl = "https://archive.org/download/mame-chds-roms-extras-complete/@MACHINE@/@DISK@.chd",
-				HtmlSizesUrl = null,
-			},
-			new MameSourceSet
-			{
-				SetType = MameSetType.SoftwareRom,
-				MetadataUrl = "https://archive.org/metadata/mame-sl",
-				DownloadUrl = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/@LIST@%2f@SOFTWARE@.zip",
-				HtmlSizesUrl = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/",
-			},
-			new MameSourceSet
-			{
-				SetType = MameSetType.SoftwareDisk,
-				MetadataUrl = "https://archive.org/metadata/mame-software-list-chds-2",
-				DownloadUrl = "https://archive.org/download/mame-software-list-chds-2/@LIST@/@SOFTWARE@/@DISK@.chd",
-				HtmlSizesUrl = null,
-			},
-		};
-
-		private MameSourceSet[] GetSourceSets(MameSetType type)
-		{
-			MameSourceSet[] results =
-				(from sourceSet in _MameSourceSets
-				where sourceSet.SetType == type
-				select sourceSet).ToArray();
-
-			if (results.Length == 0)
-				throw new ApplicationException($"Did not find any source sets: {type}");
-
-			return results;
-		}
 
 		public MameAOProcessor(string rootDirectory)
 		{
@@ -202,11 +141,11 @@ namespace Spludlow.MameAO
 			// Prepare sources
 			//
 
-			foreach (MameSetType setType in Enum.GetValues(typeof(MameSetType)))
+			foreach (Sources.MameSetType setType in Enum.GetValues(typeof(Sources.MameSetType)))
 			{
 				Tools.ConsoleHeading(_h2, $"Prepare source: {setType}");
 
-				MameSourceSet sourceSet = GetSourceSets(setType)[0];
+				Sources.MameSourceSet sourceSet = Sources.GetSourceSets(setType)[0];
 
 				string setTypeName = setType.ToString();
 				string metadataFilename = Path.Combine(_RootDirectory, $"_metadata_{setTypeName}.json");
@@ -218,25 +157,25 @@ namespace Spludlow.MameAO
 
 				switch (setType)
 				{
-					case MameSetType.MachineRom:
+					case Sources.MameSetType.MachineRom:
 						version = title.Substring(5, 5);
 
 						sourceSet.AvailableDownloadSizes = AvailableFilesInMetadata("mame-merged/", metadata);
 						break;
 
-					case MameSetType.MachineDisk:
+					case Sources.MameSetType.MachineDisk:
 						version = title.Substring(5, 5);
 
 						sourceSet.AvailableDownloadSizes = AvailableDiskFilesInMetadata(metadata);
 						break;
 
-					case MameSetType.SoftwareRom:
+					case Sources.MameSetType.SoftwareRom:
 						version = title.Substring(8, 5);
 
 						sourceSet.AvailableDownloadSizes = AvailableFilesInMetadata("mame-sl/", metadata);
 						break;
 
-					case MameSetType.SoftwareDisk:
+					case Sources.MameSetType.SoftwareDisk:
 						version = title;
 
 						sourceSet.AvailableDownloadSizes = AvailableDiskFilesInMetadata(metadata);
@@ -248,7 +187,7 @@ namespace Spludlow.MameAO
 				Console.WriteLine($"Title:\t{title}");
 				Console.WriteLine($"Version:\t{version}");
 
-				if (setType == MameSetType.MachineRom)
+				if (setType == Sources.MameSetType.MachineRom)
 				{
 					_Version = version;
 
@@ -262,7 +201,7 @@ namespace Spludlow.MameAO
 				}
 				else
 				{
-					if (setType != MameSetType.SoftwareDisk)	//	Source not kept up to date, like others (pot luck)
+					if (setType != Sources.MameSetType.SoftwareDisk)	//	Source not kept up to date, like others (pot luck)
 					{
 						if (_Version != version)
 							Console.WriteLine($"!!! {setType} on archive.org version mismatch, expected:{_Version} got:{version}. You may have problems.");
@@ -599,28 +538,53 @@ namespace Spludlow.MameAO
 			{
 				int softwareFound = 0;
 
+				HashSet<string> requiredSoftwareNames = new HashSet<string>();
+				requiredSoftwareNames.Add(softwareName);
+
 				foreach (DataRow machineSoftwarelist in softwarelists)
 				{
-					string softwarelistName = (string)machineSoftwarelist["name"];
-
-					DataRow softwarelist = _Database.GetSoftwareList(softwarelistName);
-						
-					if (softwarelist == null)
-						throw new ApplicationException($"Software list on machine but not in SL {softwarelistName}");
+					DataRow softwarelist = _Database.GetSoftwareList((string)machineSoftwarelist["name"]);
 
 					foreach (DataRow findSoftware in _Database.GetSoftwareListsSoftware(softwarelist))
 					{
 						if ((string)findSoftware["name"] == softwareName)
 						{
-							missingCount += GetRomsSoftware(softwarelist, findSoftware, romStoreFilenames);
+							// Does this need to be recursive ?
+							foreach (DataRow sharedFeat in _Database.GetSoftwareSharedFeats(findSoftware))
+							{
+								if ((string)sharedFeat["name"] == "requirement")
+								{
+									// some don't have 2 parts
+									string[] valueParts = ((string)sharedFeat["value"]).Split(new char[] { ':' });
+									string value = valueParts[valueParts.Length - 1];
 
-							missingCount += GetDiskSoftware(softwarelist, findSoftware, romStoreFilenames);
-
-							++softwareFound;
+									requiredSoftwareNames.Add(value);
+								}
+							}
 						}
 					}
+				}
 
-					// TODO : Find software depenacies (sharedfeat)
+				foreach (string requiredSoftwareName in requiredSoftwareNames)
+				{
+					foreach (DataRow machineSoftwarelist in softwarelists)
+					{
+						string softwarelistName = (string)machineSoftwarelist["name"];
+
+						DataRow softwarelist = _Database.GetSoftwareList(softwarelistName);
+
+						foreach (DataRow findSoftware in _Database.GetSoftwareListsSoftware(softwarelist))
+						{
+							if ((string)findSoftware["name"] == requiredSoftwareName)
+							{
+								missingCount += GetRomsSoftware(softwarelist, findSoftware, romStoreFilenames);
+
+								missingCount += GetDiskSoftware(softwarelist, findSoftware, romStoreFilenames);
+
+								++softwareFound;
+							}
+						}
+					}
 				}
 
 				if (softwareFound == 0)
@@ -681,7 +645,7 @@ namespace Spludlow.MameAO
 
 		private int GetRomsMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			MameSourceSet soureSet = GetSourceSets(MameSetType.MachineRom)[0];
+			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
 
 			//
 			// Related/Required machines (parent/bios/devices)
@@ -792,7 +756,7 @@ namespace Spludlow.MameAO
 
 		private int GetDisksMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			MameSourceSet soureSet = GetSourceSets(MameSetType.MachineDisk)[0];
+			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
 
 			DataRow machineRow = _Database.GetMachine(machineName);
 			if (machineRow == null)
@@ -927,7 +891,7 @@ namespace Spludlow.MameAO
 
 		private int GetDiskSoftware(DataRow softwareList, DataRow software, List<string[]> romStoreFilenames)
 		{
-			MameSourceSet soureSet = GetSourceSets(MameSetType.SoftwareDisk)[0];
+			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk)[0];
 
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
@@ -1047,7 +1011,7 @@ namespace Spludlow.MameAO
 
 		private int GetRomsSoftware(DataRow softwareList, DataRow software, List<string[]> romStoreFilenames)
 		{
-			MameSourceSet soureSet = GetSourceSets(MameSetType.SoftwareRom)[0];
+			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.SoftwareRom)[0];
 
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];

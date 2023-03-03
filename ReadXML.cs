@@ -53,7 +53,7 @@ namespace Spludlow.MameAO
 			//"feature",
 			"dataarea",
 			"rom",
-			//"sharedfeat",
+			"sharedfeat",
 			"diskarea",
 			"disk",
 		});

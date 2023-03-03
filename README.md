@@ -21,9 +21,8 @@ Find other machines / software (not currently available in UI) you are looking f
 
 ## Important notes
 
-The first time you run it will take a while and use a lot of RAM.
-
-Please be patient, subsequent runs will not.
+- The first time you run it will take a while and use a lot of RAM.
+- Please be patient, subsequent runs will not.
 
 ## UI
 
@@ -38,13 +37,11 @@ Notes
 
 - Windows with .net framework 4.8
 - 32 bit / 64 bit (application is 32 bit keeps RAM usage down)
-- ??? Gb RAM free 
+- 2 Gb RAM free 
 
 ## Known issues
 
-- Software List dependencies don't work
 - UI needs improvement
-- Uses about ??? Gb RAM
 - Not all CHD SL (Software list) disks are available in the source https://archive.org/download/mame-software-list-chds-2/
 
 ## Symbolic Links - Save disk space
