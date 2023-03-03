@@ -40,36 +40,46 @@ namespace Spludlow.MameAO
 
 					context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
 
+					string path = context.Request.Url.AbsolutePath.ToLower();
+
+					Console.WriteLine("HttpMethod: " + context.Request.HttpMethod + " " + path);
+
 					using (StreamWriter writer = new StreamWriter(context.Response.OutputStream, Encoding.UTF8))
 					{
 						try
 						{
-							if (_RunTask != null && _RunTask.Status != TaskStatus.RanToCompletion)
-								throw new ApplicationException("I'm busy.");
-
-								string path = context.Request.Url.AbsolutePath.ToLower();
-
-							switch (path)
+							if (context.Request.HttpMethod == "OPTIONS")
 							{
-								case "/":
-									Root(context, writer);
-									break;
-
-								case "/command":
-									Command(context, writer);
-									break;
-
-								case "/api/profiles":
-									ApiProfiles(context, writer);
-									break;
-
-								case "/api/machines":
-									ApiMachines(context, writer);
-									break;
-
-								default:
-									throw new ApplicationException($"404 {path}");
+								context.Response.Headers.Add("Allow", "OPTIONS, GET");
 							}
+							else
+							{
+								switch (path)
+								{
+									case "/":
+										Root(context, writer);
+										break;
+
+									case "/command":
+										if (_RunTask != null && _RunTask.Status != TaskStatus.RanToCompletion)
+											throw new ApplicationException("I'm busy.");
+
+										Command(context, writer);
+										break;
+
+									case "/api/profiles":
+										ApiProfiles(context, writer);
+										break;
+
+									case "/api/machines":
+										ApiMachines(context, writer);
+										break;
+
+									default:
+										throw new ApplicationException($"404 {path}");
+								}
+							}
+
 						}
 						catch (ApplicationException e)
 						{
