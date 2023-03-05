@@ -189,7 +189,7 @@ namespace Spludlow.MameAO
 
 			DataSet dataSet = new DataSet();
 
-			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, _AO._MachineConnection))
+			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, _AO._Database._MachineConnection))
 			{
 				adapter.Fill(dataSet);
 			}

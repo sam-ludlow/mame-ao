@@ -26,10 +26,7 @@ namespace Spludlow.MameAO
 
 		private bool _LinkingEnabled = false;
 
-		public SQLiteConnection _MachineConnection;
-		public SQLiteConnection _SoftwareConnection;
-
-		private Database _Database;
+		public Database _Database;
 
 		private Spludlow.HashStore _RomHashStore;
 		private Spludlow.HashStore _DiskHashStore;
@@ -271,6 +268,12 @@ namespace Spludlow.MameAO
 			_DownloadTempDirectory = directory;
 
 			//
+			// Database
+			//
+
+			_Database = new Database();
+
+			//
 			// MAME Machine XML & SQL
 			//
 
@@ -285,7 +288,9 @@ namespace Spludlow.MameAO
 
 			string machineDatabaseFilename = Path.Combine(_VersionDirectory, "_machine.sqlite");
 
-			_MachineConnection = Database.DatabaseFromXML(machineXmlFilename, machineDatabaseFilename, _AssemblyVersion);
+			_Database.InitializeMachine(machineXmlFilename, machineDatabaseFilename, _AssemblyVersion);
+
+			GC.Collect();
 
 			//
 			// MAME Software XML & SQL
@@ -302,13 +307,10 @@ namespace Spludlow.MameAO
 
 			string softwareDatabaseFilename = Path.Combine(_VersionDirectory, "_software.sqlite");
 
-			_SoftwareConnection = Database.DatabaseFromXML(softwareXmlFilename, softwareDatabaseFilename, _AssemblyVersion);
+			_Database.InitializeSoftware(softwareXmlFilename, softwareDatabaseFilename, _AssemblyVersion);
 
-			//
-			// Database
-			//
+			GC.Collect();
 
-			_Database = new Database(_MachineConnection, _SoftwareConnection);
 
 			Console.WriteLine("");
 		}
@@ -652,9 +654,7 @@ namespace Spludlow.MameAO
 			//
 			HashSet<string> requiredMachines = new HashSet<string>();
 
-			Console.Write("Finding related machines...");
 			FindAllMachines(machineName, requiredMachines);
-			Console.WriteLine("...done.");
 
 			if (requiredMachines.Count == 0)
 				return 0;
@@ -676,8 +676,7 @@ namespace Spludlow.MameAO
 				//
 				HashSet<string> missingRoms = new HashSet<string>();
 
-				long machine_id = (long)requiredMachine["machine_id"];
-				foreach (DataRow romRow in Database.ExecuteFill(_MachineConnection, "SELECT * FROM rom WHERE machine_id = " + machine_id).Rows)
+				foreach (DataRow romRow in _Database.GetMachineRoms(requiredMachine))
 				{
 					string name = Tools.DataRowValue(romRow, "name");
 					string sha1 = Tools.DataRowValue(romRow, "sha1");
@@ -721,8 +720,7 @@ namespace Spludlow.MameAO
 				if (requiredMachine == null)
 					throw new ApplicationException("requiredMachine not found: " + requiredMachineName);
 
-				long machine_id = (long)requiredMachine["machine_id"];
-				foreach (DataRow romRow in Database.ExecuteFill(_MachineConnection, "SELECT * FROM rom WHERE machine_id = " + machine_id).Rows)
+				foreach (DataRow romRow in _Database.GetMachineRoms(requiredMachine))
 				{
 					string name = Tools.DataRowValue(romRow, "name");
 					string sha1 = Tools.DataRowValue(romRow, "sha1");
@@ -762,11 +760,9 @@ namespace Spludlow.MameAO
 			if (machineRow == null)
 				throw new ApplicationException("GetDisksMachine machine not found: " + machineName);
 
-			long machine_id = (long)machineRow["machine_id"];
+			DataRow[] diskRows = _Database.GetMachineDisks(machineRow);
 
-			DataRowCollection diskRows = Database.ExecuteFill(_MachineConnection, "SELECT * FROM disk WHERE machine_id = " + machine_id).Rows;
-
-			if (diskRows.Count == 0)
+			if (diskRows.Length == 0)
 				return 0;
 
 			Tools.ConsoleHeading(_h2, new string[] {

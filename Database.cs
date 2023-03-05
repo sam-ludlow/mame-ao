@@ -6,26 +6,45 @@ using System.IO;
 using System.Linq;
 
 using System.Data.SQLite;
+using System.Web.UI.WebControls;
 
 namespace Spludlow.MameAO
 {
 	public class Database
 	{
 		public static string[][] DataQueryProfiles = new string[][] {
-			new string[] { "Machines - not a clone, status good, without software",
+			new string[] { "Machines - coin operated, status good, not a clone",
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_softwarelist_count = 0)) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0)) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
 
-			new string[] { "Machines - not a clone, status good, with software",
+			new string[] { "Machines - coin operated, status imperfect, not a clone",
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_softwarelist_count > 0)) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0)) " +
+				"ORDER BY machine.description COLLATE NOCASE ASC " +
+				"LIMIT @LIMIT OFFSET @OFFSET",
+			},
+
+			new string[] { "Machines - not coin operated, status good, not a clone",
+
+				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
+				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0)) " +
+				"ORDER BY machine.description COLLATE NOCASE ASC " +
+				"LIMIT @LIMIT OFFSET @OFFSET",
+			},
+
+			new string[] { "Machines - not coin operated, status imperfect, not a clone",
+
+				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
+				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0)) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -36,11 +55,13 @@ namespace Spludlow.MameAO
 
 		private Dictionary<string, DataRow[]> _DevicesRefs;
 
-		public Database(SQLiteConnection machineConnection, SQLiteConnection softwareConnection)
+		public Database()
 		{
-			_MachineConnection = machineConnection;
-			_SoftwareConnection = softwareConnection;
+		}
 
+		public void InitializeMachine(string xmlFilename, string databaseFilename, string assemblyVersion)
+		{
+			_MachineConnection = Database.DatabaseFromXML(xmlFilename, databaseFilename, assemblyVersion);
 
 			// Cache device_ref to speed up machine dependancy resolution
 			DataTable device_ref_Table = Database.ExecuteFill(_MachineConnection, "SELECT * FROM device_ref");
@@ -58,12 +79,84 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public void InitializeSoftware(string xmlFilename, string databaseFilename, string assemblyVersion)
+		{
+			_SoftwareConnection = Database.DatabaseFromXML(xmlFilename, databaseFilename, assemblyVersion);
+		}
+
+		public static void AddDataExtras(DataSet dataSet, string name, string assemblyVersion)
+		{
+			DataTable table = new DataTable("ao_info");
+			table.Columns.Add("ao_info_id", typeof(long));
+			table.Columns.Add("assembly_version", typeof(string));
+			table.Rows.Add(1L, assemblyVersion);
+			dataSet.Tables.Add(table);
+
+			if (name == "mame")
+			{
+				DataTable machineTable = dataSet.Tables["machine"];
+
+				DataTable romTable = dataSet.Tables["rom"];
+				DataTable diskTable = dataSet.Tables["disk"];
+				DataTable softwarelistTable = dataSet.Tables["softwarelist"];
+				DataTable driverTable = dataSet.Tables["driver"];
+				DataTable inputTable = dataSet.Tables["input"];
+
+				machineTable.Columns.Add("ao_rom_count", typeof(int));
+				machineTable.Columns.Add("ao_disk_count", typeof(int));
+				machineTable.Columns.Add("ao_softwarelist_count", typeof(int));
+				machineTable.Columns.Add("ao_driver_status", typeof(string));
+				machineTable.Columns.Add("ao_input_coins", typeof(int));
+
+				foreach (DataRow machineRow in machineTable.Rows)
+				{
+					long machine_id = (long)machineRow["machine_id"];
+
+					DataRow[] romRows = romTable.Select($"machine_id={machine_id}");
+					DataRow[] diskRows = diskTable.Select($"machine_id={machine_id}");
+					DataRow[] softwarelistRows = softwarelistTable.Select($"machine_id={machine_id}");
+					DataRow[] driverRows = driverTable.Select($"machine_id={machine_id}");
+					DataRow[] inputRows = inputTable.Select($"machine_id={machine_id}");
+
+					machineRow["ao_rom_count"] = romRows.Length;
+					machineRow["ao_disk_count"] = diskRows.Length;
+					machineRow["ao_softwarelist_count"] = softwarelistRows.Length;
+					if (driverRows.Length == 1)
+						machineRow["ao_driver_status"] = (string)driverRows[0]["status"];
+
+					machineRow["ao_input_coins"] = 0;
+					if (inputRows.Length == 1 && inputRows[0].IsNull("coins") == false)
+						machineRow["ao_input_coins"] = Int32.Parse((string)inputRows[0]["coins"]);
+
+				}
+			}
+
+			if (name == "softwarelists")
+			{
+
+			}
+		}
+
 		public DataRow GetMachine(string name)
 		{
 			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM machine WHERE name = '{name}'");
 			if (table.Rows.Count == 0)
 				return null;
 			return table.Rows[0];
+		}
+
+		public DataRow[] GetMachineRoms(DataRow machine)
+		{
+			long machine_id = (long)machine["machine_id"];
+			DataTable table = Database.ExecuteFill(_MachineConnection, $"SELECT * FROM rom WHERE machine_id = {machine_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
+		public DataRow[] GetMachineDisks(DataRow machine)
+		{
+			long machine_id = (long)machine["machine_id"];
+			DataTable table = Database.ExecuteFill(_MachineConnection, $"SELECT * FROM disk WHERE machine_id = {machine_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
 		public DataRow[] GetMachineSoftwareLists(DataRow machine)
@@ -254,54 +347,6 @@ namespace Spludlow.MameAO
 
 			return connection;
 		}
-
-		public static void AddDataExtras(DataSet dataSet, string name, string assemblyVersion)
-		{
-			DataTable table = new DataTable("ao_info");
-			table.Columns.Add("ao_info_id", typeof(long));
-			table.Columns.Add("assembly_version", typeof(string));
-			table.Rows.Add(1L, assemblyVersion);
-			dataSet.Tables.Add(table);
-
-			if (name == "mame")
-			{
-				DataTable machineTable = dataSet.Tables["machine"];
-
-				DataTable romTable = dataSet.Tables["rom"];
-				DataTable diskTable = dataSet.Tables["disk"];
-				DataTable softwarelistTable = dataSet.Tables["softwarelist"];
-				DataTable driverTable = dataSet.Tables["driver"];
-
-				machineTable.Columns.Add("ao_rom_count", typeof(int));
-				machineTable.Columns.Add("ao_disk_count", typeof(int));
-				machineTable.Columns.Add("ao_softwarelist_count", typeof(int));
-				machineTable.Columns.Add("ao_driver_status", typeof(string));
-
-				foreach (DataRow machineRow in machineTable.Rows)
-				{
-					long machine_id = (long)machineRow["machine_id"];
-
-					DataRow[] romRows = romTable.Select($"machine_id={machine_id}");
-					DataRow[] diskRows = diskTable.Select($"machine_id={machine_id}");
-					DataRow[] softwarelistRows = softwarelistTable.Select($"machine_id={machine_id}");
-					DataRow[] driverRows = driverTable.Select($"machine_id={machine_id}");
-
-					machineRow["ao_rom_count"] = romRows.Length;
-					machineRow["ao_disk_count"] = diskRows.Length;
-					machineRow["ao_softwarelist_count"] = softwarelistRows.Length;
-					if (driverRows.Length == 1)
-						machineRow["ao_driver_status"] = (string)driverRows[0]["status"];
-
-				}
-			}
-
-			if (name == "softwarelists")
-			{
-
-			}
-		}
-
-
 
 		public static bool TableExists(SQLiteConnection connection, string tableName)
 		{

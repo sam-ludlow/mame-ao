@@ -16,7 +16,7 @@ namespace Spludlow.MameAO
 			//"chip",
 			//"display",
 			//"sound",
-			//"input",
+			"input",
 			//"control",
 			//"dipswitch",
 			//"diplocation",
