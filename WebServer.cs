@@ -124,7 +124,20 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 
 			_RunTask = new Task(() => {
-				_AO.RunLine($"{machine} {software} {arguments}");
+				try
+				{
+					_AO.RunLine($"{machine} {software} {arguments}");
+				}
+				catch (Exception ee)
+				{
+					Console.WriteLine();
+					Console.WriteLine("!!! REMOTE COMMAND ERROR: " + ee.Message);
+					Console.WriteLine();
+					Console.WriteLine(ee.ToString());
+					Console.WriteLine();
+					Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
+					Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
+				}
 			});
 			
 			_RunTask.Start();
