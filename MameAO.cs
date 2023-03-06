@@ -638,9 +638,10 @@ namespace Spludlow.MameAO
 			Console.WriteLine($"runnable:       {Tools.DataRowValue(machine, "runnable")}");
 
 			foreach (DataRow feature in features)
-				Console.WriteLine($"Feature issue:  {(string)feature["type"]} {(string)feature["status"]}");
+				Console.WriteLine($"Feature issue: {Tools.DataRowValue(feature, "type")} {Tools.DataRowValue(feature, "status")} {Tools.DataRowValue(feature, "overall")}");
+
 			foreach (DataRow softwarelist in softwarelists)
-				Console.WriteLine($"Software list:  {(string)softwarelist["name"]}");
+				Console.WriteLine($"Software list: {Tools.DataRowValue(softwarelist, "name")}");
 
 			Console.WriteLine();
 		}
