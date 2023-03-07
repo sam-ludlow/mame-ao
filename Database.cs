@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 
 using System.Data.SQLite;
-using System.Web.UI.WebControls;
 
 namespace Spludlow.MameAO
 {
@@ -15,7 +14,7 @@ namespace Spludlow.MameAO
 		public static string[][] DataQueryProfiles = new string[][] {
 			new string[] { "Machines - coin operated, status good, not a clone",
 
-				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
+				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
 				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0)) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
@@ -24,27 +23,45 @@ namespace Spludlow.MameAO
 
 			new string[] { "Machines - coin operated, status imperfect, not a clone",
 
-				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
+				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
 				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0)) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
 
-			new string[] { "Machines - not coin operated, status good, not a clone",
+			new string[] { "Machines - not coin operated, with software, status good, not a clone",
 
-				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
+				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0)) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0)) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
 
-			new string[] { "Machines - not coin operated, status imperfect, not a clone",
+			new string[] { "Machines - not coin operated, with software, status imperfect, not a clone",
 
-				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation " +
+				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0)) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0)) " +
+				"ORDER BY machine.description COLLATE NOCASE ASC " +
+				"LIMIT @LIMIT OFFSET @OFFSET",
+			},
+
+			new string[] { "Machines - not coin operated, no software, status good, not a clone",
+
+				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
+				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0)) " +
+				"ORDER BY machine.description COLLATE NOCASE ASC " +
+				"LIMIT @LIMIT OFFSET @OFFSET",
+			},
+
+			new string[] { "Machines - not coin operated, no software, status imperfect, not a clone",
+
+				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
+				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0)) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -215,6 +232,21 @@ namespace Spludlow.MameAO
 			long software_id = (long)software["software_id"];
 			DataTable table = ExecuteFill(_SoftwareConnection, $"SELECT * FROM sharedfeat WHERE software_id = {software_id}");
 			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
+		public DataTable QueryMachine(int profile, int offset, int limit)
+		{
+			string commandText = Database.DataQueryProfiles[profile][1];
+
+			commandText = commandText.Replace("@LIMIT", limit.ToString());
+			commandText = commandText.Replace("@OFFSET", offset.ToString());
+
+			DataSet dataSet = new DataSet();
+			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, _MachineConnection))
+			{
+				adapter.Fill(dataSet);
+			}
+			return dataSet.Tables[0];
 		}
 
 		public static SQLiteConnection DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)

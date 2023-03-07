@@ -9,7 +9,6 @@ using System.IO.Compression;
 using System.Diagnostics;
 using System.Reflection;
 
-using System.Data.SQLite;
 using Newtonsoft.Json;
 
 namespace Spludlow.MameAO

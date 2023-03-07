@@ -92,6 +92,17 @@
 
 		const serverUrl = 'http://127.0.0.1:12380';
 
+		const machineColumnDefs = [
+			{ heading: '', columnName: 'image' },
+			{ heading: 'name', columnName: 'name' },
+			{ heading: 'description', columnName: 'description' },
+			{ heading: 'year', columnName: 'year' },
+			{ heading: 'manufacturer', columnName: 'manufacturer' },
+			{ heading: 'roms', columnName: 'ao_rom_count' },
+			{ heading: 'disks', columnName: 'ao_disk_count' },
+			{ heading: 'lists', columnName: 'ao_softwarelist_count' },
+		];
+
 		const runCommand = async (name) => {
 			const response = await fetch(`${serverUrl}/command?machine=${name}`);
 
@@ -109,40 +120,39 @@
 
 			const headRow = document.createElement('tr');
 
-			const headings = ['', 'name', 'description', 'year', 'manufacturer',];
-
-			headings.forEach((heading) => {
+			machineColumnDefs.forEach((colDef) => {
 				const cell = document.createElement('th');
-				cell.innerHTML = heading;
+				cell.innerHTML = colDef.heading;
 				headRow.appendChild(cell);
 			});
-			table.appendChild(headRow);
 
+			table.appendChild(headRow);
 
 			data.forEach((row) => {
 				const tableRow = document.createElement('tr');
 
-				let cell;
+				machineColumnDefs.forEach((colDef) => {
+					const cell = document.createElement('td');
 
-				cell = document.createElement('td');
-				cell.innerHTML = `<a id="${row.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><img src="https://mame.spludlow.co.uk/snap/machine/${row.name}.jpg" loading="lazy" /></a>`;
-				tableRow.appendChild(cell);
+					switch (colDef.columnName) {
+						case 'image':
+							cell.innerHTML = `<a id="${row.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><img src="https://mame.spludlow.co.uk/snap/machine/${row.name}.jpg" loading="lazy" /></a>`;
+							break;
 
-				cell = document.createElement('td');
-				cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Machine.aspx?name=${row.name}" target="_blank">${row.name}</a>`;
-				tableRow.appendChild(cell);
+						case 'name':
+							cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Machine.aspx?name=${row.name}" target="_blank">${row.name}</a>`;
+							break;
 
-				cell = document.createElement('td');
-				cell.innerHTML = row.description;
-				tableRow.appendChild(cell);
+						default:
+							cell.innerHTML = row[colDef.columnName];
+							break;
+					}
 
-				cell = document.createElement('td');
-				cell.innerHTML = row.year;
-				tableRow.appendChild(cell);
+					if (cell.innerHTML === '0')
+						cell.innerHTML = '';
 
-				cell = document.createElement('td');
-				cell.innerHTML = row.manufacturer;
-				tableRow.appendChild(cell);
+					tableRow.appendChild(cell);
+				});
 
 				table.appendChild(tableRow);
 			});

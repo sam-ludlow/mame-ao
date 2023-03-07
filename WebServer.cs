@@ -5,7 +5,8 @@ using System.Net;
 using System.Text;
 using System.Threading.Tasks;
 
-using System.Data.SQLite;
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -147,26 +148,21 @@ namespace Spludlow.MameAO
 
 		private void ApiProfiles(HttpListenerContext context, StreamWriter writer)
 		{
-			StringBuilder json = new StringBuilder();
-
-			json.AppendLine("{ \"results\": [");
+			JArray results = new JArray();
 
 			for (int index = 0; index < Database.DataQueryProfiles.Length; ++index)
 			{
-				string name = Database.DataQueryProfiles[index][0];
-				string command = Database.DataQueryProfiles[index][1];
-
-				json.Append($"{{ \"name\": \"{name}\", \"command\": \"{command}\" }}");
-
-				json.AppendLine(index == (Database.DataQueryProfiles.Length - 1) ? "" : ",");
+				dynamic result = new JObject();
+				result.name = Database.DataQueryProfiles[index][0];
+				result.command = Database.DataQueryProfiles[index][1];
+				results.Add(result);
 			}
 
-			json.AppendLine("] }");
+			dynamic json = new JObject();
+			json.results = results;
 
 			context.Response.Headers["Content-Type"] = "application/json";
-
-			writer.WriteLine(json.ToString());
-
+			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
 		private void ApiMachines(HttpListenerContext context, StreamWriter writer)
@@ -195,51 +191,38 @@ namespace Spludlow.MameAO
 				throw new ApplicationException("Bad profile index");
 
 			string profileName = Database.DataQueryProfiles[profileIndex][0];
-			string commandText = Database.DataQueryProfiles[profileIndex][1];
 
-			commandText = commandText.Replace("@LIMIT", limit.ToString());
-			commandText = commandText.Replace("@OFFSET", offset.ToString());
+			DataTable table = _AO._Database.QueryMachine(profileIndex, offset, limit);
 
-			DataSet dataSet = new DataSet();
+			JArray results = new JArray();
 
-			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, _AO._Database._MachineConnection))
+			foreach (DataRow row in table.Rows)
 			{
-				adapter.Fill(dataSet);
+				dynamic result = new JObject();
+
+				result.image = $"https://mame.spludlow.co.uk/snap/machine/{(string)row["name"]}.jpg";
+				result.name = (string)row["name"];
+				result.description = (string)row["description"];
+				result.year = row.IsNull("year") ? "" : (string)row["year"];
+				result.manufacturer = row.IsNull("manufacturer") ? "" : (string)row["manufacturer"];
+
+				result.ao_rom_count = row["ao_rom_count"];
+				result.ao_disk_count = row["ao_disk_count"];
+				result.ao_softwarelist_count = row["ao_softwarelist_count"];
+
+				results.Add(result);
 			}
 
-			StringBuilder json = new StringBuilder();
-
-			json.AppendLine($"{{ \"profile\": \"{profileName}\", \"results\": [");
-
-			for (int index = 0; index < dataSet.Tables[0].Rows.Count; ++index)
-			{
-				DataRow row = dataSet.Tables[0].Rows[index];
-
-				bool last = index == (dataSet.Tables[0].Rows.Count - 1);
-
-
-				string name = (string)row["name"];
-				string description = (string)row["description"];
-				string year = row.IsNull("year") ? "" : (string)row["year"];
-				string manufacturer = row.IsNull("manufacturer") ? "" : (string)row["manufacturer"];
-
-				description = description.Replace("\"", "\\\"");
-				manufacturer = manufacturer.Replace("\"", "\\\"");
-
-				string image = $"https://mame.spludlow.co.uk/snap/machine/{name}.jpg";
-
-				json.Append($"{{ \"name\": \"{name}\", \"description\": \"{description}\", \"year\": \"{year}\", \"manufacturer\": \"{manufacturer}\", \"image\": \"{image}\" }}");
-
-				json.AppendLine(last == true ? "" : ",");
-
-			}
-
-			json.AppendLine("] }");
+			dynamic json = new JObject();
+			json.profile = profileName;
+			json.offset = offset;
+			json.limit = limit;
+			json.total = table.Rows.Count == 0 ? 0 : (long)table.Rows[0]["ao_total"];
+			json.count = results.Count;
+			json.results = results;
 
 			context.Response.Headers["Content-Type"] = "application/json";
-
-			writer.WriteLine(json.ToString());
-
+			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
 
