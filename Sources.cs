@@ -21,6 +21,7 @@ namespace Spludlow.MameAO
 			public string DownloadUrl;
 			public string HtmlSizesUrl;
 			public Dictionary<string, long> AvailableDownloadSizes;
+			public string Version;
 		}
 
 		private static readonly MameSourceSet[] MameSourceSets = new MameSourceSet[] {
@@ -65,6 +66,11 @@ namespace Spludlow.MameAO
 				throw new ApplicationException($"Did not find any source sets: {type}");
 
 			return results;
+		}
+
+		public static MameSourceSet[] GetSourceSets()
+		{
+			return MameSourceSets;
 		}
 	}
 }

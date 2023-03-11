@@ -16,7 +16,7 @@ namespace Spludlow.MameAO
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0)) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -25,7 +25,7 @@ namespace Spludlow.MameAO
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0)) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -34,7 +34,7 @@ namespace Spludlow.MameAO
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0)) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -43,7 +43,7 @@ namespace Spludlow.MameAO
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0)) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -52,7 +52,7 @@ namespace Spludlow.MameAO
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0)) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -61,7 +61,16 @@ namespace Spludlow.MameAO
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0)) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
+				"ORDER BY machine.description COLLATE NOCASE ASC " +
+				"LIMIT @LIMIT OFFSET @OFFSET",
+			},
+
+			new string[] { "Machines - Everything",
+
+				"SELECT machine.*, COUNT() OVER() AS ao_total " +
+				"FROM machine " +
+				"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -71,6 +80,7 @@ namespace Spludlow.MameAO
 		public SQLiteConnection _SoftwareConnection;
 
 		private Dictionary<string, DataRow[]> _DevicesRefs;
+		private DataTable _SoftwarelistTable;
 
 		public Database()
 		{
@@ -94,11 +104,16 @@ namespace Spludlow.MameAO
 
 				_DevicesRefs.Add(machineName, rows);
 			}
+
 		}
 
 		public void InitializeSoftware(string xmlFilename, string databaseFilename, string assemblyVersion)
 		{
 			_SoftwareConnection = Database.DatabaseFromXML(xmlFilename, databaseFilename, assemblyVersion);
+
+			// Cache softwarelists for description
+			_SoftwarelistTable = ExecuteFill(_SoftwareConnection, "SELECT name, description FROM softwarelist");
+			_SoftwarelistTable.PrimaryKey = new DataColumn[] { _SoftwarelistTable.Columns["name"] };
 		}
 
 		public static void AddDataExtras(DataSet dataSet, string name, string assemblyVersion)
@@ -180,6 +195,15 @@ namespace Spludlow.MameAO
 		{
 			long machine_id = (long)machine["machine_id"];
 			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM softwarelist WHERE machine_id = {machine_id}");
+
+			table.Columns.Add("description", typeof(string));
+
+			foreach (DataRow row in table.Rows)
+			{
+				DataRow softwarelistRow = _SoftwarelistTable.Rows.Find((string)row["name"]);
+				row["description"] = (string)softwarelistRow["description"];
+			}
+
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
@@ -198,6 +222,15 @@ namespace Spludlow.MameAO
 		{
 			long softwarelist_id = (long)softwarelist["softwarelist_id"];
 			DataTable table = ExecuteFill(_SoftwareConnection, $"SELECT * FROM software WHERE softwarelist_id = {softwarelist_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
+		public DataRow[] GetSoftwareListsSoftware(string softwareListName)
+		{
+			DataTable table = ExecuteFill(_SoftwareConnection,
+				"SELECT software.* FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id " +
+				$"WHERE (softwarelist.name = '{softwareListName}') ORDER BY software.description COLLATE NOCASE ASC");
+			
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
@@ -234,9 +267,20 @@ namespace Spludlow.MameAO
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
-		public DataTable QueryMachine(int profile, int offset, int limit)
+		public DataTable QueryMachine(int profile, int offset, int limit, string search)
 		{
 			string commandText = Database.DataQueryProfiles[profile][1];
+
+			if (search == null)
+			{
+				commandText = commandText.Replace("@SEARCH", "");
+			}
+			else
+			{
+				search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
+				commandText = commandText.Replace("@SEARCH",
+					$" AND (machine.name LIKE '{search}' OR machine.description LIKE '{search}')");
+			}
 
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
@@ -307,6 +351,9 @@ namespace Spludlow.MameAO
 							if (column.DataType == typeof(int) || column.DataType == typeof(long))
 								dataType = "INTEGER";
 						}
+
+						if (table.TableName == "machine" && column.ColumnName == "description")
+							dataType += " COLLATE NOCASE";
 
 						columnDefinitions.Add($"\"{column.ColumnName}\" {dataType}");
 					}

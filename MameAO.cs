@@ -17,18 +17,18 @@ namespace Spludlow.MameAO
 	{
 		private readonly HttpClient _HttpClient;
 
-		private readonly string _RootDirectory;
+		public readonly string _RootDirectory;
 		private string _VersionDirectory;
 
-		private string _Version;
-		private string _AssemblyVersion;
+		public string _Version;
+		public string _AssemblyVersion;
 
 		private bool _LinkingEnabled = false;
 
 		public Database _Database;
 
-		private Spludlow.HashStore _RomHashStore;
-		private Spludlow.HashStore _DiskHashStore;
+		public Spludlow.HashStore _RomHashStore;
+		public Spludlow.HashStore _DiskHashStore;
 
 		private string _DownloadTempDirectory;
 
@@ -179,6 +179,8 @@ namespace Spludlow.MameAO
 				}
 
 				version = version.Replace(".", "").Trim();
+
+				sourceSet.Version = version;
 
 				Console.WriteLine($"Title:\t{title}");
 				Console.WriteLine($"Version:\t{version}");

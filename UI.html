@@ -70,9 +70,17 @@
 </head>
 <body>
 
-	<h1>MAME-AO Let's GO...</h1>
+	<h1 id="heading"></h1>
 
-	<select id="selectProfile" style="width:512px;"></select>
+	<p id="info"></p>
+
+	<hr />
+
+	<select id="inputSelect" style="width:512px;"></select>
+
+	<input id="inputText" type="text" style="width:480px;" />
+
+	<button type="button" onclick="youveChanged(); return false;">Search</button>
 
 	<hr />
 
@@ -85,14 +93,169 @@
 
 	<script type="text/javascript">
 
-		const _selectProfile = document.getElementById('selectProfile');
+		const _inputSelect = document.getElementById('inputSelect');
+		const _inputText = document.getElementById('inputText');
+
 		const _resultsContainer = document.getElementById('resultsContainer');
+		const _heading = document.getElementById('heading');
+		const _info = document.getElementById('info');
 		const _page_back = document.getElementById('page_back');
 		const _page_next = document.getElementById('page_next');
 
-		const serverUrl = 'http://127.0.0.1:12380';
+		let _baseUrl;
+		const _parameters = {};
+		let _mode;
 
-		const machineColumnDefs = [
+		const onload = async () => {
+
+			_baseUrl = window.location.href;
+
+			if (window.location.href.includes('?')) {
+
+				_baseUrl = window.location.href.split('?')[0];
+
+				const parts = window.location.href.split('?')[1].split('&');
+				parts.forEach((part) => {
+					const pair = part.split('=');
+					_parameters[pair[0]] = pair[1];
+				});
+			}
+
+			if (_baseUrl.endsWith('/') == true)
+				_baseUrl = _baseUrl.slice(0, -1);
+
+			_mode = 'machines';
+
+			if (_parameters['machine'] !== undefined)
+				_mode = 'machine';
+
+			switch (_mode) {
+				case 'machines':
+					await onloadMachines();
+					break;
+				case 'machine':
+					await onloadMachine();
+					break;
+				default:
+					throw new Error(`Bad mode ${_mode}`);
+			}
+
+			_inputSelect.onchange = youveChanged;
+
+		}
+
+		const youveChanged = () => {
+
+			switch (_mode) {
+				case 'machines':
+					const profile = _inputSelect.value;
+					document.location = `${_baseUrl}/?profile=${profile}&search=${encodeURIComponent(_inputText.value)}`;
+					break;
+				case 'machine':
+					const softwarelist = _inputSelect.value;
+					const machine = _parameters['machine'];
+					document.location = `${_baseUrl}/?machine=${machine}&softwarelist=${softwarelist}&search=${encodeURIComponent(_inputText.value)}`;
+					break;
+				default:
+					throw new Error(`Bad mode ${_mode}`);
+			}
+		}
+
+		const onloadMachines = async () => {
+
+			let offset = 0;
+			let limit = 100;
+			let profile = 0;
+			let search = '';
+
+			if (_parameters['offset'] !== undefined)
+				offset = parseInt(_parameters['offset'], 10);
+
+			if (_parameters['profile'] !== undefined)
+				profile = parseInt(_parameters['profile'], 10);
+
+			if (_parameters['search'] !== undefined)
+				search = decodeURIComponent(_parameters['search']);
+
+			let response = await fetch(`${_baseUrl}/api/profiles`);
+			const profiles = (await response.json()).results;
+
+			profiles.forEach((profile, index) => {
+				const option = document.createElement('option');
+				option.value = index;
+				option.innerHTML = profile.name;
+				_inputSelect.appendChild(option);
+			});
+
+			_inputSelect.selectedIndex = profile;
+
+			_inputText.value = search;
+
+			response = await fetch(`${_baseUrl}/api/machines?profile=${profile}&offset=${offset}&search=${search}`);
+			const results = (await response.json()).results;
+
+			const resultsTable = renderMachines(results);
+
+			resultsContainer.innerHTML = '';
+			resultsContainer.appendChild(resultsTable);
+
+			_page_back.href = `${_baseUrl}?profile=${profile}&offset=${offset - limit}&search=${_inputText.value}`;
+			_page_next.href = `${_baseUrl}?profile=${profile}&offset=${offset + limit}&search=${_inputText.value}`;
+
+
+			response = await fetch(`${_baseUrl}/api/info`);
+			const info = (await response.json());
+
+			document.title = `MAME-AO ${info.version} - ` + _inputSelect.options[_inputSelect.selectedIndex].text;
+
+			_heading.innerHTML = document.title;
+
+			_info.innerHTML = `version: ${info.version} - mame version: ${info.mame_version} - directory: ${info.directory}`;
+		}
+
+		const onloadMachine = async () => {
+
+			const machineName = _parameters['machine'];
+			let softwarelist = _parameters['softwarelist'];
+
+			let response = await fetch(`${_baseUrl}/api/machine?machine=${machineName}`);
+
+			const machine = await response.json();
+
+			if (machine.softwarelists !== undefined) {
+
+				machine.softwarelists.forEach((softwarelist) => {
+					const option = document.createElement('option');
+					option.value = softwarelist.name;
+					option.innerHTML = softwarelist.description;
+					_inputSelect.appendChild(option);
+				});
+
+				if (softwarelist === undefined)
+					softwarelist = _inputSelect.value;
+
+				_inputSelect.value = softwarelist;
+
+				response = await fetch(`${_baseUrl}/api/software?softwarelist=${softwarelist}`);
+				const results = (await response.json()).results;
+
+				const resultsTable = renderMachine(machine, results);
+
+				resultsContainer.innerHTML = '';
+				resultsContainer.appendChild(resultsTable);
+			}
+
+			response = await fetch(`${_baseUrl}/api/info`);
+			const info = (await response.json());
+
+			document.title = `MAME-AO ${info.version} - ${machine.description} - ` + _inputSelect.options[_inputSelect.selectedIndex].text;
+
+			_heading.innerHTML = document.title;
+
+			_info.innerHTML = `name: ${machine.name} - description: ${machine.description} - manufacturer: ${machine.manufacturer}`;
+		}
+
+		const machinesColumnDefs = [
 			{ heading: '', columnName: 'image' },
 			{ heading: 'name', columnName: 'name' },
 			{ heading: 'description', columnName: 'description' },
@@ -103,24 +266,13 @@
 			{ heading: 'lists', columnName: 'ao_softwarelist_count' },
 		];
 
-		const runCommand = async (name) => {
-			const response = await fetch(`${serverUrl}/command?machine=${name}`);
-
-			const result = await response.text();
-
-			console.log(response.status + ' : ' + result);
-
-			if (response.status !== 200)
-				alert(result);
-		}
-
-		const renderHtmlTable = (data) => {
+		const renderMachines = (data) => {
 
 			const table = document.createElement('table');
 
 			const headRow = document.createElement('tr');
 
-			machineColumnDefs.forEach((colDef) => {
+			machinesColumnDefs.forEach((colDef) => {
 				const cell = document.createElement('th');
 				cell.innerHTML = colDef.heading;
 				headRow.appendChild(cell);
@@ -131,12 +283,15 @@
 			data.forEach((row) => {
 				const tableRow = document.createElement('tr');
 
-				machineColumnDefs.forEach((colDef) => {
+				machinesColumnDefs.forEach((colDef) => {
 					const cell = document.createElement('td');
 
 					switch (colDef.columnName) {
 						case 'image':
-							cell.innerHTML = `<a id="${row.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><img src="https://mame.spludlow.co.uk/snap/machine/${row.name}.jpg" loading="lazy" /></a>`;
+							if (row.ao_softwarelist_count > 0)
+								cell.innerHTML = `<a id="${row.name}" href="./?machine=${row.name}"><img src="https://mame.spludlow.co.uk/snap/machine/${row.name}.jpg" loading="lazy" /></a>`;
+							else
+								cell.innerHTML = `<a id="${row.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><img src="https://mame.spludlow.co.uk/snap/machine/${row.name}.jpg" loading="lazy" /></a>`;
 							break;
 
 						case 'name':
@@ -160,68 +315,91 @@
 			return table;
 		}
 
-		const goLocation = () => {
-			document.location = `${serverUrl}/?profile=${_selectProfile.value}`;
-		}
+		const softwareColumnDefs = [
+			{ heading: '', columnName: 'ao_image' },
+			{ heading: 'name', columnName: 'name' },
+			{ heading: 'description', columnName: 'description' },
+			{ heading: 'year', columnName: 'year' },
+			{ heading: 'publisher', columnName: 'publisher' },
+			{ heading: 'supported', columnName: 'supported' },
+		];
 
-		const setup = async () => {
+		const renderMachine = (machine, softwares) => {
 
-			let offset = 0;
-			let profile = 0;
+			const table = document.createElement('table');
 
-			let baseUrl = window.location.href;
+			const softwarelist = _inputSelect.value;
 
-			if (window.location.href.includes('?')) {
+			const headRow = document.createElement('tr');
 
-				baseUrl = window.location.href.split('?')[0];
-
-				const parts = window.location.href.split('?')[1].split('&');
-				const params = {};
-				parts.forEach((part) => {
-					const pair = part.split('=');
-					params[pair[0]] = pair[1];
-				});
-
-				console.log(params);
-
-				if (params['offset'])
-					offset = parseInt(params['offset'], 10);
-
-				if (params['profile'])
-					profile = parseInt(params['profile'], 10);
-			}
-
-			let limit = 100;
-
-			response = await fetch(`${serverUrl}/api/profiles`);
-			const profiles = (await response.json()).results;
-
-			profiles.forEach((profile, index) => {
-				const option = document.createElement('option');
-				option.value = index;
-				option.innerHTML = profile.name;
-				_selectProfile.appendChild(option);
+			softwareColumnDefs.forEach((colDef) => {
+				const cell = document.createElement('th');
+				cell.innerHTML = colDef.heading;
+				headRow.appendChild(cell);
 			});
 
-			console.log('profile: ' + profile);
+			table.appendChild(headRow);
 
-			_selectProfile.selectedIndex = profile;
+			softwares.forEach((row) => {
 
-			_selectProfile.onchange = goLocation;
+				const tableRow = document.createElement('tr');
 
-			_page_back.href = `${baseUrl}?profile=${profile}&offset=${offset - limit}`;
-			_page_next.href = `${baseUrl}?profile=${profile}&offset=${offset + limit}`;
+				softwareColumnDefs.forEach((colDef) => {
+					const cell = document.createElement('td');
 
-			response = await fetch(`${serverUrl}/api/machines?profile=${profile}&offset=${offset}`);
-			const results = (await response.json()).results;
+					switch (colDef.columnName) {
+						case 'ao_image':
+							cell.innerHTML = `<a id="${row.name}" onclick="runSoftwareCommand(this.id)" href="javascript:void(0);"><img src="https://mame.spludlow.co.uk/snap/software/${softwarelist}/${row.name}.jpg" loading="lazy" /></a>`;
+							break;
 
-			const resultsTable = renderHtmlTable(results);
+						case 'name':
+							cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Software.aspx?list=${softwarelist}&soft=${row.name}" target="_blank">${row.name}</a>`;
+							break;
 
-			resultsContainer.innerHTML = '';
-			resultsContainer.appendChild(resultsTable);
+						default:
+							cell.innerHTML = row[colDef.columnName];
+							break;
+					}
+
+					if (cell.innerHTML === '0')
+						cell.innerHTML = '';
+
+					tableRow.appendChild(cell);
+				});
+
+				table.appendChild(tableRow);
+
+			});
+
+			return table;
 		}
 
-		setup();
+		const runCommand = async (name) => {
+			const response = await fetch(`${_baseUrl}/command?machine=${name}`);
+
+			const result = await response.text();
+
+			console.log(response.status + ' : ' + result);
+
+			if (response.status !== 200)
+				alert(result);
+		}
+
+		const runSoftwareCommand = async (software) => {
+
+			const machine = _parameters['machine']
+
+			const response = await fetch(`${_baseUrl}/command?machine=${machine}&software=${software}`);
+
+			const result = await response.text();
+
+			console.log(response.status + ' : ' + result);
+
+			if (response.status !== 200)
+				alert(result);
+		}
+
+		window.onload = onload;
 
 	</script>
 

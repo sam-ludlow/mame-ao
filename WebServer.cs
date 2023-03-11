@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Net;
@@ -70,8 +71,20 @@ namespace Spludlow.MameAO
 										ApiProfiles(context, writer);
 										break;
 
+									case "/api/machine":
+										ApiMachine(context, writer);
+										break;
+
 									case "/api/machines":
 										ApiMachines(context, writer);
+										break;
+
+									case "/api/software":
+										ApiSoftware(context, writer);
+										break;
+
+									case "/api/info":
+										ApiInfo(context, writer);
 										break;
 
 									default:
@@ -153,6 +166,7 @@ namespace Spludlow.MameAO
 			for (int index = 0; index < Database.DataQueryProfiles.Length; ++index)
 			{
 				dynamic result = new JObject();
+				result.index = index;
 				result.name = Database.DataQueryProfiles[index][0];
 				result.command = Database.DataQueryProfiles[index][1];
 				results.Add(result);
@@ -182,6 +196,11 @@ namespace Spludlow.MameAO
 			if (limit > 1000)
 				throw new ApplicationException("Limit is limited to 1000");
 
+			string search = context.Request.QueryString["search"].Trim();
+			if (search.Length == 0)
+				search = null;
+
+
 			int profileIndex = 0;
 			qs = context.Request.QueryString["profile"];
 			if (qs != null)
@@ -192,23 +211,17 @@ namespace Spludlow.MameAO
 
 			string profileName = Database.DataQueryProfiles[profileIndex][0];
 
-			DataTable table = _AO._Database.QueryMachine(profileIndex, offset, limit);
+			DataTable table = _AO._Database.QueryMachine(profileIndex, offset, limit, search);
 
 			JArray results = new JArray();
 
 			foreach (DataRow row in table.Rows)
 			{
-				dynamic result = new JObject();
+				dynamic result = RowToJson(row);
 
-				result.image = $"https://mame.spludlow.co.uk/snap/machine/{(string)row["name"]}.jpg";
-				result.name = (string)row["name"];
-				result.description = (string)row["description"];
-				result.year = row.IsNull("year") ? "" : (string)row["year"];
-				result.manufacturer = row.IsNull("manufacturer") ? "" : (string)row["manufacturer"];
+				string name = (string)row["name"];
 
-				result.ao_rom_count = row["ao_rom_count"];
-				result.ao_disk_count = row["ao_disk_count"];
-				result.ao_softwarelist_count = row["ao_softwarelist_count"];
+				result.ao_image = $"https://mame.spludlow.co.uk/snap/machine/{name}.jpg";
 
 				results.Add(result);
 			}
@@ -225,6 +238,148 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
+
+		private void ApiMachine(HttpListenerContext context, StreamWriter writer)
+		{
+			string qs;
+
+			string machine = null;
+			qs = context.Request.QueryString["machine"];
+			if (qs != null)
+				machine = qs;
+
+			if (machine == null)
+				throw new ApplicationException("machine not passed");
+
+			DataRow machineRow = _AO._Database.GetMachine(machine);
+
+			DataRow[] machineSoftwareListRows = _AO._Database.GetMachineSoftwareLists(machineRow);
+
+			dynamic json = RowToJson(machineRow);
+
+			json.ao_image = $"https://mame.spludlow.co.uk/snap/machine/{machine}.jpg";
+
+			if (machineSoftwareListRows.Length > 0)
+			{
+				JArray softwarelists = new JArray();
+
+				foreach (DataRow row in machineSoftwareListRows)
+				{
+					dynamic softwarelist = new JObject();
+
+					softwarelist.name = (string)row["name"];
+					softwarelist.description = (string)row["description"];
+
+					softwarelists.Add(softwarelist);
+				}
+
+				json.softwarelists = softwarelists;
+			}
+
+			context.Response.Headers["Content-Type"] = "application/json";
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+
+		private void ApiSoftware(HttpListenerContext context, StreamWriter writer)
+		{
+			string qs;
+
+			string softwarelist = null;
+			qs = context.Request.QueryString["softwarelist"];
+			if (qs != null)
+				softwarelist = qs;
+
+			if (softwarelist == null)
+				throw new ApplicationException("softwarelist not passed");
+
+			DataRow[] rows = _AO._Database.GetSoftwareListsSoftware(softwarelist);
+
+			JArray results = new JArray();
+
+			foreach (DataRow row in rows)
+			{
+				dynamic result = RowToJson(row);
+
+				string name = (string)row["name"];
+
+				result.ao_image = $"https://mame.spludlow.co.uk/snap/software/{softwarelist}/{name}.jpg";
+
+				results.Add(result);
+			}
+
+			dynamic json = new JObject();
+			json.softwarelist = softwarelist;
+			json.offset = 0;
+			json.limit = 0;
+			json.total = rows.Length;
+			json.count = results.Count;
+			json.results = results;
+
+			context.Response.Headers["Content-Type"] = "application/json";
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+		private void ApiInfo(HttpListenerContext context, StreamWriter writer)
+		{
+			dynamic json = new JObject();
+
+			json.time = DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture);
+			json.version = _AO._AssemblyVersion;
+			json.mame_version = _AO._Version;
+			json.directory = _AO._RootDirectory;
+			json.rom_store_count = _AO._RomHashStore.Length;
+			json.disk_store_count = _AO._DiskHashStore.Length;
+
+			dynamic sources = new JArray();
+
+			foreach (Sources.MameSourceSet sourceSet in Sources.GetSourceSets())
+			{
+				dynamic source = new JObject();
+
+				source.type = sourceSet.SetType.ToString();
+				source.version = sourceSet.Version;
+				source.download = sourceSet.DownloadUrl;
+				source.metadata = sourceSet.MetadataUrl;
+
+				sources.Add(source);
+			}
+
+			json.sources = sources;
+
+			context.Response.Headers["Content-Type"] = "application/json";
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+		private dynamic RowToJson(DataRow row)
+		{
+			dynamic json = new JObject();
+
+			foreach (DataColumn column in row.Table.Columns)
+			{
+				if (column.ColumnName.EndsWith("_id") == true)
+					continue;
+
+				if (row.IsNull(column.ColumnName) == true)
+					continue;
+
+				switch (column.DataType.Name)
+				{
+					case "String":
+						json[column.ColumnName] = (string)row[column];
+						break;
+
+					case "Int64":
+						json[column.ColumnName] = (long)row[column];
+						break;
+
+					default:
+						throw new ApplicationException($"Unknown datatype {column.DataType.Name}");
+				}
+			}
+
+			return json;
+		}
 
 
 	}
