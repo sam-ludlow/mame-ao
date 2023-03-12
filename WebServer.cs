@@ -196,10 +196,12 @@ namespace Spludlow.MameAO
 			if (limit > 1000)
 				throw new ApplicationException("Limit is limited to 1000");
 
-			string search = context.Request.QueryString["search"].Trim();
+			string search = "";
+			qs = context.Request.QueryString["search"];
+			if (qs != null)
+				search = qs.Trim();
 			if (search.Length == 0)
 				search = null;
-
 
 			int profileIndex = 0;
 			qs = context.Request.QueryString["profile"];
@@ -293,7 +295,27 @@ namespace Spludlow.MameAO
 			if (softwarelist == null)
 				throw new ApplicationException("softwarelist not passed");
 
-			DataRow[] rows = _AO._Database.GetSoftwareListsSoftware(softwarelist);
+			int offset = 0;
+			qs = context.Request.QueryString["offset"];
+			if (qs != null)
+				offset = Int32.Parse(qs);
+
+			int limit = 100;
+			qs = context.Request.QueryString["limit"];
+			if (qs != null)
+				limit = Int32.Parse(qs);
+
+			if (limit > 1000)
+				throw new ApplicationException("Limit is limited to 1000");
+
+			string search = "";
+			qs = context.Request.QueryString["search"];
+			if (qs != null)
+				search = qs.Trim();
+			if (search.Length == 0)
+				search = null;
+
+			DataRow[] rows = _AO._Database.GetSoftwareListsSoftware(softwarelist, offset, limit, search);
 
 			JArray results = new JArray();
 
@@ -310,9 +332,9 @@ namespace Spludlow.MameAO
 
 			dynamic json = new JObject();
 			json.softwarelist = softwarelist;
-			json.offset = 0;
-			json.limit = 0;
-			json.total = rows.Length;
+			json.offset = offset;
+			json.limit = limit;
+			json.total = rows.Length == 0 ? 0 : (long)rows[0]["ao_total"];
 			json.count = results.Count;
 			json.results = results;
 

@@ -70,37 +70,49 @@
 </head>
 <body>
 
-	<h1 id="heading"></h1>
+	<form>
+		<a href="/"> <h1 id="heading"></h1> </a>
 
-	<p id="info"></p>
+		<p id="info"></p>
 
-	<hr />
+		<hr />
 
-	<select id="inputSelect" style="width:512px;"></select>
+		<select id="inputSelect" style="width:512px;"></select>
 
-	<input id="inputText" type="text" style="width:480px;" />
+		<hr />
 
-	<button type="button" onclick="youveChanged(); return false;">Search</button>
+		<input id="inputText" type="text" style="width:480px;" />
 
-	<hr />
+		<button type="submit" onclick="youveChanged(); return false;">Search</button>
 
-	<div id="resultsContainer">
-	</div>
+		<span id="searchInfo"></span>
 
-	<hr />
+		<hr />
 
-	<a id="page_back" href="">BACK</a> &bull; <a id="page_next" href="">NEXT</a>
+		<a id="page_back1" href="">BACK</a> &bull; <a id="page_next1" href="">NEXT</a>
+
+		<div id="resultsContainer">
+		</div>
+
+		<a id="page_back2" href="">BACK</a> &bull; <a id="page_next2" href="">NEXT</a>
+
+		<hr />
+	</form>
+
 
 	<script type="text/javascript">
 
 		const _inputSelect = document.getElementById('inputSelect');
 		const _inputText = document.getElementById('inputText');
+		const _searchInfo = document.getElementById('searchInfo');
 
 		const _resultsContainer = document.getElementById('resultsContainer');
 		const _heading = document.getElementById('heading');
 		const _info = document.getElementById('info');
-		const _page_back = document.getElementById('page_back');
-		const _page_next = document.getElementById('page_next');
+		const _page_back1 = document.getElementById('page_back1');
+		const _page_next1 = document.getElementById('page_next1');
+		const _page_back2 = document.getElementById('page_back2');
+		const _page_next2 = document.getElementById('page_next2');
 
 		let _baseUrl;
 		const _parameters = {};
@@ -141,6 +153,8 @@
 			}
 
 			_inputSelect.onchange = youveChanged;
+
+			_inputText.focus();
 
 		}
 
@@ -192,15 +206,23 @@
 			_inputText.value = search;
 
 			response = await fetch(`${_baseUrl}/api/machines?profile=${profile}&offset=${offset}&search=${search}`);
-			const results = (await response.json()).results;
+			const json = await response.json();
+			const results = json.results;
 
 			const resultsTable = renderMachines(results);
 
 			resultsContainer.innerHTML = '';
 			resultsContainer.appendChild(resultsTable);
 
-			_page_back.href = `${_baseUrl}?profile=${profile}&offset=${offset - limit}&search=${_inputText.value}`;
-			_page_next.href = `${_baseUrl}?profile=${profile}&offset=${offset + limit}&search=${_inputText.value}`;
+			let totalPages = Math.ceil(json.total / json.limit);
+			let currentPage = (json.offset / json.limit) + 1;
+			_searchInfo.innerHTML = `page: ${currentPage} / ${totalPages} - total: ${json.total} - viewing: ${json.count}`;
+
+
+			_page_back1.href = `${_baseUrl}?profile=${profile}&offset=${offset - limit}&search=${_inputText.value}`;
+			_page_next1.href = `${_baseUrl}?profile=${profile}&offset=${offset + limit}&search=${_inputText.value}`;
+			_page_back2.href = _page_back1.href;
+			_page_next2.href = _page_next1.href;
 
 
 			response = await fetch(`${_baseUrl}/api/info`);
@@ -217,6 +239,21 @@
 
 			const machineName = _parameters['machine'];
 			let softwarelist = _parameters['softwarelist'];
+
+			let offset = 0;
+			let limit = 100;
+			let search = '';
+
+			if (_parameters['offset'] !== undefined)
+				offset = parseInt(_parameters['offset'], 10);
+
+			if (_parameters['profile'] !== undefined)
+				profile = parseInt(_parameters['profile'], 10);
+
+			if (_parameters['search'] !== undefined)
+				search = decodeURIComponent(_parameters['search']);
+
+			_inputText.value = search;
 
 			let response = await fetch(`${_baseUrl}/api/machine?machine=${machineName}`);
 
@@ -236,14 +273,27 @@
 
 				_inputSelect.value = softwarelist;
 
-				response = await fetch(`${_baseUrl}/api/software?softwarelist=${softwarelist}`);
-				const results = (await response.json()).results;
+				response = await fetch(`${_baseUrl}/api/software?softwarelist=${softwarelist}&offset=${offset}&search=${search}`);
+
+				const json = await response.json();
+
+				const results = json.results;
 
 				const resultsTable = renderMachine(machine, results);
 
 				resultsContainer.innerHTML = '';
 				resultsContainer.appendChild(resultsTable);
+
+				let totalPages = Math.ceil(json.total / json.limit);
+				let currentPage = (json.offset / json.limit) + 1;
+				_searchInfo.innerHTML = `page: ${currentPage} / ${totalPages} - total: ${json.total} - viewing: ${json.count}`;
+
 			}
+
+			_page_back1.href = `${_baseUrl}?machine=${machineName}&softwarelist=${softwarelist}&offset=${offset - limit}&search=${_inputText.value}`;
+			_page_next1.href = `${_baseUrl}?machine=${machineName}&softwarelist=${softwarelist}&offset=${offset + limit}&search=${_inputText.value}`;
+			_page_back2.href = _page_back1.href;
+			_page_next2.href = _page_next1.href;
 
 			response = await fetch(`${_baseUrl}/api/info`);
 			const info = (await response.json());
@@ -256,7 +306,7 @@
 		}
 
 		const machinesColumnDefs = [
-			{ heading: '', columnName: 'image' },
+			{ heading: '', columnName: 'ao_image' },
 			{ heading: 'name', columnName: 'name' },
 			{ heading: 'description', columnName: 'description' },
 			{ heading: 'year', columnName: 'year' },
@@ -287,11 +337,11 @@
 					const cell = document.createElement('td');
 
 					switch (colDef.columnName) {
-						case 'image':
+						case 'ao_image':
 							if (row.ao_softwarelist_count > 0)
-								cell.innerHTML = `<a id="${row.name}" href="./?machine=${row.name}"><img src="https://mame.spludlow.co.uk/snap/machine/${row.name}.jpg" loading="lazy" /></a>`;
+								cell.innerHTML = `<a id="${row.name}" href="./?machine=${row.name}"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
 							else
-								cell.innerHTML = `<a id="${row.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><img src="https://mame.spludlow.co.uk/snap/machine/${row.name}.jpg" loading="lazy" /></a>`;
+								cell.innerHTML = `<a id="${row.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
 							break;
 
 						case 'name':
@@ -349,7 +399,7 @@
 
 					switch (colDef.columnName) {
 						case 'ao_image':
-							cell.innerHTML = `<a id="${row.name}" onclick="runSoftwareCommand(this.id)" href="javascript:void(0);"><img src="https://mame.spludlow.co.uk/snap/software/${softwarelist}/${row.name}.jpg" loading="lazy" /></a>`;
+							cell.innerHTML = `<a id="${row.name}" onclick="runSoftwareCommand(this.id)" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
 							break;
 
 						case 'name':

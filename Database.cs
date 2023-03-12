@@ -34,7 +34,7 @@ namespace Spludlow.MameAO
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -43,7 +43,7 @@ namespace Spludlow.MameAO
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -52,7 +52,7 @@ namespace Spludlow.MameAO
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -61,7 +61,7 @@ namespace Spludlow.MameAO
 
 				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isbios = 'no') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
+				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -225,12 +225,36 @@ namespace Spludlow.MameAO
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
-		public DataRow[] GetSoftwareListsSoftware(string softwareListName)
+		public DataRow[] GetSoftwareListsSoftware(string softwareListName, int offset, int limit, string search)
 		{
-			DataTable table = ExecuteFill(_SoftwareConnection,
-				"SELECT software.* FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id " +
-				$"WHERE (softwarelist.name = '{softwareListName}') ORDER BY software.description COLLATE NOCASE ASC");
-			
+			string commandText = "SELECT software.*, COUNT() OVER() AS ao_total FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id " +
+				$"WHERE (softwarelist.name = '{softwareListName}' @SEARCH) ORDER BY software.description COLLATE NOCASE ASC " +
+				"LIMIT @LIMIT OFFSET @OFFSET";
+
+			if (search == null)
+			{
+				commandText = commandText.Replace("@SEARCH", "");
+			}
+			else
+			{
+				search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
+				commandText = commandText.Replace("@SEARCH",
+					" AND (software.name LIKE @name OR software.description LIKE @description)");
+			}
+
+			commandText = commandText.Replace("@LIMIT", limit.ToString());
+			commandText = commandText.Replace("@OFFSET", offset.ToString());
+
+			SQLiteCommand command = new SQLiteCommand(commandText, _SoftwareConnection);
+
+			if (search != null)
+			{
+				command.Parameters.AddWithValue("@name", search);
+				command.Parameters.AddWithValue("@description", search);
+			}
+
+			DataTable table = ExecuteFill(command);
+
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
@@ -279,18 +303,23 @@ namespace Spludlow.MameAO
 			{
 				search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
 				commandText = commandText.Replace("@SEARCH",
-					$" AND (machine.name LIKE '{search}' OR machine.description LIKE '{search}')");
+					$" AND (machine.name LIKE @name OR machine.description LIKE @description)");
 			}
 
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
-			DataSet dataSet = new DataSet();
-			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, _MachineConnection))
+			SQLiteCommand command = new SQLiteCommand(commandText, _MachineConnection);
+
+			if (search != null)
 			{
-				adapter.Fill(dataSet);
+				command.Parameters.AddWithValue("@name", search);
+				command.Parameters.AddWithValue("@description", search);
 			}
-			return dataSet.Tables[0];
+
+			DataTable table = ExecuteFill(command);
+
+			return table;
 		}
 
 		public static SQLiteConnection DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)
@@ -473,5 +502,13 @@ namespace Spludlow.MameAO
 				adapter.Fill(dataSet);
 			return dataSet.Tables[0];
 		}
+		public static DataTable ExecuteFill(SQLiteCommand command)
+		{
+			DataSet dataSet = new DataSet();
+			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+				adapter.Fill(dataSet);
+			return dataSet.Tables[0];
+		}
+
 	}
 }
