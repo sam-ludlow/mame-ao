@@ -4,9 +4,9 @@ Run MAME easily, just download this and run.
 
 Automatically downloads all MAME binaries (from github.com) and ROMS (from archive.org) on the fly.
 
-Built in web UI just click image.
+Built in web UI just click image and wait.
 
-Find other machines / software (not currently available in UI) you are looking for the short name/code
+You can also use the command line just enter machine / software you are looking for the short name/code
 - http://adb.arcadeitalia.net/lista_mame.php
 - https://mame.spludlow.co.uk/
 
@@ -17,7 +17,8 @@ Find other machines / software (not currently available in UI) you are looking f
 - put ZIP in empty directory and extract
 - double click "mame-ao.exe"
 - wait for the MAME Shell to start
-- enter a machine name and press enter e.g. "mrdo", or use the UI.
+- use the Web UI it will pop up
+- or use command line, enter a machine name and press enter e.g. "mrdo"
 
 ## Important notes
 
@@ -26,12 +27,13 @@ Find other machines / software (not currently available in UI) you are looking f
 
 ## UI
 
-After mame-ao has fully started browse to http://127.0.0.1:12380/. Just click on image.
+- After mame-ao has fully started the web UI will apear in the default browser.
+- You can access it at http://127.0.0.1:12380/.
+- Just click on image to start the machine.
+- If the machine has software it will be listed, click what you want to run.
+- Click back on the mame-ao console window to see what it's doing
 
-Notes
-- still work in progress
-- not currently complete machine list
-- images may be slow to load
+![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/mame-ao-ui.png)
 
 ## System requirements
 
@@ -41,8 +43,8 @@ Notes
 
 ## Known issues
 
-- UI needs improvement
 - Not all CHD SL (Software list) disks are available in the source https://archive.org/download/mame-software-list-chds-2/
+- UI could do with refinement.
 
 ## Symbolic Links - Save disk space
 
