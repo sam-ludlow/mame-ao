@@ -714,7 +714,7 @@ namespace Spludlow.MameAO
 
 						long size = soureSet.AvailableDownloadSizes[requiredMachineName];
 
-						ImportRoms(downloadMachineUrl, $"machine:{requiredMachineName}", size);
+						ImportRoms(downloadMachineUrl, $"machine rom: '{requiredMachineName}'", size);
 					}
 				}
 			}
@@ -842,18 +842,7 @@ namespace Spludlow.MameAO
 					diskUrl = diskUrl.Replace("@MACHINE@", availableMachineName);
 					diskUrl = diskUrl.Replace("@DISK@", diskNameEnc);
 
-					string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + availableDiskName);
-
-					Console.Write($"Downloading {key} Machine Disk. size:{Tools.DataSize(size)} url:{diskUrl} ...");
-					long downloadSize = Tools.Download(diskUrl, tempFilename, _DownloadDotSize, 3 * 60);
-					Console.WriteLine($"...done");
-
-					if (size != downloadSize)
-						Console.WriteLine($"Unexpected downloaded file size expect:{size} actual:{downloadSize}");
-
-					bool imported = _DiskHashStore.Add(tempFilename, true);
-
-					Console.WriteLine($"Disk Store Import: {imported} {key}");
+					ImportDisk(diskUrl, $"machine disk: '{key}'", size, sha1);
 				}
 			}
 
@@ -962,18 +951,7 @@ namespace Spludlow.MameAO
 					url = url.Replace("@SOFTWARE@", downloadSoftwareName);
 					url = url.Replace("@DISK@", nameEnc);
 
-					string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + diskName);
-
-					Console.Write($"Downloading {key} Software Disk. size:{Tools.DataSize(size)} url:{url} ...");
-					long downloadSize = Tools.Download(url, tempFilename, _DownloadDotSize, 3 * 60);
-					Console.WriteLine($"...done");
-
-					if (size != downloadSize)
-						Console.WriteLine($"Unexpected downloaded file size expect:{size} actual:{downloadSize}");
-
-					bool imported = _DiskHashStore.Add(tempFilename, true);
-
-					Console.WriteLine($"Disk Store Import: {imported} {key}");
+					ImportDisk(url, $"software disk: '{key}'", size, sha1);
 				}
 			}
 
@@ -1080,7 +1058,7 @@ namespace Spludlow.MameAO
 
 				long size = softwareSizes[requiredSoftwareName];
 
-				ImportRoms(downloadSoftwareUrl, $"software:{softwareListName}, {requiredSoftwareName}", size);
+				ImportRoms(downloadSoftwareUrl, $"software rom: '{softwareListName}/{requiredSoftwareName}'", size);
 			}
 
 			//
@@ -1192,20 +1170,19 @@ namespace Spludlow.MameAO
 				string extractDirectory = Path.Combine(tempDir.Path, "OUT");
 				Directory.CreateDirectory(extractDirectory);
 
-				Console.Write($"Downloading {name} ROM ZIP size:{Tools.DataSize(expectedSize)} url:{url} ...");
+				Console.Write($"Downloading {name} size:{Tools.DataSize(expectedSize)} url:{url} ...");
 				DateTime startTime = DateTime.Now;
 				size = Tools.Download(url, archiveFilename, _DownloadDotSize, 30);
 				TimeSpan took = DateTime.Now - startTime;
 				Console.WriteLine($"...done");
 
-				if (size != expectedSize)
-					Console.WriteLine($"Unexpected downloaded file size expect:{expectedSize} actual:{size}");
-
 				decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
-
 				Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
 
-				Console.Write($"Extracting {name} ROM ZIP {archiveFilename} ...");
+				if (size != expectedSize)
+					Console.WriteLine($"!!! Unexpected downloaded file size expect:{expectedSize} actual:{size}");
+
+				Console.Write($"Extracting {name}, {archiveFilename} ...");
 				ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
 				Console.WriteLine($"...done");
 
@@ -1213,10 +1190,39 @@ namespace Spludlow.MameAO
 
 				foreach (string romFilename in Directory.GetFiles(extractDirectory, "*", SearchOption.AllDirectories))
 				{
-					bool imported = _RomHashStore.Add(romFilename);
-					Console.WriteLine($"Store Import: {imported} {name} {romFilename.Substring(extractDirectory.Length)}");
+					string sha1 = _RomHashStore.Hash(romFilename);
+					bool imported = _RomHashStore.Add(romFilename, false, sha1);
+					Console.WriteLine($"ROM Store Import: {imported} {sha1} {name} {romFilename.Substring(extractDirectory.Length)}");
 				}
 			}
+
+			return size;
+		}
+
+		private long ImportDisk(string url, string name, long expectedSize, string expectedSha1)
+		{
+			string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(name) + ".chd");
+
+			Console.Write($"Downloading {name} size:{Tools.DataSize(expectedSize)} url:{url} ...");
+			DateTime startTime = DateTime.Now;
+			long size = Tools.Download(url, tempFilename, _DownloadDotSize, 3 * 60);
+			TimeSpan took = DateTime.Now - startTime;
+			Console.WriteLine($"...done");
+
+			decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
+			Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
+
+			if (expectedSize != size)
+				Console.WriteLine($"!!! Unexpected downloaded file size expect:{expectedSize} actual:{size}");
+
+			string sha1 = _DiskHashStore.Hash(tempFilename);
+
+			if (sha1 != expectedSha1)
+				Console.WriteLine($"!!! Unexpected downloaded CHD SHA1. It's wrong in the source and will not work. expect:{expectedSha1} actual:{sha1}");
+
+			bool imported = _DiskHashStore.Add(tempFilename, true, sha1);
+
+			Console.WriteLine($"Disk Store Import: {imported} {sha1} {name}");
 
 			return size;
 		}

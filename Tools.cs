@@ -67,6 +67,28 @@ namespace Spludlow.MameAO
 			ConsoleRule(ch);
 		}
 
+		private static List<char> _InvalidFileNameChars = new List<char>(Path.GetInvalidFileNameChars());
+
+		public static string ValidFileName(string name)
+		{
+			return ValidName(name, _InvalidFileNameChars, "_");
+		}
+
+		private static string ValidName(string name, List<char> invalidChars, string replaceBadWith)
+		{
+			StringBuilder sb = new StringBuilder();
+
+			foreach (char c in name)
+			{
+				if (invalidChars.Contains(c) == true)
+					sb.Append(replaceBadWith);
+				else
+					sb.Append(c);
+			}
+
+			return sb.ToString();
+		}
+
 		public static string SHA1HexFile(string filename)
 		{
 			using (FileStream stream = File.OpenRead(filename))

@@ -43,7 +43,8 @@ You can also use the command line just enter machine / software you are looking 
 
 ## Known issues
 
-- Not all CHD SL (Software list) disks are available in the source https://archive.org/download/mame-software-list-chds-2/
+- Not all CHD SL (Software list) disks are available in the source & may contains incorect files (sha1 don't match) https://archive.org/download/mame-software-list-chds-2/
+- Incorect files (sha1 don't match) in the source will allow you to download on every attempt. You will see a warning in the console for CHDs but not ROMs.
 - UI could do with refinement.
 
 ## Symbolic Links - Save disk space
