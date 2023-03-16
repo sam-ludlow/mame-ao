@@ -382,6 +382,9 @@ namespace Spludlow.MameAO
 				if (column.ColumnName.EndsWith("_id") == true)
 					continue;
 
+				if (column.ColumnName == "ao_total")
+					continue;
+
 				if (row.IsNull(column.ColumnName) == true)
 					continue;
 
