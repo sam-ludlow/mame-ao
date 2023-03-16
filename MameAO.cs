@@ -8,6 +8,7 @@ using System.Data;
 using System.IO.Compression;
 using System.Diagnostics;
 using System.Reflection;
+using System.Threading.Tasks;
 
 using Newtonsoft.Json;
 
@@ -25,6 +26,8 @@ namespace Spludlow.MameAO
 
 		private bool _LinkingEnabled = false;
 
+		private Task _RunTask = null;
+
 		public Database _Database;
 
 		public Spludlow.HashStore _RomHashStore;
@@ -37,9 +40,6 @@ namespace Spludlow.MameAO
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
 		public readonly string _ListenAddress = "http://127.0.0.1:12380/";
-
-		public readonly char _h1 = '#';
-		public readonly char _h2 = '.';
 
 		private readonly string _BinariesDownloadUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
 
@@ -78,7 +78,7 @@ namespace Spludlow.MameAO
 
 			_AssemblyVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}";
 
-			Tools.ConsoleHeading(_h1, new string[] {
+			Tools.ConsoleHeading(1, new string[] {
 				$"Welcome to Spludlow MAME Shell V{_AssemblyVersion}",
 				"https://github.com/sam-ludlow/mame-ao",
 			});
@@ -99,7 +99,7 @@ namespace Spludlow.MameAO
 			Console.WriteLine("WARNING: Large downloads like CHD will take a while, each dot represents 1 MiB (about a floppy disk) you do the maths.");
 			Console.WriteLine("");
 
-			Tools.ConsoleHeading(_h1, "Initializing");
+			Tools.ConsoleHeading(1, "Initializing");
 			Console.WriteLine("");
 
 			//
@@ -139,7 +139,7 @@ namespace Spludlow.MameAO
 
 			foreach (Sources.MameSetType setType in Enum.GetValues(typeof(Sources.MameSetType)))
 			{
-				Tools.ConsoleHeading(_h2, $"Prepare source: {setType}");
+				Tools.ConsoleHeading(2, $"Prepare source: {setType}");
 
 				Sources.MameSourceSet sourceSet = Sources.GetSourceSets(setType)[0];
 
@@ -213,7 +213,7 @@ namespace Spludlow.MameAO
 
 			string binUrl = _BinariesDownloadUrl.Replace("@VERSION@", _Version);
 
-			Tools.ConsoleHeading(_h2, new string[] {
+			Tools.ConsoleHeading(2, new string[] {
 				"MAME",
 				binUrl,
 			});
@@ -373,7 +373,7 @@ namespace Spludlow.MameAO
 			WebServer webServer = new WebServer(this);
 			webServer.StartListener();
 
-			Tools.ConsoleHeading(_h1, new string[] {
+			Tools.ConsoleHeading(1, new string[] {
 				"Remote Listener ready for commands",
 				_ListenAddress,
 				$"e.g. {_ListenAddress}command?machine=a2600&software=et&arguments=-window"
@@ -383,7 +383,7 @@ namespace Spludlow.MameAO
 
 			Process.Start(_ListenAddress);
 
-			Tools.ConsoleHeading(_h1, "Shell ready for commands");
+			Tools.ConsoleHeading(1, "Shell ready for commands");
 			Console.WriteLine("");
 
 			while (true)
@@ -395,8 +395,44 @@ namespace Spludlow.MameAO
 				if (line.Length == 0)
 					continue;
 
-				RunLine(line);
+				if (RunLineTask(line) == true)
+					_RunTask.Wait();
+				else
+					Console.WriteLine("BUSY!");
 			}
+		}
+
+		public bool RunLineTask(string line)
+		{
+			if (_RunTask != null && _RunTask.Status != TaskStatus.RanToCompletion)
+				return false;
+
+			_RunTask = new Task(() => {
+				try
+				{
+					RunLine(line);
+				}
+				catch (ApplicationException ee)
+				{
+					Console.WriteLine();
+					Console.WriteLine("!!! ERROR: " + ee.Message);
+					Console.WriteLine();
+				}
+				catch (Exception ee)
+				{
+					Console.WriteLine();
+					Console.WriteLine("!!! WORKER ERROR: " + ee.Message);
+					Console.WriteLine();
+					Console.WriteLine(ee.ToString());
+					Console.WriteLine();
+					Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
+					Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
+				}
+			});
+
+			_RunTask.Start();
+
+			return true;
 		}
 
 		public void RunLine(string line)
@@ -437,28 +473,20 @@ namespace Spludlow.MameAO
 			machine = machine.ToLower().Trim();
 			software = software.ToLower().Trim();
 
-			try
+			if (machine.StartsWith(".") == true)
 			{
-				if (machine.StartsWith(".") == true)
-				{
-					RunMame(binFilename, arguments);
-				}
-				else
-				{
-					GetRoms(machine, software);
-					RunMame(binFilename, machine + " " + software + " " + arguments);
-				}
+				RunMame(binFilename, arguments);
 			}
-			catch (ApplicationException ee)
+			else
 			{
-				Console.WriteLine("SHELL ERROR: " + ee.Message);
-				Console.WriteLine();
+				GetRoms(machine, software);
+				RunMame(binFilename, machine + " " + software + " " + arguments);
 			}
 		}
 
 		public void RunMame(string binFilename, string arguments)
 		{
-			Tools.ConsoleHeading(_h1, new string[] {
+			Tools.ConsoleHeading(1, new string[] {
 				"Starting MAME",
 				binFilename,
 				arguments,
@@ -508,7 +536,7 @@ namespace Spludlow.MameAO
 
 		public void GetRoms(string machineName, string softwareName)
 		{
-			Tools.ConsoleHeading(_h1, "Asset Acquisition");
+			Tools.ConsoleHeading(1, "Asset Acquisition");
 			Console.WriteLine();
 
 			//
@@ -627,7 +655,7 @@ namespace Spludlow.MameAO
 			//
 			// Info
 			//
-			Tools.ConsoleHeading(_h1, new string[] {
+			Tools.ConsoleHeading(1, new string[] {
 				"Machine Information",
 				"",
 				missingCount == 0 ? "Everything looks good to run MAME" : "!!! Missing ROM & Disk files. I doubt MAME will run !!!",
@@ -669,7 +697,7 @@ namespace Spludlow.MameAO
 			if (requiredMachines.Count == 0)
 				return 0;
 
-			Tools.ConsoleHeading(_h2, new string[] {
+			Tools.ConsoleHeading(2, new string[] {
 				"Machine ROM",
 				$"{machineName}",
 				$"required machines: {String.Join(", ", requiredMachines.ToArray())}",
@@ -696,7 +724,7 @@ namespace Spludlow.MameAO
 
 					bool inStore = _RomHashStore.Exists(sha1);
 
-					Console.WriteLine($"Checking machine ROM: {inStore}\t{requiredMachineName}\t{name}\t{sha1}");
+					Console.WriteLine($"Checking machine ROM: {inStore}\t{sha1}\t{requiredMachineName}\t{name}");
 
 					if (inStore == false)
 						missingRoms.Add(sha1);
@@ -714,7 +742,7 @@ namespace Spludlow.MameAO
 
 						long size = soureSet.AvailableDownloadSizes[requiredMachineName];
 
-						ImportRoms(downloadMachineUrl, $"machine rom: '{requiredMachineName}'", size);
+						ImportRoms(downloadMachineUrl, $"machine rom: '{requiredMachineName}'", size, missingRoms.ToArray());
 					}
 				}
 			}
@@ -743,19 +771,18 @@ namespace Spludlow.MameAO
 					if (Directory.Exists(romDirectory) == false)
 						Directory.CreateDirectory(romDirectory);
 
-					if (_RomHashStore.Exists(sha1) == true)
+					bool have = _RomHashStore.Exists(sha1);
+
+					if (have == true)
 					{
 						if (File.Exists(romFilename) == false)
-						{
-							Console.WriteLine($"Place machine ROM: {requiredMachineName}\t{name}");
 							romStoreFilenames.Add(new string[] { romFilename, _RomHashStore.Filename(sha1) });
-						}
 					}
 					else
 					{
-						Console.WriteLine($"Missing machine ROM: {requiredMachineName}\t{name}\t{sha1}");
 						++missingCount;
 					}
+					Console.WriteLine($"Place machine ROM: {have}\t{sha1}\t{requiredMachineName}\t{name}");
 				}
 			}
 
@@ -775,7 +802,7 @@ namespace Spludlow.MameAO
 			if (diskRows.Length == 0)
 				return 0;
 
-			Tools.ConsoleHeading(_h2, new string[] {
+			Tools.ConsoleHeading(2, new string[] {
 				"Machine Disk",
 				$"{machineName}",
 			});
@@ -795,7 +822,7 @@ namespace Spludlow.MameAO
 
 				bool inStore = _DiskHashStore.Exists(sha1);
 
-				Console.WriteLine($"Checking machine Disk: {inStore}\t{machineName}\t{name}\t{sha1}");
+				Console.WriteLine($"Checking machine Disk: {inStore}\t{sha1}\t{machineName}\t{name}");
 
 				if (inStore == false)
 					missingDiskRows.Add(diskRow);
@@ -866,19 +893,19 @@ namespace Spludlow.MameAO
 				if (Directory.Exists(directory) == false)
 					Directory.CreateDirectory(directory);
 
-				if (_DiskHashStore.Exists(sha1) == true)
+				bool have = _DiskHashStore.Exists(sha1);
+
+				if (have == true)
 				{
 					if (File.Exists(filename) == false)
-					{
-						Console.WriteLine($"Place machine Disk: {machineName}\t{name}");
 						romStoreFilenames.Add(new string[] { filename, _DiskHashStore.Filename(sha1) });
-					}
 				}
 				else
 				{
-					Console.WriteLine($"Missing machine Disk: {machineName}\t{name}\t{sha1}");
 					++missing;
 				}
+
+				Console.WriteLine($"Place machine Disk: {have}\t{sha1}\t{machineName}\t{name}");
 			}
 
 			return missing;
@@ -896,7 +923,7 @@ namespace Spludlow.MameAO
 			if (disks.Length == 0)
 				return 0;
 
-			Tools.ConsoleHeading(_h2, new string[] {
+			Tools.ConsoleHeading(2, new string[] {
 				"Software Disk",
 				$"{softwareListName} / {softwareName}",
 			});
@@ -916,7 +943,7 @@ namespace Spludlow.MameAO
 
 				bool inStore = _DiskHashStore.Exists(sha1);
 
-				Console.WriteLine($"Checking software Disk: {inStore}\t{softwareListName}\t{softwareName}\t{name}\t{sha1}");
+				Console.WriteLine($"Checking software Disk: {inStore}\t{sha1}\t{softwareListName}\t{softwareName}\t{name}");
 
 				if (inStore == false)
 					missingDisks.Add(disk);
@@ -975,19 +1002,19 @@ namespace Spludlow.MameAO
 				if (Directory.Exists(directory) == false)
 					Directory.CreateDirectory(directory);
 
-				if (_DiskHashStore.Exists(sha1) == true)
+				bool have = _DiskHashStore.Exists(sha1);
+
+				if (have == true)
 				{
 					if (File.Exists(filename) == false)
-					{
-						Console.WriteLine($"Place software Disk: {softwareListName}\t{softwareName}\t{name}");
 						romStoreFilenames.Add(new string[] { filename, _DiskHashStore.Filename(sha1) });
-					}
 				}
 				else
 				{
-					Console.WriteLine($"Missing softwsre Disk: {softwareListName}\t{softwareName}\t{name}\t{sha1}");
 					++missing;
 				}
+
+				Console.WriteLine($"Place software Disk: {have}\t{sha1}\t{softwareListName}\t{softwareName}\t{name}");
 			}
 
 			return missing;
@@ -1005,7 +1032,7 @@ namespace Spludlow.MameAO
 			if (roms.Length == 0)
 				return 0;
 
-			Tools.ConsoleHeading(_h2, new string[] {
+			Tools.ConsoleHeading(2, new string[] {
 				"Software ROM",
 				$"{softwareListName} / {softwareName}",
 			});
@@ -1028,7 +1055,7 @@ namespace Spludlow.MameAO
 
 				bool inStore = _RomHashStore.Exists(sha1);
 
-				Console.WriteLine($"Checking Software ROM: {inStore}\t{softwareListName}\t{softwareName}\t{romName}\t{sha1}");
+				Console.WriteLine($"Checking Software ROM: {inStore}\t{sha1}\t{softwareListName}\t{softwareName}\t{romName}");
 
 				if (inStore == false)
 					missingRoms.Add(sha1);
@@ -1058,7 +1085,7 @@ namespace Spludlow.MameAO
 
 				long size = softwareSizes[requiredSoftwareName];
 
-				ImportRoms(downloadSoftwareUrl, $"software rom: '{softwareListName}/{requiredSoftwareName}'", size);
+				ImportRoms(downloadSoftwareUrl, $"software rom: '{softwareListName}/{requiredSoftwareName}'", size, missingRoms.ToArray());
 			}
 
 			//
@@ -1079,19 +1106,18 @@ namespace Spludlow.MameAO
 				if (Directory.Exists(romDirectory) == false)
 					Directory.CreateDirectory(romDirectory);
 
-				if (_RomHashStore.Exists(sha1) == true)
+				bool have = _RomHashStore.Exists(sha1);
+
+				if (have == true)
 				{
 					if (File.Exists(romFilename) == false)
-					{
-						Console.WriteLine($"Place software ROM: {softwareListName}\t{softwareName}\t{romName}");
 						romStoreFilenames.Add(new string[] { romFilename, _RomHashStore.Filename(sha1) });
-					}
 				}
 				else
 				{
-					Console.WriteLine($"Missing software ROM: {softwareListName}\t{softwareName}\t{romName}\t{sha1}");
 					++missingCount;
 				}
+				Console.WriteLine($"Place software Disk: {have}\t{sha1}\t{softwareListName}\t{softwareName}\t{romName}");
 			}
 
 			return missingCount;
@@ -1160,8 +1186,10 @@ namespace Spludlow.MameAO
 			return result;
 		}
 
-		private long ImportRoms(string url, string name, long expectedSize)
+		private long ImportRoms(string url, string name, long expectedSize, string[] requiredSHA1s)
 		{
+			HashSet<string> required = new HashSet<string>(requiredSHA1s);
+
 			long size = 0;
 
 			using (TempDirectory tempDir = new TempDirectory())
@@ -1190,11 +1218,19 @@ namespace Spludlow.MameAO
 
 				foreach (string romFilename in Directory.GetFiles(extractDirectory, "*", SearchOption.AllDirectories))
 				{
+					string partFilename = romFilename.Substring(extractDirectory.Length);
+
 					string sha1 = _RomHashStore.Hash(romFilename);
+
+					required.Remove(sha1);
+
 					bool imported = _RomHashStore.Add(romFilename, false, sha1);
-					Console.WriteLine($"ROM Store Import: {imported} {sha1} {name} {romFilename.Substring(extractDirectory.Length)}");
+					Console.WriteLine($"ROM Store Import: {imported} {sha1} {name} {partFilename}");
 				}
 			}
+
+			foreach (string sha1 in required)
+				Console.WriteLine($"!!! Importing missing sha1 in source it won't work. {name} {sha1}");
 
 			return size;
 		}

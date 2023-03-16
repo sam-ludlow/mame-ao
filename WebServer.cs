@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Net;
@@ -15,8 +14,6 @@ namespace Spludlow.MameAO
 	{
 		private MameAOProcessor _AO;
 		
-		private Task _RunTask = null;
-
 		public WebServer(MameAOProcessor ao)
 		{
 			_AO = ao;
@@ -61,9 +58,6 @@ namespace Spludlow.MameAO
 										break;
 
 									case "/command":
-										if (_RunTask != null && _RunTask.Status != TaskStatus.RanToCompletion)
-											throw new ApplicationException("I'm busy.");
-
 										Command(context, writer);
 										break;
 
@@ -129,7 +123,7 @@ namespace Spludlow.MameAO
 				throw new ApplicationException("No machine given.");
 
 			Console.WriteLine();
-			Tools.ConsoleHeading(_AO._h1, new string[] {
+			Tools.ConsoleHeading(1, new string[] {
 				"Remote command recieved",
 				$"machine: {machine}",
 				$"software: {software}",
@@ -137,26 +131,12 @@ namespace Spludlow.MameAO
 			});
 			Console.WriteLine();
 
-			_RunTask = new Task(() => {
-				try
-				{
-					_AO.RunLine($"{machine} {software} {arguments}");
-				}
-				catch (Exception ee)
-				{
-					Console.WriteLine();
-					Console.WriteLine("!!! REMOTE COMMAND ERROR: " + ee.Message);
-					Console.WriteLine();
-					Console.WriteLine(ee.ToString());
-					Console.WriteLine();
-					Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
-					Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
-				}
-			});
-			
-			_RunTask.Start();
-			
-			writer.WriteLine("OK");
+			bool started = _AO.RunLineTask($"{machine} {software} {arguments}");
+
+			writer.WriteLine(started == true ? "OK" : "BUSY");
+
+			if (started == false)
+				throw new ApplicationException("I'm busy.");
 		}
 
 		private void ApiProfiles(HttpListenerContext context, StreamWriter writer)

@@ -26,6 +26,8 @@ namespace Spludlow.MameAO
 			"Exabytes (EiB)"
 		};
 
+		private static readonly char[] _HeadingChars = new char[] { ' ', '#', '=', '-' };
+
 		private static readonly SHA1Managed _SHA1Managed = new SHA1Managed();
 
 		public static string DataRowValue(DataRow row, string columnName)
@@ -35,18 +37,20 @@ namespace Spludlow.MameAO
 			return (string)row[columnName];
 		}
 
-		public static void ConsoleRule(char ch)
+		public static void ConsoleRule(int head)
 		{
-			Console.WriteLine(new String(ch, Console.WindowWidth - 1));
+			Console.WriteLine(new String(_HeadingChars[head], Console.WindowWidth - 1));
 		}
 
-		public static void ConsoleHeading(char ch, string line)
+		public static void ConsoleHeading(int head, string line)
 		{
-			ConsoleHeading(ch, new string[] { line });
+			ConsoleHeading(head, new string[] { line });
 		}
-		public static void ConsoleHeading(char ch, string[] lines)
+		public static void ConsoleHeading(int head, string[] lines)
 		{
-			ConsoleRule(ch);
+			ConsoleRule(head);
+
+			char ch = _HeadingChars[head];
 
 			foreach (string line in lines)
 			{
@@ -64,7 +68,7 @@ namespace Spludlow.MameAO
 				Console.WriteLine();
 			}
 
-			ConsoleRule(ch);
+			ConsoleRule(head);
 		}
 
 		private static List<char> _InvalidFileNameChars = new List<char>(Path.GetInvalidFileNameChars());
