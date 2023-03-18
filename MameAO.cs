@@ -9,6 +9,7 @@ using System.IO.Compression;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
+using System.Runtime.InteropServices;
 
 using Newtonsoft.Json;
 
@@ -43,6 +44,17 @@ namespace Spludlow.MameAO
 
 		private readonly string _BinariesDownloadUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
 
+		private IntPtr _ConsoleHandle;
+
+
+		[DllImport("user32.dll")]
+		[return: MarshalAs(UnmanagedType.Bool)]
+		static extern bool SetForegroundWindow(IntPtr hWnd);
+
+		[DllImport("user32.dll", EntryPoint = "FindWindow", SetLastError = true)]
+		static extern IntPtr FindWindowByCaption(IntPtr zeroOnly, string lpWindowName);
+
+
 		public MameAOProcessor(string rootDirectory)
 		{
 			_RootDirectory = rootDirectory;
@@ -72,14 +84,26 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public void BringToFront()
+		{
+			if (_ConsoleHandle == IntPtr.Zero)
+				Console.WriteLine("!!! Wanring can't get handle on Console Window.");
+			else
+				SetForegroundWindow(_ConsoleHandle);
+		}
+
 		public void Initialize()
 		{
 			Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
 
 			_AssemblyVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}";
 
+			Console.Title = $"Spludlow MAME-AO Shell V{_AssemblyVersion}";
+
+			_ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
+
 			Tools.ConsoleHeading(1, new string[] {
-				$"Welcome to Spludlow MAME Shell V{_AssemblyVersion}",
+				$"Welcome to Spludlow MAME-AO Shell V{_AssemblyVersion}",
 				"https://github.com/sam-ludlow/mame-ao",
 			});
 			Console.WriteLine("");
@@ -156,25 +180,25 @@ namespace Spludlow.MameAO
 					case Sources.MameSetType.MachineRom:
 						version = title.Substring(5, 5);
 
-						sourceSet.AvailableDownloadSizes = AvailableFilesInMetadata("mame-merged/", metadata);
+						sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-merged/", metadata);
 						break;
 
 					case Sources.MameSetType.MachineDisk:
 						version = title.Substring(5, 5);
 
-						sourceSet.AvailableDownloadSizes = AvailableDiskFilesInMetadata(metadata);
+						sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
 						break;
 
 					case Sources.MameSetType.SoftwareRom:
 						version = title.Substring(8, 5);
 
-						sourceSet.AvailableDownloadSizes = AvailableFilesInMetadata("mame-sl/", metadata);
+						sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-sl/", metadata);
 						break;
 
 					case Sources.MameSetType.SoftwareDisk:
 						version = title;
 
-						sourceSet.AvailableDownloadSizes = AvailableDiskFilesInMetadata(metadata);
+						sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
 						break;
 				}
 
@@ -316,9 +340,9 @@ namespace Spludlow.MameAO
 			Console.WriteLine("");
 		}
 
-		private Dictionary<string, long> AvailableFilesInMetadata(string find, dynamic metadata)
+		private Dictionary<string, Sources.SourceFileInfo> AvailableFilesInMetadata(string find, dynamic metadata)
 		{
-			Dictionary<string, long> result = new Dictionary<string, long>();
+			var result = new Dictionary<string, Sources.SourceFileInfo>();
 
 			foreach (dynamic file in metadata.files)
 			{
@@ -327,25 +351,26 @@ namespace Spludlow.MameAO
 				{
 					name = name.Substring(find.Length);
 					name = name.Substring(0, name.Length - 4);
-					long size = Int64.Parse((string)file.size);
-					result.Add(name, size);
+
+					result.Add(name, new Sources.SourceFileInfo(file));
 				}
 			}
 
 			return result;
 		}
 
-		private Dictionary<string, long> AvailableDiskFilesInMetadata(dynamic metadata)
+		private Dictionary<string, Sources.SourceFileInfo> AvailableDiskFilesInMetadata(dynamic metadata)
 		{
-			Dictionary<string, long> result = new Dictionary<string, long>();
+			var result = new Dictionary<string, Sources.SourceFileInfo>();
 
 			foreach (dynamic file in metadata.files)
 			{
 				string name = (string)file.name;
 				if (name.EndsWith(".chd") == true)
 				{
-					long size = Int64.Parse((string)file.size);
-					result.Add(name.Substring(0, name.Length - 4), size);
+					name = name.Substring(0, name.Length - 4);
+
+					result.Add(name, new Sources.SourceFileInfo(file));
 				}
 			}
 
@@ -406,6 +431,8 @@ namespace Spludlow.MameAO
 		{
 			if (_RunTask != null && _RunTask.Status != TaskStatus.RanToCompletion)
 				return false;
+
+			BringToFront();
 
 			_RunTask = new Task(() => {
 				try
@@ -735,12 +762,12 @@ namespace Spludlow.MameAO
 				//
 				if (missingRoms.Count > 0)
 				{
-					if (soureSet.AvailableDownloadSizes.ContainsKey(requiredMachineName) == true)
+					if (soureSet.AvailableDownloadFileInfos.ContainsKey(requiredMachineName) == true)
 					{
 						string downloadMachineUrl = soureSet.DownloadUrl;
 						downloadMachineUrl = downloadMachineUrl.Replace("@MACHINE@", requiredMachineName);
 
-						long size = soureSet.AvailableDownloadSizes[requiredMachineName];
+						long size = soureSet.AvailableDownloadFileInfos[requiredMachineName].size;
 
 						ImportRoms(downloadMachineUrl, $"machine rom: '{requiredMachineName}'", size, missingRoms.ToArray());
 					}
@@ -852,16 +879,16 @@ namespace Spludlow.MameAO
 
 					string key = $"{availableMachineName}/{availableDiskName}";
 
-					if (soureSet.AvailableDownloadSizes.ContainsKey(key) == false)
+					if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
 					{
 						availableMachineName = parentMachineName;
 						key = $"{availableMachineName}/{availableDiskName}";
 
-						if (soureSet.AvailableDownloadSizes.ContainsKey(key) == false)
+						if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
 							throw new ApplicationException($"Available Download Machine Disks not found key:{key}");
 					}
 
-					long size = soureSet.AvailableDownloadSizes[key];
+					long size = soureSet.AvailableDownloadFileInfos[key].size;
 
 					string diskNameEnc = Uri.EscapeUriString(availableDiskName);
 
@@ -966,10 +993,10 @@ namespace Spludlow.MameAO
 
 					string key = $"{softwareListName}/{downloadSoftwareName}/{diskName}";
 
-					if (soureSet.AvailableDownloadSizes.ContainsKey(key) == false)
+					if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
 						throw new ApplicationException($"Software list disk not on archive.org {key}");
 
-					long size = soureSet.AvailableDownloadSizes[key];
+					long size = soureSet.AvailableDownloadFileInfos[key].size;
 
 					string nameEnc = Uri.EscapeUriString(diskName);
 
@@ -1037,7 +1064,7 @@ namespace Spludlow.MameAO
 				$"{softwareListName} / {softwareName}",
 			});
 
-			if (soureSet.AvailableDownloadSizes.ContainsKey(softwareListName) == false)
+			if (soureSet.AvailableDownloadFileInfos.ContainsKey(softwareListName) == false)
 				throw new ApplicationException($"Software list not on archive.org {softwareListName}");
 
 			//

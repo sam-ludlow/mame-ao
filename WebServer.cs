@@ -81,6 +81,10 @@ namespace Spludlow.MameAO
 										ApiInfo(context, writer);
 										break;
 
+									case "/api/source_files":
+										ApiListSourceFiles(context, writer);
+										break;
+
 									default:
 										throw new ApplicationException($"404 {path}");
 								}
@@ -348,6 +352,35 @@ namespace Spludlow.MameAO
 			}
 
 			json.sources = sources;
+
+			context.Response.Headers["Content-Type"] = "application/json";
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+		private void ApiListSourceFiles(HttpListenerContext context, StreamWriter writer)
+		{
+			string qs;
+
+			string type = null;
+			qs = context.Request.QueryString["type"];
+			if (qs != null)
+				type = qs;
+
+			if (type == null)
+				throw new ApplicationException("type not passed");
+
+			Sources.MameSetType setType = (Sources.MameSetType)Enum.Parse(typeof(Sources.MameSetType), type);
+
+			Sources.MameSourceSet sourceSet = Sources.GetSourceSets(setType)[0];
+
+			JArray files = JArray.FromObject(sourceSet.AvailableDownloadFileInfos.Values);
+
+			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = files.Count;
+			json.count = files.Count;
+			json.results = files;
 
 			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));

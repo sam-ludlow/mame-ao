@@ -14,13 +14,31 @@ namespace Spludlow.MameAO
 			SoftwareDisk,
 		};
 
+		private static readonly DateTime _EpochDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+		public class SourceFileInfo
+		{
+			public SourceFileInfo(dynamic file)
+			{
+				name = file.name;
+				size = Int64.Parse((string)file.size);
+				sha1 = file.sha1;
+				mtime = _EpochDateTime.AddSeconds(double.Parse((string)file.mtime));
+			}
+
+			public string name { get; set; }
+			public long size { get; set; }
+			public string sha1 { get; set; }
+			public DateTime mtime { get; set; }
+		}
+
 		public class MameSourceSet
 		{
 			public MameSetType SetType;
 			public string MetadataUrl;
 			public string DownloadUrl;
 			public string HtmlSizesUrl;
-			public Dictionary<string, long> AvailableDownloadSizes;
+			public Dictionary<string, SourceFileInfo> AvailableDownloadFileInfos;
 			public string Version;
 		}
 
