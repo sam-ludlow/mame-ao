@@ -54,6 +54,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="BadSources.cs" />
     <Compile Include="Database.cs" />
     <Compile Include="HashStore.cs" />
     <Compile Include="MameAO.cs" />

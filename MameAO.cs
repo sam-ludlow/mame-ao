@@ -38,6 +38,8 @@ namespace Spludlow.MameAO
 
 		private MameChdMan _MameChdMan;
 
+		private BadSources _BadSources;
+
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
 		public readonly string _ListenAddress = "http://127.0.0.1:12380/";
@@ -230,6 +232,12 @@ namespace Spludlow.MameAO
 					}
 				}
 			}
+
+			//
+			// Bad Sources
+			//
+
+			_BadSources = new BadSources(_RootDirectory);
 
 			//
 			// MAME Binaries
@@ -888,15 +896,13 @@ namespace Spludlow.MameAO
 							throw new ApplicationException($"Available Download Machine Disks not found key:{key}");
 					}
 
-					long size = soureSet.AvailableDownloadFileInfos[key].size;
-
 					string diskNameEnc = Uri.EscapeUriString(availableDiskName);
 
 					string diskUrl = soureSet.DownloadUrl;
 					diskUrl = diskUrl.Replace("@MACHINE@", availableMachineName);
 					diskUrl = diskUrl.Replace("@DISK@", diskNameEnc);
 
-					ImportDisk(diskUrl, $"machine disk: '{key}'", size, sha1);
+					ImportDisk(diskUrl, $"machine disk: '{key}'", sha1, soureSet.AvailableDownloadFileInfos[key]);
 				}
 			}
 
@@ -996,8 +1002,6 @@ namespace Spludlow.MameAO
 					if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
 						throw new ApplicationException($"Software list disk not on archive.org {key}");
 
-					long size = soureSet.AvailableDownloadFileInfos[key].size;
-
 					string nameEnc = Uri.EscapeUriString(diskName);
 
 					string url = soureSet.DownloadUrl;
@@ -1005,7 +1009,7 @@ namespace Spludlow.MameAO
 					url = url.Replace("@SOFTWARE@", downloadSoftwareName);
 					url = url.Replace("@DISK@", nameEnc);
 
-					ImportDisk(url, $"software disk: '{key}'", size, sha1);
+					ImportDisk(url, $"software disk: '{key}'", sha1, soureSet.AvailableDownloadFileInfos[key]);
 				}
 			}
 
@@ -1262,11 +1266,17 @@ namespace Spludlow.MameAO
 			return size;
 		}
 
-		private long ImportDisk(string url, string name, long expectedSize, string expectedSha1)
+		private long ImportDisk(string url, string name, string expectedSha1, Sources.SourceFileInfo sourceInfo)
 		{
+			if (_BadSources.AlreadyDownloaded(sourceInfo) == true)
+			{
+				Console.WriteLine($"!!! Already Downloaded before and it didn't work (bad in source) chd-sha1:{expectedSha1} source-sha1: {sourceInfo.sha1}");
+				return 0;
+			}
+
 			string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(name) + ".chd");
 
-			Console.Write($"Downloading {name} size:{Tools.DataSize(expectedSize)} url:{url} ...");
+			Console.Write($"Downloading {name} size:{Tools.DataSize(sourceInfo.size)} url:{url} ...");
 			DateTime startTime = DateTime.Now;
 			long size = Tools.Download(url, tempFilename, _DownloadDotSize, 3 * 60);
 			TimeSpan took = DateTime.Now - startTime;
@@ -1275,13 +1285,16 @@ namespace Spludlow.MameAO
 			decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
 			Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
 
-			if (expectedSize != size)
-				Console.WriteLine($"!!! Unexpected downloaded file size expect:{expectedSize} actual:{size}");
+			if (sourceInfo.size != size)
+				Console.WriteLine($"!!! Unexpected downloaded file size expect:{sourceInfo.size} actual:{size}");
 
 			string sha1 = _DiskHashStore.Hash(tempFilename);
 
 			if (sha1 != expectedSha1)
+			{
 				Console.WriteLine($"!!! Unexpected downloaded CHD SHA1. It's wrong in the source and will not work. expect:{expectedSha1} actual:{sha1}");
+				_BadSources.ReportSourceFile(sourceInfo, expectedSha1, sha1);
+			}
 
 			bool imported = _DiskHashStore.Add(tempFilename, true, sha1);
 
