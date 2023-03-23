@@ -2,13 +2,13 @@
 
 Run MAME easily, just download this and run.
 
-Automatically downloads all MAME binaries (from github.com) and ROMS (from archive.org) on the fly.
+Automatically downloads all MAME binaries (from github.com) and ROMs (from archive.org) on the fly.
 
 Built in web UI just click image and wait.
 
-You can also use the command line just enter machine / software you are looking for the short name/code
-- http://adb.arcadeitalia.net/lista_mame.php
-- https://mame.spludlow.co.uk/
+You can also use the command line just enter machine / software short name.
+
+![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/mame-ao-ui.png)
 
 ## Installation & Usage
 
@@ -22,7 +22,7 @@ You can also use the command line just enter machine / software you are looking 
 
 ## Important notes
 
-- The first time you run it will take a while and use a lot of RAM.
+- The first time you run it will take a while and use a lot of CPU & RAM.
 - Please be patient, subsequent runs will not.
 
 ## UI
@@ -33,13 +33,11 @@ You can also use the command line just enter machine / software you are looking 
 - If the machine has software it will be listed, click what you want to run.
 - Click back on the mame-ao console window to see what it's doing
 
-![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/mame-ao-ui.png)
-
 ## System requirements
 
 - Windows with .net framework 4.8
 - 32 bit / 64 bit (application is 32 bit keeps RAM usage down)
-- 2 Gb RAM free 
+- 2 Gb RAM free
 
 ## Known issues
 
@@ -50,9 +48,10 @@ You can also use the command line just enter machine / software you are looking 
 
 To be able to create symbolic links you have to grant permission.
 
-- Run "gpedit"
-- Go to "Computer Configuration\Windows Settings\Security Settings\Local Policies\User Rights Assignment\Create symbolic links"
-- Add the required user or group. You will need to re-start for settings to take effect.
+- Run "secpol" (Local Security Policy) as Administrator. Do a Windows search for "secpol" click "Run as administrator".
+- Go to "Local Policies\User Rights Assignment\Create symbolic links"
+- Add the required user or group. Enter your username, click the "Check Names" button to check it is correct.
+- You will need to re-start for settings to take effect.
 
 ## Internal Workings
 
@@ -101,3 +100,7 @@ https://www.newtonsoft.com/json
 ### SQLite
 SQL Database
 https://www.sqlite.org/
+
+### Spludlow MAME
+Image hosting
+https://mame.spludlow.co.uk/
