@@ -90,6 +90,8 @@ namespace Spludlow.MameAO
 		{
 			_MachineConnection = Database.DatabaseFromXML(xmlFilename, databaseFilename, assemblyVersion);
 
+			Console.Write("Creating machine performance caches...");
+
 			// Cache device_ref to speed up machine dependancy resolution
 			DataTable device_ref_Table = Database.ExecuteFill(_MachineConnection, "SELECT * FROM device_ref");
 
@@ -104,16 +106,21 @@ namespace Spludlow.MameAO
 
 				_DevicesRefs.Add(machineName, rows);
 			}
-
+			
+			Console.WriteLine("...done");
 		}
 
 		public void InitializeSoftware(string xmlFilename, string databaseFilename, string assemblyVersion)
 		{
 			_SoftwareConnection = Database.DatabaseFromXML(xmlFilename, databaseFilename, assemblyVersion);
 
+			Console.Write("Creating software performance caches...");
+
 			// Cache softwarelists for description
 			_SoftwarelistTable = ExecuteFill(_SoftwareConnection, "SELECT name, description FROM softwarelist");
 			_SoftwarelistTable.PrimaryKey = new DataColumn[] { _SoftwarelistTable.Columns["name"] };
+
+			Console.WriteLine("...done");
 		}
 
 		public static void AddDataExtras(DataSet dataSet, string name, string assemblyVersion)
