@@ -12,64 +12,64 @@ namespace Spludlow.MameAO
 	public class Database
 	{
 		public static string[][] DataQueryProfiles = new string[][] {
-			new string[] { "Machines - coin operated, status good, not a clone",
+			new string[] { "Arcade Machines - status good - no clones",
 
-				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
+				"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
 				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
 
-			new string[] { "Machines - coin operated, status imperfect, not a clone",
+			new string[] { "Arcade Machines - status imperfect - no clones",
 
-				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
+				"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
 				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
 
-			new string[] { "Machines - not coin operated, with software, status good, not a clone",
+			new string[] { "Compters & Consoles with software - status good - no clones",
 
-				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
+				"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
 				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
 
-			new string[] { "Machines - not coin operated, with software, status imperfect, not a clone",
+			new string[] { "Compters & Consoles with software - status imperfect - no clones",
 
-				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
+				"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
 				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
 
-			new string[] { "Machines - not coin operated, no software, status good, not a clone",
+			new string[] { "Other Systems without software - status good - no clones",
 
-				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
+				"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
 				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
 
-			new string[] { "Machines - not coin operated, no software, status imperfect, not a clone",
+			new string[] { "Other Systems without software - status imperfect - no clones",
 
-				"SELECT machine.name, machine.description, machine.year, machine.manufacturer, machine.ao_softwarelist_count, machine.ao_rom_count, machine.ao_disk_count, driver.status, driver.emulation, COUNT() OVER() AS ao_total " +
+				"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
 				"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
 
-			new string[] { "Machines - Everything",
+			new string[] { "Everything",
 
-				"SELECT machine.*, COUNT() OVER() AS ao_total " +
-				"FROM machine " +
+				"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
+				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
 				"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') @SEARCH) " +
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",

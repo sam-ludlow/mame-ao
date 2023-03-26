@@ -319,6 +319,10 @@
 			{ heading: 'roms', columnName: 'ao_rom_count' },
 			{ heading: 'disks', columnName: 'ao_disk_count' },
 			{ heading: 'lists', columnName: 'ao_softwarelist_count' },
+			{ heading: 'romof', columnName: 'romof' },
+			{ heading: 'cloneof', columnName: 'cloneof' },
+			{ heading: 'status', columnName: 'status' },
+			{ heading: 'emulation', columnName: 'emulation' },
 		];
 
 		const renderMachines = (data) => {
@@ -354,7 +358,8 @@
 							break;
 
 						default:
-							cell.innerHTML = row[colDef.columnName];
+							if (row[colDef.columnName] !== undefined)
+								cell.innerHTML = row[colDef.columnName];
 							break;
 					}
 

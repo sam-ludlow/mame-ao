@@ -392,7 +392,7 @@ namespace Spludlow.MameAO
 
 			foreach (DataColumn column in row.Table.Columns)
 			{
-				if (column.ColumnName.EndsWith("_id") == true)
+				if (column.ColumnName.EndsWith("_id") == true || column.ColumnName.EndsWith("_id1") == true)
 					continue;
 
 				if (column.ColumnName == "ao_total")

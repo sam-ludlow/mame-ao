@@ -29,8 +29,8 @@ You can also use the command line just enter machine / software short name.
 
 - After mame-ao has fully started the web UI will apear in the default browser.
 - You can access it at http://127.0.0.1:12380/.
-- Just click on image to start the machine.
-- If the machine has software it will be listed, click what you want to run.
+- Just click on image to start the machine. Select machine query profiles using the drop-down.
+- If the machine has software it will be listed, you can change software list using the drop-down, click what you want to run.
 - Click back on the mame-ao console window to see what it's doing
 
 ## System requirements
