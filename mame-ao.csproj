@@ -57,6 +57,7 @@
     <Compile Include="source\BadSources.cs" />
     <Compile Include="source\Database.cs" />
     <Compile Include="source\HashStore.cs" />
+    <Compile Include="source\Mame.cs" />
     <Compile Include="source\MameAO.cs" />
     <Compile Include="source\MameChdMan.cs" />
     <Compile Include="source\Program.cs" />

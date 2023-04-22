@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Net;
@@ -83,6 +84,10 @@ namespace Spludlow.MameAO
 
 									case "/api/source_files":
 										ApiListSourceFiles(context, writer);
+										break;
+
+									case "/api/list":
+										ApiList(context, writer);
 										break;
 
 									default:
@@ -386,6 +391,29 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
+		private void ApiList(HttpListenerContext context, StreamWriter writer)
+		{
+			DataTable table = Mame.ListSavedState(_AO._RootDirectory, _AO._Database);
+
+			JArray results = new JArray();
+
+			foreach (DataRow row in table.Rows)
+			{
+				dynamic result = RowToJson(row);
+				results.Add(result);
+			}
+
+			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = table.Rows.Count;
+			json.count = results.Count;
+			json.results = results;
+
+			context.Response.Headers["Content-Type"] = "application/json";
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
 		private dynamic RowToJson(DataRow row)
 		{
 			dynamic json = new JObject();
@@ -409,6 +437,10 @@ namespace Spludlow.MameAO
 
 					case "Int64":
 						json[column.ColumnName] = (long)row[column];
+						break;
+
+					case "DateTime":
+						json[column.ColumnName] = ((DateTime)row[column]).ToString("s");
 						break;
 
 					default:

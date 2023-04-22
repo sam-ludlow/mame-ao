@@ -122,6 +122,8 @@ namespace Spludlow.MameAO
 			Console.WriteLine("Use dot to run mame without a machine e.g. \".\", or with paramters \". -window\"");
 			Console.WriteLine("If you have alreay loaded a machine (in current MAME version) you can use the MAME UI, filter on avaialable.");
 			Console.WriteLine("");
+			Console.WriteLine("List saved state: .list");
+			Console.WriteLine("");
 			Console.WriteLine("WARNING: Large downloads like CHD will take a while, each dot represents 1 MiB (about a floppy disk) you do the maths.");
 			Console.WriteLine("");
 
@@ -270,7 +272,7 @@ namespace Spludlow.MameAO
 			if (File.Exists(binFilename) == false)
 			{
 				Console.Write($"Extracting MAME binaries {binFilename} ...");
-				RunSelfExtract(binCacheFilename);
+				Mame.RunSelfExtract(binCacheFilename);
 				Console.WriteLine("...done.");
 			}
 
@@ -315,7 +317,7 @@ namespace Spludlow.MameAO
 			if (File.Exists(machineXmlFilename) == false)
 			{
 				Console.Write($"Extracting MAME machine XML {machineXmlFilename} ...");
-				ExtractXML(binFilename, machineXmlFilename, "-listxml");
+				Mame.ExtractXML(binFilename, machineXmlFilename, "-listxml");
 				Console.WriteLine("...done.");
 			}
 
@@ -334,7 +336,7 @@ namespace Spludlow.MameAO
 			if (File.Exists(softwareXmlFilename) == false)
 			{
 				Console.Write($"Extracting MAME software XML {softwareXmlFilename} ...");
-				ExtractXML(binFilename, softwareXmlFilename, "-listsoftware");
+				Mame.ExtractXML(binFilename, softwareXmlFilename, "-listsoftware");
 				Console.WriteLine("...done.");
 			}
 
@@ -482,10 +484,22 @@ namespace Spludlow.MameAO
 
 			machine = parts[0];
 
-			if (machine == ".")
+			if (machine.StartsWith(".") == true)
 			{
-				if (parts.Length > 1)
-					arguments = String.Join(" ", parts.Skip(1));
+				switch (machine)
+				{
+					case ".":
+						if (parts.Length > 1)
+							arguments = String.Join(" ", parts.Skip(1));
+						break;
+
+					case ".list":
+						ListSavedState();
+						return;
+
+					default:
+						throw new ApplicationException($"Unknown command: {machine}");
+				}
 			}
 			else
 			{
@@ -510,62 +524,43 @@ namespace Spludlow.MameAO
 
 			if (machine.StartsWith(".") == true)
 			{
-				RunMame(binFilename, arguments);
+				Mame.RunMame(binFilename, arguments);
 			}
 			else
 			{
 				GetRoms(machine, software);
-				RunMame(binFilename, machine + " " + software + " " + arguments);
+				Mame.RunMame(binFilename, machine + " " + software + " " + arguments);
 			}
 		}
 
-		public void RunMame(string binFilename, string arguments)
+		public void ListSavedState()
 		{
-			Tools.ConsoleHeading(1, new string[] {
-				"Starting MAME",
-				binFilename,
-				arguments,
-			});
-			Console.WriteLine();
+			Tools.ConsoleHeading(2, "Saved Games");
 
-			string directory = Path.GetDirectoryName(binFilename);
+			DataTable table = Mame.ListSavedState(_RootDirectory, _Database);
 
-			ProcessStartInfo startInfo = new ProcessStartInfo(binFilename)
+			StringBuilder line = new StringBuilder();
+
+			foreach (DataColumn column in table.Columns)
 			{
-				WorkingDirectory = directory,
-				Arguments = arguments,
-				UseShellExecute = false,
-				RedirectStandardOutput = true,
-				StandardOutputEncoding = Encoding.UTF8,
-			};
-
-			using (Process process = new Process())
-			{
-				process.StartInfo = startInfo;
-
-				process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
-				{
-					if (e.Data != null)
-						Console.WriteLine($"MAME output:{e.Data}");
-				});
-
-				process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
-				{
-					if (e.Data != null)
-						Console.WriteLine($"MAME error:{e.Data}");
-				});
-
-				process.Start();
-				process.BeginOutputReadLine();
-				process.WaitForExit();
-
-				Console.WriteLine();
-				if (process.ExitCode == 0)
-					Console.WriteLine("MAME Shell Exit OK.");
-				else
-					Console.WriteLine($"MAME Shell Exit BAD: {process.ExitCode}");
+				if (line.Length > 0)
+					line.Append("\t");
+				line.Append(column.ColumnName);
 			}
+			Console.WriteLine(line.ToString());
 
+			foreach (DataRow row in table.Rows)
+			{
+				line.Length = 0;
+
+				foreach (DataColumn column in table.Columns)
+				{
+					if (line.Length > 0)
+						line.Append("\t");
+					line.Append(row[column.ColumnName]);
+				}
+				Console.WriteLine(line.ToString());
+			}
 			Console.WriteLine();
 		}
 
@@ -1327,61 +1322,5 @@ namespace Spludlow.MameAO
 				FindAllMachines((string)row["name"], requiredMachines);
 		}
 
-		public void RunSelfExtract(string filename)
-		{
-			string directory = Path.GetDirectoryName(filename);
-
-			ProcessStartInfo startInfo = new ProcessStartInfo(filename)
-			{
-				WorkingDirectory = directory,
-				Arguments = "-y",
-			};
-
-			using (Process process = new Process())
-			{
-				process.StartInfo = startInfo;
-
-				process.Start();
-				process.WaitForExit();
-
-				if (process.ExitCode != 0)
-					throw new ApplicationException("Bad exit code");
-			}
-		}
-
-		public void ExtractXML(string binFilename, string outputFilename, string arguments)
-		{
-			string directory = Path.GetDirectoryName(binFilename);
-
-			using (StreamWriter writer = new StreamWriter(outputFilename, false, Encoding.UTF8))
-			{
-				ProcessStartInfo startInfo = new ProcessStartInfo(binFilename)
-				{
-					WorkingDirectory = directory,
-					Arguments = arguments,
-					UseShellExecute = false,
-					RedirectStandardOutput = true,
-					StandardOutputEncoding = Encoding.UTF8,
-				};
-
-				using (Process process = new Process())
-				{
-					process.StartInfo = startInfo;
-
-					process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
-					{
-						if (e.Data != null)
-							writer.WriteLine(e.Data);
-					});
-
-					process.Start();
-					process.BeginOutputReadLine();
-					process.WaitForExit();
-
-					if (process.ExitCode != 0)
-						throw new ApplicationException("ExtractXML Bad exit code");
-				}
-			}
-		}
 	}
 }
