@@ -124,23 +124,19 @@ namespace Spludlow.MameAO
 
 		private void Command(HttpListenerContext context, StreamWriter writer)
 		{
-			string machine = context.Request.QueryString["machine"];
-			string software = context.Request.QueryString["software"];
-			string arguments = context.Request.QueryString["arguments"];
+			string line = context.Request.QueryString["line"];
 
-			if (machine == null)
-				throw new ApplicationException("No machine given.");
+			if (line == null)
+				throw new ApplicationException("No line given.");
 
 			Console.WriteLine();
 			Tools.ConsoleHeading(1, new string[] {
 				"Remote command recieved",
-				$"machine: {machine}",
-				$"software: {software}",
-				$"arguments: {arguments}",
+				line,
 			});
 			Console.WriteLine();
 
-			bool started = _AO.RunLineTask($"{machine} {software} {arguments}");
+			bool started = _AO.RunLineTask(line);
 
 			writer.WriteLine(started == true ? "OK" : "BUSY");
 

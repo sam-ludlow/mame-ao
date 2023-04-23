@@ -435,7 +435,8 @@
 		}
 
 		const runCommand = async (name) => {
-			const response = await fetch(`${_baseUrl}/command?machine=${name}`);
+
+			const response = await fetch(`${_baseUrl}/command?line=${name}`);
 
 			const result = await response.text();
 
@@ -449,7 +450,7 @@
 
 			const machine = _parameters['machine']
 
-			const response = await fetch(`${_baseUrl}/command?machine=${machine}&software=${software}`);
+			const response = await fetch(`${_baseUrl}/command?line=${machine} ${software}`);
 
 			const result = await response.text();
 

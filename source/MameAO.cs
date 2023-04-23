@@ -122,7 +122,9 @@ namespace Spludlow.MameAO
 			Console.WriteLine("Use dot to run mame without a machine e.g. \".\", or with paramters \". -window\"");
 			Console.WriteLine("If you have alreay loaded a machine (in current MAME version) you can use the MAME UI, filter on avaialable.");
 			Console.WriteLine("");
-			Console.WriteLine("List saved state: .list");
+			Console.WriteLine("List saved state: \".list\".");
+			Console.WriteLine("");
+			Console.WriteLine("You can start a particular version of MAME with the command \".VVVV\" where V is the version e.g. \".0252\" or pass arguments e.g. \".0252 mrdo -window\".");
 			Console.WriteLine("");
 			Console.WriteLine("WARNING: Large downloads like CHD will take a while, each dot represents 1 MiB (about a floppy disk) you do the maths.");
 			Console.WriteLine("");
@@ -411,7 +413,7 @@ namespace Spludlow.MameAO
 			Tools.ConsoleHeading(1, new string[] {
 				"Remote Listener ready for commands",
 				_ListenAddress,
-				$"e.g. {_ListenAddress}command?machine=a2600&software=et&arguments=-window"
+				$"e.g. {_ListenAddress}command?line=a2600 et -window"
 
 			});
 			Console.WriteLine("");
@@ -498,7 +500,16 @@ namespace Spludlow.MameAO
 						return;
 
 					default:
-						throw new ApplicationException($"Unknown command: {machine}");
+						binFilename = Path.Combine(_RootDirectory, machine.Substring(1), "mame.exe");
+
+						if (File.Exists(binFilename) == false)
+							throw new ApplicationException($"Unknown command: {machine}");
+
+						machine = ".";
+
+						if (parts.Length > 1)
+							arguments = String.Join(" ", parts.Skip(1));
+						break;
 				}
 			}
 			else
