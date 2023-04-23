@@ -38,7 +38,7 @@ You can also use the command line just enter machine / software short name.
 - Saved state often does not work between MAME versions. If you have started something with saved state you should continue to run the same MAME version.
 - MAME-AO leaves previous MAME versions isolated in their own directory. You can easily list all saved stated across all previous and current MAME versions with the command “.list”.
 - You can start a particular version of MAME with the command “.VVVV” where V is the version e.g. “.0252” or pass arguments e.g. “.0252 mrdo -window”.
-- NOTE: MAME-AO only allows pacing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
+- NOTE: MAME-AO only allows placing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
 - List on the API: http://127.0.0.1:12380/api/list
 - TODO: Add saved state to UI
 
