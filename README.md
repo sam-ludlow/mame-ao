@@ -72,29 +72,29 @@ NOTE: Machines that emulate keyboards will take over, use __Scroll Lock__ to tog
 
 You should use a joystick but you will need a few keyboard commands. Full keyboard docs here https://docs.mamedev.org/usingmame/defaultkeys.html
 
-Coin Up Player 1: __5__
-Start Player 1: __1__
+- Coin Up Player 1: __5__
+- Start Player 1: __1__
 
 NOTE: Other players continue along, coin:__5,6,7,8__ start:__1,2,3,4__
 
-Player 1 Joystick: __Cursor keys__
-Player 1 Button 1: __Left Ctrl__
-Player 1 Button 2: __Left Alt__
-Player 1 Button 3: __Spacebar__
+- Player 1 Joystick: __Cursor keys__
+- Player 1 Button 1: __Left Ctrl__
+- Player 1 Button 2: __Left Alt__
+- Player 1 Button 3: __Spacebar__
 
-Main Menu - __TAB__
-Pause - __P__
+- Main Menu - __TAB__
+- Pause - __P__
 
-Load Saved State: __F7__
-Save Saved State: __Left Shift + F7__
+- Load Saved State: __F7__
+- Save Saved State: __Left Shift + F7__
 
 NOTE: When saving state you have to then press another key or button to name the save, so you can have many.
 
-Snap Screen: __F12__
+- Snap Screen: __F12__
 
-Exit MAME: __ESC__
+- Exit MAME: __ESC__
 
-Keyboard UI controls OR full keyboard : __Scroll Lock__
+- Keyboard UI controls OR full keyboard : __Scroll Lock__
 
 ### MAME UI
 
