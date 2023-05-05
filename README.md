@@ -18,7 +18,7 @@ You can also use the command line just enter machine / software short name.
 - double click "mame-ao.exe"
 - wait for the MAME Shell to start
 - use the Web UI it will pop up
-- or use command line, enter a machine name and press enter e.g. "mrdo"
+- or use command line, enter a machine name and press enter e.g. __"mrdo"__
 
 ## Important notes
 
@@ -31,16 +31,15 @@ You can also use the command line just enter machine / software short name.
 - You can access it at http://127.0.0.1:12380/.
 - Just click on image to start the machine. Select machine query profiles using the drop-down.
 - If the machine has software it will be listed, you can change software list using the drop-down, click what you want to run.
-- Click back on the mame-ao console window to see what it's doing
+- Click on the mame-ao console window to see what it's doing, no progress is shown in the UI (TODO).
 
 ## Saved State and previous MAME versions
 
 - Saved state often does not work between MAME versions. If you have started something with saved state you should continue to run the same MAME version.
-- MAME-AO leaves previous MAME versions isolated in their own directory. You can easily list all saved stated across all previous and current MAME versions with the command “.list”.
-- You can start a particular version of MAME with the command “.VVVV” where V is the version e.g. “.0252” or pass arguments e.g. “.0252 mrdo -window”.
+- MAME-AO leaves previous MAME versions isolated in their own directory. You can easily list all saved stated across all previous and current MAME versions with the command __".list"__.
+- You can start a particular version of MAME with the command __".VVVV"__ where V is the version e.g. __".0252"__ or pass arguments e.g. __".0252 mrdo -window"__.
 - NOTE: MAME-AO only allows placing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
-- List on the API: http://127.0.0.1:12380/api/list
-- TODO: Add saved state to UI
+- You can list saved state in the UI. The link will start the chosen MAME version without any machine, select machine & software in the MAME UI. 
 
 ## System requirements
 

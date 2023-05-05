@@ -146,12 +146,18 @@
 			if (_parameters['machine'] !== undefined)
 				_mode = 'machine';
 
+			if (_parameters['mode'] !== undefined)
+				_mode = _parameters['mode'];
+
 			switch (_mode) {
 				case 'machines':
 					await onloadMachines();
 					break;
 				case 'machine':
 					await onloadMachine();
+					break;
+				case 'list':
+					await onloadList();
 					break;
 				default:
 					throw new Error(`Bad mode ${_mode}`);
@@ -168,13 +174,22 @@
 			switch (_mode) {
 				case 'machines':
 					const profile = _inputSelect.value;
-					document.location = `${_baseUrl}/?profile=${profile}&search=${encodeURIComponent(_inputText.value)}`;
+
+					if (profile === '')
+						return;
+
+					if (profile.startsWith('mode='))
+						document.location = `${_baseUrl}/?${profile}`;
+					else
+						document.location = `${_baseUrl}/?profile=${profile}&search=${encodeURIComponent(_inputText.value)}`;
 					break;
+
 				case 'machine':
 					const softwarelist = _inputSelect.value;
 					const machine = _parameters['machine'];
 					document.location = `${_baseUrl}/?machine=${machine}&softwarelist=${softwarelist}&search=${encodeURIComponent(_inputText.value)}`;
 					break;
+
 				default:
 					throw new Error(`Bad mode ${_mode}`);
 			}
@@ -203,6 +218,18 @@
 				const option = document.createElement('option');
 				option.value = index;
 				option.innerHTML = profile.name;
+				_inputSelect.appendChild(option);
+			});
+
+			const extraOptions = [
+				{ value: '', html: '' },
+				{ value: 'mode=list', html: 'List Saved State & previous MAME versions' },
+				{ value: '', html: '' },
+			];
+			extraOptions.forEach((optionInfo) => {
+				const option = document.createElement('option');
+				option.value = optionInfo.value;
+				option.innerHTML = optionInfo.html;
 				_inputSelect.appendChild(option);
 			});
 
@@ -308,6 +335,68 @@
 			_heading.innerHTML = document.title;
 
 			_info.innerHTML = `name: ${machine.name} - description: ${machine.description} - manufacturer: ${machine.manufacturer}`;
+		}
+
+		const onloadList = async () => {
+
+			const columnDefs = [
+				{ heading: 'MAME Version', columnName: 'version' },
+				{ heading: 'MAME Binary Time', columnName: 'binary_time' },
+				{ heading: 'Save Name', columnName: 'sta_name' },
+				{ heading: 'Save Time', columnName: 'sta_time' },
+				{ heading: 'Machine Name', columnName: 'sta_machine' },
+				{ heading: 'Machine Description', columnName: 'sta_description' },
+			];
+
+			let response = await fetch(`${_baseUrl}/api/list`);
+
+			const list = await response.json();
+
+			const table = document.createElement('table');
+
+			const headRow = document.createElement('tr');
+
+			columnDefs.forEach((colDef) => {
+				const cell = document.createElement('th');
+				cell.innerHTML = colDef.heading;
+				headRow.appendChild(cell);
+			});
+
+			table.appendChild(headRow);
+
+			list.results.forEach((row) => {
+				const tableRow = document.createElement('tr');
+
+				columnDefs.forEach((colDef) => {
+					const cell = document.createElement('td');
+
+					switch (colDef.columnName) {
+
+						case 'version':
+							cell.innerHTML = `<a onclick="runCommand('.${row.version}')" href="javascript:void(0);">${row.version}</a>`;
+							break;
+
+						default:
+							if (row[colDef.columnName] !== undefined)
+								cell.innerHTML = row[colDef.columnName];
+							break;
+					}
+
+					if (cell.innerHTML === '0')
+						cell.innerHTML = '';
+
+					tableRow.appendChild(cell);
+				});
+
+				table.appendChild(tableRow);
+			});
+
+			resultsContainer.innerHTML = '';
+			resultsContainer.appendChild(table);
+
+			document.title = 'MAME-AO Saved State';
+
+			_heading.innerHTML = document.title;
 		}
 
 		const machinesColumnDefs = [

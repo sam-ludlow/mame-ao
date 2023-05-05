@@ -171,7 +171,14 @@ namespace Spludlow.MameAO
 					table.Rows.Add(version, lastWriteTime);
 			}
 
-			return table;
+			DataView view = new DataView(table);
+			view.Sort = "sta_time";
+
+			DataTable sortTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				sortTable.ImportRow(rowView.Row);
+
+			return sortTable;
 
 		}
 
