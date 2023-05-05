@@ -39,7 +39,7 @@ You can also use the command line just enter machine / software short name.
 - MAME-AO leaves previous MAME versions isolated in their own directory. You can easily list all saved stated across all previous and current MAME versions with the command __".list"__.
 - You can start a particular version of MAME with the command __".VVVV"__ where V is the version e.g. __".0252"__ or pass arguments e.g. __".0252 mrdo -window"__.
 - NOTE: MAME-AO only allows placing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
-- You can list saved state in the UI. The link will start the chosen MAME version without any machine, select machine & software in the MAME UI. 
+- You can list saved state in the UI. The link will start the chosen MAME version without any machine, select machine & software in the MAME UI, use the available filter (top left).
 
 ## System requirements
 
@@ -53,6 +53,10 @@ You can also use the command line just enter machine / software short name.
 - UI could do with refinement.
 
 ## Symbolic Links - Save disk space
+
+When MAME-AO downloads assets it keeps them in a "hash store", this makes keeping account of them very simple, you don’t have to keep grooming a bunch of ZIP files.
+
+Obviously for MAME to run the ROMs have to be in the right place with the right name, so they need duplicating from the store. The best way to do this is use symbolic links, these use virtually zero disk space and point to the actual file in the store, otherwise you have to copy the files wasting diskspace.
 
 To be able to create symbolic links you have to grant permission.
 
