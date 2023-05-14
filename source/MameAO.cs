@@ -59,8 +59,13 @@ namespace Spludlow.MameAO
 
 		public MameAOProcessor(string rootDirectory)
 		{
+			Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
+			_AssemblyVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}";
+
 			_RootDirectory = rootDirectory;
+
 			_HttpClient = new HttpClient();
+			_HttpClient.DefaultRequestHeaders.Add("User-Agent", $"mame-ao/{_AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)");
 		}
 
 		public void Run()
@@ -96,10 +101,6 @@ namespace Spludlow.MameAO
 
 		public void Initialize()
 		{
-			Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
-
-			_AssemblyVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}";
-
 			Console.Title = $"Spludlow MAME-AO Shell V{_AssemblyVersion}";
 
 			_ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
@@ -162,6 +163,25 @@ namespace Spludlow.MameAO
 			if (_LinkingEnabled == false)
 				Console.WriteLine("!!! You can save a lot of disk space by enabling symbolic links, see the README.");
 			Console.WriteLine();
+
+			//
+			// New version Check
+			//
+
+			dynamic latest = JsonConvert.DeserializeObject<dynamic>(Tools.Query(_HttpClient, "https://api.github.com/repos/sam-ludlow/mame-ao/releases/latest"));
+
+			if (latest.assets.Count != 1)
+				throw new ApplicationException("Expected one github release asset." + latest.assets.Count);
+
+			string latestName = Path.GetFileNameWithoutExtension((string)latest.assets[0].name);
+			string currentName = $"mame-ao-{_AssemblyVersion}";
+			if (latestName != currentName)
+				Tools.ConsoleHeading(1, new string[] {
+					"New MAME-AO version available",
+					"",
+					$"{currentName} => {latestName}",
+					(string)latest.assets[0].browser_download_url,
+				});
 
 			//
 			// Prepare sources
