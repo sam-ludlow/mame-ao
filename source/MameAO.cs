@@ -716,7 +716,7 @@ namespace Spludlow.MameAO
 				Console.WriteLine(targetFilename);
 			}
 
-			ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(updateDirectory, "mame-ao.exe"))
+			ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(_RootDirectory, "mame-ao.exe"))
 			{
 				WorkingDirectory = _RootDirectory,
 				UseShellExecute = true,
