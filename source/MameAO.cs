@@ -10,6 +10,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Threading;
 
 using Newtonsoft.Json;
 
@@ -46,6 +47,8 @@ namespace Spludlow.MameAO
 
 		private readonly string _BinariesDownloadUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
 
+		public dynamic _MameAoLatest;
+
 		private IntPtr _ConsoleHandle;
 
 
@@ -75,17 +78,26 @@ namespace Spludlow.MameAO
 				Initialize();
 				Shell();
 			}
-			catch (Exception ee)
+			catch (Exception e)
+			{
+				ReportError(e, "FATAL ERROR", true);
+			}
+		}
+
+		public void ReportError(Exception e, string title, bool fatal)
+		{
+			Console.WriteLine();
+			Console.WriteLine($"!!! {title}: " + e.Message);
+			Console.WriteLine();
+			Console.WriteLine(e.ToString());
+			Console.WriteLine();
+			Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
+			Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
+
+			if (fatal == true)
 			{
 				Console.WriteLine();
-				Console.WriteLine("!!! FATAL ERROR: " + ee.Message);
-				Console.WriteLine();
-				Console.WriteLine(ee.ToString());
-				Console.WriteLine();
 				Console.WriteLine("Press any key to continue, program has crashed and will exit.");
-				Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
-				Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
-
 				Console.ReadKey();
 				Environment.Exit(1);
 			}
@@ -163,25 +175,6 @@ namespace Spludlow.MameAO
 			if (_LinkingEnabled == false)
 				Console.WriteLine("!!! You can save a lot of disk space by enabling symbolic links, see the README.");
 			Console.WriteLine();
-
-			//
-			// New version Check
-			//
-
-			dynamic latest = JsonConvert.DeserializeObject<dynamic>(Tools.Query(_HttpClient, "https://api.github.com/repos/sam-ludlow/mame-ao/releases/latest"));
-
-			if (latest.assets.Count != 1)
-				throw new ApplicationException("Expected one github release asset." + latest.assets.Count);
-
-			string latestName = Path.GetFileNameWithoutExtension((string)latest.assets[0].name);
-			string currentName = $"mame-ao-{_AssemblyVersion}";
-			if (latestName != currentName)
-				Tools.ConsoleHeading(1, new string[] {
-					"New MAME-AO version available",
-					"",
-					$"{currentName} => {latestName}",
-					(string)latest.assets[0].browser_download_url,
-				});
 
 			//
 			// Prepare sources
@@ -368,6 +361,25 @@ namespace Spludlow.MameAO
 
 			GC.Collect();
 
+			//
+			// New version Check
+			//
+
+			_MameAoLatest = JsonConvert.DeserializeObject<dynamic>(Tools.Query(_HttpClient, "https://api.github.com/repos/sam-ludlow/mame-ao/releases/latest"));
+
+			if (_MameAoLatest.assets.Count != 1)
+				throw new ApplicationException("Expected one github release asset." + _MameAoLatest.assets.Count);
+
+			string latestName = Path.GetFileNameWithoutExtension((string)_MameAoLatest.assets[0].name);
+			string currentName = $"mame-ao-{_AssemblyVersion}";
+			if (latestName != currentName)
+				Tools.ConsoleHeading(1, new string[] {
+					"New MAME-AO version available",
+					"",
+					$"{currentName} => {latestName}",
+					"",
+					"Automatically update with shell command \".up\".",
+				});
 
 			Console.WriteLine("");
 		}
@@ -471,21 +483,15 @@ namespace Spludlow.MameAO
 				{
 					RunLine(line);
 				}
-				catch (ApplicationException ee)
+				catch (ApplicationException e)
 				{
 					Console.WriteLine();
-					Console.WriteLine("!!! ERROR: " + ee.Message);
+					Console.WriteLine("!!! ERROR: " + e.Message);
 					Console.WriteLine();
 				}
-				catch (Exception ee)
+				catch (Exception e)
 				{
-					Console.WriteLine();
-					Console.WriteLine("!!! WORKER ERROR: " + ee.Message);
-					Console.WriteLine();
-					Console.WriteLine(ee.ToString());
-					Console.WriteLine();
-					Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
-					Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
+					ReportError(e, "WORKER ERROR", false);
 				}
 			});
 
@@ -517,6 +523,14 @@ namespace Spludlow.MameAO
 
 					case ".list":
 						ListSavedState();
+						return;
+
+					case ".up":
+						Update(0);
+						return;
+
+					case ".upany":	//	for testing update works
+						Update(-1);
 						return;
 
 					default:
@@ -593,6 +607,137 @@ namespace Spludlow.MameAO
 				Console.WriteLine(line.ToString());
 			}
 			Console.WriteLine();
+		}
+
+		public void Update(int startingPid)
+		{
+			string currentName = $"mame-ao-{_AssemblyVersion}";
+
+			string updateDirectory = Path.Combine(_RootDirectory, "_TEMP", "UPDATE");
+
+			if (startingPid <= 0)
+			{
+				string latestName = Path.GetFileNameWithoutExtension((string)_MameAoLatest.assets[0].name);
+
+				if (latestName == currentName)
+				{
+					Console.WriteLine($"MAME-AO is already up to date '{currentName}'.");
+					if (startingPid == 0)
+						return;
+				}
+
+				Console.WriteLine($"Updating MAME-AO '{currentName}' => '{latestName}'...");
+
+				string archiveUrl = (string)_MameAoLatest.assets[0].browser_download_url;
+				string archiveFilename = Path.Combine(_RootDirectory, latestName + ".zip");
+
+				Tools.Download(archiveUrl, archiveFilename, 0, 5);
+
+				if (Directory.Exists(updateDirectory) == true)
+				{
+					try
+					{
+						Directory.Delete(updateDirectory, true);
+					}
+					catch (UnauthorizedAccessException e)
+					{
+						throw new ApplicationException("Looks like an update is currently running, please kill all mame-ao processes and try again, " + e.Message, e);
+					}
+				}
+
+				ZipFile.ExtractToDirectory(archiveFilename, updateDirectory);
+
+				int pid = Process.GetCurrentProcess().Id;
+
+				ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(updateDirectory, "mame-ao.exe"))
+				{
+					WorkingDirectory = _RootDirectory,
+					Arguments = $"UPDATE={pid} DIRECTORY={_RootDirectory}",
+					UseShellExecute = true,
+				};
+
+				Console.Write("Starting update process...");
+
+				using (Process process = new Process())
+				{
+					process.StartInfo = startInfo;
+					process.Start();
+
+					if (process.HasExited == true)
+						throw new ApplicationException($"Update process exited imediatly after starting {process.ExitCode}.");
+				}
+
+				Console.WriteLine("...done");
+				Console.WriteLine("Exiting this process...");
+				Thread.Sleep(1000);
+				Environment.Exit(0);
+			}
+			else
+			{
+				try
+				{
+					UpdateChild(currentName, updateDirectory, startingPid);
+				}
+				catch (Exception e)
+				{
+					ReportError(e, "UPDATE FATAL ERROR", true);
+				}
+			}
+		}
+
+		public void UpdateChild(string currentName, string updateDirectory, int startingPid)
+		{
+			Console.WriteLine($"MAME-AO UPDATER {currentName}");
+			Console.WriteLine($"Target Directory: {_RootDirectory}, Update From Directory {updateDirectory}.");
+
+			Console.WriteLine("Waiting for starting process to exit...");
+			using (Process startingProcess = Process.GetProcessById(startingPid))
+			{
+				startingProcess.WaitForExit();
+			}
+			Console.WriteLine("...done");
+
+			try
+			{
+				File.Delete(Path.Combine(_RootDirectory, "mame-ao.exe"));
+			}
+			catch (UnauthorizedAccessException e)
+			{
+				throw new ApplicationException("Looks like the starting process is currently running, please kill all mame-ao processes and try again, " + e.Message, e);
+			}
+
+			foreach (string sourceFilename in Directory.GetFiles(updateDirectory))
+			{
+				string targetFilename = Path.Combine(_RootDirectory, Path.GetFileName(sourceFilename));
+				if (File.Exists(targetFilename) == true)
+					File.Delete(targetFilename);
+				File.Copy(sourceFilename, targetFilename);
+
+				Console.WriteLine(targetFilename);
+			}
+
+			ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(updateDirectory, "mame-ao.exe"))
+			{
+				WorkingDirectory = _RootDirectory,
+				UseShellExecute = true,
+			};
+
+			Console.Write("Starting updated mame-ao process...");
+			Thread.Sleep(1000);
+
+			using (Process process = new Process())
+			{
+				process.StartInfo = startInfo;
+				process.Start();
+
+				if (process.HasExited == true)
+					throw new ApplicationException($"New mame-ao process exited imediatly after starting {process.ExitCode}.");
+			}
+
+			Console.WriteLine("...done");
+			Console.WriteLine("Exiting this process...");
+			Thread.Sleep(1000);
+			Environment.Exit(0);
 		}
 
 		public void GetRoms(string machineName, string softwareName)
