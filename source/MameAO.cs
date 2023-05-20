@@ -13,6 +13,7 @@ using System.Runtime.InteropServices;
 using System.Threading;
 
 using Newtonsoft.Json;
+using System.Xml.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -523,6 +524,10 @@ namespace Spludlow.MameAO
 
 					case ".list":
 						ListSavedState();
+						return;
+
+					case ".import":
+						ImportDirectory();
 						return;
 
 					case ".up":
@@ -1472,6 +1477,47 @@ namespace Spludlow.MameAO
 			Console.WriteLine($"Disk Store Import: {imported} {sha1} {name}");
 
 			return size;
+		}
+
+		public void ImportDirectory()
+		{
+			string importDirectory = Path.Combine(_RootDirectory, "_TEMP", "IMPORT");
+
+			if (Directory.Exists(importDirectory) == false)
+				throw new ApplicationException($"Import directory does not exist: {importDirectory}");
+
+			Tools.ConsoleHeading(1, new string[] {
+				"Import from Directory Disk",
+				$"{importDirectory}",
+			});
+
+			Tools.ClearAttributes(importDirectory);
+
+			foreach (string filename in Directory.GetFiles(importDirectory, "*", SearchOption.AllDirectories))
+			{
+				string extention = Path.GetExtension(filename).ToLower();
+
+				string sha1;
+				bool imported;
+				string type;
+
+				if (extention == ".chd")
+				{
+					sha1 = _DiskHashStore.Hash(filename);
+					imported = _DiskHashStore.Add(filename, true, sha1);
+					type = "DISK";
+				}
+				else
+				{
+					sha1 = _RomHashStore.Hash(filename);
+					imported = _RomHashStore.Add(filename, true, sha1);
+					type = "ROM";
+				}
+				
+				Console.WriteLine($"{type} Store Import: {imported} {sha1} {filename}");
+			}
+
+			Console.WriteLine();
 		}
 
 		public void FindAllMachines(string machineName, HashSet<string> requiredMachines)
