@@ -69,7 +69,7 @@
 	<title>MAME-AO</title>
 </head>
 <body>
-
+	<a id="systemAlert" href="" style="color:white;background-color:red;"></a>
 	<form>
 		<div>
 			<a style="float:left;" href="/"><img src="https://mame.spludlow.co.uk/snap/mame-ao-logo.png" /></a>
@@ -110,6 +110,7 @@
 		const _inputSelect = document.getElementById('inputSelect');
 		const _inputText = document.getElementById('inputText');
 		const _searchInfo = document.getElementById('searchInfo');
+		const _systemAlert = document.getElementById('systemAlert');
 
 		const _resultsContainer = document.getElementById('resultsContainer');
 		const _heading = document.getElementById('heading');
@@ -259,6 +260,11 @@
 
 			response = await fetch(`${_baseUrl}/api/info`);
 			const info = (await response.json());
+
+			if (info.version_name_available !== info.version_name_current) {
+				_systemAlert.href = '/update';
+				_systemAlert.innerText = `New MAME-AO update avaialable ${info.version_name_current} => ${info.version_name_available} Click here to update immediately.`;
+			}
 
 			document.title = `MAME-AO ${info.version} - ` + _inputSelect.options[_inputSelect.selectedIndex].text;
 

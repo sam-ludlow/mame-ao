@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Net;
+using System.Runtime.Remoting.Contexts;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -60,6 +61,10 @@ namespace Spludlow.MameAO
 
 									case "/command":
 										Command(context, writer);
+										break;
+
+									case "/update":
+										Update(context, writer);
 										break;
 
 									case "/api/profiles":
@@ -142,6 +147,25 @@ namespace Spludlow.MameAO
 
 			if (started == false)
 				throw new ApplicationException("I'm busy.");
+		}
+
+		public void Update(HttpListenerContext context, StreamWriter writer)
+		{
+			Console.WriteLine();
+			Tools.ConsoleHeading(1, new string[] {
+				"Remote update recieved",
+			});
+			Console.WriteLine();
+
+			bool started = _AO.RunLineTask(".up");
+
+			writer.WriteLine(started == true ?
+				"<html>Please wait, MAME-AO update has started.<br/><br/>Check the console to see what it's doing.<br/><br/>" +
+				"The database will be re-created so give it a moment.<br/><br/>The updated Web UI will apear when finished.</html>"
+
+				: "MAME-AO is busy. Is it already updating or running MAME? Kill all MAME-AO processes and try again.");
+
+			context.Response.Headers["Content-Type"] = "text/html";
 		}
 
 		private void ApiProfiles(HttpListenerContext context, StreamWriter writer)
@@ -337,6 +361,11 @@ namespace Spludlow.MameAO
 			json.directory = _AO._RootDirectory;
 			json.rom_store_count = _AO._RomHashStore.Length;
 			json.disk_store_count = _AO._DiskHashStore.Length;
+
+			json.latest = _AO._MameAoLatest;
+
+			json.version_name_available = Path.GetFileNameWithoutExtension((string)_AO._MameAoLatest.assets[0].name);
+			json.version_name_current = $"mame-ao-{_AO._AssemblyVersion}";
 
 			dynamic sources = new JArray();
 
