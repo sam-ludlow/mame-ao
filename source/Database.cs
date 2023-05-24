@@ -6,6 +6,7 @@ using System.IO;
 using System.Linq;
 
 using System.Data.SQLite;
+using System.Data.SqlClient;
 
 namespace Spludlow.MameAO
 {
@@ -327,6 +328,23 @@ namespace Spludlow.MameAO
 			DataTable table = ExecuteFill(command);
 
 			return table;
+		}
+
+		public HashSet<string> GetAllSHA1s()
+		{
+			HashSet<string> result = new HashSet<string>();
+
+			foreach (SQLiteConnection connection in new SQLiteConnection[] { _MachineConnection, _SoftwareConnection })
+			{
+				foreach (string tableName in new string[] { "rom", "disk" })
+				{
+					DataTable table = ExecuteFill(connection, $"SELECT \"sha1\" FROM \"{tableName}\" WHERE \"sha1\" IS NOT NULL");
+					foreach (DataRow row in table.Rows)
+						result.Add((string)row["sha1"]);
+				}
+			}
+			
+			return result;
 		}
 
 		public static SQLiteConnection DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)

@@ -40,6 +40,7 @@ You can also use the command line just enter machine / software short name.
 - You can start a particular version of MAME with the command __".VVVV"__ where V is the version e.g. __".0252"__ or pass arguments e.g. __".0252 mrdo -window"__.
 - NOTE: MAME-AO only allows placing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
 - You can list saved state in the UI. The link will start the chosen MAME version without any machine, select machine & software in the MAME UI, use the available filter (top left).
+- Sometimes a regression in MAME will break a machine in the current version, so if a machine doesn't work after updating MAME you can run a previous version.
 
 ## System requirements
 
@@ -110,6 +111,36 @@ Use __Tab__ to move between windows.
 The __available__ filter (top left) is very handy when running previous MAME versions, use the mouse or __Tab__ to get to the filters.
 
 NOTE: Selecting machines that have software will then take you to the software lists, you can use the same __available__ filter trick.
+
+## Shell / Console
+From the shell you normally just enter machine name and maybe software name.
+
+There are also commands available they all start with a dot __.__
+- __.__	- Run current MAME without a machine (start MAME UI) you can also pass arguments to MAME
+- __.0255__ - Run a previous version of MAME, you can still pass the machine and software but MAME-AO will not place assets in previous versions, you are better off not passing the machine and use the MAME UI with the available filter.
+- __.list__ - Show all saved state across all MAME versions, previous MAME versions will also be listed even without saved state.
+- __.up__ - Self update MAME-AO to the latest on GitHub
+- __.import__ - Run the import function, see below.
+
+## Import
+MAME-AO is all about downloading files on the fly and not bothering the user with the details.
+
+If you have already downloaded ROM & CHD files you can feed them to MAME-AO into its "hash store" with the import function. MAME-AO will still place them as normal.
+
+This makes sense for large files, or files that are not available on archive.org (in the sources used), an example being Neo-Geo CDs. You can download them on the side using whatever method you prefer.
+
+Simply drop your files to the __\\_TEMP\IMPORT__ directory and run the __.import__ command.
+
+Files are imported based on their filename extension.
+- .ZIP – Archives will be extracted and imported with the same rules, this is recursive (ZIPs in ZIPs... will also be imported).
+- .CHD – Disk files, will have chdman.exe run against them to determine the SHA1.
+- Everything else – Considered a ROM, a hash of the file to determine the SHA1.
+
+Important notes on import
+- Filenames are not important, the file will be imported based on its SHA1.
+- Files will not be imported if its SHA1 is not in the current MAME version.
+- Only .ZIP archives will be extracted, other archive formats (.7z, .rar, ...) will be considered ROMs and not work. If you have these extract them manually to the import directory.
+- Successfully imported files will be moved from the IMPORT directory to the store, all other files are left in place, including archives.
 
 ## Internal Workings
 
