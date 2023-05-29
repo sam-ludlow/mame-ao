@@ -41,6 +41,8 @@ namespace Spludlow.MameAO
 
 		private BadSources _BadSources;
 
+		private Favorites _Favorites;
+
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
 		public readonly string _ListenAddress = "http://127.0.0.1:12380/";
@@ -251,10 +253,12 @@ namespace Spludlow.MameAO
 			}
 
 			//
-			// Bad Sources
+			// Bits & Bobs
 			//
 
 			_BadSources = new BadSources(_RootDirectory);
+
+			_Favorites = new Favorites(_RootDirectory);
 
 			//
 			// MAME Binaries
@@ -321,7 +325,7 @@ namespace Spludlow.MameAO
 			// Database
 			//
 
-			_Database = new Database();
+			_Database = new Database(_Favorites);
 
 			//
 			// MAME Machine XML & SQL
@@ -471,12 +475,15 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		private HashSet<string> _DontBringToFrontCommands = new HashSet<string>(new string[] { ".favm", ".favmx" });
+
 		public bool RunLineTask(string line)
 		{
 			if (_RunTask != null && _RunTask.Status != TaskStatus.RanToCompletion)
 				return false;
 
-			BringToFront();
+			if (line.Length == 0 || _DontBringToFrontCommands.Contains(line.Split(new char[] { ' ' })[0]) == false)
+				BringToFront();
 
 			_RunTask = new Task(() => {
 				try
@@ -533,8 +540,26 @@ namespace Spludlow.MameAO
 						Update(0);
 						return;
 
-					case ".upany":	//	for testing update works
+					case ".upany":  //	for testing update works
 						Update(-1);
+						return;
+
+					case ".favm":
+						if (parts.Length != 2)
+							throw new ApplicationException("Usage: .favm <Machine Name>");
+						machine = parts[1].ToLower();
+						if (_Database.GetMachine(machine) == null)
+							throw new ApplicationException("Machine not found: " + machine);
+						_Favorites.AddMachine(machine);
+						return;
+
+					case ".favmx":
+						if (parts.Length != 2)
+							throw new ApplicationException("Usage: .favmx <Machine Name>");
+						machine = parts[1].ToLower();
+						if (_Database.GetMachine(machine) == null)
+							throw new ApplicationException("Machine not found: " + machine);
+						_Favorites.RemoveMachine(machine);
 						return;
 
 					default:
@@ -1490,11 +1515,7 @@ namespace Spludlow.MameAO
 				$"{importDirectory}",
 			});
 
-			Console.Write("Getting all SHA1s...");
-			HashSet<string> allSHA1s = _Database.GetAllSHA1s();
-			Console.WriteLine("...done.");
-
-			ImportDirectory(importDirectory, allSHA1s);
+			ImportDirectory(importDirectory, _Database._AllSHA1s);
 
 			Console.WriteLine();
 		}

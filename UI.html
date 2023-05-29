@@ -407,6 +407,7 @@
 
 		const machinesColumnDefs = [
 			{ heading: '', columnName: 'ao_image' },
+			{ heading: 'fav', columnName: 'favorite' },
 			{ heading: 'name', columnName: 'name' },
 			{ heading: 'description', columnName: 'description' },
 			{ heading: 'year', columnName: 'year' },
@@ -434,7 +435,7 @@
 
 			table.appendChild(headRow);
 
-			data.forEach((row) => {
+			data.forEach((row, rowIndex) => {
 				const tableRow = document.createElement('tr');
 
 				machinesColumnDefs.forEach((colDef) => {
@@ -452,6 +453,10 @@
 							cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Machine.aspx?name=${row.name}" target="_blank">${row.name}</a>`;
 							break;
 
+						case 'favorite':
+							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavorite(this.id)" ${row.favorite ? 'checked' : ''}>`;
+							break;
+
 						default:
 							if (row[colDef.columnName] !== undefined)
 								cell.innerHTML = row[colDef.columnName];
@@ -461,8 +466,17 @@
 					if (cell.innerHTML === '0')
 						cell.innerHTML = '';
 
+					if (row.favorite === true) {
+						if ((rowIndex % 2) == 0)
+							cell.style.background = '#cccc00';
+						else
+							cell.style.background = '#e6e600';
+					}
+
 					tableRow.appendChild(cell);
 				});
+
+				tableRow.id = `row${rowIndex}`;
 
 				table.appendChild(tableRow);
 			});
@@ -529,9 +543,9 @@
 			return table;
 		}
 
-		const runCommand = async (name) => {
+		const runCommand = async (line) => {
 
-			const response = await fetch(`${_baseUrl}/command?line=${name}`);
+			const response = await fetch(`${_baseUrl}/command?line=${line}`);
 
 			const result = await response.text();
 
@@ -553,6 +567,34 @@
 
 			if (response.status !== 200)
 				alert(result);
+		}
+
+		const changeFavorite = async (checkBoxId) =>
+		{
+			const checkBox = document.getElementById(checkBoxId);
+
+			const name = checkBoxId.substring(4);
+
+			const command = checkBox.checked ? ".favm" : ".favmx";
+
+			await runCommand(`${command} ${name}`);
+
+			const row = checkBox.parentElement.parentElement;
+
+			const rowIndex = parseInt(row.id.substring(3), 10);
+
+			for (let cellIndex = 0; cellIndex < row.cells.length; ++cellIndex) {
+				const cell = row.cells[cellIndex];
+
+				if (checkBox.checked === false) {
+					cell.style.background = '';
+				} else {
+					if ((rowIndex % 2) == 0)
+						cell.style.background = '#cccc00';
+					else
+						cell.style.background = '#e6e600';
+				}
+			}
 		}
 
 		window.onload = onload;

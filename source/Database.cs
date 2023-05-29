@@ -6,7 +6,7 @@ using System.IO;
 using System.Linq;
 
 using System.Data.SQLite;
-using System.Data.SqlClient;
+using System.Text;
 
 namespace Spludlow.MameAO
 {
@@ -75,6 +75,15 @@ namespace Spludlow.MameAO
 				"ORDER BY machine.description COLLATE NOCASE ASC " +
 				"LIMIT @LIMIT OFFSET @OFFSET",
 			},
+
+			new string[] { "Favorites",
+
+				"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
+				"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+				"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') @FAVORITES @SEARCH) " +
+				"ORDER BY machine.description COLLATE NOCASE ASC " +
+				"LIMIT @LIMIT OFFSET @OFFSET",
+			},
 		};
 
 		public SQLiteConnection _MachineConnection;
@@ -83,8 +92,13 @@ namespace Spludlow.MameAO
 		private Dictionary<string, DataRow[]> _DevicesRefs;
 		private DataTable _SoftwarelistTable;
 
-		public Database()
+		public HashSet<string> _AllSHA1s;
+
+		public Favorites _Favorites;
+
+		public Database(Favorites favorites)
 		{
+			_Favorites = favorites;
 		}
 
 		public void InitializeMachine(string xmlFilename, string databaseFilename, string assemblyVersion)
@@ -122,6 +136,10 @@ namespace Spludlow.MameAO
 			_SoftwarelistTable.PrimaryKey = new DataColumn[] { _SoftwarelistTable.Columns["name"] };
 
 			Console.WriteLine("...done");
+
+			Console.Write("Getting all SHA1s...");
+			_AllSHA1s = GetAllSHA1s();
+			Console.WriteLine("...done.");
 		}
 
 		public static void AddDataExtras(DataSet dataSet, string name, string assemblyVersion)
@@ -301,8 +319,9 @@ namespace Spludlow.MameAO
 
 		public DataTable QueryMachine(int profile, int offset, int limit, string search)
 		{
+			string profileName = Database.DataQueryProfiles[profile][0];
 			string commandText = Database.DataQueryProfiles[profile][1];
-
+			
 			if (search == null)
 			{
 				commandText = commandText.Replace("@SEARCH", "");
@@ -312,6 +331,23 @@ namespace Spludlow.MameAO
 				search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
 				commandText = commandText.Replace("@SEARCH",
 					$" AND (machine.name LIKE @name OR machine.description LIKE @description)");
+			}
+
+			if (profileName == "Favorites")
+			{
+				string favorites = "(machine_id = -1)";
+				if (_Favorites._Machines.Count > 0)
+				{
+					StringBuilder text = new StringBuilder();
+					foreach (string name in _Favorites._Machines)
+					{
+						if (text.Length > 0)
+							text.Append(" OR ");
+						text.Append($"(name = '{name}')");
+					}
+					favorites = text.ToString();
+				}
+				commandText = commandText.Replace("@FAVORITES", $" AND ({favorites})");
 			}
 
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
@@ -326,6 +362,8 @@ namespace Spludlow.MameAO
 			}
 
 			DataTable table = ExecuteFill(command);
+
+			_Favorites.AddColumn(table, "name", "favorite");
 
 			return table;
 		}

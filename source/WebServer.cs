@@ -466,6 +466,10 @@ namespace Spludlow.MameAO
 						json[column.ColumnName] = ((DateTime)row[column]).ToString("s");
 						break;
 
+					case "Boolean":
+						json[column.ColumnName] = (bool)row[column];
+						break;
+
 					default:
 						throw new ApplicationException($"Unknown datatype {column.DataType.Name}");
 				}

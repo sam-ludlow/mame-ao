@@ -76,10 +76,10 @@ NOTE: Machines that emulate keyboards will take over, use __Scroll Lock__ to tog
 
 You should use a joystick but you will need a few keyboard commands. Full keyboard docs here https://docs.mamedev.org/usingmame/defaultkeys.html
 
-- Coin Up Player 1: __5__
-- Start Player 1: __1__
+- Player 1 Coin Up: __5__
+- Player 1 Start: __1__
 
-NOTE: Other players continue along, coin:__5,6,7,8__ start:__1,2,3,4__
+NOTE: Other players continue along, coin:__5, 6, 7, 8__ start:__1, 2, 3, 4__
 
 - Player 1 Joystick: __Cursor keys__
 - Player 1 Button 1: __Left Ctrl__
@@ -155,15 +155,15 @@ When you select a machine MAME-AO will download the files from archive.org if th
 SQLite databases are generated from the MAME XML output, 2 databases machine & software. This uses quiet a bit of CPU & RAM but once done is quick to load next time. If MAME-AO or MAME have version bumps the database will be re-created.
 
 ### Sources
-There are 4 types of source these each relate to a collection on archive.org.
+There are 4 types of source these each relate to an item on archive.org.
 - Machine ROM (version master)
 - Machine DISK
 - Software ROM
 - Software DISK (not complete or updated as often)
 
-Machine ROM is considered the version master, new MAME binaries will only be used that match the version in this archive.org collection.
+Machine ROM is considered the version master, new MAME binaries will only be used that match the version in this archive.org item.
 
-Archive.org metadata for the collections are downloaded and cached to know what’s available and the file size.
+Archive.org metadata for the items are downloaded and cached to know what’s available and the file size.
 
 ## Credits
 

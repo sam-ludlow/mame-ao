@@ -119,7 +119,7 @@ namespace Spludlow.MameAO
 
 		public static string Query(HttpClient client, string url)
 		{
-			using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, $"{url}"))
+			using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url))
 			{
 				Task<HttpResponseMessage> requestTask = client.SendAsync(requestMessage);
 				requestTask.Wait();
