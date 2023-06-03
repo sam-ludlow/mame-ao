@@ -41,7 +41,7 @@ namespace Spludlow.MameAO
 
 		private BadSources _BadSources;
 
-		private Favorites _Favorites;
+		public Favorites _Favorites;
 
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
@@ -475,7 +475,7 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		private HashSet<string> _DontBringToFrontCommands = new HashSet<string>(new string[] { ".favm", ".favmx" });
+		private HashSet<string> _DontBringToFrontCommands = new HashSet<string>(new string[] { ".favm", ".favmx", ".favs", ".favsx" });
 
 		public bool RunLineTask(string line)
 		{
@@ -513,6 +513,7 @@ namespace Spludlow.MameAO
 
 			string machine;
 			string software = "";
+			string list = "";
 			string arguments = "";
 
 			string[] parts = line.Split(new char[] { ' ' });
@@ -545,21 +546,37 @@ namespace Spludlow.MameAO
 						return;
 
 					case ".favm":
-						if (parts.Length != 2)
-							throw new ApplicationException("Usage: .favm <Machine Name>");
-						machine = parts[1].ToLower();
-						if (_Database.GetMachine(machine) == null)
-							throw new ApplicationException("Machine not found: " + machine);
-						_Favorites.AddMachine(machine);
-						return;
-
 					case ".favmx":
 						if (parts.Length != 2)
-							throw new ApplicationException("Usage: .favmx <Machine Name>");
+							throw new ApplicationException($"Usage: {parts[0]} <Machine Name>");
+
 						machine = parts[1].ToLower();
-						if (_Database.GetMachine(machine) == null)
-							throw new ApplicationException("Machine not found: " + machine);
-						_Favorites.RemoveMachine(machine);
+						
+						ValidateFavorite(machine, null, null);
+
+						if (parts[0].EndsWith("x") == true)
+							_Favorites.RemoveMachine(machine);
+						else
+							_Favorites.AddMachine(machine);
+
+						return;
+
+					case ".favs":
+					case ".favsx":
+						if (parts.Length != 4)
+							throw new ApplicationException($"Usage: {parts[0]} <Machine Name> <List Name> <Software Name>");
+
+						machine = parts[1].ToLower();
+						list = parts[2].ToLower();
+						software = parts[3].ToLower();
+
+						ValidateFavorite(machine, list, software);
+
+						if (parts[0].EndsWith("x") == true)
+							_Favorites.RemoveSoftware(machine, list, software);
+						else
+							_Favorites.AddSoftware(machine, list, software);
+
 						return;
 
 					default:
@@ -605,6 +622,41 @@ namespace Spludlow.MameAO
 				GetRoms(machine, software);
 				Mame.RunMame(binFilename, machine + " " + software + " " + arguments);
 			}
+		}
+
+		private void ValidateFavorite(string machine, string list, string software)
+		{
+			DataRow machineRow = _Database.GetMachine(machine);
+			if (machineRow == null)
+				throw new ApplicationException($"Machine not found: {machine}.");
+
+			if (list == null)
+				return;
+
+			DataRow machineListRow = null;
+			foreach (DataRow row in _Database.GetMachineSoftwareLists(machineRow))
+			{
+				if (list == (string)row["name"])
+					machineListRow = row;
+			}
+
+			if (machineListRow == null)
+				throw new ApplicationException($"Machine does not have that software list: {machine}, {list}");
+
+			DataRow softwareListRow = _Database.GetSoftwareList(list);
+
+			if (softwareListRow == null)
+				throw new ApplicationException($"Software list not found: {list}");
+
+			DataRow softwareRow = null;
+			foreach (DataRow row in _Database.GetSoftwareListsSoftware(softwareListRow))
+			{
+				if (software == (string)row["name"])
+					softwareRow = row;
+			}
+
+			if (softwareRow == null)
+				throw new ApplicationException($"Software not found in software list: {list}, {software}");
 		}
 
 		public void ListSavedState()

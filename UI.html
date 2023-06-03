@@ -302,7 +302,7 @@
 				machine.softwarelists.forEach((softwarelist) => {
 					const option = document.createElement('option');
 					option.value = softwarelist.name;
-					option.innerHTML = softwarelist.description;
+					option.innerHTML = `${softwarelist.description} (${softwarelist.name})`;
 					_inputSelect.appendChild(option);
 				});
 
@@ -311,7 +311,7 @@
 
 				_inputSelect.value = softwarelist;
 
-				response = await fetch(`${_baseUrl}/api/software?softwarelist=${softwarelist}&offset=${offset}&search=${search}`);
+				response = await fetch(`${_baseUrl}/api/software?softwarelist=${softwarelist}&offset=${offset}&search=${search}&favorites_machine=${machineName}`);
 
 				const json = await response.json();
 
@@ -454,7 +454,7 @@
 							break;
 
 						case 'favorite':
-							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavorite(this.id)" ${row.favorite ? 'checked' : ''}>`;
+							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavoriteMachine(this.id)" ${row.favorite ? 'checked' : ''}>`;
 							break;
 
 						default:
@@ -486,6 +486,7 @@
 
 		const softwareColumnDefs = [
 			{ heading: '', columnName: 'ao_image' },
+			{ heading: 'fav', columnName: 'favorite' },
 			{ heading: 'name', columnName: 'name' },
 			{ heading: 'description', columnName: 'description' },
 			{ heading: 'year', columnName: 'year' },
@@ -494,6 +495,8 @@
 		];
 
 		const renderMachine = (machine, softwares) => {
+
+			const machineName = _parameters['machine'];
 
 			const table = document.createElement('table');
 
@@ -509,7 +512,7 @@
 
 			table.appendChild(headRow);
 
-			softwares.forEach((row) => {
+			softwares.forEach((row, rowIndex) => {
 
 				const tableRow = document.createElement('tr');
 
@@ -525,6 +528,10 @@
 							cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Software.aspx?list=${softwarelist}&soft=${row.name}" target="_blank">${row.name}</a>`;
 							break;
 
+						case 'favorite':
+							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavoriteSoftware(this.id, '${machineName}', '${softwarelist}')" ${row.favorite ? 'checked' : ''}>`;
+							break;
+
 						default:
 							cell.innerHTML = row[colDef.columnName];
 							break;
@@ -532,6 +539,13 @@
 
 					if (cell.innerHTML === '0')
 						cell.innerHTML = '';
+
+					if (row.favorite === true) {
+						if ((rowIndex % 2) == 0)
+							cell.style.background = '#cccc00';
+						else
+							cell.style.background = '#e6e600';
+					}
 
 					tableRow.appendChild(cell);
 				});
@@ -569,7 +583,7 @@
 				alert(result);
 		}
 
-		const changeFavorite = async (checkBoxId) =>
+		const changeFavoriteMachine = async (checkBoxId) =>
 		{
 			const checkBox = document.getElementById(checkBoxId);
 
@@ -578,6 +592,33 @@
 			const command = checkBox.checked ? ".favm" : ".favmx";
 
 			await runCommand(`${command} ${name}`);
+
+			const row = checkBox.parentElement.parentElement;
+
+			const rowIndex = parseInt(row.id.substring(3), 10);
+
+			for (let cellIndex = 0; cellIndex < row.cells.length; ++cellIndex) {
+				const cell = row.cells[cellIndex];
+
+				if (checkBox.checked === false) {
+					cell.style.background = '';
+				} else {
+					if ((rowIndex % 2) == 0)
+						cell.style.background = '#cccc00';
+					else
+						cell.style.background = '#e6e600';
+				}
+			}
+		}
+
+		const changeFavoriteSoftware = async (checkBoxId, machineName, listName) => {
+			const checkBox = document.getElementById(checkBoxId);
+
+			const softwareName = checkBoxId.substring(4);
+
+			const command = checkBox.checked ? ".favs" : ".favsx";
+
+			await runCommand(`${command} ${machineName} ${listName} ${softwareName}`);
 
 			const row = checkBox.parentElement.parentElement;
 

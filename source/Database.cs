@@ -251,7 +251,7 @@ namespace Spludlow.MameAO
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
-		public DataRow[] GetSoftwareListsSoftware(string softwareListName, int offset, int limit, string search)
+		public DataRow[] GetSoftwareListsSoftware(string softwareListName, int offset, int limit, string search, string favorites_machine)
 		{
 			string commandText = "SELECT software.*, COUNT() OVER() AS ao_total FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id " +
 				$"WHERE (softwarelist.name = '{softwareListName}' @SEARCH) ORDER BY software.description COLLATE NOCASE ASC " +
@@ -280,6 +280,9 @@ namespace Spludlow.MameAO
 			}
 
 			DataTable table = ExecuteFill(command);
+
+			if (favorites_machine != null)
+				_Favorites.AddColumnSoftware(table, favorites_machine, softwareListName, "name", "favorite");
 
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
@@ -339,7 +342,7 @@ namespace Spludlow.MameAO
 				if (_Favorites._Machines.Count > 0)
 				{
 					StringBuilder text = new StringBuilder();
-					foreach (string name in _Favorites._Machines)
+					foreach (string name in _Favorites._Machines.Keys)
 					{
 						if (text.Length > 0)
 							text.Append(" OR ");
@@ -363,7 +366,7 @@ namespace Spludlow.MameAO
 
 			DataTable table = ExecuteFill(command);
 
-			_Favorites.AddColumn(table, "name", "favorite");
+			_Favorites.AddColumnMachines(table, "name", "favorite");
 
 			return table;
 		}

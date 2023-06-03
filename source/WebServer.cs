@@ -132,6 +132,12 @@ namespace Spludlow.MameAO
 			if (line == null)
 				throw new ApplicationException("No line given.");
 
+			if (line.StartsWith(".fav") == true)
+			{
+				_AO._Favorites.AddCommandLine(line);
+				return;
+			}
+
 			Console.WriteLine();
 			Tools.ConsoleHeading(1, new string[] {
 				"Remote command recieved",
@@ -322,7 +328,11 @@ namespace Spludlow.MameAO
 			if (search.Length == 0)
 				search = null;
 
-			DataRow[] rows = _AO._Database.GetSoftwareListsSoftware(softwarelist, offset, limit, search);
+			string favorites_machine = context.Request.QueryString["favorites_machine"];
+			if (favorites_machine != null)
+				favorites_machine = favorites_machine.Trim();
+
+			DataRow[] rows = _AO._Database.GetSoftwareListsSoftware(softwarelist, offset, limit, search, favorites_machine);
 
 			JArray results = new JArray();
 
