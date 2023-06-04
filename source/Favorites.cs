@@ -103,6 +103,7 @@ namespace Spludlow.MameAO
 					AddSoftware(parts[1], parts[2], parts[3]);
 					break;
 				case ".favsx":
+					RemoveSoftware(parts[1], parts[2], parts[3]);
 					break;
 				default:
 					throw new ApplicationException("Bad Favorites AddCommandLine: " + line);
@@ -203,7 +204,28 @@ namespace Spludlow.MameAO
 			table.Columns.Add(targetColumnName, typeof(bool));
 
 			foreach (DataRow row in table.Rows)
-				row[targetColumnName] = IsSoftware(machineName, listName, (string)row[nameColumnName]);
+				row[targetColumnName] = IsSoftware(machineName, listName == "@fav" ? (string)row["softwarelist_name"] : listName, (string)row[nameColumnName]);
+		}
+
+		public string[][] ListSoftwareUsedByMachine(string machineName)
+		{
+			List<string[]> result = new List<string[]>();
+
+			if (_Machines.ContainsKey(machineName) == true)
+			{
+				foreach (string listName in _Machines[machineName])
+				{
+					if (_Software.ContainsKey(listName) == true)
+					{
+						foreach (string softwareName in _Software[listName])
+						{
+							result.Add(new string[] { listName, softwareName });
+						}
+					}
+				}
+			}
+
+			return result.ToArray();
 		}
 
 	}

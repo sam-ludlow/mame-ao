@@ -342,7 +342,7 @@ namespace Spludlow.MameAO
 
 				string name = (string)row["name"];
 
-				result.ao_image = $"https://mame.spludlow.co.uk/snap/software/{softwarelist}/{name}.jpg";
+				result.ao_image = $"https://mame.spludlow.co.uk/snap/software/{(softwarelist == "@fav" ? (string)row["softwarelist_name"] : softwarelist)}/{name}.jpg";
 
 				results.Add(result);
 			}

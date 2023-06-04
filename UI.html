@@ -187,7 +187,12 @@
 
 				case 'machine':
 					const softwarelist = _inputSelect.value;
+
+					if (softwarelist === '')
+						return;
+
 					const machine = _parameters['machine'];
+
 					document.location = `${_baseUrl}/?machine=${machine}&softwarelist=${softwarelist}&search=${encodeURIComponent(_inputText.value)}`;
 					break;
 
@@ -303,6 +308,16 @@
 					const option = document.createElement('option');
 					option.value = softwarelist.name;
 					option.innerHTML = `${softwarelist.description} (${softwarelist.name})`;
+					_inputSelect.appendChild(option);
+				});
+
+				const extraOptions = [
+					{ value: '@fav', html: 'Favorites' },
+				];
+				extraOptions.forEach((optionInfo) => {
+					const option = document.createElement('option');
+					option.value = optionInfo.value;
+					option.innerHTML = optionInfo.html;
 					_inputSelect.appendChild(option);
 				});
 
@@ -500,7 +515,7 @@
 
 			const table = document.createElement('table');
 
-			const softwarelist = _inputSelect.value;
+
 
 			const headRow = document.createElement('tr');
 
@@ -515,6 +530,10 @@
 			softwares.forEach((row, rowIndex) => {
 
 				const tableRow = document.createElement('tr');
+
+				let softwarelist = _inputSelect.value;
+				if (softwarelist === '@fav')
+					softwarelist = row.softwarelist_name;
 
 				softwareColumnDefs.forEach((colDef) => {
 					const cell = document.createElement('td');
