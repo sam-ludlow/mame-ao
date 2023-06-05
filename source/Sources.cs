@@ -53,8 +53,8 @@ namespace Spludlow.MameAO
 			new MameSourceSet
 			{
 				SetType = MameSetType.MachineDisk,
-				MetadataUrl = "https://archive.org/metadata/mame-chds-roms-extras-complete",
-				DownloadUrl = "https://archive.org/download/mame-chds-roms-extras-complete/@MACHINE@/@DISK@.chd",
+				MetadataUrl = "https://archive.org/metadata/MAME_0.225_CHDs_merged",
+				DownloadUrl = "https://archive.org/download/MAME_0.225_CHDs_merged/@MACHINE@/@DISK@.chd",
 				HtmlSizesUrl = null,
 			},
 			new MameSourceSet
