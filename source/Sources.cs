@@ -35,6 +35,7 @@ namespace Spludlow.MameAO
 		public class MameSourceSet
 		{
 			public MameSetType SetType;
+			public string ListName;
 			public string MetadataUrl;
 			public string DownloadUrl;
 			public string HtmlSizesUrl;
@@ -64,9 +65,40 @@ namespace Spludlow.MameAO
 				DownloadUrl = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/@LIST@%2f@SOFTWARE@.zip",
 				HtmlSizesUrl = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/",
 			},
+
+
+
 			new MameSourceSet
 			{
 				SetType = MameSetType.SoftwareDisk,
+				ListName = "cdi",
+				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-cdi",
+				DownloadUrl = "https://archive.org/download/mame-sl-chd-cdi/@SOFTWARE@/@DISK@.chd",
+				HtmlSizesUrl = null,
+			},
+
+			new MameSourceSet
+			{
+				SetType = MameSetType.SoftwareDisk,
+				ListName = "neocd",
+				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-neocd",
+				DownloadUrl = "https://archive.org/download/mame-sl-chd-neocd/@SOFTWARE@/@DISK@.chd",
+				HtmlSizesUrl = null,
+			},
+
+			new MameSourceSet
+			{
+				SetType = MameSetType.SoftwareDisk,
+				ListName = "pcecd",
+				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-pcecd",
+				DownloadUrl = "https://archive.org/download/mame-sl-chd-pcecd/@SOFTWARE@/@DISK@.chd",
+				HtmlSizesUrl = null,
+			},
+
+			new MameSourceSet
+			{
+				SetType = MameSetType.SoftwareDisk,
+				ListName = "*",
 				MetadataUrl = "https://archive.org/metadata/mame-software-list-chds-2",
 				DownloadUrl = "https://archive.org/download/mame-software-list-chds-2/@LIST@/@SOFTWARE@/@DISK@.chd",
 				HtmlSizesUrl = null,
@@ -84,6 +116,25 @@ namespace Spludlow.MameAO
 				throw new ApplicationException($"Did not find any source sets: {type}");
 
 			return results;
+		}
+
+		public static MameSourceSet[] GetSourceSets(MameSetType type, string listName)
+		{
+			List<MameSourceSet> results = new List<MameSourceSet>();
+
+			foreach (string listNameQuery in new string[] { listName, "*" })
+			{
+				foreach (MameSourceSet sourceSet in from sourceSet in MameSourceSets
+					where sourceSet.SetType == type && sourceSet.ListName == listNameQuery select sourceSet)
+				{
+					results.Add(sourceSet);
+				}
+			}
+
+			if (results.Count == 0)
+				throw new ApplicationException($"Did not find any source sets: {type}");
+
+			return results.ToArray();
 		}
 
 		public static MameSourceSet[] GetSourceSets()

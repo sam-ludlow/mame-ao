@@ -50,8 +50,12 @@ You can also use the command line just enter machine / software short name.
 
 ## Known issues
 
-- Not all CHD SL (Software list) disks are available in the source & may contains incorect files (sha1 don't match) https://archive.org/download/mame-software-list-chds-2/
+- Not all CHD SL (Software list) disks are available in the source & may contains incorect files (sha1 don't match). See section below "Sources - Software Disk" for more information.
 - UI could do with refinement.
+
+## Reporting issues
+
+https://github.com/sam-ludlow/mame-ao/issues
 
 ## Symbolic Links - Save disk space
 
@@ -159,11 +163,24 @@ There are 4 types of source these each relate to an item on archive.org.
 - Machine ROM (version master)
 - Machine DISK
 - Software ROM
-- Software DISK (not complete or updated as often)
+- Software DISK (not complete or updated as often, uses multiple archive.org items, see below)
 
 Machine ROM is considered the version master, new MAME binaries will only be used that match the version in this archive.org item.
 
+The version is determined from the archive.org item’s title. If a source’s archive.org item has a version mismatch you will see a warning at the Initializing preparing sources stage.
+
 Archive.org metadata for the items are downloaded and cached to know what’s available and the file size.
+
+### Sources - Software Disk
+The other 3 sources have very good archive.org items, they are complete, accurate, and get updated within a few days of MAME releases. They just use a single archive.org item each and work like a charm.
+
+Software Disks are a little trickier there is not a single archive.org item that covers them all. So multiple archive.org items are used.
+
+Note that MAME support for machines with software disks is not that great, many of them have preliminary status, meaning that they barely work, you are better off using another emulator. Examples being Sony PlayStation & Sega Saturn, the disks are massive and the machines have preliminary status. You can see here that there isn't actually that many https://mame.spludlow.co.uk/WorkingMachines/SoftwareListDisk.aspx
+
+Of the consoles there are only really these 3: Philips CD-i, Neo-Geo CD, and PC Engine (with CD Super System Card). So currently these 3 have their own archive.org items.
+
+See the sources source code to see what archive.org items MAME-AO is using https://github.com/sam-ludlow/mame-ao/blob/main/source/Sources.cs
 
 ## Credits
 

@@ -95,6 +95,8 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 			Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
 			Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
+			Console.WriteLine();
+			Console.WriteLine("Report issues here https://github.com/sam-ludlow/mame-ao/issues");
 
 			if (fatal == true)
 			{
@@ -182,72 +184,86 @@ namespace Spludlow.MameAO
 			// Prepare sources
 			//
 
+			// Clear legacy files - from 1.53 - TODO: remove later
+			foreach (string name in new string[] { "_metadata_MachineDisk.json", "_metadata_MachineRom.json", "_metadata_SoftwareDisk.json", "_metadata_SoftwareRom.json" })
+			{
+				string filename = Path.Combine(_RootDirectory, name);
+				if (File.Exists(filename) == true)
+					File.Delete(filename);
+			}
+
+			string metaDataDirectory = Path.Combine(_RootDirectory, "_METADATA");
+			if (Directory.Exists(metaDataDirectory) == false)
+				Directory.CreateDirectory(metaDataDirectory);
+
 			foreach (Sources.MameSetType setType in Enum.GetValues(typeof(Sources.MameSetType)))
 			{
 				Tools.ConsoleHeading(2, $"Prepare source: {setType}");
 
-				Sources.MameSourceSet sourceSet = Sources.GetSourceSets(setType)[0];
-
 				string setTypeName = setType.ToString();
-				string metadataFilename = Path.Combine(_RootDirectory, $"_metadata_{setTypeName}.json");
 
-				dynamic metadata = GetArchiveOrgMeteData(setTypeName, sourceSet.MetadataUrl, metadataFilename);
-
-				string title = metadata.metadata.title;
-				string version = "";
-
-				switch (setType)
+				foreach (Sources.MameSourceSet sourceSet in Sources.GetSourceSets(setType))
 				{
-					case Sources.MameSetType.MachineRom:
-						version = title.Substring(5, 5);
+					string metadataFilename = Path.Combine(metaDataDirectory, $"{setTypeName}_{Path.GetFileName(sourceSet.MetadataUrl)}.json");
 
-						sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-merged/", metadata);
-						break;
+					dynamic metadata = GetArchiveOrgMeteData(setTypeName, sourceSet.MetadataUrl, metadataFilename);
 
-					case Sources.MameSetType.MachineDisk:
-						version = title.Substring(5, 5);
+					string title = metadata.metadata.title;
+					string version = "";
 
-						sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
-						break;
-
-					case Sources.MameSetType.SoftwareRom:
-						version = title.Substring(8, 5);
-
-						sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-sl/", metadata);
-						break;
-
-					case Sources.MameSetType.SoftwareDisk:
-						version = title;
-
-						sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
-						break;
-				}
-
-				version = version.Replace(".", "").Trim();
-
-				sourceSet.Version = version;
-
-				Console.WriteLine($"Title:\t{title}");
-				Console.WriteLine($"Version:\t{version}");
-
-				if (setType == Sources.MameSetType.MachineRom)
-				{
-					_Version = version;
-
-					_VersionDirectory = Path.Combine(_RootDirectory, _Version);
-
-					if (Directory.Exists(_VersionDirectory) == false)
+					switch (setType)
 					{
-						Console.WriteLine($"New MAME version: {_Version}");
-						Directory.CreateDirectory(_VersionDirectory);
+						case Sources.MameSetType.MachineRom:
+							version = title.Substring(5, 5);
+
+							sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-merged/", metadata);
+							break;
+
+						case Sources.MameSetType.MachineDisk:
+							version = title.Substring(5, 5);
+
+							sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
+							break;
+
+						case Sources.MameSetType.SoftwareRom:
+							version = title.Substring(8, 5);
+
+							sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-sl/", metadata);
+							break;
+
+						case Sources.MameSetType.SoftwareDisk:
+							version = title;
+
+							sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
+							break;
 					}
-				}
-				else
-				{
-					if (setType != Sources.MameSetType.SoftwareDisk)	//	Source not kept up to date, like others (pot luck)
+
+					version = version.Replace(".", "").Trim();
+
+					sourceSet.Version = version;
+
+					Console.WriteLine($"Title:\t{title}");
+					Console.WriteLine($"Version:\t{version}");
+
+					if (setType == Sources.MameSetType.MachineRom)
 					{
-						if (_Version != version)
-							Console.WriteLine($"!!! {setType} on archive.org version mismatch, expected:{_Version} got:{version}. You may have problems.");
+						_Version = version;
+
+						_VersionDirectory = Path.Combine(_RootDirectory, _Version);
+
+						if (Directory.Exists(_VersionDirectory) == false)
+						{
+							Console.WriteLine($"New MAME version: {_Version}");
+							Directory.CreateDirectory(_VersionDirectory);
+						}
+					}
+					else
+					{
+						if (setType != Sources.MameSetType.SoftwareDisk)    //	Source not kept up to date, like others (pot luck)
+						{
+							if (_Version != version)
+								Console.WriteLine($"!!! {setType} on archive.org version mismatch, expected:{_Version} got:{version}. You may have problems.");
+						}
 					}
 				}
 			}
@@ -1198,10 +1214,10 @@ namespace Spludlow.MameAO
 
 		private int GetDiskSoftware(DataRow softwareList, DataRow software, List<string[]> romStoreFilenames)
 		{
-			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk)[0];
-
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
+
+			Sources.MameSourceSet[] soureSets = Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk, softwareListName);
 
 			DataRow[] disks = _Database.GetSoftwareDisks(software);
 
@@ -1249,19 +1265,31 @@ namespace Spludlow.MameAO
 					string diskName = Tools.DataRowValue(disk, "name");
 					string sha1 = Tools.DataRowValue(disk, "sha1");
 
-					string key = $"{softwareListName}/{downloadSoftwareName}/{diskName}";
+					bool imported = false;
+					for (int sourceIndex = 0; sourceIndex < soureSets.Length && imported == false; ++sourceIndex)
+					{
+						Sources.MameSourceSet sourceSet = soureSets[sourceIndex];
 
-					if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
-						throw new ApplicationException($"Software list disk not on archive.org {key}");
+						string key = $"{softwareListName}/{downloadSoftwareName}/{diskName}";
 
-					string nameEnc = Uri.EscapeUriString(diskName);
+						if (sourceSet.ListName != null && sourceSet.ListName != "*")
+							key = $"{downloadSoftwareName}/{diskName}";
 
-					string url = soureSet.DownloadUrl;
-					url = url.Replace("@LIST@", softwareListName);
-					url = url.Replace("@SOFTWARE@", downloadSoftwareName);
-					url = url.Replace("@DISK@", nameEnc);
+						if (sourceSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
+							continue;
 
-					ImportDisk(url, $"software disk: '{key}'", sha1, soureSet.AvailableDownloadFileInfos[key]);
+						string nameEnc = Uri.EscapeUriString(diskName);
+
+						string url = sourceSet.DownloadUrl;
+						url = url.Replace("@LIST@", softwareListName);
+						url = url.Replace("@SOFTWARE@", downloadSoftwareName);
+						url = url.Replace("@DISK@", nameEnc);
+
+						imported = ImportDisk(url, $"software disk: '{key}'", sha1, sourceSet.AvailableDownloadFileInfos[key]);
+					}
+
+					if (imported == false)
+						throw new ApplicationException($"Software list disk not on archive.org {softwareListName}/{downloadSoftwareName}/{diskName}");
 				}
 			}
 
@@ -1518,12 +1546,12 @@ namespace Spludlow.MameAO
 			return size;
 		}
 
-		private long ImportDisk(string url, string name, string expectedSha1, Sources.SourceFileInfo sourceInfo)
+		private bool ImportDisk(string url, string name, string expectedSha1, Sources.SourceFileInfo sourceInfo)
 		{
 			if (_BadSources.AlreadyDownloaded(sourceInfo) == true)
 			{
 				Console.WriteLine($"!!! Already Downloaded before and it didn't work (bad in source) chd-sha1:{expectedSha1} source-sha1: {sourceInfo.sha1}");
-				return 0;
+				return false;
 			}
 
 			string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(name) + ".chd");
@@ -1548,11 +1576,17 @@ namespace Spludlow.MameAO
 				_BadSources.ReportSourceFile(sourceInfo, expectedSha1, sha1);
 			}
 
+			if (_Database._AllSHA1s.Contains(sha1) == false)
+			{
+				Console.WriteLine($"!!! Unkown downloaded CHD SHA1. It will be left in the TEMP directory, {sha1}, {tempFilename}");
+				return false;
+			}
+
 			bool imported = _DiskHashStore.Add(tempFilename, true, sha1);
 
 			Console.WriteLine($"Disk Store Import: {imported} {sha1} {name}");
 
-			return size;
+			return _DiskHashStore.Exists(expectedSha1);
 		}
 
 		public void ImportDirectory()
