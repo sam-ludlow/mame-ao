@@ -32,16 +32,16 @@ namespace Spludlow.MameAO
 
 		public Database _Database;
 
-		public Spludlow.HashStore _RomHashStore;
-		public Spludlow.HashStore _DiskHashStore;
+		public HashStore _RomHashStore;
+		public HashStore _DiskHashStore;
 
 		private string _DownloadTempDirectory;
 
 		private MameChdMan _MameChdMan;
-
 		private BadSources _BadSources;
-
 		public Favorites _Favorites;
+		private Reports _Reports;
+		private Export _Export;
 
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
@@ -272,6 +272,11 @@ namespace Spludlow.MameAO
 			// Bits & Bobs
 			//
 
+			string reportDirectory = Path.Combine(_RootDirectory, "_REPORTS");
+			if (Directory.Exists(reportDirectory) == false)
+				Directory.CreateDirectory(reportDirectory);
+			_Reports = new Reports(reportDirectory);
+
 			_BadSources = new BadSources(_RootDirectory);
 
 			_Favorites = new Favorites(_RootDirectory);
@@ -380,6 +385,12 @@ namespace Spludlow.MameAO
 			_Database.InitializeSoftware(softwareXmlFilename, softwareDatabaseFilename, _AssemblyVersion);
 
 			GC.Collect();
+
+			//
+			// Export
+			//
+
+			_Export = new Export(_Database, _RomHashStore, _DiskHashStore, _Reports);
 
 			//
 			// New version Check
@@ -529,7 +540,6 @@ namespace Spludlow.MameAO
 
 			string machine;
 			string software = "";
-			string list = "";
 			string arguments = "";
 
 			string[] parts = line.Split(new char[] { ' ' });
@@ -583,7 +593,7 @@ namespace Spludlow.MameAO
 							throw new ApplicationException($"Usage: {parts[0]} <Machine Name> <List Name> <Software Name>");
 
 						machine = parts[1].ToLower();
-						list = parts[2].ToLower();
+						string list = parts[2].ToLower();
 						software = parts[3].ToLower();
 
 						ValidateFavorite(machine, list, software);
@@ -593,6 +603,32 @@ namespace Spludlow.MameAO
 						else
 							_Favorites.AddSoftware(machine, list, software);
 
+						return;
+
+					case ".export":
+						if (parts.Length < 3)
+							throw new ApplicationException($"Usage: {parts[0]} <type: MR, MD, SR, SD> <target directory>");
+
+						arguments = String.Join(" ", parts.Skip(2));
+
+						if (Directory.Exists(arguments) == false)
+							throw new ApplicationException($"Export directory does not exist: \"{arguments}\".");
+
+						switch (parts[1].ToUpper())
+						{
+							case "MR":
+								_Export.MachineRoms(arguments);
+								break;
+							case "MD":
+								throw new ApplicationException("Export Machine Disk Not Implemented yet.");
+							case "SR":
+								throw new ApplicationException("Export Software ROM Not Implemented yet.");
+							case "SD":
+								throw new ApplicationException("Export Software Disk Not Implemented yet.");
+							default:
+								throw new ApplicationException("Export Unknown type not (MR, MD, SR, SD).");
+
+						}
 						return;
 
 					default:

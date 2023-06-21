@@ -56,6 +56,7 @@
   <ItemGroup>
     <Compile Include="source\BadSources.cs" />
     <Compile Include="source\Database.cs" />
+    <Compile Include="source\Export.cs" />
     <Compile Include="source\Favorites.cs" />
     <Compile Include="source\HashStore.cs" />
     <Compile Include="source\Mame.cs" />
@@ -64,6 +65,7 @@
     <Compile Include="source\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="source\ReadXML.cs" />
+    <Compile Include="source\Reports.cs" />
     <Compile Include="source\Sources.cs" />
     <Compile Include="source\Tools.cs" />
     <Compile Include="source\WebServer.cs" />

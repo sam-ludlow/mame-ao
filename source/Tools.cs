@@ -117,6 +117,43 @@ namespace Spludlow.MameAO
 			return JsonConvert.SerializeObject(obj, Newtonsoft.Json.Formatting.Indented);
 		}
 
+		public static DataTable MakeDataTable(string columnNames, string columnTypes)
+		{
+			string[] names = columnNames.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+			string[] types = columnTypes.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+			if (names.Length != types.Length)
+				throw new ApplicationException("Make Data Table Bad definition.");
+
+			DataTable table = new DataTable();
+
+			List<int> keyColumnIndexes = new List<int>();
+
+			for (int index = 0; index < names.Length; ++index)
+			{
+				string name = names[index];
+				string typeName = "System." + types[index];
+
+				if (typeName.EndsWith("*") == true)
+				{
+					typeName = typeName.Substring(0, typeName.Length - 1);
+					keyColumnIndexes.Add(index);
+				}
+
+				table.Columns.Add(name, Type.GetType(typeName, true));
+			}
+
+			if (keyColumnIndexes.Count > 0)
+			{
+				List<DataColumn> keyColumns = new List<DataColumn>();
+				foreach (int index in keyColumnIndexes)
+					keyColumns.Add(table.Columns[index]);
+				table.PrimaryKey = keyColumns.ToArray();
+			}
+
+			return table;
+		}
+
 		public static string Query(HttpClient client, string url)
 		{
 			using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url))

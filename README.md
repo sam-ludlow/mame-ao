@@ -125,13 +125,14 @@ There are also commands available they all start with a dot __.__
 - __.list__ - Show all saved state across all MAME versions, previous MAME versions will also be listed even without saved state.
 - __.up__ - Self update MAME-AO to the latest on GitHub
 - __.import__ - Run the import function, see below.
+- __.export__ - Run the export function, see below.
 
 ## Import
 MAME-AO is all about downloading files on the fly and not bothering the user with the details.
 
 If you have already downloaded ROM & CHD files you can feed them to MAME-AO into its "hash store" with the import function. MAME-AO will still place them as normal.
 
-This makes sense for large files, or files that are not available on archive.org (in the sources used), an example being Neo-Geo CDs. You can download them on the side using whatever method you prefer.
+This makes sense for large files, or files that are not available on archive.org (in the sources used). You can download them on the side using whatever method you prefer.
 
 Simply drop your files to the __\\_TEMP\IMPORT__ directory and run the __.import__ command.
 
@@ -145,6 +146,33 @@ Important notes on import
 - Files will not be imported if its SHA1 is not in the current MAME version.
 - Only .ZIP archives will be extracted, other archive formats (.7z, .rar, ...) will be considered ROMs and not work. If you have these extract them manually to the import directory.
 - Successfully imported files will be moved from the IMPORT directory to the store, all other files are left in place, including archives.
+
+## Export
+__NOTE: Export only currently supports Machine ROM (MR). Others coming soon.__
+
+If you want to use the downloaded assets (ROMs & DISKs) anywhere other than MAME-AO you probably aren't that happy with the way it stores files. Hash stores, no ZIPs, uncompressed ROMs or symbolic links, oh dear what am I supposed to do with those?
+
+Well that's what the export command is for use it like so:
+
+__.export \<type\> \<directory\>__
+
+For example __.export mr C:\My MAME ROMs__
+
+Type can be:
+- MR – Machine ROM (only one currently supported)
+- MD – Machine DISK
+- SR – Software ROM
+- SD – Software DISK
+
+Everything it can will be exported to the specified directory.
+ 
+Machine ROMs will be in split-set format (separate parent ZIP & child diff ZIPs). If anything is missing the ZIP will not be created.
+
+A HTML report will be created containing details of the export.
+
+## HTML Reports
+
+Some MAME-AO functions will produce HTML reports, so you can take a look what it's been doing, they are saved to the ___REPORTS__ directory.
 
 ## Internal Workings
 
