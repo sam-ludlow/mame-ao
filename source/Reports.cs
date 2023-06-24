@@ -44,6 +44,13 @@ namespace Spludlow.MameAO
 			" background-color: #b6daeb;" +
 			"}";
 
+		public void SaveHtmlReport(DataTable table, string title)
+		{
+			DataSet dataSet = new DataSet();
+			dataSet.Tables.Add(table);
+			SaveHtmlReport(dataSet, title);
+		}
+
 		public void SaveHtmlReport(DataSet dataSet, string title)
 		{
 			string name = DateTime.Now.ToString("s").Replace(":", "-") + "_" + title;
@@ -79,7 +86,9 @@ namespace Spludlow.MameAO
 
 			File.WriteAllText(filename, html.ToString(), Encoding.UTF8);
 
+			Console.WriteLine();
 			Console.WriteLine($"HTML Report saved \"{title}\" : {filename}");
+			Console.WriteLine();
 		}
 
 		public static string MakeHtmlTable(DataTable table, string tableStyle)

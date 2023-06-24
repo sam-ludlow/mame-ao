@@ -134,7 +134,9 @@ If you have already downloaded ROM & CHD files you can feed them to MAME-AO into
 
 This makes sense for large files, or files that are not available on archive.org (in the sources used). You can download them on the side using whatever method you prefer.
 
-Simply drop your files to the __\\_TEMP\IMPORT__ directory and run the __.import__ command.
+Use the following command to perform an import
+
+__.import \<directory\>__
 
 Files are imported based on their filename extension.
 - .ZIP – Archives will be extracted and imported with the same rules, this is recursive (ZIPs in ZIPs... will also be imported).
@@ -142,14 +144,11 @@ Files are imported based on their filename extension.
 - Everything else – Considered a ROM, a hash of the file to determine the SHA1.
 
 Important notes on import
-- Filenames are not important, the file will be imported based on its SHA1.
+- Filenames are not important, except the extention, the file will be imported based on its SHA1.
 - Files will not be imported if its SHA1 is not in the current MAME version.
 - Only .ZIP archives will be extracted, other archive formats (.7z, .rar, ...) will be considered ROMs and not work. If you have these extract them manually to the import directory.
-- Successfully imported files will be moved from the IMPORT directory to the store, all other files are left in place, including archives.
 
 ## Export
-__NOTE: Export only currently supports Machine ROM (MR). Others coming soon.__
-
 If you want to use the downloaded assets (ROMs & DISKs) anywhere other than MAME-AO you probably aren't that happy with the way it stores files. Hash stores, no ZIPs, uncompressed ROMs or symbolic links, oh dear what am I supposed to do with those?
 
 Well that's what the export command is for use it like so:
@@ -159,14 +158,17 @@ __.export \<type\> \<directory\>__
 For example __.export mr C:\My MAME ROMs__
 
 Type can be:
-- MR – Machine ROM (only one currently supported)
-- MD – Machine DISK
-- SR – Software ROM
-- SD – Software DISK
+- MR : Machine ROM
+- MD : Machine DISK
+- SR : Software ROM
+- SD : Software DISK
+- \* : Everything
 
-Everything it can will be exported to the specified directory.
+Everything it can will be exported to the specified directory, based on the current MAME version.
  
 Machine ROMs will be in split-set format (separate parent ZIP & child diff ZIPs). If anything is missing the ZIP will not be created.
+
+Machine DISKs that exist in a parent machine will not be exported, as the file would be duplicated.
 
 A HTML report will be created containing details of the export.
 

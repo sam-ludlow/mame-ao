@@ -560,7 +560,12 @@ namespace Spludlow.MameAO
 						return;
 
 					case ".import":
-						ImportDirectory();
+						if (parts.Length < 2)
+							throw new ApplicationException($"Usage: {parts[0]} <source directory>");
+
+						arguments = String.Join(" ", parts.Skip(1));
+
+						ImportDirectory(arguments);
 						return;
 
 					case ".up":
@@ -607,7 +612,7 @@ namespace Spludlow.MameAO
 
 					case ".export":
 						if (parts.Length < 3)
-							throw new ApplicationException($"Usage: {parts[0]} <type: MR, MD, SR, SD> <target directory>");
+							throw new ApplicationException($"Usage: {parts[0]} <type: MR, MD, SR, SD, *> <target directory>");
 
 						arguments = String.Join(" ", parts.Skip(2));
 
@@ -620,13 +625,24 @@ namespace Spludlow.MameAO
 								_Export.MachineRoms(arguments);
 								break;
 							case "MD":
-								throw new ApplicationException("Export Machine Disk Not Implemented yet.");
+								_Export.MachineDisks(arguments);
+								break;
 							case "SR":
-								throw new ApplicationException("Export Software ROM Not Implemented yet.");
+								_Export.SoftwareRoms(arguments);
+								break;
 							case "SD":
-								throw new ApplicationException("Export Software Disk Not Implemented yet.");
+								_Export.SoftwareDisks(arguments);
+								break;
+
+							case "*":
+								_Export.MachineRoms(arguments);
+								_Export.MachineDisks(arguments);
+								_Export.SoftwareRoms(arguments);
+								_Export.SoftwareDisks(arguments);
+								break;
+
 							default:
-								throw new ApplicationException("Export Unknown type not (MR, MD, SR, SD).");
+								throw new ApplicationException("Export Unknown type not (MR, MD, SR, SD, *).");
 
 						}
 						return;
@@ -1625,16 +1641,14 @@ namespace Spludlow.MameAO
 			return _DiskHashStore.Exists(expectedSha1);
 		}
 
-		public void ImportDirectory()
+		public void ImportDirectory(string importDirectory)
 		{
-			string importDirectory = Path.Combine(_RootDirectory, "_TEMP", "IMPORT");
-
 			if (Directory.Exists(importDirectory) == false)
 				throw new ApplicationException($"Import directory does not exist: {importDirectory}");
 
 			Tools.ConsoleHeading(1, new string[] {
 				"Import from Directory",
-				$"{importDirectory}",
+				importDirectory,
 			});
 
 			ImportDirectory(importDirectory, _Database._AllSHA1s);
@@ -1667,7 +1681,7 @@ namespace Spludlow.MameAO
 					case ".chd":
 						sha1 = _DiskHashStore.Hash(filename);
 						if (allSHA1s.Contains(sha1) == true)
-							status = _DiskHashStore.Add(filename, true, sha1) ? "Disk imported" : "Disk have already";
+							status = _DiskHashStore.Add(filename, false, sha1) ? "Disk imported" : "Disk have already";
 						else
 							status = "Disk not known";
 						break;
@@ -1675,7 +1689,7 @@ namespace Spludlow.MameAO
 					default:
 						sha1 = _RomHashStore.Hash(filename);
 						if (allSHA1s.Contains(sha1) == true)
-							status = _RomHashStore.Add(filename, true, sha1) ? "ROM imported" : "ROM have already";
+							status = _RomHashStore.Add(filename, false, sha1) ? "ROM imported" : "ROM have already";
 						else
 							status = "ROM not known";
 						break;
