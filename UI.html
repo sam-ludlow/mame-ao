@@ -160,6 +160,9 @@
 				case 'list':
 					await onloadList();
 					break;
+				case 'reports':
+					await onloadReports();
+					break;
 				default:
 					throw new Error(`Bad mode ${_mode}`);
 			}
@@ -230,6 +233,7 @@
 			const extraOptions = [
 				{ value: '', html: '' },
 				{ value: 'mode=list', html: 'List Saved State & previous MAME versions' },
+				{ value: 'mode=reports', html: 'List Reports' },
 				{ value: '', html: '' },
 			];
 			extraOptions.forEach((optionInfo) => {
@@ -416,6 +420,35 @@
 			resultsContainer.appendChild(table);
 
 			document.title = 'MAME-AO Saved State';
+
+			_heading.innerHTML = document.title;
+		}
+
+		const onloadReports = async () => {
+
+			let response = await fetch(`${_baseUrl}/api/reports`);
+
+			const reportNames = (await response.json()).results;
+
+			const table = document.createElement('table');
+
+			reportNames.forEach((reportName) => {
+
+				const tableRow = document.createElement('tr');
+
+				const cell = document.createElement('td');
+
+				cell.innerHTML = `<a href="${_baseUrl}/api/report?name=${reportName}" target="_blank">${reportName}</a>`;
+
+				tableRow.appendChild(cell);
+
+				table.appendChild(tableRow);
+			});
+
+			resultsContainer.innerHTML = '';
+			resultsContainer.appendChild(table);
+
+			document.title = 'MAME-AO Reports';
 
 			_heading.innerHTML = document.title;
 		}

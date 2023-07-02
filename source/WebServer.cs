@@ -93,6 +93,14 @@ namespace Spludlow.MameAO
 										ApiList(context, writer);
 										break;
 
+									case "/api/reports":
+										Reports(context, writer);
+										break;
+
+									case "/api/report":
+										Report(context, writer);
+										break;
+
 									default:
 										throw new ApplicationException($"404 {path}");
 								}
@@ -445,6 +453,35 @@ namespace Spludlow.MameAO
 
 			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+		private void Reports(HttpListenerContext context, StreamWriter writer)
+		{
+			JArray results = new JArray();
+
+			foreach (string reportName in _AO._Reports.ListReports())
+				results.Add(reportName);
+
+			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = results.Count;
+			json.count = results.Count;
+			json.results = results;
+
+			context.Response.Headers["Content-Type"] = "application/json";
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+		private void Report(HttpListenerContext context, StreamWriter writer)
+		{
+			string name = context.Request.QueryString["name"] ?? throw new ApplicationException("name not passed");
+
+			string html = _AO._Reports.GetHtml(name);
+
+			context.Response.Headers["Content-Type"] = "text/html";
+
+			writer.WriteLine(html);
 		}
 
 		private dynamic RowToJson(DataRow row)

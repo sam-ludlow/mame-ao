@@ -40,7 +40,7 @@ namespace Spludlow.MameAO
 		private MameChdMan _MameChdMan;
 		private BadSources _BadSources;
 		public Favorites _Favorites;
-		private Reports _Reports;
+		public Reports _Reports;
 		private Export _Export;
 
 		private readonly long _DownloadDotSize = 1024 * 1024;
@@ -1651,16 +1651,23 @@ namespace Spludlow.MameAO
 				importDirectory,
 			});
 
-			ImportDirectory(importDirectory, _Database._AllSHA1s);
+			DataTable reportTable = Tools.MakeDataTable(
+				"Filename	Type	SHA1	Action",
+				"String		String	String	String"
+			);
 
-			Console.WriteLine();
+			ImportDirectory(importDirectory, _Database._AllSHA1s, reportTable);
+
+			_Reports.SaveHtmlReport(reportTable, "Import Directory");
 		}
-		public void ImportDirectory(string importDirectory, HashSet<string> allSHA1s)
+		public void ImportDirectory(string importDirectory, HashSet<string> allSHA1s, DataTable reportTable)
 		{
-			Tools.ClearAttributes(importDirectory);
-
 			foreach (string filename in Directory.GetFiles(importDirectory, "*", SearchOption.AllDirectories))
 			{
+				Console.WriteLine(filename);
+
+				string name = filename.Substring(importDirectory.Length + 1);
+
 				string extention = Path.GetExtension(filename).ToLower();
 
 				string sha1;
@@ -1669,33 +1676,41 @@ namespace Spludlow.MameAO
 				switch (extention)
 				{
 					case ".zip":
+						sha1 = "";
+						status = "";
+
 						using (TempDirectory tempDir = new TempDirectory())
 						{
 							ZipFile.ExtractToDirectory(filename, tempDir.Path);
-							ImportDirectory(tempDir.Path, allSHA1s);
+
+							Tools.ClearAttributes(tempDir.Path);
+
+							reportTable.Rows.Add(name, "ARCHIVE", sha1, status);
+
+							ImportDirectory(tempDir.Path, allSHA1s, reportTable);
 						}
-						sha1 = "-";
-						status = "Archive extracted";
 						break;
 
 					case ".chd":
 						sha1 = _DiskHashStore.Hash(filename);
 						if (allSHA1s.Contains(sha1) == true)
-							status = _DiskHashStore.Add(filename, false, sha1) ? "Disk imported" : "Disk have already";
+							status = _DiskHashStore.Add(filename, false, sha1) ? "" : "Have";
 						else
-							status = "Disk not known";
+							status = "Unknown";
+
+						reportTable.Rows.Add(name, "DISK", sha1, status);
 						break;
 
 					default:
 						sha1 = _RomHashStore.Hash(filename);
 						if (allSHA1s.Contains(sha1) == true)
-							status = _RomHashStore.Add(filename, false, sha1) ? "ROM imported" : "ROM have already";
+							status = _RomHashStore.Add(filename, false, sha1) ? "" : "Have";
 						else
-							status = "ROM not known";
+							status = "Unknown";
+
+						reportTable.Rows.Add(name, "ROM", sha1, status);
 						break;
 				}
-		
-				Console.WriteLine($"{status} {sha1} {filename}");
 			}
 		}
 

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Text;
@@ -129,6 +130,32 @@ namespace Spludlow.MameAO
 			html.AppendLine("</table>");
 
 			return html.ToString();
+		}
+
+		public string GetHtml(string reportName)
+		{
+			string filename = Path.Combine(_OutputDirectory, reportName + ".htm");
+
+			if (File.Exists(filename) == false)
+				throw new ApplicationException($"Report does no exist: {reportName}");
+
+			return File.ReadAllText(filename, Encoding.UTF8);
+		}
+
+		public string[] ListReports()
+		{
+			List<string> items = new List<string>();
+			
+			if (Directory.Exists(_OutputDirectory) == true)
+			{
+				foreach (string filename in Directory.GetFiles(_OutputDirectory))
+					items.Add(Path.GetFileNameWithoutExtension(filename));
+
+				items.Sort();
+				items.Reverse();
+			}
+
+			return items.ToArray();
 		}
 	}
 }
