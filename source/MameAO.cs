@@ -45,7 +45,7 @@ namespace Spludlow.MameAO
 
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
-		public readonly string _ListenAddress = "http://127.0.0.1:12380/";
+		public readonly string _ListenAddress = "http://localhost:12380/";
 
 		private readonly string _BinariesDownloadUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
 
