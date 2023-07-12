@@ -51,58 +51,61 @@ namespace Spludlow.MameAO
 							}
 							else
 							{
-								switch (path)
+								if (path.StartsWith("/api/") == true)
 								{
-									case "/":
-										Root(context, writer);
-										break;
+									switch (path)
+									{
+										case "/api/command":
+											Command(context, writer);
+											break;
 
-									case "/command":
-										Command(context, writer);
-										break;
+										case "/api/update":
+											Update(context, writer);
+											break;
 
-									case "/update":
-										Update(context, writer);
-										break;
+										case "/api/profiles":
+											ApiProfiles(context, writer);
+											break;
 
-									case "/api/profiles":
-										ApiProfiles(context, writer);
-										break;
+										case "/api/machine":
+											ApiMachine(context, writer);
+											break;
 
-									case "/api/machine":
-										ApiMachine(context, writer);
-										break;
+										case "/api/machines":
+											ApiMachines(context, writer);
+											break;
 
-									case "/api/machines":
-										ApiMachines(context, writer);
-										break;
+										case "/api/software":
+											ApiSoftware(context, writer);
+											break;
 
-									case "/api/software":
-										ApiSoftware(context, writer);
-										break;
+										case "/api/info":
+											ApiInfo(context, writer);
+											break;
 
-									case "/api/info":
-										ApiInfo(context, writer);
-										break;
+										case "/api/source_files":
+											ApiListSourceFiles(context, writer);
+											break;
 
-									case "/api/source_files":
-										ApiListSourceFiles(context, writer);
-										break;
+										case "/api/list":
+											ApiList(context, writer);
+											break;
 
-									case "/api/list":
-										ApiList(context, writer);
-										break;
+										case "/api/reports":
+											Reports(context, writer);
+											break;
 
-									case "/api/reports":
-										Reports(context, writer);
-										break;
+										case "/api/report":
+											Report(context, writer);
+											break;
 
-									case "/api/report":
-										Report(context, writer);
-										break;
-
-									default:
-										throw new ApplicationException($"404 {path}");
+										default:
+											throw new ApplicationException($"404 {path}");
+									}
+								}
+								else
+								{
+									ServeUI(context, writer);
 								}
 							}
 
@@ -124,7 +127,7 @@ namespace Spludlow.MameAO
 			listenTask.Start();
 		}
 
-		private void Root(HttpListenerContext context, StreamWriter writer)
+		private void ServeUI(HttpListenerContext context, StreamWriter writer)
 		{
 			string html = File.ReadAllText(@"UI.html", Encoding.UTF8);
 
