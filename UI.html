@@ -71,71 +71,77 @@
 
 		let _path;
 
-		const menu = [
-			{
-				text: 'Machines',
-				title: 'Start Machines',
-				href: '/machines',
-				menu: [
-					{
-						text: 'Arcade Good',
-						title: 'Arcade Machines - Status Good',
-						href: '/machines/arcade-good',
-					},
-					{
-						text: 'Arcade Imperfect',
-						title: 'Arcade Machines - Status Imperfect',
-						href: '/machines/arcade-imperfect',
-					},
-					{
-						text: 'Compters & Consoles Good',
-						title: 'Compters & Consoles with software - status good',
-						href: '/machines/computer-console-good',
-					},
-					{
-						text: 'Compters & Consoles Imperfect',
-						title: 'Compters & Consoles with software - status imperfect',
-						href: '/machines/computer-console-imperfect',
-					},
-					{
-						text: 'Other Good',
-						title: 'Other Systems without software - status good',
-						href: '/machines/other-good',
-					},
-					{
-						text: 'Other Imperfect',
-						title: 'Other Systems without software - status imperfect',
-						href: '/machines/other-imperfect',
-					},
-					{
-						text: 'Everything',
-						title: 'Everything',
-						href: '/machines/everything',
-					},
-					{
-						text: 'Favorites',
-						title: 'Favorites',
-						href: '/machines/favorites',
-					},
+		const rootMenu =
+		[{
+			text: 'MAME-AO',
+			title: 'MAME-AO Root (should not see)',
+			href: '/',
+			menu: [
+				{
+					text: 'Machines',
+					title: 'Start Machines',
+					href: '/machines',
+					menu: [
+						{
+							text: 'Arcade Good',
+							title: 'Arcade Machines - Status Good',
+							href: '/machines/arcade-good',
+						},
+						{
+							text: 'Arcade Imperfect',
+							title: 'Arcade Machines - Status Imperfect',
+							href: '/machines/arcade-imperfect',
+						},
+						{
+							text: 'Compters & Consoles Good',
+							title: 'Compters & Consoles with software - status good',
+							href: '/machines/computer-console-good',
+						},
+						{
+							text: 'Compters & Consoles Imperfect',
+							title: 'Compters & Consoles with software - status imperfect',
+							href: '/machines/computer-console-imperfect',
+						},
+						{
+							text: 'Other Good',
+							title: 'Other Systems without software - status good',
+							href: '/machines/other-good',
+						},
+						{
+							text: 'Other Imperfect',
+							title: 'Other Systems without software - status imperfect',
+							href: '/machines/other-imperfect',
+						},
+						{
+							text: 'Everything',
+							title: 'Everything',
+							href: '/machines/everything',
+						},
+						{
+							text: 'Favorites',
+							title: 'Favorites',
+							href: '/machines/favorites',
+						},
 
-				],
-			},
-			{
-				text: 'Saved State',
-				title: 'View saved state',
-				href: '/saved',
-			},
-			{
-				text: 'Reports',
-				title: 'View reports',
-				href: '/reports',
-			},
-			{
-				text: 'About',
-				title: 'Informatuoin',
-				href: '/about',
-			},
-		];
+					],
+				},
+				{
+					text: 'Saved State',
+					title: 'View saved state',
+					href: '/saved',
+				},
+				{
+					text: 'Reports',
+					title: 'View reports',
+					href: '/reports',
+				},
+				{
+					text: 'About',
+					title: 'Informatuoin',
+					href: '/about',
+				},
+			],
+		}];
 
 		const displayNav = () => {
 
@@ -144,10 +150,10 @@
 			const row = document.createElement('tr');
 
 			let path = document.location.pathname;
-			if (path === '/')
-				path = menuData[0].href;
+			//if (path === '/')
+			//	path = menu[0].href;
 
-			menu.forEach((item) => {
+			rootMenu.forEach((item) => {
 				const cell = document.createElement('td');
 
 				const itemClass = (path === item.href ? 'nav-on' : 'nav-off');
@@ -165,9 +171,11 @@
 
 		const onload = () => {
 
-			let _path = document.location.pathname;
-			if (_path === '/')
-				document.location = menuData[0].href;
+			//let _path = document.location.pathname;
+			//if (_path === '/')
+			//	document.location = menuData[0].href;
+
+			// nav should auto follow down-left
 
 			console.log(document.location);
 
