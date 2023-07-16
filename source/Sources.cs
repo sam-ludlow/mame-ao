@@ -30,6 +30,7 @@ namespace Spludlow.MameAO
 			public long size { get; set; }
 			public string sha1 { get; set; }
 			public DateTime mtime { get; set; }
+			public string url { get; set; }
 		}
 
 		public class MameSourceSet

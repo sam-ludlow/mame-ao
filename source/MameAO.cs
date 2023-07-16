@@ -647,6 +647,21 @@ namespace Spludlow.MameAO
 						}
 						return;
 
+					case ".report":
+						if (parts.Length != 2)
+							throw new ApplicationException($"Usage: {parts[0]} <SEMD, ...todo>");
+
+						switch (parts[1].ToUpper())
+						{
+							case "SEMD":
+								_Reports.ReportSourceExistsMachineDisk(_Database);
+								break;
+
+							default:
+								throw new ApplicationException("Report Unknown type.");
+						}
+						return;
+
 					default:
 						binFilename = Path.Combine(_RootDirectory, machine.Substring(1), "mame.exe");
 
@@ -1144,6 +1159,51 @@ namespace Spludlow.MameAO
 			return missingCount;
 		}
 
+		public static Sources.SourceFileInfo MachineDiskAvailableSourceFile(DataRow machineRow, DataRow diskRow, Sources.MameSourceSet soureSet)
+		{
+			string machineName = Tools.DataRowValue(machineRow, "name");
+
+			string name = Tools.DataRowValue(diskRow, "name");
+			string merge = Tools.DataRowValue(diskRow, "merge");
+
+			string parentMachineName = machineRow.IsNull("romof") ? null : (string)machineRow["romof"];
+
+			string availableMachineName = machineName;
+			string availableDiskName = name;
+
+			if (merge != null)
+			{
+				availableMachineName = parentMachineName ?? throw new ApplicationException($"machine disk merge without parent {machineName}");
+				availableDiskName = merge;
+			}
+
+			string key = $"{availableMachineName}/{availableDiskName}";
+
+			if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
+			{
+				availableMachineName = parentMachineName;
+				key = $"{availableMachineName}/{availableDiskName}";
+
+				if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
+					return null;
+			}
+
+			Sources.SourceFileInfo fileInfo = soureSet.AvailableDownloadFileInfos[key];
+
+			if (fileInfo.url == null)	//	Do at init not here.
+			{
+				string diskNameEnc = Uri.EscapeUriString(availableDiskName);
+
+				string diskUrl = soureSet.DownloadUrl;
+				diskUrl = diskUrl.Replace("@MACHINE@", availableMachineName);
+				diskUrl = diskUrl.Replace("@DISK@", diskNameEnc);
+
+				fileInfo.url = diskUrl;
+			}
+
+			return fileInfo;
+		}
+
 		private int GetDisksMachine(string machineName, List<string[]> romStoreFilenames)
 		{
 			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
@@ -1188,41 +1248,17 @@ namespace Spludlow.MameAO
 			//
 			if (missingDiskRows.Count > 0)
 			{
-				string parentMachineName = machineRow.IsNull("romof") ? null : (string)machineRow["romof"];
-
 				foreach (DataRow diskRow in missingDiskRows)
 				{
-					string name = Tools.DataRowValue(diskRow, "name");
+					string diskName = Tools.DataRowValue(diskRow, "name");
 					string sha1 = Tools.DataRowValue(diskRow, "sha1");
-					string merge = Tools.DataRowValue(diskRow, "merge");
 
-					string availableMachineName = machineName;
-					string availableDiskName = name;
+					Sources.SourceFileInfo sourceFile = MachineDiskAvailableSourceFile(machineRow, diskRow, soureSet);
 
-					if (merge != null)
-					{
-						availableMachineName = parentMachineName ?? throw new ApplicationException($"machine disk merge without parent {machineName}");
-						availableDiskName = merge;
-					}
+					if (sourceFile == null)
+						throw new ApplicationException($"Available Download Machine Disks not found in source: {machineName}, {diskName}");
 
-					string key = $"{availableMachineName}/{availableDiskName}";
-
-					if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
-					{
-						availableMachineName = parentMachineName;
-						key = $"{availableMachineName}/{availableDiskName}";
-
-						if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
-							throw new ApplicationException($"Available Download Machine Disks not found key:{key}");
-					}
-
-					string diskNameEnc = Uri.EscapeUriString(availableDiskName);
-
-					string diskUrl = soureSet.DownloadUrl;
-					diskUrl = diskUrl.Replace("@MACHINE@", availableMachineName);
-					diskUrl = diskUrl.Replace("@DISK@", diskNameEnc);
-
-					ImportDisk(diskUrl, $"machine disk: '{key}'", sha1, soureSet.AvailableDownloadFileInfos[key]);
+					ImportDisk(sourceFile.url, $"machine disk: '{sourceFile.name}'", sha1, sourceFile);
 				}
 			}
 

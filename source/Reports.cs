@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Diagnostics;
 using System.IO;
 using System.Text;
 
@@ -90,6 +91,8 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 			Console.WriteLine($"HTML Report saved \"{title}\" : {filename}");
 			Console.WriteLine();
+
+			Process.Start($"http://localhost:12380/api/report?name={Path.GetFileNameWithoutExtension(filename)}");
 		}
 
 		public static string MakeHtmlTable(DataTable table, string tableStyle)
@@ -156,6 +159,73 @@ namespace Spludlow.MameAO
 			}
 
 			return items.ToArray();
+		}
+
+		public void ReportSourceExistsMachineDisk(Database database)
+		{
+			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
+
+			DataTable machineTable = Database.ExecuteFill(database._MachineConnection, "SELECT machine_id, name, description, romof FROM machine ORDER BY machine.name");
+			DataTable diskTable = Database.ExecuteFill(database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
+
+			DataTable table = Tools.MakeDataTable(
+				"Status	Machine	Merge	Description	Name	SHA1	Filename	Size	FileSHA1	ModifiedTime",
+				"String	String	String	String		String	String	String		Int64	String		DateTime");
+
+			foreach (DataRow machineRow in machineTable.Rows)
+			{
+				long machine_id = (long)machineRow["machine_id"];
+
+				string machineName = (string)machineRow["name"];
+				string machineDescription = (string)machineRow["description"];
+
+				foreach (DataRow diskRow in diskTable.Select("machine_id = " + machine_id))
+				{
+					string diskName = (string)diskRow["name"];
+					string merge = Tools.DataRowValue(diskRow, "merge");
+					string sha1 = (string)diskRow["sha1"];
+
+					DataRow row = table.Rows.Add("", machineName, merge, machineDescription, diskName, sha1);
+
+					Sources.SourceFileInfo sourceFile = MameAOProcessor.MachineDiskAvailableSourceFile(machineRow, diskRow, soureSet);
+
+					if (sourceFile != null)
+					{
+						row["Filename"] = sourceFile.name;
+						row["Size"] = sourceFile.size;
+						row["FileSHA1"] = sourceFile.sha1;
+						row["ModifiedTime"] = sourceFile.mtime;
+					}
+					else
+					{
+						row["Status"] = "MISSING";
+					}
+				}
+			}
+
+			DataSet dataSet = new DataSet();
+
+			DataView view;
+			DataTable viewTable;
+
+			view = new DataView(table);
+			view.RowFilter = $"Status = 'MISSING'";
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "Missing in Source";
+			dataSet.Tables.Add(viewTable);
+
+			view = new DataView(table);
+			view.RowFilter = $"Status = ''";
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "Available in Source";
+			dataSet.Tables.Add(viewTable);
+
+			this.SaveHtmlReport(dataSet, "Source Exists Machine Disk");
+
 		}
 	}
 }
