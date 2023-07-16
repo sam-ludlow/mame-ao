@@ -1159,49 +1159,55 @@ namespace Spludlow.MameAO
 			return missingCount;
 		}
 
-		public static Sources.SourceFileInfo MachineDiskAvailableSourceFile(DataRow machineRow, DataRow diskRow, Sources.MameSourceSet soureSet)
+		public static Sources.SourceFileInfo MachineDiskAvailableSourceFile(DataRow machineRow, DataRow diskRow, Sources.MameSourceSet soureSet, Database database)
 		{
 			string machineName = Tools.DataRowValue(machineRow, "name");
 
-			string name = Tools.DataRowValue(diskRow, "name");
+			string diskName = Tools.DataRowValue(diskRow, "name");
 			string merge = Tools.DataRowValue(diskRow, "merge");
 
-			string parentMachineName = machineRow.IsNull("romof") ? null : (string)machineRow["romof"];
+			List<string> machineNames = new List<string>();
 
-			string availableMachineName = machineName;
-			string availableDiskName = name;
+			machineNames.Add(machineName);
+
+			DataRow currentRow = machineRow;
+			while (currentRow.IsNull("romof") == false)
+			{
+				string romof = (string)currentRow["romof"];
+				machineNames.Add(romof);
+
+				currentRow = database.GetMachine(romof);
+			}
+
+			string availableDiskName = diskName;
 
 			if (merge != null)
-			{
-				availableMachineName = parentMachineName ?? throw new ApplicationException($"machine disk merge without parent {machineName}");
 				availableDiskName = merge;
-			}
 
-			string key = $"{availableMachineName}/{availableDiskName}";
-
-			if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
+			foreach (string availableMachineName in machineNames)
 			{
-				availableMachineName = parentMachineName;
-				key = $"{availableMachineName}/{availableDiskName}";
+				string key = $"{availableMachineName}/{availableDiskName}";
 
-				if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
-					return null;
+				if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == true)
+				{
+					Sources.SourceFileInfo fileInfo = soureSet.AvailableDownloadFileInfos[key];
+
+					if (fileInfo.url == null)   //	Do at init not here.
+					{
+						string diskNameEnc = Uri.EscapeUriString(availableDiskName);
+
+						string diskUrl = soureSet.DownloadUrl;
+						diskUrl = diskUrl.Replace("@MACHINE@", availableMachineName);
+						diskUrl = diskUrl.Replace("@DISK@", diskNameEnc);
+
+						fileInfo.url = diskUrl;
+					}
+
+					return fileInfo;
+				}
 			}
 
-			Sources.SourceFileInfo fileInfo = soureSet.AvailableDownloadFileInfos[key];
-
-			if (fileInfo.url == null)	//	Do at init not here.
-			{
-				string diskNameEnc = Uri.EscapeUriString(availableDiskName);
-
-				string diskUrl = soureSet.DownloadUrl;
-				diskUrl = diskUrl.Replace("@MACHINE@", availableMachineName);
-				diskUrl = diskUrl.Replace("@DISK@", diskNameEnc);
-
-				fileInfo.url = diskUrl;
-			}
-
-			return fileInfo;
+			return null;
 		}
 
 		private int GetDisksMachine(string machineName, List<string[]> romStoreFilenames)
@@ -1253,12 +1259,16 @@ namespace Spludlow.MameAO
 					string diskName = Tools.DataRowValue(diskRow, "name");
 					string sha1 = Tools.DataRowValue(diskRow, "sha1");
 
-					Sources.SourceFileInfo sourceFile = MachineDiskAvailableSourceFile(machineRow, diskRow, soureSet);
+					Sources.SourceFileInfo sourceFile = MachineDiskAvailableSourceFile(machineRow, diskRow, soureSet, _Database);
 
 					if (sourceFile == null)
-						throw new ApplicationException($"Available Download Machine Disks not found in source: {machineName}, {diskName}");
-
-					ImportDisk(sourceFile.url, $"machine disk: '{sourceFile.name}'", sha1, sourceFile);
+					{
+						Console.WriteLine($"!!! Available Download Machine Disks not found in source: {machineName}, {diskName}");
+					}
+					else
+					{
+						ImportDisk(sourceFile.url, $"machine disk: '{sourceFile.name}'", sha1, sourceFile);
+					}
 				}
 			}
 

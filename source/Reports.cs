@@ -169,8 +169,8 @@ namespace Spludlow.MameAO
 			DataTable diskTable = Database.ExecuteFill(database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
 
 			DataTable table = Tools.MakeDataTable(
-				"Status	Machine	Merge	Description	Name	SHA1	Filename	Size	FileSHA1	ModifiedTime",
-				"String	String	String	String		String	String	String		Int64	String		DateTime");
+				"Status	Machine	RomOf	Merge	Description	Name	SHA1	Filename	Size	FileSHA1	ModifiedTime",
+				"String	String	String	String	String		String	String	String		Int64	String		DateTime");
 
 			foreach (DataRow machineRow in machineTable.Rows)
 			{
@@ -178,6 +178,7 @@ namespace Spludlow.MameAO
 
 				string machineName = (string)machineRow["name"];
 				string machineDescription = (string)machineRow["description"];
+				string romof = Tools.DataRowValue(machineRow, "romof");
 
 				foreach (DataRow diskRow in diskTable.Select("machine_id = " + machine_id))
 				{
@@ -185,9 +186,9 @@ namespace Spludlow.MameAO
 					string merge = Tools.DataRowValue(diskRow, "merge");
 					string sha1 = (string)diskRow["sha1"];
 
-					DataRow row = table.Rows.Add("", machineName, merge, machineDescription, diskName, sha1);
+					DataRow row = table.Rows.Add("", machineName, romof, merge, machineDescription, diskName, sha1);
 
-					Sources.SourceFileInfo sourceFile = MameAOProcessor.MachineDiskAvailableSourceFile(machineRow, diskRow, soureSet);
+					Sources.SourceFileInfo sourceFile = MameAOProcessor.MachineDiskAvailableSourceFile(machineRow, diskRow, soureSet, database);
 
 					if (sourceFile != null)
 					{
