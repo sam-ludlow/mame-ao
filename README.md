@@ -33,15 +33,6 @@ You can also use the command line just enter machine / software short name.
 - If the machine has software it will be listed, you can change software list using the drop-down, click what you want to run.
 - Click on the mame-ao console window to see what it's doing, no progress is shown in the UI (TODO).
 
-## Saved State and previous MAME versions
-
-- Saved state often does not work between MAME versions. If you have started something with saved state you should continue to run the same MAME version.
-- MAME-AO leaves previous MAME versions isolated in their own directory. You can easily list all saved stated across all previous and current MAME versions with the command __".list"__.
-- You can start a particular version of MAME with the command __".VVVV"__ where V is the version e.g. __".0252"__ or pass arguments e.g. __".0252 mrdo -window"__.
-- NOTE: MAME-AO only allows placing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
-- You can list saved state in the UI. The link will start the chosen MAME version without any machine, select machine & software in the MAME UI, use the available filter (top left).
-- Sometimes a regression in MAME will break a machine in the current version, so if a machine doesn't work after updating MAME you can run a previous version.
-
 ## System requirements
 
 - Windows with .net framework 4.8
@@ -127,6 +118,15 @@ There are also commands available they all start with a dot __.__
 - __.import__ - Run the import function, see below.
 - __.export__ - Run the export function, see below.
 
+## Saved State and previous MAME versions
+
+- Saved state often does not work between MAME versions. If you have started something with saved state you should continue to run the same MAME version.
+- MAME-AO leaves previous MAME versions isolated in their own directory. You can easily list all saved stated across all previous and current MAME versions with the command __".list"__.
+- You can start a particular version of MAME with the command __".VVVV"__ where V is the version e.g. __".0252"__ or pass arguments e.g. __".0252 mrdo -window"__.
+- NOTE: MAME-AO only allows placing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
+- You can list saved state in the UI. The link will start the chosen MAME version without any machine, select machine & software in the MAME UI, use the available filter (top left).
+- Sometimes a regression in MAME will break a machine in the current version, so if a machine doesn't work after updating MAME you can run a previous version.
+
 ## Import
 MAME-AO is all about downloading files on the fly and not bothering the user with the details.
 
@@ -174,7 +174,13 @@ A HTML report will be created containing details of the export.
 
 ## HTML Reports
 
-Some MAME-AO functions will produce HTML reports, so you can take a look what it's been doing, they are saved to the ___REPORTS__ directory.
+Some MAME-AO functions will produce HTML reports, so you can take a look what it's been doing, they are saved to the ___REPORTS__ directory. There is an option in the UI to view all saved reports.
+
+You can run the following reports with the command __.report \<type\>__
+
+- SEMD : Source Exists Machine Disk, use to see if all machine disks existing in the source (SHA1 not checked, only if exists).
+
+TODO: Add reports for other sources
 
 ## Internal Workings
 
