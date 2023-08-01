@@ -20,6 +20,8 @@ You can also use the command line just enter machine / software short name.
 - use the Web UI it will pop up
 - or use command line, enter a machine name and press enter e.g. __"mrdo"__
 
+TIP: Run command __.upany__ to self update program, this will stop the microsoft defender notice.
+
 ## Important notes
 
 - The first time you run it will take a while and use a lot of CPU & RAM.
@@ -50,7 +52,7 @@ https://github.com/sam-ludlow/mame-ao/issues
 
 ## Symbolic Links - Save disk space
 
-When MAME-AO downloads assets it keeps them in a "hash store", this makes keeping account of them very simple, you donít have to keep grooming a bunch of ZIP files.
+When MAME-AO downloads assets it keeps them in a "hash store", this makes keeping account of them very simple, you don‚Äôt have to keep grooming a bunch of ZIP files.
 
 Obviously for MAME to run the ROMs have to be in the right place with the right name, so they need duplicating from the store. The best way to do this is use symbolic links, these use virtually zero disk space and point to the actual file in the store, otherwise you have to copy the files wasting diskspace.
 
@@ -139,9 +141,9 @@ Use the following command to perform an import
 __.import \<directory\>__
 
 Files are imported based on their filename extension.
-- .ZIP ñ Archives will be extracted and imported with the same rules, this is recursive (ZIPs in ZIPs... will also be imported).
-- .CHD ñ Disk files, will have chdman.exe run against them to determine the SHA1.
-- Everything else ñ Considered a ROM, a hash of the file to determine the SHA1.
+- .ZIP ‚Äì Archives will be extracted and imported with the same rules, this is recursive (ZIPs in ZIPs... will also be imported).
+- .CHD ‚Äì Disk files, will have chdman.exe run against them to determine the SHA1.
+- Everything else ‚Äì Considered a ROM, a hash of the file to determine the SHA1.
 
 Important notes on import
 - Filenames are not important, except the extention, the file will be imported based on its SHA1.
@@ -185,9 +187,9 @@ TODO: Add reports for other sources
 ## Internal Workings
 
 ### Overall
-Assets (ROMs & CHDs) are downloaded to a ìHash Storeî. Uncompressed individual files are stored with a filename that is the SHA1 of the file. This is completely separate to the MAME rom directories. ZIP files are not used at all.
+Assets (ROMs & CHDs) are downloaded to a ‚ÄúHash Store‚Äù. Uncompressed individual files are stored with a filename that is the SHA1 of the file. This is completely separate to the MAME rom directories. ZIP files are not used at all.
 
-Each MAME version is kept completely isolated, when a new version of MAME is used a fresh MAME directory is created. Previous versions are left in place, you can go back to them anytime, letís say you have some saved state (these often donít work with different MAME versions).
+Each MAME version is kept completely isolated, when a new version of MAME is used a fresh MAME directory is created. Previous versions are left in place, you can go back to them anytime, let‚Äôs say you have some saved state (these often don‚Äôt work with different MAME versions).
 
 When you select a machine MAME-AO will download the files from archive.org if they are not already in the Hash Store. When in the Hash Store the files are copied (or preferably linked if enabled) to the correct place in the MAME rom directory.
 
@@ -203,9 +205,9 @@ There are 4 types of source these each relate to an item on archive.org.
 
 Machine ROM is considered the version master, new MAME binaries will only be used that match the version in this archive.org item.
 
-The version is determined from the archive.org itemís title. If a sourceís archive.org item has a version mismatch you will see a warning at the Initializing preparing sources stage.
+The version is determined from the archive.org item‚Äôs title. If a source‚Äôs archive.org item has a version mismatch you will see a warning at the Initializing preparing sources stage.
 
-Archive.org metadata for the items are downloaded and cached to know whatís available and the file size.
+Archive.org metadata for the items are downloaded and cached to know what‚Äôs available and the file size.
 
 ### Sources - Software Disk
 The other 3 sources have very good archive.org items, they are complete, accurate, and get updated within a few days of MAME releases. They just use a single archive.org item each and work like a charm.

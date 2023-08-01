@@ -119,8 +119,6 @@ namespace Spludlow.MameAO
 		{
 			Console.Title = $"Spludlow MAME-AO Shell V{_AssemblyVersion}";
 
-			_ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
-
 			Tools.ConsoleHeading(1, new string[] {
 				$"Welcome to Spludlow MAME-AO Shell V{_AssemblyVersion}",
 				"https://github.com/sam-ludlow/mame-ao",
@@ -280,6 +278,8 @@ namespace Spludlow.MameAO
 			_BadSources = new BadSources(_RootDirectory);
 
 			_Favorites = new Favorites(_RootDirectory);
+
+			_ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
 
 			//
 			// MAME Binaries
@@ -649,12 +649,26 @@ namespace Spludlow.MameAO
 
 					case ".report":
 						if (parts.Length != 2)
-							throw new ApplicationException($"Usage: {parts[0]} <SEMD, ...todo>");
+							throw new ApplicationException($"Usage: {parts[0]} <Report Name>" + Environment.NewLine +
+								"    SEMR - Source Exists Machine ROM (TODO)" + Environment.NewLine +
+								"    SEMD - Source Exists Machine Disk" + Environment.NewLine +
+								"    SESR - Source Exists Software ROM (TODO)" + Environment.NewLine +
+								"    SESD - Source Exists Software Disk (TODO)" + Environment.NewLine
+								);
 
 						switch (parts[1].ToUpper())
 						{
 							case "SEMD":
 								_Reports.ReportSourceExistsMachineDisk(_Database);
+								break;
+							case "SEMR":
+								_Reports.ReportSourceExistsMachineRom(_Database);
+								break;
+							case "SESD":
+								_Reports.ReportSourceExistsSoftwareDisk(_Database);
+								break;
+							case "SESR":
+								_Reports.ReportSourceExistsSoftwareRom(_Database);
 								break;
 
 							default:
@@ -816,7 +830,7 @@ namespace Spludlow.MameAO
 				ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(updateDirectory, "mame-ao.exe"))
 				{
 					WorkingDirectory = _RootDirectory,
-					Arguments = $"UPDATE={pid} DIRECTORY={_RootDirectory}",
+					Arguments = $"UPDATE={pid} DIRECTORY=\"{_RootDirectory}\"",
 					UseShellExecute = true,
 				};
 

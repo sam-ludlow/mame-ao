@@ -4,6 +4,7 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Web.UI.WebControls;
 
 namespace Spludlow.MameAO
 {
@@ -45,6 +46,27 @@ namespace Spludlow.MameAO
 			"tr:nth-child(even) {" +
 			" background-color: #b6daeb;" +
 			"}";
+
+		public void SaveHtmlReport(DataView[] views, string[] headings, string title)
+		{
+			DataSet dataSet = new DataSet();
+
+			for (int index = 0; index < views.Length; ++index)
+			{
+				DataView view = views[index];
+				string heading = headings[index];
+
+				DataTable table = view.Table.Clone();
+				table.TableName = heading;
+
+				foreach (DataRowView rowView in view)
+					table.ImportRow(rowView.Row);
+
+				dataSet.Tables.Add(table);
+			}
+
+			SaveHtmlReport(dataSet, title);
+		}
 
 		public void SaveHtmlReport(DataTable table, string title)
 		{
@@ -228,5 +250,56 @@ namespace Spludlow.MameAO
 			this.SaveHtmlReport(dataSet, "Source Exists Machine Disk");
 
 		}
+
+
+		public void ReportSourceExistsMachineRom(Database database)
+		{
+			DataTable table = Tools.MakeDataTable(
+				"Status",
+				"String");
+
+			table.Rows.Add("TODO");
+
+			table.TableName = "The report is coming soon";
+
+			DataSet dataSet = new DataSet();
+			dataSet.Tables.Add(table);
+
+			this.SaveHtmlReport(dataSet, "Source Exists Machine Rom");
+		}
+
+		public void ReportSourceExistsSoftwareDisk(Database database)
+		{
+			DataTable table = Tools.MakeDataTable(
+				"Status",
+				"String");
+
+			table.Rows.Add("TODO");
+
+			table.TableName = "The report is coming soon";
+
+			DataSet dataSet = new DataSet();
+			dataSet.Tables.Add(table);
+
+			this.SaveHtmlReport(dataSet, "Source Exists Software Disk");
+		}
+
+		public void ReportSourceExistsSoftwareRom(Database database)
+		{
+			DataTable table = Tools.MakeDataTable(
+				"Status",
+				"String");
+
+			table.Rows.Add("TODO");
+
+			table.TableName = "The report is coming soon";
+
+			DataSet dataSet = new DataSet();
+			dataSet.Tables.Add(table);
+
+			this.SaveHtmlReport(dataSet, "Source Exists Software Rom");
+		}
+
+
 	}
 }
