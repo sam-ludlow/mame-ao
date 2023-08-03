@@ -55,26 +55,23 @@
 		td.nav-off {
 			text-decoration: none;
 			background-color: #1a75bc;
+			text-align: center;
 		}
 
 		td.nav-on {
 			text-decoration: none;
 			background-color: #00ADEF;
+			text-align: center;
 		}
 
 	</style>
 
-	<title>MAME-AO</title>
-
-
 	<script type="text/javascript">
 
-		let _path;
-
-		const rootMenu =
+		const _rootMenu =
 		[{
 			text: 'MAME-AO',
-			title: 'MAME-AO Root (should not see)',
+			title: 'MAME-AO',
 			href: '/',
 			menu: [
 				{
@@ -131,32 +128,237 @@
 					href: '/saved',
 				},
 				{
-					text: 'Reports',
+					text: 'View Reports',
 					title: 'View reports',
+					href: '/view-reports',
+				},
+				{
+					text: 'Run Reports',
+					title: 'Run reports',
 					href: '/reports',
+					menu: [
+						{
+							text: 'Source Exists',
+							title: 'Check if assets exist in source',
+							href: '/reports/source-exists',
+						},
+						{
+							text: 'Asset Sizes',
+							title: 'Information about machine asset sizes',
+							href: '/reports/machine-sizes',
+						},
+					],
 				},
 				{
 					text: 'About',
-					title: 'Informatuoin',
+					title: 'Information',
 					href: '/about',
 				},
 			],
 		}];
 
-		const displayNav = () => {
+		//
+		// Main
+		//
 
-			const table = document.getElementById('nav');
+		let _baseUrl;
+		let _path;
+		let _pathParts;
+		let _info;
+
+		const main = async () => {
+
+			//
+			// Setup
+			//
+
+			getRequestInfo();
+
+			_info = await (await fetch(`${_baseUrl}/api/info`)).json();
+
+			displayMenu();
+
+			//
+			// Route
+			//
+
+			switch (_path) {
+				case '/about':
+					await about();
+					break;
+			}
+
+		}
+
+		//
+		// About
+		//
+
+		const about = async () => {
+
+			const page = getPage();
+
+
+			page.innerHTML = renderHtmlTable(_info);
+
+		}
+
+		//
+		// Tools
+		//
+
+		const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+		const getPage = () => {
+			const page = document.getElementById('page');
+			page.innerHTML = '';
+			return page;
+		}
+
+		const getRequestInfo = () => {
+
+			// URL & paramters
+
+			_baseUrl = window.location.origin;
+
+			_parameters = [];
+
+			if (window.location.href.includes('?')) {
+
+				const parts = window.location.href.split('?')[1].split('&');
+				parts.forEach((part) => {
+					const pair = part.split('=');
+					_parameters[pair[0]] = pair[1];
+				});
+			}
+
+			console.log(`baseUrl: ${_baseUrl}`);
+
+			// Path
+
+			_path = document.location.pathname;
+
+			_pathParts = [];
+
+			if (_path === '/') {
+				_pathParts.push('/');
+			} else {
+				_path.split('/').forEach((part) => {
+					if (part !== undefined) {
+						let prev = '';
+						if (_pathParts.length > 1)
+							prev = _pathParts[_pathParts.length - 1];
+
+						_pathParts.push(prev + '/' + part);
+					}
+				});
+			}
+
+			console.log(`path: ${_path}`);
+
+			_pathParts.forEach((part, index) => {
+				console.log(`pathPart : ${index} : ${part}`);
+			});
+		}
+
+		const htmlEncode = (html) => html.replace(/[&<>'"]/g,
+			tag => ({
+				'&': '&amp;',
+				'<': '&lt;',
+				'>': '&gt;',
+				"'": '&#39;',
+				'"': '&quot;'
+			}[tag]));
+
+		const renderHtmlTable = (data) => {
+			if (data == null)
+				return 'null';
+
+			if (typeof data !== 'object')
+				return htmlEncode(JSON.stringify(data));
+
+			if (Array.isArray(data) === false) {
+				data = [data];
+			}
+
+			if (data.length === 0)
+				return '[]';
+
+			if (typeof data[0] !== 'object')
+				return htmlEncode(JSON.stringify(data));
+
+			const columnNames = [];
+			data.forEach((row) => {
+				Object.keys(row).forEach(columnName => {
+					if (columnNames.includes(columnName) === false)
+						columnNames.push(columnName);
+				});
+			});
+
+			let table = '';
+
+			table += '<table>';
+			table += '<tr>';
+			columnNames.forEach(columnName => {
+				table += `<th>${columnName}</th>`;
+			});
+			table += '</tr>';
+
+			data.forEach((row) => {
+				table += '<tr>';
+				columnNames.forEach(columnName => {
+					let value = '';
+					if (row[columnName] !== undefined)
+						value = renderHtmlTable(row[columnName]);
+
+					table += `<td>${value}</td>`;
+				});
+				table += '</tr>';
+			});
+
+			table += '</table>';
+
+			return table;
+		};
+
+		//
+		// Menu
+		//
+
+		const displayMenu = () => {
+
+			// TODO: Redirect to bottom left document.location =
+
+			const versions = `V${_info.version} (${_info.mame_version})`;
+
+			_rootMenu[0].text = `MAME-AO ${versions}`;
+			_rootMenu[0].title = versions;
+
+			displayMenuWalk(_rootMenu);
+		}
+
+		const displayMenuWalk = (menu) => {
+
+			const nav = document.getElementById('nav');
+
+			const table = document.createElement('table');
+			table.style = "width: 100%;";
 
 			const row = document.createElement('tr');
 
-			let path = document.location.pathname;
-			//if (path === '/')
-			//	path = menu[0].href;
+			let found;
 
-			rootMenu.forEach((item) => {
+			menu.forEach((item) => {
 				const cell = document.createElement('td');
 
-				const itemClass = (path === item.href ? 'nav-on' : 'nav-off');
+				let itemClass = 'nav-off';
+
+				if (_pathParts.includes(item.href)) {
+
+					itemClass = 'nav-on';
+					found = item;
+					document.title = `MAME-AO ${item.title}`;
+				}
 
 				cell.className = itemClass;
 
@@ -166,39 +368,31 @@
 			});
 
 			table.appendChild(row);
+			nav.appendChild(table);
 
+			if (found && found.menu)
+				displayMenuWalk(found.menu);
 		}
 
-		const onload = () => {
+		//
+		// Load
+		//
 
-			//let _path = document.location.pathname;
-			//if (_path === '/')
-			//	document.location = menuData[0].href;
-
-			// nav should auto follow down-left
-
-			console.log(document.location);
-
-			displayNav();
-
-		}
-
-		window.onload = onload;
+		window.onload = main;
 
 	</script>
 
 </head>
 <body>
 
-	<h1>MAME-AO</h1>
-
-	<nav>
-		<table id="nav">
-
-		</table>
+	<nav id="nav">
 	</nav>
+
+	<hr />
 	
-	<p>Hello world</p>
+	<div id="page">
+		<p>This is the new UI for MAME-AO. It is not ready yet.</p>
+	</div>
 
 </body>
 </html>
