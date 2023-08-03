@@ -58,6 +58,8 @@ namespace Spludlow.MameAO
 
 					context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
 
+					context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+
 					string path = context.Request.Url.AbsolutePath.ToLower();
 
 					using (StreamWriter writer = new StreamWriter(context.Response.OutputStream, new UTF8Encoding(false)))
@@ -160,7 +162,7 @@ namespace Spludlow.MameAO
 		{
 			string html = File.ReadAllText(@"UI.html", Encoding.UTF8);
 
-			context.Response.Headers["Content-Type"] = "text/html";
+			context.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
 
 			writer.WriteLine(html);
 		}
@@ -228,7 +230,6 @@ namespace Spludlow.MameAO
 			dynamic json = new JObject();
 			json.results = results;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -289,7 +290,6 @@ namespace Spludlow.MameAO
 			json.count = results.Count;
 			json.results = results;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -331,7 +331,6 @@ namespace Spludlow.MameAO
 				json.softwarelists = softwarelists;
 			}
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -395,7 +394,6 @@ namespace Spludlow.MameAO
 			json.count = results.Count;
 			json.results = results;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -431,7 +429,6 @@ namespace Spludlow.MameAO
 
 			json.sources = sources;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -460,7 +457,6 @@ namespace Spludlow.MameAO
 			json.count = files.Count;
 			json.results = files;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -483,7 +479,6 @@ namespace Spludlow.MameAO
 			json.count = results.Count;
 			json.results = results;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -501,7 +496,6 @@ namespace Spludlow.MameAO
 			json.count = results.Count;
 			json.results = results;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
