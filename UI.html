@@ -162,6 +162,7 @@
 		//
 
 		let _baseUrl;
+		let _parameters;
 		let _path;
 		let _pathParts;
 		let _info;
@@ -196,10 +197,10 @@
 
 		const about = async () => {
 
-			const page = getPage();
+            const canvas = getCanvas();
 
 
-			page.innerHTML = renderHtmlTable(_info);
+            canvas.innerHTML = renderHtmlTable(_info);
 
 		}
 
@@ -209,8 +210,8 @@
 
 		const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-		const getPage = () => {
-			const page = document.getElementById('page');
+        const getCanvas = () => {
+            const page = document.getElementById('canvas');
 			page.innerHTML = '';
 			return page;
 		}
@@ -221,7 +222,7 @@
 
 			_baseUrl = window.location.origin;
 
-			_parameters = [];
+			_parameters = {};
 
 			if (window.location.href.includes('?')) {
 
@@ -230,9 +231,15 @@
 					const pair = part.split('=');
 					_parameters[pair[0]] = pair[1];
 				});
+
+				console.log(parts);
 			}
 
 			console.log(`baseUrl: ${_baseUrl}`);
+
+            Object.keys(_parameters).forEach((key) => {
+                console.log(`parameters : ${key} : ${_parameters[key]}`);
+			});
 
 			// Path
 
@@ -390,7 +397,7 @@
 
 	<hr />
 	
-	<div id="page">
+	<div id="canvas">
 		<p>This is the new UI for MAME-AO. It is not ready yet.</p>
 	</div>
 
