@@ -137,10 +137,9 @@
 
 			// load machines menu
 			if (_pathParts.includes('/machines')) {
-				const dataProfiles = (await (await fetch(`${_baseUrl}/api/profiles`)).json()).results;
+				const dataProfiles = (await (await fetch(`${_baseUrl}/api/profiles`)).json());
 
-				_rootMenu[0].menu[0].menu = Object.keys(dataProfiles).map((key) => {
-					const profile = dataProfiles[key];
+				_rootMenu[0].menu[0].menu = dataProfiles.results.map((profile) => {
 					return {
 						text: profile.text,
 						title: profile.description,

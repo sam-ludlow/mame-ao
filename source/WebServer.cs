@@ -216,7 +216,7 @@ namespace Spludlow.MameAO
 
 		private void ApiProfiles(HttpListenerContext context, StreamWriter writer)
 		{
-			dynamic results = new JObject();
+			dynamic results = new JArray();
 
 			foreach (Database.DataQueryProfile profile in Database.DataQueryProfiles)
 			{
@@ -227,11 +227,14 @@ namespace Spludlow.MameAO
 				result.description = profile.Decription;
 				result.command = profile.CommandText;
 
-				results[profile.Key] = result;
-
+				results.Add(result);
 			}
 
 			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = results.Count;
+			json.count = results.Count;
 			json.results = results;
 
 			writer.WriteLine(json.ToString(Formatting.Indented));
@@ -261,10 +264,9 @@ namespace Spludlow.MameAO
 			if (search.Length == 0)
 				search = null;
 
-			string profile = "arcade-good";
-			qs = context.Request.QueryString["profile"];
-			if (qs != null)
-				profile = qs;
+			string profile = context.Request.QueryString["profile"];
+			if (profile == null)
+				throw new ApplicationException("profile not passed");
 
 			Database.DataQueryProfile dataQueryProfile = _AO._Database.GetDataQueryProfile(profile);
 
