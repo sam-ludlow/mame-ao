@@ -78,49 +78,6 @@
 					text: 'Machines',
 					title: 'Start Machines',
 					href: '/machines',
-					menu: [
-						{
-							text: 'Arcade Good',
-							title: 'Arcade Machines - Status Good',
-							href: '/machines/arcade-good',
-						},
-						{
-							text: 'Arcade Imperfect',
-							title: 'Arcade Machines - Status Imperfect',
-							href: '/machines/arcade-imperfect',
-						},
-						{
-							text: 'Compters & Consoles Good',
-							title: 'Compters & Consoles with software - status good',
-							href: '/machines/computer-console-good',
-						},
-						{
-							text: 'Compters & Consoles Imperfect',
-							title: 'Compters & Consoles with software - status imperfect',
-							href: '/machines/computer-console-imperfect',
-						},
-						{
-							text: 'Other Good',
-							title: 'Other Systems without software - status good',
-							href: '/machines/other-good',
-						},
-						{
-							text: 'Other Imperfect',
-							title: 'Other Systems without software - status imperfect',
-							href: '/machines/other-imperfect',
-						},
-						{
-							text: 'Everything',
-							title: 'Everything',
-							href: '/machines/everything',
-						},
-						{
-							text: 'Favorites',
-							title: 'Favorites',
-							href: '/machines/favorites',
-						},
-
-					],
 				},
 				{
 					text: 'Saved State',
@@ -166,6 +123,7 @@
 		let _path;
 		let _pathParts;
 		let _info;
+		let _currentMenu;
 
 		const main = async () => {
 
@@ -177,13 +135,41 @@
 
 			_info = await (await fetch(`${_baseUrl}/api/info`)).json();
 
+			// load machines menu
+			if (_pathParts.includes('/machines')) {
+				const dataProfiles = (await (await fetch(`${_baseUrl}/api/profiles`)).json()).results;
+
+				_rootMenu[0].menu[0].menu = Object.keys(dataProfiles).map((key) => {
+					const profile = dataProfiles[key];
+					return {
+						text: profile.text,
+						title: profile.description,
+						href: `/machines/${profile.key}`,
+					};
+				});
+			}
+
 			displayMenu();
 
 			//
 			// Route
 			//
 
+			if (_pathParts.includes('/machines') && _pathParts.length === 3) {
+				await machines();
+				return;
+			}
+
 			switch (_path) {
+
+				case '/saved':
+					await saved();
+					break;
+
+				case '/view-reports':
+					await viewReports();
+					break;
+
 				case '/about':
 					await about();
 					break;
@@ -194,13 +180,50 @@
 		//
 		// About
 		//
-
 		const about = async () => {
 
             const canvas = getCanvas();
 
 
             canvas.innerHTML = renderHtmlTable(_info);
+		}
+
+		//
+		// Machines
+		//
+		const machines = async () => {
+
+			const canvas = getCanvas();
+
+			const profileKey = _pathParts[2].substring(10);
+
+			const machinesData = await (await fetch(`${_baseUrl}/api/machines?profile=${profileKey}`)).json();
+
+			canvas.innerHTML = renderHtmlTable(machinesData);
+		}
+
+		//
+		// Saved state
+		//
+		const saved = async () => {
+
+			const canvas = getCanvas();
+
+			const savedData = await (await fetch(`${_baseUrl}/api/list`)).json();
+
+			canvas.innerHTML = renderHtmlTable(savedData);
+		}
+
+		//
+		// View Reports
+		//
+		const viewReports = async () => {
+
+			const canvas = getCanvas();
+
+			const reportsData = await (await fetch(`${_baseUrl}/api/reports`)).json();
+
+			canvas.innerHTML = renderHtmlTable(reportsData);
 
 		}
 
@@ -334,19 +357,21 @@
 
 		const displayMenu = () => {
 
-			// TODO: Redirect to bottom left document.location =
-
 			const versions = `V${_info.version} (${_info.mame_version})`;
 
 			_rootMenu[0].text = `MAME-AO ${versions}`;
 			_rootMenu[0].title = versions;
 
 			displayMenuWalk(_rootMenu);
+
+			if (_currentMenu && _currentMenu.menu && _currentMenu.menu[0].href)
+				document.location = `${_baseUrl}${_currentMenu.menu[0].href}`;
 		}
 
 		const displayMenuWalk = (menu) => {
 
 			const nav = document.getElementById('nav');
+			const heading = document.getElementById('heading');
 
 			const table = document.createElement('table');
 			table.style = "width: 100%;";
@@ -365,7 +390,11 @@
 					itemClass = 'nav-on';
 					found = item;
 					document.title = `MAME-AO ${item.title}`;
+					heading.innerHTML = `MAME-AO ${item.title}`;
 				}
+
+				if (_path === item.href)
+					_currentMenu = item;
 
 				cell.className = itemClass;
 
@@ -391,6 +420,8 @@
 
 </head>
 <body>
+
+	<h1 id="heading"></h1>
 
 	<nav id="nav">
 	</nav>

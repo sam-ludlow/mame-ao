@@ -216,15 +216,19 @@ namespace Spludlow.MameAO
 
 		private void ApiProfiles(HttpListenerContext context, StreamWriter writer)
 		{
-			JArray results = new JArray();
+			dynamic results = new JObject();
 
-			for (int index = 0; index < Database.DataQueryProfiles.Length; ++index)
+			foreach (Database.DataQueryProfile profile in Database.DataQueryProfiles)
 			{
 				dynamic result = new JObject();
-				result.index = index;
-				result.name = Database.DataQueryProfiles[index][0];
-				result.command = Database.DataQueryProfiles[index][1];
-				results.Add(result);
+
+				result.key = profile.Key;
+				result.text = profile.Text;
+				result.description = profile.Decription;
+				result.command = profile.CommandText;
+
+				results[profile.Key] = result;
+
 			}
 
 			dynamic json = new JObject();
@@ -257,17 +261,14 @@ namespace Spludlow.MameAO
 			if (search.Length == 0)
 				search = null;
 
-			int profileIndex = 0;
+			string profile = "arcade-good";
 			qs = context.Request.QueryString["profile"];
 			if (qs != null)
-				profileIndex = Int32.Parse(qs);
+				profile = qs;
 
-			if (profileIndex < 0 || profileIndex >= Database.DataQueryProfiles.Length)
-				throw new ApplicationException("Bad profile index");
+			Database.DataQueryProfile dataQueryProfile = _AO._Database.GetDataQueryProfile(profile);
 
-			string profileName = Database.DataQueryProfiles[profileIndex][0];
-
-			DataTable table = _AO._Database.QueryMachine(profileIndex, offset, limit, search);
+			DataTable table = _AO._Database.QueryMachine(dataQueryProfile.Key, offset, limit, search);
 
 			JArray results = new JArray();
 
@@ -283,7 +284,7 @@ namespace Spludlow.MameAO
 			}
 
 			dynamic json = new JObject();
-			json.profile = profileName;
+			json.profile = dataQueryProfile.Key;
 			json.offset = offset;
 			json.limit = limit;
 			json.total = table.Rows.Count == 0 ? 0 : (long)table.Rows[0]["ao_total"];
