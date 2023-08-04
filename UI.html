@@ -198,7 +198,86 @@
 
 			const machinesData = await (await fetch(`${_baseUrl}/api/machines?profile=${profileKey}`)).json();
 
-			canvas.innerHTML = renderHtmlTable(machinesData);
+			const columnDefs = [
+				{ heading: '', columnName: 'ao_image' },
+				{ heading: 'fav', columnName: 'favorite' },
+				{ heading: 'name', columnName: 'name' },
+				{ heading: 'description', columnName: 'description' },
+				{ heading: 'year', columnName: 'year' },
+				{ heading: 'manufacturer', columnName: 'manufacturer' },
+				{ heading: 'roms', columnName: 'ao_rom_count' },
+				{ heading: 'disks', columnName: 'ao_disk_count' },
+				{ heading: 'lists', columnName: 'ao_softwarelist_count' },
+				{ heading: 'romof', columnName: 'romof' },
+				{ heading: 'cloneof', columnName: 'cloneof' },
+				{ heading: 'status', columnName: 'status' },
+				{ heading: 'emulation', columnName: 'emulation' },
+			];
+
+			const table = document.createElement('table');
+			table.style = 'width:100%;';
+
+			// Headings
+			const headRow = document.createElement('tr');
+			columnDefs.forEach((colDef) => {
+				const cell = document.createElement('th');
+				cell.innerHTML = colDef.heading;
+				headRow.appendChild(cell);
+			});
+			table.appendChild(headRow);
+
+			// Rows
+			machinesData.results.forEach((row, rowIndex) => {
+				const tableRow = document.createElement('tr');
+
+				columnDefs.forEach((colDef) => {
+					const cell = document.createElement('td');
+
+					switch (colDef.columnName) {
+						case 'ao_image':
+							if (row.ao_softwarelist_count > 0)
+								cell.innerHTML = `<a id="${row.name}" href="./?machine=${row.name}"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
+							else
+								cell.innerHTML = `<a id="${row.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
+							break;
+
+						case 'name':
+							cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Machine.aspx?name=${row.name}" target="_blank">${row.name}</a>`;
+							break;
+
+						case 'favorite':
+							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavoriteMachine(this.id)" ${row.favorite ? 'checked' : ''}>`;
+							break;
+
+						default:
+							if (row[colDef.columnName] !== undefined)
+								cell.innerHTML = row[colDef.columnName];
+							break;
+					}
+
+					if (cell.innerHTML === '0')
+						cell.innerHTML = '';
+
+					if (row.favorite === true) {
+						if ((rowIndex % 2) == 0)
+							cell.style.background = '#cccc00';
+						else
+							cell.style.background = '#e6e600';
+					}
+
+					tableRow.appendChild(cell);
+				});
+
+				tableRow.id = `row${rowIndex}`;
+
+				table.appendChild(tableRow);
+			});
+
+			canvas.appendChild(table);
+
+			//const debug = document.createElement('div');
+			//debug.innerHTML = renderHtmlTable(machinesData);
+			//canvas.appendChild(debug);
 		}
 
 		//
