@@ -77,11 +77,11 @@ namespace Spludlow.MameAO
 									switch (path)
 									{
 										case "/api/command":
-											Command(context, writer);
+											ApiCommand(context, writer);
 											break;
 
 										case "/api/update":
-											Update(context, writer);
+											ApiUpdate(context, writer);
 											break;
 
 										case "/api/profiles":
@@ -113,15 +113,17 @@ namespace Spludlow.MameAO
 											break;
 
 										case "/api/reports":
-											Reports(context, writer);
+											ApiReports(context, writer);
 											break;
 
 										case "/api/report":
-											Report(context, writer);
+											ApiReport(context, writer);
 											break;
 
 										default:
-											throw new ApplicationException($"404 {path}");
+											ApplicationException exception = new ApplicationException($"Not found: {path}");
+											exception.Data.Add("status", 404);
+											throw exception;
 									}
 								}
 								else
@@ -141,21 +143,36 @@ namespace Spludlow.MameAO
 							}
 
 						}
-						catch (ApplicationException e)
-						{
-							writer.WriteLine(e.ToString());
-							context.Response.StatusCode = 400;
-						}
 						catch (Exception e)
 						{
-							writer.WriteLine(e.ToString());
-							context.Response.StatusCode = 500;
+							ErrorResponse(context, writer, e);
 						}
 					}	
 				}
 			});
 
 			listenTask.Start();
+		}
+
+		private void ErrorResponse(HttpListenerContext context, StreamWriter writer, Exception e)
+		{
+			int status = 500;
+
+			if (e is ApplicationException)
+				status = 400;
+
+			if (e.Data["status"] != null)
+				status = (int)e.Data["status"];
+
+			context.Response.StatusCode = status;
+
+			dynamic json = new JObject();
+			
+			json.status = status;
+			json.message = e.Message;
+			json.error = e.ToString();
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
 		private void ServeUI(HttpListenerContext context, StreamWriter writer)
@@ -167,35 +184,41 @@ namespace Spludlow.MameAO
 			writer.WriteLine(html);
 		}
 
-		private void Command(HttpListenerContext context, StreamWriter writer)
+		private void ApiCommand(HttpListenerContext context, StreamWriter writer)
 		{
 			string line = context.Request.QueryString["line"];
 
 			if (line == null)
 				throw new ApplicationException("No line given.");
 
+			// Special commands
+
 			if (line.StartsWith(".fav") == true)
 			{
 				_AO._Favorites.AddCommandLine(line);
-				return;
+			}
+			else
+			{
+				Console.WriteLine();
+				Tools.ConsoleHeading(1, new string[] {
+					"Remote command recieved",
+					line,
+				});
+				Console.WriteLine();
+
+				bool started = _AO.RunLineTask(line);
+
+				if (started == false)
+					throw new ApplicationException("I'm busy.");
 			}
 
-			Console.WriteLine();
-			Tools.ConsoleHeading(1, new string[] {
-				"Remote command recieved",
-				line,
-			});
-			Console.WriteLine();
-
-			bool started = _AO.RunLineTask(line);
-
-			writer.WriteLine(started == true ? "OK" : "BUSY");
-
-			if (started == false)
-				throw new ApplicationException("I'm busy.");
+			dynamic json = new JObject();
+			json.message = "OK";
+			json.command = line;
+			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		public void Update(HttpListenerContext context, StreamWriter writer)
+		public void ApiUpdate(HttpListenerContext context, StreamWriter writer)
 		{
 			Console.WriteLine();
 			Tools.ConsoleHeading(1, new string[] {
@@ -485,7 +508,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		private void Reports(HttpListenerContext context, StreamWriter writer)
+		private void ApiReports(HttpListenerContext context, StreamWriter writer)
 		{
 			JArray results = new JArray();
 
@@ -502,7 +525,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		private void Report(HttpListenerContext context, StreamWriter writer)
+		private void ApiReport(HttpListenerContext context, StreamWriter writer)
 		{
 			string name = context.Request.QueryString["name"] ?? throw new ApplicationException("name not passed");
 

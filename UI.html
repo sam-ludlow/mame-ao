@@ -279,6 +279,32 @@
 			//debug.innerHTML = renderHtmlTable(machinesData);
 			//canvas.appendChild(debug);
 		}
+		const changeFavoriteMachine = async (checkBoxId) => {
+			const checkBox = document.getElementById(checkBoxId);
+
+			const name = checkBoxId.substring(4);
+
+			const command = checkBox.checked ? ".favm" : ".favmx";
+
+			await runCommand(`${command} ${name}`);
+
+			const row = checkBox.parentElement.parentElement;
+
+			const rowIndex = parseInt(row.id.substring(3), 10);
+
+			for (let cellIndex = 0; cellIndex < row.cells.length; ++cellIndex) {
+				const cell = row.cells[cellIndex];
+
+				if (checkBox.checked === false) {
+					cell.style.background = '';
+				} else {
+					if ((rowIndex % 2) == 0)
+						cell.style.background = '#cccc00';
+					else
+						cell.style.background = '#e6e600';
+				}
+			}
+		}
 
 		//
 		// Saved state
@@ -315,6 +341,18 @@
             const page = document.getElementById('canvas');
 			page.innerHTML = '';
 			return page;
+		}
+
+		const runCommand = async (line) => {
+
+			const response = await fetch(`${_baseUrl}/api/command?line=${encodeURIComponent(line)}`);
+
+			const result = await response.json();
+
+			console.log(result);
+
+			if (response.status !== 200)
+				alert(result.message);
 		}
 
 		const getRequestInfo = () => {
