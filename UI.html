@@ -196,7 +196,7 @@
 
 			const profileKey = _pathParts[2].substring(10);
 
-			const machinesData = await (await fetch(`${_baseUrl}/api/machines?profile=${profileKey}`)).json();
+			const machinesData = await (await fetch(`${_baseUrl}/api/machines?profile=${profileKey}&offset=${_parameters.offset}&search=${_parameters.search}`)).json();
 
 			const columnDefs = [
 				{ heading: '', columnName: 'ao_image' },
@@ -273,12 +273,48 @@
 				table.appendChild(tableRow);
 			});
 
-			canvas.appendChild(table);
+			//canvas.appendChild(table);
+
+			
+
+			const limit = 100;
+
+			const navHtml = `<a href="${_path}?offset=${_parameters.offset - limit}&search=${_parameters.search}">PREV</a>` +
+							'&nbsp; - &nbsp;' +
+							`<a href="${_path}?offset=${_parameters.offset + limit}&search=${_parameters.search}">NEXT</a>`;
+
+			let html = '';
+
+			html += `<input id="inputText" type="text" value="${_parameters.search}" style="width:480px;" />`;
+			html += '<button type="submit" onclick="machineSearch(); return false;">Search</button>';
+			html += '<hr />';
+			html += `<nav>${navHtml}</nav>`;
+			html += '<div id="results"></div>';
+			html += `<nav>${navHtml}</nav>`;
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+
+			const results = document.getElementById('results');
+
+			results.appendChild(table);
+
+			const inputText = document.getElementById('inputText');
+			inputText.focus();
 
 			//const debug = document.createElement('div');
 			//debug.innerHTML = renderHtmlTable(machinesData);
 			//canvas.appendChild(debug);
 		}
+		const machineSearch = async () => {
+
+			const inputText = document.getElementById('inputText');
+
+			document.location = `${_path}?search=${encodeURIComponent(inputText.value)}`;
+			
+		}
+
 		const changeFavoriteMachine = async (checkBoxId) => {
 			const checkBox = document.getElementById(checkBoxId);
 
@@ -373,6 +409,14 @@
 
 				console.log(parts);
 			}
+
+			if (_parameters['offset'] === undefined)
+				_parameters['offset'] = 0;
+			else
+				_parameters['offset'] = parseInt(_parameters['offset'], 10);
+
+			if (_parameters['search'] === undefined)
+				_parameters['search'] = '';
 
 			console.log(`baseUrl: ${_baseUrl}`);
 
@@ -543,10 +587,11 @@
 	</nav>
 
 	<hr />
-	
-	<div id="canvas">
-		<p>This is the new UI for MAME-AO. It is not ready yet.</p>
-	</div>
+	<form>
+		<div id="canvas">
+			<p>This is the new UI for MAME-AO. It is not ready yet.</p>
+		</div>
+	</form>
 
 </body>
 </html>
