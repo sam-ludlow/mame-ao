@@ -325,7 +325,7 @@ namespace Spludlow.MameAO
 			string qs;
 
 			string machine = null;
-			qs = context.Request.QueryString["machine"];
+			qs = context.Request.QueryString["name"];
 			if (qs != null)
 				machine = qs;
 

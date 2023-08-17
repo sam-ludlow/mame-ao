@@ -135,7 +135,9 @@
 
 			_info = await (await fetch(`${_baseUrl}/api/info`)).json();
 
+			//
 			// load machines menu
+			//
 			if (_pathParts.includes('/machines')) {
 				const dataProfiles = (await (await fetch(`${_baseUrl}/api/profiles`)).json());
 
@@ -148,6 +150,47 @@
 				});
 			}
 
+			//
+			// load software menu
+			//
+			let machineData;
+
+			if (_pathParts.includes('/machines') && _pathParts.length >= 4) {
+
+				let current;
+				_rootMenu[0].menu[0].menu.forEach((item) => {
+					if (_pathParts[2] === item.href)
+						current = item;
+				});
+
+				if (current === undefined)
+					throw new Error('current menu not found');
+
+				let parts = _pathParts[2].split('/');
+				const profileName = parts[parts.length - 1];
+
+				parts = _pathParts[3].split('/');
+				const machineName = parts[parts.length - 1];
+
+				machineData = (await (await fetch(`${_baseUrl}/api/machine?name=${machineName}`)).json());
+
+				current.menu = [{
+					text: `${machineData.name} &bull; ${machineData.description}`,
+					title: machineData.description,
+					href: `/machines/${profileName}/${machineName}`,
+				}];
+
+				current.menu[0].menu = machineData.softwarelists.map((list) => {
+					return {
+						text: list.description,
+						title: list.description,
+						href: `/machines/${profileName}/${machineName}/${list.name}`,
+					};
+				});
+
+			}
+
+
 			displayMenu();
 
 			//
@@ -155,7 +198,14 @@
 			//
 
 			if (_pathParts.includes('/machines') && _pathParts.length === 3) {
+
 				await machines();
+				return;
+			}
+
+			if (_pathParts.includes('/machines') && _pathParts.length === 5) {
+
+				await machine(machineData);
 				return;
 			}
 
@@ -236,7 +286,7 @@
 					switch (colDef.columnName) {
 						case 'ao_image':
 							if (row.ao_softwarelist_count > 0)
-								cell.innerHTML = `<a id="${row.name}" href="./?machine=${row.name}"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
+								cell.innerHTML = `<a id="${row.name}" href="${_baseUrl}/machines/${profileKey}/${row.name}"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
 							else
 								cell.innerHTML = `<a id="${row.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
 							break;
@@ -314,7 +364,6 @@
 			document.location = `${_path}?search=${encodeURIComponent(inputText.value)}`;
 			
 		}
-
 		const changeFavoriteMachine = async (checkBoxId) => {
 			const checkBox = document.getElementById(checkBoxId);
 
@@ -341,6 +390,23 @@
 				}
 			}
 		}
+
+		//
+		// Machine
+		//
+		const machine = async (machineData) => {
+
+			const canvas = getCanvas();
+
+
+
+
+			const debug = document.createElement('div');
+			debug.innerHTML = renderHtmlTable(machineData);
+			canvas.appendChild(debug);
+
+		}
+
 
 		//
 		// Saved state
