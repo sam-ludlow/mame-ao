@@ -1,8 +1,9 @@
 ﻿<!DOCTYPE html>
-
-<html lang="en" xmlns="http://www.w3.org/1999/xhtml">
+<html lang="en">
 <head>
-	<meta charset="utf-8" />
+	<meta charset="utf-8">
+	<meta name="viewport" content="width=device-width">
+
 	<style type="text/css">
 		body {
 			font-family: sans-serif;
@@ -41,458 +42,339 @@
 			background-color: #b6daeb;
 		}
 
-		select {
-			width: 100px;
-			height: 20px;
+		a.nav-off {
+			text-decoration: none;
+			color: #FFFFFF;
 		}
 
-		div.busy {
-			position: fixed;
-			z-index: 100;
-			top: 0px;
-			right: 0px;
-			bottom: 0px;
-			left: 0px;
-			background: rgba(255, 255, 255, 0.5);
+		a.nav-on {
+			text-decoration: none;
+			color: #FFFF00;
 		}
 
-		img.centered {
-			position: fixed;
-			top: 50%;
-			left: 50%;
-			margin-left: -192px;
-			margin-top: -178px;
-			width: 386px;
-			height: 356px;
+		td.nav-off {
+			text-decoration: none;
+			background-color: #1a75bc;
+			text-align: center;
 		}
+
+		td.nav-on {
+			text-decoration: none;
+			background-color: #00ADEF;
+			text-align: center;
+		}
+
 	</style>
-	<title>MAME-AO</title>
-</head>
-<body>
-	<a id="systemAlert" href="" style="color:white;background-color:red;"></a>
-	<form>
-		<div>
-			<a style="float:left;" href="/"><img src="https://mame.spludlow.co.uk/snap/mame-ao-logo.png" /></a>
-			<h1 id="heading"></h1>
-		</div>
-
-		<br/>
-
-		<p id="info"></p>
-
-		<hr />
-
-		<select id="inputSelect" style="width:512px;"></select>
-
-		<hr />
-
-		<input id="inputText" type="text" style="width:480px;" />
-
-		<button type="submit" onclick="youveChanged(); return false;">Search</button>
-
-		<span id="searchInfo"></span>
-
-		<hr />
-
-		<a id="page_back1" href="">BACK</a> &bull; <a id="page_next1" href="">NEXT</a>
-
-		<div id="resultsContainer">
-		</div>
-
-		<a id="page_back2" href="">BACK</a> &bull; <a id="page_next2" href="">NEXT</a>
-
-		<hr />
-	</form>
-
 
 	<script type="text/javascript">
 
-		const _inputSelect = document.getElementById('inputSelect');
-		const _inputText = document.getElementById('inputText');
-		const _searchInfo = document.getElementById('searchInfo');
-		const _systemAlert = document.getElementById('systemAlert');
+		const _rootMenu =
+		[{
+			text: 'MAME-AO',
+			title: 'MAME-AO',
+			href: '/',
+			menu: [
+				{
+					text: 'Machines',
+					title: 'Start Machines',
+					href: '/machines',
+				},
+				{
+					text: 'Saved State',
+					title: 'View saved state',
+					href: '/saved',
+				},
+				{
+					text: 'View Reports',
+					title: 'View reports',
+					href: '/view-reports',
+				},
+				//{
+				//	text: 'Run Reports',
+				//	title: 'Run reports',
+				//	href: '/reports',
+				//	menu: [
+				//		{
+				//			text: 'Source Exists',
+				//			title: 'Check if assets exist in source',
+				//			href: '/reports/source-exists',
+				//		},
+				//		{
+				//			text: 'Asset Sizes',
+				//			title: 'Information about machine asset sizes',
+				//			href: '/reports/machine-sizes',
+				//		},
+				//	],
+				//},
+				{
+					text: 'About',
+					title: 'Information',
+					href: '/about',
+				},
+			],
+		}];
 
-		const _resultsContainer = document.getElementById('resultsContainer');
-		const _heading = document.getElementById('heading');
-		const _info = document.getElementById('info');
-		const _page_back1 = document.getElementById('page_back1');
-		const _page_next1 = document.getElementById('page_next1');
-		const _page_back2 = document.getElementById('page_back2');
-		const _page_next2 = document.getElementById('page_next2');
+		//
+		// Main
+		//
 
 		let _baseUrl;
-		const _parameters = {};
-		let _mode;
+		let _parameters;
+		let _path;
+		let _pathParts;
+		let _info;
+		let _currentMenu;
+		let _updateAvailable = false;
 
-		const onload = async () => {
+		const main = async () => {
 
-			_baseUrl = window.location.href;
+			try {
 
-			if (window.location.href.includes('?')) {
+				await mainWork();
 
-				_baseUrl = window.location.href.split('?')[0];
+			} catch (error) {
 
-				const parts = window.location.href.split('?')[1].split('&');
-				parts.forEach((part) => {
-					const pair = part.split('=');
-					_parameters[pair[0]] = pair[1];
+				const div = document.getElementById('error');
+
+				const html = `<h2>MAME-AO UI Error : ${error.name}</h2>` +
+					'<p>If you want to submit an error report please copy and paste the error text from here. Maybe include a screen shot.</p>' +
+					'<p>Copy (Ctrl+C) -> notepad -> paste (Ctrl+V).</p>' +
+					'<p>Report issues here <a href="https://github.com/sam-ludlow/mame-ao/issues" target="_blank" >https://github.com/sam-ludlow/mame-ao/issues</a></p>' +
+					'<hr />' +
+					`<p>${error.stack}</p>` +
+					'<hr />';
+
+				div.innerHTML = html;
+				div.style = 'background-color: pink;';
+
+				throw error;
+			}
+		}
+
+		const mainWork = async () => {
+
+			//
+			// Setup
+			//
+
+			getRequestInfo();
+
+			_info = await (await fetch(`${_baseUrl}/api/info`)).json();
+
+
+			if (_info.version_name_current !== _info.version_name_available) {
+				_rootMenu.push({
+					text: `Update Available ${_info.version_name_current} => ${_info.version_name_available}`,
+					title: `Update ${_info.version_name_current} => ${_info.version_name_available}`,
+					href: '/update',
+					style: 'background-color: red;',
 				});
 			}
 
-			if (_baseUrl.endsWith('/') == true)
-				_baseUrl = _baseUrl.slice(0, -1);
 
-			_mode = 'machines';
+			//
+			// load machines menu
+			//
+			if (_pathParts.includes('/machines')) {
+				const dataProfiles = (await (await fetch(`${_baseUrl}/api/profiles`)).json());
 
-			if (_parameters['machine'] !== undefined)
-				_mode = 'machine';
-
-			if (_parameters['mode'] !== undefined)
-				_mode = _parameters['mode'];
-
-			switch (_mode) {
-				case 'machines':
-					await onloadMachines();
-					break;
-				case 'machine':
-					await onloadMachine();
-					break;
-				case 'list':
-					await onloadList();
-					break;
-				case 'reports':
-					await onloadReports();
-					break;
-				default:
-					throw new Error(`Bad mode ${_mode}`);
+				_rootMenu[0].menu[0].menu = dataProfiles.results.map((profile) => {
+					return {
+						text: profile.text,
+						title: profile.description,
+						href: `/machines/${profile.key}`,
+					};
+				});
 			}
 
-			_inputSelect.onchange = youveChanged;
+			//
+			// load software menu
+			//
+			let machineData;
 
-			_inputText.focus();
+			if (_pathParts.includes('/machines') && _pathParts.length >= 4) {
 
-		}
-
-		const youveChanged = () => {
-
-			switch (_mode) {
-				case 'machines':
-					const profile = _inputSelect.value;
-
-					if (profile === '')
-						return;
-
-					if (profile.startsWith('mode='))
-						document.location = `${_baseUrl}/?${profile}`;
-					else
-						document.location = `${_baseUrl}/?profile=${profile}&search=${encodeURIComponent(_inputText.value)}`;
-					break;
-
-				case 'machine':
-					const softwarelist = _inputSelect.value;
-
-					if (softwarelist === '')
-						return;
-
-					const machine = _parameters['machine'];
-
-					document.location = `${_baseUrl}/?machine=${machine}&softwarelist=${softwarelist}&search=${encodeURIComponent(_inputText.value)}`;
-					break;
-
-				default:
-					throw new Error(`Bad mode ${_mode}`);
-			}
-		}
-
-		const onloadMachines = async () => {
-
-			let offset = 0;
-			let limit = 100;
-			let profile = 0;
-			let search = '';
-
-			if (_parameters['offset'] !== undefined)
-				offset = parseInt(_parameters['offset'], 10);
-
-			if (_parameters['profile'] !== undefined)
-				profile = parseInt(_parameters['profile'], 10);
-
-			if (_parameters['search'] !== undefined)
-				search = decodeURIComponent(_parameters['search']);
-
-			let response = await fetch(`${_baseUrl}/api/profiles`);
-			const profiles = (await response.json()).results;
-
-			profiles.forEach((profile, index) => {
-				const option = document.createElement('option');
-				option.value = index;
-				option.innerHTML = profile.name;
-				_inputSelect.appendChild(option);
-			});
-
-			const extraOptions = [
-				{ value: '', html: '' },
-				{ value: 'mode=list', html: 'List Saved State & previous MAME versions' },
-				{ value: 'mode=reports', html: 'List Reports' },
-				{ value: '', html: '' },
-			];
-			extraOptions.forEach((optionInfo) => {
-				const option = document.createElement('option');
-				option.value = optionInfo.value;
-				option.innerHTML = optionInfo.html;
-				_inputSelect.appendChild(option);
-			});
-
-			_inputSelect.selectedIndex = profile;
-
-			_inputText.value = search;
-
-			response = await fetch(`${_baseUrl}/api/machines?profile=${profile}&offset=${offset}&search=${search}`);
-			const json = await response.json();
-			const results = json.results;
-
-			const resultsTable = renderMachines(results);
-
-			resultsContainer.innerHTML = '';
-			resultsContainer.appendChild(resultsTable);
-
-			let totalPages = Math.ceil(json.total / json.limit);
-			let currentPage = (json.offset / json.limit) + 1;
-			_searchInfo.innerHTML = `page: ${currentPage} / ${totalPages} - total: ${json.total} - viewing: ${json.count}`;
-
-
-			_page_back1.href = `${_baseUrl}?profile=${profile}&offset=${offset - limit}&search=${_inputText.value}`;
-			_page_next1.href = `${_baseUrl}?profile=${profile}&offset=${offset + limit}&search=${_inputText.value}`;
-			_page_back2.href = _page_back1.href;
-			_page_next2.href = _page_next1.href;
-
-
-			response = await fetch(`${_baseUrl}/api/info`);
-			const info = (await response.json());
-
-			if (info.version_name_available !== info.version_name_current) {
-				_systemAlert.href = '/update';
-				_systemAlert.innerText = `New MAME-AO update avaialable ${info.version_name_current} => ${info.version_name_available} Click here to update immediately.`;
-			}
-
-			document.title = `MAME-AO ${info.version} - ` + _inputSelect.options[_inputSelect.selectedIndex].text;
-
-			_heading.innerHTML = document.title;
-
-			_info.innerHTML = `version: ${info.version} - mame version: ${info.mame_version} - directory: ${info.directory}`;
-		}
-
-		const onloadMachine = async () => {
-
-			const machineName = _parameters['machine'];
-			let softwarelist = _parameters['softwarelist'];
-
-			let offset = 0;
-			let limit = 100;
-			let search = '';
-
-			if (_parameters['offset'] !== undefined)
-				offset = parseInt(_parameters['offset'], 10);
-
-			if (_parameters['profile'] !== undefined)
-				profile = parseInt(_parameters['profile'], 10);
-
-			if (_parameters['search'] !== undefined)
-				search = decodeURIComponent(_parameters['search']);
-
-			_inputText.value = search;
-
-			let response = await fetch(`${_baseUrl}/api/machine?machine=${machineName}`);
-
-			const machine = await response.json();
-
-			if (machine.softwarelists !== undefined) {
-
-				machine.softwarelists.forEach((softwarelist) => {
-					const option = document.createElement('option');
-					option.value = softwarelist.name;
-					option.innerHTML = `${softwarelist.description} (${softwarelist.name})`;
-					_inputSelect.appendChild(option);
+				let current;
+				_rootMenu[0].menu[0].menu.forEach((item) => {
+					if (_pathParts[2] === item.href)
+						current = item;
 				});
 
-				const extraOptions = [
-					{ value: '@fav', html: 'Favorites' },
-				];
-				extraOptions.forEach((optionInfo) => {
-					const option = document.createElement('option');
-					option.value = optionInfo.value;
-					option.innerHTML = optionInfo.html;
-					_inputSelect.appendChild(option);
+				if (current === undefined)
+					throw new Error('current menu not found');
+
+				let parts = _pathParts[2].split('/');
+				const profileName = parts[parts.length - 1];
+
+				parts = _pathParts[3].split('/');
+				const machineName = parts[parts.length - 1];
+
+				machineData = (await (await fetch(`${_baseUrl}/api/machine?name=${machineName}`)).json());
+
+				current.menu = [{
+					text: `${machineData.name} &bull; ${machineData.description}`,
+					title: machineData.description,
+					href: `/machines/${profileName}/${machineName}`,
+				}];
+
+				current.menu[0].menu = machineData.softwarelists.map((list) => {
+					return {
+						text: list.description,
+						title: list.description,
+						href: `/machines/${profileName}/${machineName}/${list.name}`,
+					};
 				});
 
-				if (softwarelist === undefined)
-					softwarelist = _inputSelect.value;
-
-				_inputSelect.value = softwarelist;
-
-				response = await fetch(`${_baseUrl}/api/software?softwarelist=${softwarelist}&offset=${offset}&search=${search}&favorites_machine=${machineName}`);
-
-				const json = await response.json();
-
-				const results = json.results;
-
-				const resultsTable = renderMachine(machine, results);
-
-				resultsContainer.innerHTML = '';
-				resultsContainer.appendChild(resultsTable);
-
-				let totalPages = Math.ceil(json.total / json.limit);
-				let currentPage = (json.offset / json.limit) + 1;
-				_searchInfo.innerHTML = `page: ${currentPage} / ${totalPages} - total: ${json.total} - viewing: ${json.count}`;
+				current.menu[0].menu.push({
+					text: 'Favorites',
+					title: 'Favorites',
+					href: `/machines/${profileName}/${machineName}/@fav`,
+				});
 
 			}
 
-			_page_back1.href = `${_baseUrl}?machine=${machineName}&softwarelist=${softwarelist}&offset=${offset - limit}&search=${_inputText.value}`;
-			_page_next1.href = `${_baseUrl}?machine=${machineName}&softwarelist=${softwarelist}&offset=${offset + limit}&search=${_inputText.value}`;
-			_page_back2.href = _page_back1.href;
-			_page_next2.href = _page_next1.href;
+			displayMenu();
 
-			response = await fetch(`${_baseUrl}/api/info`);
-			const info = (await response.json());
+			//
+			// Route
+			//
 
-			document.title = `MAME-AO ${info.version} - ${machine.description} - ` + _inputSelect.options[_inputSelect.selectedIndex].text;
+			if (_pathParts.includes('/machines') && _pathParts.length === 3) {
 
-			_heading.innerHTML = document.title;
+				await machines();
+				return;
+			}
 
-			_info.innerHTML = `name: ${machine.name} - description: ${machine.description} - manufacturer: ${machine.manufacturer}`;
+			if (_pathParts.includes('/machines') && _pathParts.length === 5) {
+
+				await machine(machineData);
+				return;
+			}
+
+			switch (_path) {
+
+				case '/saved':
+					await saved();
+					break;
+
+				case '/view-reports':
+					await viewReports();
+					break;
+
+				case '/about':
+					await about();
+					break;
+
+				case '/update':
+					await update();
+					break;
+			}
+
 		}
 
-		const onloadList = async () => {
+		//
+		// About
+		//
+		const about = async () => {
 
-			const columnDefs = [
-				{ heading: 'MAME Version', columnName: 'version' },
-				{ heading: 'MAME Binary Time', columnName: 'binary_time' },
-				{ heading: 'Save Name', columnName: 'sta_name' },
-				{ heading: 'Save Time', columnName: 'sta_time' },
-				{ heading: 'Machine Name', columnName: 'sta_machine' },
-				{ heading: 'Machine Description', columnName: 'sta_description' },
-			];
+			const canvas = getCanvas();
 
-			let response = await fetch(`${_baseUrl}/api/list`);
-
-			const list = await response.json();
+			delete _info.latest;
 
 			const table = document.createElement('table');
+			table.style = 'width:100%;';
 
+			Object.keys(_info).forEach((key) => {
+
+				const row = document.createElement('tr');
+
+				let cell;
+
+				cell = document.createElement('td');
+				cell.innerHTML = key;
+				row.appendChild(cell);
+
+				cell = document.createElement('td');
+				cell.innerHTML = renderHtmlTable(_info[key]);
+				row.appendChild(cell);
+
+				table.appendChild(row);
+
+			});
+
+			canvas.appendChild(table);
+
+			//const debug = document.createElement('div');
+			//debug.innerHTML = renderHtmlTable(_info);
+			//canvas.appendChild(debug);
+		}
+
+		//
+		// Update
+		//
+		const update = async () => {
+
+			const canvas = getCanvas();
+
+			const html = `<p>New MAME-AO update avaialable ${_info.version_name_current} => ${_info.version_name_available}</p>` +
+				`<a href="${_baseUrl}/api/update">Click here to update immediately.</a>`;
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+		}
+
+		//
+		// Machines
+		//
+		const machines = async () => {
+
+			const canvas = getCanvas();
+
+			let parts = _pathParts[2].split('/');
+			const profileKey = parts[parts.length - 1];
+
+			const machinesData = await (await fetch(`${_baseUrl}/api/machines?profile=${profileKey}&offset=${_parameters.offset}&search=${_parameters.search}`)).json();
+
+			const columnDefs = [
+				{ heading: '', columnName: 'ao_image' },
+				{ heading: 'fav', columnName: 'favorite' },
+				{ heading: 'name', columnName: 'name' },
+				{ heading: 'description', columnName: 'description' },
+				{ heading: 'year', columnName: 'year' },
+				{ heading: 'manufacturer', columnName: 'manufacturer' },
+				{ heading: 'roms', columnName: 'ao_rom_count' },
+				{ heading: 'disks', columnName: 'ao_disk_count' },
+				{ heading: 'lists', columnName: 'ao_softwarelist_count' },
+				{ heading: 'romof', columnName: 'romof' },
+				{ heading: 'cloneof', columnName: 'cloneof' },
+				{ heading: 'status', columnName: 'status' },
+				{ heading: 'emulation', columnName: 'emulation' },
+			];
+
+			const table = document.createElement('table');
+			table.style = 'width:100%;';
+
+			// Headings
 			const headRow = document.createElement('tr');
-
 			columnDefs.forEach((colDef) => {
 				const cell = document.createElement('th');
 				cell.innerHTML = colDef.heading;
 				headRow.appendChild(cell);
 			});
-
 			table.appendChild(headRow);
 
-			list.results.forEach((row) => {
+			// Rows
+			machinesData.results.forEach((row, rowIndex) => {
 				const tableRow = document.createElement('tr');
 
 				columnDefs.forEach((colDef) => {
 					const cell = document.createElement('td');
 
 					switch (colDef.columnName) {
-
-						case 'version':
-							cell.innerHTML = `<a onclick="runCommand('.${row.version}')" href="javascript:void(0);">${row.version}</a>`;
-							break;
-
-						default:
-							if (row[colDef.columnName] !== undefined)
-								cell.innerHTML = row[colDef.columnName];
-							break;
-					}
-
-					if (cell.innerHTML === '0')
-						cell.innerHTML = '';
-
-					tableRow.appendChild(cell);
-				});
-
-				table.appendChild(tableRow);
-			});
-
-			resultsContainer.innerHTML = '';
-			resultsContainer.appendChild(table);
-
-			document.title = 'MAME-AO Saved State';
-
-			_heading.innerHTML = document.title;
-		}
-
-		const onloadReports = async () => {
-
-			let response = await fetch(`${_baseUrl}/api/reports`);
-
-			const reportNames = (await response.json()).results;
-
-			const table = document.createElement('table');
-
-			reportNames.forEach((reportName) => {
-
-				const tableRow = document.createElement('tr');
-
-				const cell = document.createElement('td');
-
-				cell.innerHTML = `<a href="${_baseUrl}/api/report?name=${reportName}" target="_blank">${reportName}</a>`;
-
-				tableRow.appendChild(cell);
-
-				table.appendChild(tableRow);
-			});
-
-			resultsContainer.innerHTML = '';
-			resultsContainer.appendChild(table);
-
-			document.title = 'MAME-AO Reports';
-
-			_heading.innerHTML = document.title;
-		}
-
-		const machinesColumnDefs = [
-			{ heading: '', columnName: 'ao_image' },
-			{ heading: 'fav', columnName: 'favorite' },
-			{ heading: 'name', columnName: 'name' },
-			{ heading: 'description', columnName: 'description' },
-			{ heading: 'year', columnName: 'year' },
-			{ heading: 'manufacturer', columnName: 'manufacturer' },
-			{ heading: 'roms', columnName: 'ao_rom_count' },
-			{ heading: 'disks', columnName: 'ao_disk_count' },
-			{ heading: 'lists', columnName: 'ao_softwarelist_count' },
-			{ heading: 'romof', columnName: 'romof' },
-			{ heading: 'cloneof', columnName: 'cloneof' },
-			{ heading: 'status', columnName: 'status' },
-			{ heading: 'emulation', columnName: 'emulation' },
-		];
-
-		const renderMachines = (data) => {
-
-			const table = document.createElement('table');
-
-			const headRow = document.createElement('tr');
-
-			machinesColumnDefs.forEach((colDef) => {
-				const cell = document.createElement('th');
-				cell.innerHTML = colDef.heading;
-				headRow.appendChild(cell);
-			});
-
-			table.appendChild(headRow);
-
-			data.forEach((row, rowIndex) => {
-				const tableRow = document.createElement('tr');
-
-				machinesColumnDefs.forEach((colDef) => {
-					const cell = document.createElement('td');
-
-					switch (colDef.columnName) {
 						case 'ao_image':
 							if (row.ao_softwarelist_count > 0)
-								cell.innerHTML = `<a id="${row.name}" href="./?machine=${row.name}"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
+								cell.innerHTML = `<a id="${row.name}" href="${_baseUrl}/machines/${profileKey}/${row.name}"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
 							else
 								cell.innerHTML = `<a id="${row.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
 							break;
@@ -529,114 +411,40 @@
 				table.appendChild(tableRow);
 			});
 
-			return table;
+			const navHtml = navigateHtml(machinesData);
+
+			let html = '';
+
+			html += `<input id="inputText" type="text" value="${_parameters.search}" style="width:480px;" />`;
+			html += '<button type="submit" onclick="searchButton(); return false;">Search</button>';
+			html += '<hr />';
+			html += `<nav>${navHtml}</nav>`;
+			html += '<div id="results"></div>';
+			html += `<nav>${navHtml}</nav>`;
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+
+			const results = document.getElementById('results');
+
+			results.appendChild(table);
+
+			const inputText = document.getElementById('inputText');
+			inputText.focus();
+
+			//const debug = document.createElement('div');
+			//debug.innerHTML = renderHtmlTable(machinesData);
+			//canvas.appendChild(debug);
 		}
+		const searchButton = async () => {
 
-		const softwareColumnDefs = [
-			{ heading: '', columnName: 'ao_image' },
-			{ heading: 'fav', columnName: 'favorite' },
-			{ heading: 'name', columnName: 'name' },
-			{ heading: 'description', columnName: 'description' },
-			{ heading: 'year', columnName: 'year' },
-			{ heading: 'publisher', columnName: 'publisher' },
-			{ heading: 'supported', columnName: 'supported' },
-		];
+			const inputText = document.getElementById('inputText');
 
-		const renderMachine = (machine, softwares) => {
-
-			const machineName = _parameters['machine'];
-
-			const table = document.createElement('table');
-
-
-
-			const headRow = document.createElement('tr');
-
-			softwareColumnDefs.forEach((colDef) => {
-				const cell = document.createElement('th');
-				cell.innerHTML = colDef.heading;
-				headRow.appendChild(cell);
-			});
-
-			table.appendChild(headRow);
-
-			softwares.forEach((row, rowIndex) => {
-
-				const tableRow = document.createElement('tr');
-
-				let softwarelist = _inputSelect.value;
-				if (softwarelist === '@fav')
-					softwarelist = row.softwarelist_name;
-
-				softwareColumnDefs.forEach((colDef) => {
-					const cell = document.createElement('td');
-
-					switch (colDef.columnName) {
-						case 'ao_image':
-							cell.innerHTML = `<a id="${row.name}" onclick="runSoftwareCommand(this.id)" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
-							break;
-
-						case 'name':
-							cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Software.aspx?list=${softwarelist}&soft=${row.name}" target="_blank">${row.name}</a>`;
-							break;
-
-						case 'favorite':
-							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavoriteSoftware(this.id, '${machineName}', '${softwarelist}')" ${row.favorite ? 'checked' : ''}>`;
-							break;
-
-						default:
-							cell.innerHTML = row[colDef.columnName];
-							break;
-					}
-
-					if (cell.innerHTML === '0')
-						cell.innerHTML = '';
-
-					if (row.favorite === true) {
-						if ((rowIndex % 2) == 0)
-							cell.style.background = '#cccc00';
-						else
-							cell.style.background = '#e6e600';
-					}
-
-					tableRow.appendChild(cell);
-				});
-
-				table.appendChild(tableRow);
-
-			});
-
-			return table;
+			document.location = `${_path}?search=${encodeURIComponent(inputText.value)}`;
+			
 		}
-
-		const runCommand = async (line) => {
-
-			const response = await fetch(`${_baseUrl}/command?line=${line}`);
-
-			const result = await response.text();
-
-			console.log(response.status + ' : ' + result);
-
-			if (response.status !== 200)
-				alert(result);
-		}
-
-		const runSoftwareCommand = async (software) => {
-
-			const machine = _parameters['machine']
-
-			const response = await fetch(`${_baseUrl}/command?line=${machine} ${software}`);
-
-			const result = await response.text();
-
-			console.log(response.status + ' : ' + result);
-
-			if (response.status !== 200)
-				alert(result);
-		}
-
-		const changeFavoriteMachine = async (checkBoxId) =>
-		{
+		const changeFavoriteMachine = async (checkBoxId) => {
 			const checkBox = document.getElementById(checkBoxId);
 
 			const name = checkBoxId.substring(4);
@@ -661,6 +469,114 @@
 						cell.style.background = '#e6e600';
 				}
 			}
+		}
+
+		//
+		// Machine
+		//
+		const machine = async (machineData) => {
+
+			const canvas = getCanvas();
+
+			let parts = _pathParts[4].split('/');
+			const softwarelist = parts[parts.length - 1];
+
+			const softwareData = await (await fetch(`${_baseUrl}/api/software?softwarelist=${softwarelist}&offset=${_parameters.offset}&search=${_parameters.search}&favorites_machine=${machineData.name}`)).json();
+
+			const columnDefs = [
+				{ heading: '', columnName: 'ao_image' },
+				{ heading: 'fav', columnName: 'favorite' },
+				{ heading: 'name', columnName: 'name' },
+				{ heading: 'description', columnName: 'description' },
+				{ heading: 'year', columnName: 'year' },
+				{ heading: 'publisher', columnName: 'publisher' },
+				{ heading: 'supported', columnName: 'supported' },
+			];
+
+			const table = document.createElement('table');
+			table.style = 'width:100%;';
+
+			// Headings
+			const headRow = document.createElement('tr');
+			columnDefs.forEach((colDef) => {
+				const cell = document.createElement('th');
+				cell.innerHTML = colDef.heading;
+				headRow.appendChild(cell);
+			});
+			table.appendChild(headRow);
+
+			// Rows
+			softwareData.results.forEach((row, rowIndex) => {
+
+				const tableRow = document.createElement('tr');
+
+				columnDefs.forEach((colDef) => {
+					const cell = document.createElement('td');
+
+					switch (colDef.columnName) {
+						case 'ao_image':
+							cell.innerHTML = `<a id="${row.name}" onclick="runCommand('${machineData.name} ${row.name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
+							break;
+
+						case 'name':
+							cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Software.aspx?list=${softwarelist}&soft=${row.name}" target="_blank">${row.name}</a>`;
+							break;
+
+						case 'favorite':
+							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavoriteSoftware(this.id, '${machineData.name}', '${softwarelist}')" ${row.favorite ? 'checked' : ''}>`;
+							break;
+
+						default:
+							cell.innerHTML = row[colDef.columnName];
+							break;
+					}
+
+					if (cell.innerHTML === '0')
+						cell.innerHTML = '';
+
+					if (row.favorite === true) {
+						if ((rowIndex % 2) == 0)
+							cell.style.background = '#cccc00';
+						else
+							cell.style.background = '#e6e600';
+					}
+
+					tableRow.appendChild(cell);
+				});
+
+				table.appendChild(tableRow);
+
+			});
+
+			const navHtml = navigateHtml(softwareData);
+
+			let html = '';
+
+			html += `<input id="inputText" type="text" value="${_parameters.search}" style="width:480px;" />`;
+			html += '<button type="submit" onclick="searchButton(); return false;">Search</button>';
+			html += '<hr />';
+			html += `<nav>${navHtml}</nav>`;
+			html += '<div id="results"></div>';
+			html += `<nav>${navHtml}</nav>`;
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+
+			const results = document.getElementById('results');
+
+			results.appendChild(table);
+
+			const inputText = document.getElementById('inputText');
+			inputText.focus();
+
+			//let debug = document.createElement('div');
+			//debug.innerHTML = renderHtmlTable(machineData);
+			//canvas.appendChild(debug);
+
+			//debug = document.createElement('div');
+			//debug.innerHTML = renderHtmlTable(softwareData);
+			//canvas.appendChild(debug);
 		}
 
 		const changeFavoriteSoftware = async (checkBoxId, machineName, listName) => {
@@ -690,9 +606,355 @@
 			}
 		}
 
-		window.onload = onload;
+		const navigateHtml = (data) => {
+
+			const limit = 100;
+
+			const totalPages = Math.ceil(data.total / data.limit);
+			const currentPage = (data.offset / data.limit) + 1;
+
+			return `<a href="${_path}?offset=${_parameters.offset - limit}&search=${encodeURIComponent(_parameters.search)}">PREV</a>` +
+				'&nbsp; - &nbsp;' +
+				`<a href="${_path}?offset=${_parameters.offset + limit}&search=${encodeURIComponent(_parameters.search)}">NEXT</a>` +
+				'&nbsp; - &nbsp;' +
+				`page: ${currentPage} / ${totalPages} - total: ${data.total} - viewing: ${data.count}`;
+		}
+
+		//
+		// Saved state
+		//
+		const saved = async () => {
+
+			const canvas = getCanvas();
+
+			const data = await (await fetch(`${_baseUrl}/api/list`)).json();
+
+			const columnDefs = [
+				{ heading: 'MAME Version', columnName: 'version' },
+				{ heading: 'MAME Binary Time', columnName: 'binary_time' },
+				{ heading: 'Save Name', columnName: 'sta_name' },
+				{ heading: 'Save Time', columnName: 'sta_time' },
+				{ heading: 'Machine Name', columnName: 'sta_machine' },
+				{ heading: 'Machine Description', columnName: 'sta_description' },
+			];
+
+			const table = document.createElement('table');
+			table.style = 'width:100%;';
+
+			// Headings
+			const headRow = document.createElement('tr');
+			columnDefs.forEach((colDef) => {
+				const cell = document.createElement('th');
+				cell.innerHTML = colDef.heading;
+				headRow.appendChild(cell);
+			});
+			table.appendChild(headRow);
+
+
+			// Rows
+			data.results.forEach((row) => {
+				const tableRow = document.createElement('tr');
+
+				columnDefs.forEach((colDef) => {
+					const cell = document.createElement('td');
+
+					switch (colDef.columnName) {
+
+						case 'version':
+							cell.innerHTML = `<a onclick="runCommand('.${row.version}')" href="javascript:void(0);">${row.version}</a>`;
+							break;
+
+						default:
+							if (row[colDef.columnName] !== undefined)
+								cell.innerHTML = row[colDef.columnName];
+							break;
+					}
+
+					if (cell.innerHTML === '0')
+						cell.innerHTML = '';
+
+					tableRow.appendChild(cell);
+				});
+
+				table.appendChild(tableRow);
+			});
+
+
+			canvas.appendChild(table);
+
+			//let debug = document.createElement('div');
+			//debug.innerHTML = renderHtmlTable(data);
+			//canvas.appendChild(debug);
+		}
+
+		//
+		// View Reports
+		//
+		const viewReports = async () => {
+
+			const canvas = getCanvas();
+
+			const data = await (await fetch(`${_baseUrl}/api/reports`)).json();
+
+			const table = document.createElement('table');
+			table.style = 'width:100%;';
+
+			data.results.forEach((reportName) => {
+
+				const tableRow = document.createElement('tr');
+
+				const cell = document.createElement('td');
+
+				cell.innerHTML = `<a href="${_baseUrl}/api/report?name=${reportName}" target="_blank">${reportName}</a>`;
+
+				tableRow.appendChild(cell);
+
+				table.appendChild(tableRow);
+			});
+
+			canvas.appendChild(table);
+
+			//let debug = document.createElement('div');
+			//debug.innerHTML = renderHtmlTable(data);
+			//canvas.appendChild(debug);
+		}
+
+		//
+		// Tools
+		//
+
+		const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+        const getCanvas = () => {
+            const page = document.getElementById('canvas');
+			page.innerHTML = '';
+			return page;
+		}
+
+		const runCommand = async (line) => {
+
+			const response = await fetch(`${_baseUrl}/api/command?line=${encodeURIComponent(line)}`);
+
+			const result = await response.json();
+
+			console.log(result);
+
+			if (response.status !== 200)
+				alert(result.message);
+		}
+
+		const getRequestInfo = () => {
+
+			// URL & paramters
+
+			_baseUrl = window.location.origin;
+
+			_parameters = {};
+
+			if (window.location.href.includes('?')) {
+
+				const parts = window.location.href.split('?')[1].split('&');
+				parts.forEach((part) => {
+					const pair = part.split('=');
+					_parameters[pair[0]] = decodeURIComponent(pair[1]);
+				});
+
+				//console.log(parts);
+			}
+
+			if (_parameters['offset'] === undefined)
+				_parameters['offset'] = 0;
+			else
+				_parameters['offset'] = parseInt(_parameters['offset'], 10);
+
+			if (_parameters['search'] === undefined)
+				_parameters['search'] = '';
+
+			//console.log(`baseUrl: ${_baseUrl}`);
+
+   //         Object.keys(_parameters).forEach((key) => {
+   //             console.log(`parameters : ${key} : ${_parameters[key]}`);
+			//});
+
+			// Path
+
+			_path = document.location.pathname;
+
+			_pathParts = [];
+
+			if (_path === '/') {
+				_pathParts.push('/');
+			} else {
+				_path.split('/').forEach((part) => {
+					if (part !== undefined) {
+						let prev = '';
+						if (_pathParts.length > 1)
+							prev = _pathParts[_pathParts.length - 1];
+
+						_pathParts.push(prev + '/' + part);
+					}
+				});
+			}
+
+			//console.log(`path: ${_path}`);
+
+			//_pathParts.forEach((part, index) => {
+			//	console.log(`pathPart : ${index} : ${part}`);
+			//});
+		}
+
+		const htmlEncode = (html) => html.replace(/[&<>'"]/g,
+			tag => ({
+				'&': '&amp;',
+				'<': '&lt;',
+				'>': '&gt;',
+				"'": '&#39;',
+				'"': '&quot;'
+			}[tag]));
+
+		const renderHtmlTable = (data) => {
+			if (data == null)
+				return 'null';
+
+			if (typeof data !== 'object')
+				return htmlEncode(JSON.stringify(data));
+
+			if (Array.isArray(data) === false) {
+				data = [data];
+			}
+
+			if (data.length === 0)
+				return '[]';
+
+			if (typeof data[0] !== 'object')
+				return htmlEncode(JSON.stringify(data));
+
+			const columnNames = [];
+			data.forEach((row) => {
+				Object.keys(row).forEach(columnName => {
+					if (columnNames.includes(columnName) === false)
+						columnNames.push(columnName);
+				});
+			});
+
+			let table = '';
+
+			table += '<table>';
+			table += '<tr>';
+			columnNames.forEach(columnName => {
+				table += `<th>${columnName}</th>`;
+			});
+			table += '</tr>';
+
+			data.forEach((row) => {
+				table += '<tr>';
+				columnNames.forEach(columnName => {
+					let value = '';
+					if (row[columnName] !== undefined)
+						value = renderHtmlTable(row[columnName]);
+
+					table += `<td>${value}</td>`;
+				});
+				table += '</tr>';
+			});
+
+			table += '</table>';
+
+			return table;
+		};
+
+		//
+		// Menu
+		//
+
+		const displayMenu = () => {
+
+			const versions = `V${_info.version} (${_info.mame_version})`;
+
+			_rootMenu[0].text = `MAME-AO ${versions}`;
+			_rootMenu[0].title = versions;
+
+			displayMenuWalk(_rootMenu);
+
+			if (_currentMenu && _currentMenu.menu && _currentMenu.menu[0].href)
+				document.location = `${_baseUrl}${_currentMenu.menu[0].href}`;
+		}
+
+		const displayMenuWalk = (menu) => {
+
+			const nav = document.getElementById('nav');
+			const heading = document.getElementById('heading');
+
+			const table = document.createElement('table');
+			table.style = "width: 100%;";
+
+			const row = document.createElement('tr');
+
+			let found;
+
+			menu.forEach((item) => {
+				const cell = document.createElement('td');
+
+				let itemClass = 'nav-off';
+
+				if (_pathParts.includes(item.href)) {
+
+					itemClass = 'nav-on';
+					found = item;
+					document.title = `MAME-AO ${item.title}`;
+					heading.innerHTML = `MAME-AO ${item.title}`;
+				}
+
+				if (_path === item.href)
+					_currentMenu = item;
+
+				cell.className = itemClass;
+
+				if (item.style)
+					cell.style = item.style;
+
+				cell.innerHTML = `<a href="${item.href}" title="${item.title}" class="${itemClass}">${item.text}</a>`;
+
+				row.appendChild(cell);
+			});
+
+			table.appendChild(row);
+			nav.appendChild(table);
+
+			if (found && found.menu)
+				displayMenuWalk(found.menu);
+		}
+
+		//
+		// Load
+		//
+
+		window.onload = main;
 
 	</script>
+
+</head>
+<body>
+
+	<div>
+		<a style="float:left;" href="/"><img src="https://mame.spludlow.co.uk/snap/mame-ao-logo.png" /></a>
+		<h1 id="heading"></h1>
+	</div>
+
+	<nav id="nav">
+	</nav>
+
+	<hr />
+
+	<div id="error"></div>
+
+	<form>
+		<div id="canvas">
+			<p>MAME-AO no page here</p>
+		</div>
+	</form>
+
+	<hr />
 
 </body>
 </html>

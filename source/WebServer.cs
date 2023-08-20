@@ -58,6 +58,8 @@ namespace Spludlow.MameAO
 
 					context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
 
+					context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+
 					string path = context.Request.Url.AbsolutePath.ToLower();
 
 					using (StreamWriter writer = new StreamWriter(context.Response.OutputStream, new UTF8Encoding(false)))
@@ -70,76 +72,80 @@ namespace Spludlow.MameAO
 							}
 							else
 							{
-								switch (path)
+								if (path.StartsWith("/api/") == true)
 								{
-									case "/":
-										Root(context, writer);
-										break;
+									switch (path)
+									{
+										case "/api/command":
+											ApiCommand(context, writer);
+											break;
 
-									case "/command":
-										Command(context, writer);
-										break;
+										case "/api/update":
+											ApiUpdate(context, writer);
+											break;
 
-									case "/update":
-										Update(context, writer);
-										break;
+										case "/api/profiles":
+											ApiProfiles(context, writer);
+											break;
 
-									case "/api/profiles":
-										ApiProfiles(context, writer);
-										break;
+										case "/api/machine":
+											ApiMachine(context, writer);
+											break;
 
-									case "/api/machine":
-										ApiMachine(context, writer);
-										break;
+										case "/api/machines":
+											ApiMachines(context, writer);
+											break;
 
-									case "/api/machines":
-										ApiMachines(context, writer);
-										break;
+										case "/api/software":
+											ApiSoftware(context, writer);
+											break;
 
-									case "/api/software":
-										ApiSoftware(context, writer);
-										break;
+										case "/api/info":
+											ApiInfo(context, writer);
+											break;
 
-									case "/api/info":
-										ApiInfo(context, writer);
-										break;
+										case "/api/source_files":
+											ApiListSourceFiles(context, writer);
+											break;
 
-									case "/api/source_files":
-										ApiListSourceFiles(context, writer);
-										break;
+										case "/api/list":
+											ApiList(context, writer);
+											break;
 
-									case "/api/list":
-										ApiList(context, writer);
-										break;
+										case "/api/reports":
+											ApiReports(context, writer);
+											break;
 
-									case "/api/reports":
-										Reports(context, writer);
-										break;
+										case "/api/report":
+											ApiReport(context, writer);
+											break;
 
-									case "/api/report":
-										Report(context, writer);
-										break;
+										default:
+											ApplicationException exception = new ApplicationException($"Not found: {path}");
+											exception.Data.Add("status", 404);
+											throw exception;
+									}
+								}
+								else
+								{
+									switch (path)
+									{
+										case "/favicon.ico":
+											context.Response.Headers["Content-Type"] = "image/x-icon";
+											context.Response.OutputStream.Write(_FavIcon, 0, _FavIcon.Length);
+											break;
 
-									case "/favicon.ico":
-										context.Response.Headers["Content-Type"] = "image/x-icon";
-										context.Response.OutputStream.Write(_FavIcon, 0, _FavIcon.Length);
-										break;
-
-									default:
-										throw new ApplicationException($"404 {path}");
+										default:
+											ServeUI(context, writer);
+											break;
+									}
 								}
 							}
 
 						}
-						catch (ApplicationException e)
-						{
-							writer.WriteLine(e.ToString());
-							context.Response.StatusCode = 400;
-						}
 						catch (Exception e)
 						{
-							writer.WriteLine(e.ToString());
-							context.Response.StatusCode = 500;
+							ErrorResponse(context, writer, e);
 						}
 					}	
 				}
@@ -148,44 +154,71 @@ namespace Spludlow.MameAO
 			listenTask.Start();
 		}
 
-		private void Root(HttpListenerContext context, StreamWriter writer)
+		private void ErrorResponse(HttpListenerContext context, StreamWriter writer, Exception e)
+		{
+			int status = 500;
+
+			if (e is ApplicationException)
+				status = 400;
+
+			if (e.Data["status"] != null)
+				status = (int)e.Data["status"];
+
+			context.Response.StatusCode = status;
+
+			dynamic json = new JObject();
+			
+			json.status = status;
+			json.message = e.Message;
+			json.error = e.ToString();
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+		private void ServeUI(HttpListenerContext context, StreamWriter writer)
 		{
 			string html = File.ReadAllText(@"UI.html", Encoding.UTF8);
 
-			context.Response.Headers["Content-Type"] = "text/html";
+			context.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
 
 			writer.WriteLine(html);
 		}
 
-		private void Command(HttpListenerContext context, StreamWriter writer)
+		private void ApiCommand(HttpListenerContext context, StreamWriter writer)
 		{
 			string line = context.Request.QueryString["line"];
 
 			if (line == null)
 				throw new ApplicationException("No line given.");
 
+			// Special commands
+
 			if (line.StartsWith(".fav") == true)
 			{
 				_AO._Favorites.AddCommandLine(line);
-				return;
+			}
+			else
+			{
+				Console.WriteLine();
+				Tools.ConsoleHeading(1, new string[] {
+					"Remote command recieved",
+					line,
+				});
+				Console.WriteLine();
+
+				bool started = _AO.RunLineTask(line);
+
+				if (started == false)
+					throw new ApplicationException("I'm busy.");
 			}
 
-			Console.WriteLine();
-			Tools.ConsoleHeading(1, new string[] {
-				"Remote command recieved",
-				line,
-			});
-			Console.WriteLine();
-
-			bool started = _AO.RunLineTask(line);
-
-			writer.WriteLine(started == true ? "OK" : "BUSY");
-
-			if (started == false)
-				throw new ApplicationException("I'm busy.");
+			dynamic json = new JObject();
+			json.message = "OK";
+			json.command = line;
+			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		public void Update(HttpListenerContext context, StreamWriter writer)
+		public void ApiUpdate(HttpListenerContext context, StreamWriter writer)
 		{
 			Console.WriteLine();
 			Tools.ConsoleHeading(1, new string[] {
@@ -206,21 +239,27 @@ namespace Spludlow.MameAO
 
 		private void ApiProfiles(HttpListenerContext context, StreamWriter writer)
 		{
-			JArray results = new JArray();
+			dynamic results = new JArray();
 
-			for (int index = 0; index < Database.DataQueryProfiles.Length; ++index)
+			foreach (Database.DataQueryProfile profile in Database.DataQueryProfiles)
 			{
 				dynamic result = new JObject();
-				result.index = index;
-				result.name = Database.DataQueryProfiles[index][0];
-				result.command = Database.DataQueryProfiles[index][1];
+
+				result.key = profile.Key;
+				result.text = profile.Text;
+				result.description = profile.Decription;
+				result.command = profile.CommandText;
+
 				results.Add(result);
 			}
 
 			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = results.Count;
+			json.count = results.Count;
 			json.results = results;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -248,17 +287,13 @@ namespace Spludlow.MameAO
 			if (search.Length == 0)
 				search = null;
 
-			int profileIndex = 0;
-			qs = context.Request.QueryString["profile"];
-			if (qs != null)
-				profileIndex = Int32.Parse(qs);
+			string profile = context.Request.QueryString["profile"];
+			if (profile == null)
+				throw new ApplicationException("profile not passed");
 
-			if (profileIndex < 0 || profileIndex >= Database.DataQueryProfiles.Length)
-				throw new ApplicationException("Bad profile index");
+			Database.DataQueryProfile dataQueryProfile = _AO._Database.GetDataQueryProfile(profile);
 
-			string profileName = Database.DataQueryProfiles[profileIndex][0];
-
-			DataTable table = _AO._Database.QueryMachine(profileIndex, offset, limit, search);
+			DataTable table = _AO._Database.QueryMachine(dataQueryProfile.Key, offset, limit, search);
 
 			JArray results = new JArray();
 
@@ -274,14 +309,13 @@ namespace Spludlow.MameAO
 			}
 
 			dynamic json = new JObject();
-			json.profile = profileName;
+			json.profile = dataQueryProfile.Key;
 			json.offset = offset;
 			json.limit = limit;
 			json.total = table.Rows.Count == 0 ? 0 : (long)table.Rows[0]["ao_total"];
 			json.count = results.Count;
 			json.results = results;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -291,7 +325,7 @@ namespace Spludlow.MameAO
 			string qs;
 
 			string machine = null;
-			qs = context.Request.QueryString["machine"];
+			qs = context.Request.QueryString["name"];
 			if (qs != null)
 				machine = qs;
 
@@ -323,7 +357,6 @@ namespace Spludlow.MameAO
 				json.softwarelists = softwarelists;
 			}
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -387,7 +420,6 @@ namespace Spludlow.MameAO
 			json.count = results.Count;
 			json.results = results;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -423,7 +455,6 @@ namespace Spludlow.MameAO
 
 			json.sources = sources;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -452,7 +483,6 @@ namespace Spludlow.MameAO
 			json.count = files.Count;
 			json.results = files;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
@@ -475,11 +505,10 @@ namespace Spludlow.MameAO
 			json.count = results.Count;
 			json.results = results;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		private void Reports(HttpListenerContext context, StreamWriter writer)
+		private void ApiReports(HttpListenerContext context, StreamWriter writer)
 		{
 			JArray results = new JArray();
 
@@ -493,11 +522,10 @@ namespace Spludlow.MameAO
 			json.count = results.Count;
 			json.results = results;
 
-			context.Response.Headers["Content-Type"] = "application/json";
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		private void Report(HttpListenerContext context, StreamWriter writer)
+		private void ApiReport(HttpListenerContext context, StreamWriter writer)
 		{
 			string name = context.Request.QueryString["name"] ?? throw new ApplicationException("name not passed");
 

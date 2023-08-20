@@ -476,7 +476,7 @@ namespace Spludlow.MameAO
 			Tools.ConsoleHeading(1, new string[] {
 				"Remote Listener ready for commands",
 				_ListenAddress,
-				$"e.g. {_ListenAddress}command?line=a2600 et -window"
+				$"e.g. {_ListenAddress}api/command?line=a2600 et -window"
 
 			});
 			Console.WriteLine("");
