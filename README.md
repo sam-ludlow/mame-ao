@@ -31,8 +31,8 @@ TIP: Run command __.upany__ to self update program, this will stop the microsoft
 
 - After mame-ao has fully started the web UI will apear in the default browser.
 - You can access it at http://localhost:12380/.
-- Just click on image to start the machine. Select machine query profiles using the drop-down.
-- If the machine has software it will be listed, you can change software list using the drop-down, click what you want to run.
+- Just click on image to start the machine. Select machine query profiles using the top menu.
+- If the machine has software it will be listed, you can change software list using the top menu, click what you want to run.
 - Click on the mame-ao console window to see what it's doing, no progress is shown in the UI (TODO).
 
 ## System requirements
@@ -187,7 +187,7 @@ TODO: Add reports for other sources
 ## Internal Workings
 
 ### Overall
-Assets (ROMs & CHDs) are downloaded to a “Hash Store”. Uncompressed individual files are stored with a filename that is the SHA1 of the file. This is completely separate to the MAME rom directories. ZIP files are not used at all.
+Assets (ROMs & CHDs) are downloaded to a "Hash Store". Uncompressed individual files are stored with a filename that is the SHA1 of the file. This is completely separate to the MAME rom directories. ZIP files are not used at all.
 
 Each MAME version is kept completely isolated, when a new version of MAME is used a fresh MAME directory is created. Previous versions are left in place, you can go back to them anytime, let’s say you have some saved state (these often don’t work with different MAME versions).
 
