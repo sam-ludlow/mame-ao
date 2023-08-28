@@ -3,17 +3,102 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
+using System.Reflection;
 using System.Text;
-using System.Web.UI.WebControls;
 
 namespace Spludlow.MameAO
 {
 	public class Reports
 	{
+		public class ReportGroup
+		{
+			public string Key;
+			public string Text;
+			public string Decription;
+		}
+
+		public class ReportType
+		{
+			public string Key;
+			public string Group;
+			public string Code;
+			public string Text;
+			public string Decription;
+		}
+
+		public static ReportGroup[] ReportGroups = new ReportGroup[] {
+			new ReportGroup(){
+				Key = "source-exists",
+				Text = "Source Exists",
+				Decription = "Check that files exist in the archive.org sources.",
+			},
+			new ReportGroup(){
+				Key = "file-size",
+				Text = "File Size",
+				Decription = "Report om ROM & DISK sizes. ",
+			},
+		};
+
+		public static ReportType[] ReportTypes = new ReportType[] {
+			new ReportType(){
+				Key = "machine-rom",
+				Group = "source-exists",
+				Code = "SEMR",
+				Text = "Source Exists - Machine Rom",
+				Decription = "Source Exists - Machine Rom",
+			},
+			new ReportType(){
+				Key = "machine-disk",
+				Group = "source-exists",
+				Code = "SEMD",
+				Text = "Source Exists - Machine Disk",
+				Decription = "Source Exists - Machine Disk",
+			},
+			new ReportType(){
+				Key = "software-rom",
+				Group = "source-exists",
+				Code = "SESR",
+				Text = "Source Exists - Software Rom",
+				Decription = "Source Exists - Software Rom",
+			},
+			new ReportType(){
+				Key = "software-disk",
+				Group = "source-exists",
+				Code = "SESD",
+				Text = "Source Exists - Software Disk",
+				Decription = "Source Exists - Software Disk",
+			},
+
+			new ReportType(){
+				Key = "machine",
+				Group = "file-size",
+				Code = "FSM",
+				Text = "File Size - Machine",
+				Decription = "File Size - Machine",
+			},
+			new ReportType(){
+				Key = "software",
+				Group = "file-size",
+				Code = "FSS",
+				Text = "File Size - Software",
+				Decription = "File Size - Software",
+			},
+		};
+
 		private string _OutputDirectory;
 		public Reports(string outputDirectory)
 		{
 			_OutputDirectory = outputDirectory;
+		}
+
+		public string[] ReportTypeText()
+		{
+			List<string> results = new List<string>();
+
+			foreach (ReportType reportType in ReportTypes)
+				results.Add($"{reportType.Code} - {reportType.Text}");
+
+			return results.ToArray();
 		}
 
 		private static readonly string _HtmlReportStyle =
@@ -183,7 +268,88 @@ namespace Spludlow.MameAO
 			return items.ToArray();
 		}
 
-		public void ReportSourceExistsMachineDisk(Database database)
+		public bool RunReport(string reportCode, Database database)
+		{
+			reportCode = reportCode.ToUpper();
+
+			MethodInfo method = this.GetType().GetMethod($"Report_{reportCode}");
+
+			if (method == null)
+				return false;
+
+			try
+			{
+				method.Invoke(this, new object[] { database });
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine("REPORT ERROR: " + e.ToString());
+				throw;
+			}
+
+			return true;
+		}
+
+
+		public void Report_SEMR(Database database)
+		{
+			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
+
+			DataTable machineTable = Database.ExecuteFill(database._MachineConnection, "SELECT machine_id, name, description, romof, cloneof FROM machine ORDER BY machine.name");
+
+			DataTable table = Tools.MakeDataTable(
+				"Status	Machine	RomOf	CloneOf	Filename	Size	FileSHA1	ModifiedTime",
+				"String	String	String	String	String		Int64	String		DateTime");
+
+			foreach (DataRow machineRow in machineTable.Rows)
+			{
+				string machineName = (string)machineRow["name"];
+				string romof = Tools.DataRowValue(machineRow, "romof");
+				string cloneof = Tools.DataRowValue(machineRow, "cloneof");
+
+				DataRow row = table.Rows.Add("", machineName, romof, cloneof);
+
+				if (soureSet.AvailableDownloadFileInfos.ContainsKey(machineName) == true)
+				{
+					Sources.SourceFileInfo sourceFile = soureSet.AvailableDownloadFileInfos[machineName];
+
+					row["Filename"] = sourceFile.name;
+					row["Size"] = sourceFile.size;
+					row["FileSHA1"] = sourceFile.sha1;
+					row["ModifiedTime"] = sourceFile.mtime;
+				}
+				else
+				{
+					row["Status"] = "MISSING";
+				}
+			}
+
+			DataSet dataSet = new DataSet();
+
+			DataView view;
+			DataTable viewTable;
+
+			//view = new DataView(table);
+			//view.RowFilter = $"Status = 'MISSING'";
+			//viewTable = table.Clone();
+			//foreach (DataRowView rowView in view)
+			//	viewTable.ImportRow(rowView.Row);
+			//viewTable.TableName = "Missing in Source";
+			//dataSet.Tables.Add(viewTable);
+
+			view = new DataView(table);
+			view.RowFilter = $"Status = ''";
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "Available in Source";
+			dataSet.Tables.Add(viewTable);
+
+
+			this.SaveHtmlReport(dataSet, "Source Exists Machine Rom");
+		}
+
+		public void Report_SEMD(Database database)
 		{
 			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
 
@@ -248,43 +414,14 @@ namespace Spludlow.MameAO
 			dataSet.Tables.Add(viewTable);
 
 			this.SaveHtmlReport(dataSet, "Source Exists Machine Disk");
-
 		}
 
 
-		public void ReportSourceExistsMachineRom(Database database)
-		{
-			DataTable table = Tools.MakeDataTable(
-				"Status",
-				"String");
 
-			table.Rows.Add("TODO");
 
-			table.TableName = "The report is coming soon";
 
-			DataSet dataSet = new DataSet();
-			dataSet.Tables.Add(table);
 
-			this.SaveHtmlReport(dataSet, "Source Exists Machine Rom");
-		}
-
-		public void ReportSourceExistsSoftwareDisk(Database database)
-		{
-			DataTable table = Tools.MakeDataTable(
-				"Status",
-				"String");
-
-			table.Rows.Add("TODO");
-
-			table.TableName = "The report is coming soon";
-
-			DataSet dataSet = new DataSet();
-			dataSet.Tables.Add(table);
-
-			this.SaveHtmlReport(dataSet, "Source Exists Software Disk");
-		}
-
-		public void ReportSourceExistsSoftwareRom(Database database)
+		public void Report_SESR(Database database)
 		{
 			DataTable table = Tools.MakeDataTable(
 				"Status",
@@ -298,6 +435,22 @@ namespace Spludlow.MameAO
 			dataSet.Tables.Add(table);
 
 			this.SaveHtmlReport(dataSet, "Source Exists Software Rom");
+		}
+
+		public void Report_SESD(Database database)
+		{
+			DataTable table = Tools.MakeDataTable(
+				"Status",
+				"String");
+
+			table.Rows.Add("TODO");
+
+			table.TableName = "The report is coming soon";
+
+			DataSet dataSet = new DataSet();
+			dataSet.Tables.Add(table);
+
+			this.SaveHtmlReport(dataSet, "Source Exists Software Disk");
 		}
 
 

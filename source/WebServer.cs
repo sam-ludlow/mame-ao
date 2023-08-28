@@ -120,6 +120,14 @@ namespace Spludlow.MameAO
 											ApiReport(context, writer);
 											break;
 
+										case "/api/report-groups":
+											ApiReportGroups(context, writer);
+											break;
+
+										case "/api/report-types":
+											ApiReportTypes(context, writer);
+											break;
+
 										default:
 											ApplicationException exception = new ApplicationException($"Not found: {path}");
 											exception.Data.Add("status", 404);
@@ -534,6 +542,63 @@ namespace Spludlow.MameAO
 			context.Response.Headers["Content-Type"] = "text/html";
 
 			writer.WriteLine(html);
+		}
+
+		private void ApiReportGroups(HttpListenerContext context, StreamWriter writer)
+		{
+			JArray results = new JArray();
+
+			foreach (Reports.ReportGroup reportGroup in Reports.ReportGroups)
+			{
+				dynamic group = new JObject();
+
+				group.key = reportGroup.Key;
+				group.text = reportGroup.Text;
+				group.description = reportGroup.Decription;
+
+				results.Add(group);
+			}
+
+			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = results.Count;
+			json.count = results.Count;
+			json.results = results;
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+		private void ApiReportTypes(HttpListenerContext context, StreamWriter writer)
+		{
+			string groupFilter = context.Request.QueryString["group"];
+
+			JArray results = new JArray();
+
+			foreach (Reports.ReportType reportType in Reports.ReportTypes)
+			{
+				if (groupFilter != null && groupFilter != reportType.Group)
+					continue;
+
+				dynamic type = new JObject();
+
+				type.key = reportType.Key;
+				type.group = reportType.Group;
+				type.code = reportType.Code;
+				type.text = reportType.Text;
+				type.description = reportType.Decription;
+
+				results.Add(type);
+			}
+
+			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = results.Count;
+			json.count = results.Count;
+			json.results = results;
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
 		private dynamic RowToJson(DataRow row)

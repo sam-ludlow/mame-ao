@@ -649,31 +649,12 @@ namespace Spludlow.MameAO
 
 					case ".report":
 						if (parts.Length != 2)
-							throw new ApplicationException($"Usage: {parts[0]} <Report Name>" + Environment.NewLine +
-								"    SEMR - Source Exists Machine ROM (TODO)" + Environment.NewLine +
-								"    SEMD - Source Exists Machine Disk" + Environment.NewLine +
-								"    SESR - Source Exists Software ROM (TODO)" + Environment.NewLine +
-								"    SESD - Source Exists Software Disk (TODO)" + Environment.NewLine
+							throw new ApplicationException($"Usage: {parts[0]} <Report Code>" + Environment.NewLine +
+								String.Join(Environment.NewLine, _Reports.ReportTypeText()) + Environment.NewLine
 								);
 
-						switch (parts[1].ToUpper())
-						{
-							case "SEMD":
-								_Reports.ReportSourceExistsMachineDisk(_Database);
-								break;
-							case "SEMR":
-								_Reports.ReportSourceExistsMachineRom(_Database);
-								break;
-							case "SESD":
-								_Reports.ReportSourceExistsSoftwareDisk(_Database);
-								break;
-							case "SESR":
-								_Reports.ReportSourceExistsSoftwareRom(_Database);
-								break;
-
-							default:
-								throw new ApplicationException("Report Unknown type.");
-						}
+						if (_Reports.RunReport(parts[1], _Database) == false)
+							throw new ApplicationException("Report Unknown type.");
 						return;
 
 					default:
