@@ -198,71 +198,78 @@ namespace Spludlow.MameAO
 			{
 				Tools.ConsoleHeading(2, $"Prepare source: {setType}");
 
-				string setTypeName = setType.ToString();
-
-				foreach (Sources.MameSourceSet sourceSet in Sources.GetSourceSets(setType))
+				try
 				{
-					string metadataFilename = Path.Combine(metaDataDirectory, $"{setTypeName}_{Path.GetFileName(sourceSet.MetadataUrl)}.json");
+					string setTypeName = setType.ToString();
 
-					dynamic metadata = GetArchiveOrgMeteData(setTypeName, sourceSet.MetadataUrl, metadataFilename);
-
-					string title = metadata.metadata.title;
-					string version = "";
-
-					switch (setType)
+					foreach (Sources.MameSourceSet sourceSet in Sources.GetSourceSets(setType))
 					{
-						case Sources.MameSetType.MachineRom:
-							version = title.Substring(5, 5);
+						string metadataFilename = Path.Combine(metaDataDirectory, $"{setTypeName}_{Path.GetFileName(sourceSet.MetadataUrl)}.json");
 
-							sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-merged/", metadata);
-							break;
+						dynamic metadata = GetArchiveOrgMeteData(setTypeName, sourceSet.MetadataUrl, metadataFilename);
 
-						case Sources.MameSetType.MachineDisk:
-							version = title.Substring(5, 5);
+						string title = metadata.metadata.title;
+						string version = "";
 
-							sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
-							break;
-
-						case Sources.MameSetType.SoftwareRom:
-							version = title.Substring(8, 5);
-
-							sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-sl/", metadata);
-							break;
-
-						case Sources.MameSetType.SoftwareDisk:
-							version = title;
-
-							sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
-							break;
-					}
-
-					version = version.Replace(".", "").Trim();
-
-					sourceSet.Version = version;
-
-					Console.WriteLine($"Title:\t{title}");
-					Console.WriteLine($"Version:\t{version}");
-
-					if (setType == Sources.MameSetType.MachineRom)
-					{
-						_Version = version;
-
-						_VersionDirectory = Path.Combine(_RootDirectory, _Version);
-
-						if (Directory.Exists(_VersionDirectory) == false)
+						switch (setType)
 						{
-							Console.WriteLine($"New MAME version: {_Version}");
-							Directory.CreateDirectory(_VersionDirectory);
+							case Sources.MameSetType.MachineRom:
+								version = title.Substring(5, 5);
+
+								sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-merged/", metadata);
+								break;
+
+							case Sources.MameSetType.MachineDisk:
+								version = title.Substring(5, 5);
+
+								sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
+								break;
+
+							case Sources.MameSetType.SoftwareRom:
+								version = title.Substring(8, 5);
+
+								sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-sl/", metadata);
+								break;
+
+							case Sources.MameSetType.SoftwareDisk:
+								version = title;
+
+								sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
+								break;
+						}
+
+						version = version.Replace(".", "").Trim();
+
+						sourceSet.Version = version;
+
+						Console.WriteLine($"Title:\t{title}");
+						Console.WriteLine($"Version:\t{version}");
+
+						if (setType == Sources.MameSetType.MachineRom)
+						{
+							_Version = version;
+
+							_VersionDirectory = Path.Combine(_RootDirectory, _Version);
+
+							if (Directory.Exists(_VersionDirectory) == false)
+							{
+								Console.WriteLine($"New MAME version: {_Version}");
+								Directory.CreateDirectory(_VersionDirectory);
+							}
+						}
+						else
+						{
+							if (setType != Sources.MameSetType.SoftwareDisk)    //	Source not kept up to date, like others (pot luck)
+							{
+								if (_Version != version)
+									Console.WriteLine($"!!! {setType} on archive.org version mismatch, expected:{_Version} got:{version}. You may have problems.");
+							}
 						}
 					}
-					else
-					{
-						if (setType != Sources.MameSetType.SoftwareDisk)    //	Source not kept up to date, like others (pot luck)
-						{
-							if (_Version != version)
-								Console.WriteLine($"!!! {setType} on archive.org version mismatch, expected:{_Version} got:{version}. You may have problems.");
-						}
-					}
+				}
+				catch (Exception ee)
+				{
+					ReportError(ee, $"Error in source, you will have problems downloading new things from {setType}.", false);
 				}
 			}
 

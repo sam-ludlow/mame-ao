@@ -40,7 +40,7 @@ namespace Spludlow.MameAO
 			public string MetadataUrl;
 			public string DownloadUrl;
 			public string HtmlSizesUrl;
-			public Dictionary<string, SourceFileInfo> AvailableDownloadFileInfos;
+			public Dictionary<string, SourceFileInfo> AvailableDownloadFileInfos = new Dictionary<string, SourceFileInfo>();
 			public string Version;
 		}
 
@@ -55,8 +55,8 @@ namespace Spludlow.MameAO
 			new MameSourceSet
 			{
 				SetType = MameSetType.MachineDisk,
-				MetadataUrl = "https://archive.org/metadata/MAME_0.225_CHDs_merged",
-				DownloadUrl = "https://archive.org/download/MAME_0.225_CHDs_merged/@MACHINE@/@DISK@.chd",
+				MetadataUrl = "https://archive.org/metadata/mame-chds-roms-extras-complete",
+				DownloadUrl = "https://archive.org/download/mame-chds-roms-extras-complete/@MACHINE@/@DISK@.chd",
 				HtmlSizesUrl = null,
 			},
 			new MameSourceSet

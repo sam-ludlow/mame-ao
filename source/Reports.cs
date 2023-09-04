@@ -32,21 +32,21 @@ namespace Spludlow.MameAO
 				Text = "Source Exists",
 				Decription = "Check that files exist in the archive.org sources.",
 			},
-			new ReportGroup(){
-				Key = "file-size",
-				Text = "File Size",
-				Decription = "Report om ROM & DISK sizes. ",
-			},
+			//new ReportGroup(){
+			//	Key = "file-size",
+			//	Text = "File Size",
+			//	Decription = "Report om ROM & DISK sizes. ",
+			//},
 		};
 
 		public static ReportType[] ReportTypes = new ReportType[] {
-			new ReportType(){
-				Key = "machine-rom",
-				Group = "source-exists",
-				Code = "SEMR",
-				Text = "Source Exists - Machine Rom",
-				Decription = "Source Exists - Machine Rom",
-			},
+			//new ReportType(){
+			//	Key = "machine-rom",
+			//	Group = "source-exists",
+			//	Code = "SEMR",
+			//	Text = "Source Exists - Machine Rom",
+			//	Decription = "Source Exists - Machine Rom",
+			//},
 			new ReportType(){
 				Key = "machine-disk",
 				Group = "source-exists",
@@ -54,35 +54,35 @@ namespace Spludlow.MameAO
 				Text = "Source Exists - Machine Disk",
 				Decription = "Source Exists - Machine Disk",
 			},
-			new ReportType(){
-				Key = "software-rom",
-				Group = "source-exists",
-				Code = "SESR",
-				Text = "Source Exists - Software Rom",
-				Decription = "Source Exists - Software Rom",
-			},
-			new ReportType(){
-				Key = "software-disk",
-				Group = "source-exists",
-				Code = "SESD",
-				Text = "Source Exists - Software Disk",
-				Decription = "Source Exists - Software Disk",
-			},
+			//new ReportType(){
+			//	Key = "software-rom",
+			//	Group = "source-exists",
+			//	Code = "SESR",
+			//	Text = "Source Exists - Software Rom",
+			//	Decription = "Source Exists - Software Rom",
+			//},
+			//new ReportType(){
+			//	Key = "software-disk",
+			//	Group = "source-exists",
+			//	Code = "SESD",
+			//	Text = "Source Exists - Software Disk",
+			//	Decription = "Source Exists - Software Disk",
+			//},
 
-			new ReportType(){
-				Key = "machine",
-				Group = "file-size",
-				Code = "FSM",
-				Text = "File Size - Machine",
-				Decription = "File Size - Machine",
-			},
-			new ReportType(){
-				Key = "software",
-				Group = "file-size",
-				Code = "FSS",
-				Text = "File Size - Software",
-				Decription = "File Size - Software",
-			},
+			//new ReportType(){
+			//	Key = "machine",
+			//	Group = "file-size",
+			//	Code = "FSM",
+			//	Text = "File Size - Machine",
+			//	Decription = "File Size - Machine",
+			//},
+			//new ReportType(){
+			//	Key = "software",
+			//	Group = "file-size",
+			//	Code = "FSS",
+			//	Text = "File Size - Software",
+			//	Decription = "File Size - Software",
+			//},
 		};
 
 		private string _OutputDirectory;
