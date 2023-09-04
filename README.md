@@ -8,6 +8,8 @@ Built in web UI just click image and wait.
 
 You can also use the command line just enter machine / software short name.
 
+__!!! Serious issue 2023-09-04 some of the sources are no longer working on archive.org fix coming soon !!!__
+
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/mame-ao-ui.png)
 
 ## Installation & Usage
