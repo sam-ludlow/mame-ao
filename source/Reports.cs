@@ -30,7 +30,7 @@ namespace Spludlow.MameAO
 			new ReportGroup(){
 				Key = "source-exists",
 				Text = "Source Exists",
-				Decription = "Check that files exist in the archive.org sources.",
+				Decription = "Check that files exist in the archive.org source metadata. No tests are performed to check if ROMs or CHDs are valid.",
 			},
 			//new ReportGroup(){
 			//	Key = "file-size",
@@ -40,19 +40,19 @@ namespace Spludlow.MameAO
 		};
 
 		public static ReportType[] ReportTypes = new ReportType[] {
-			//new ReportType(){
-			//	Key = "machine-rom",
-			//	Group = "source-exists",
-			//	Code = "SEMR",
-			//	Text = "Source Exists - Machine Rom",
-			//	Decription = "Source Exists - Machine Rom",
-			//},
+			new ReportType(){
+				Key = "machine-rom",
+				Group = "source-exists",
+				Code = "SEMR",
+				Text = "Source Exists - Machine Rom",
+				Decription = "Check that the file exists for all parent machines with ROMs.",
+			},
 			new ReportType(){
 				Key = "machine-disk",
 				Group = "source-exists",
 				Code = "SEMD",
 				Text = "Source Exists - Machine Disk",
-				Decription = "Source Exists - Machine Disk",
+				Decription = "Check that all machine disks exist, including child machines.",
 			},
 			//new ReportType(){
 			//	Key = "software-rom",
@@ -295,19 +295,19 @@ namespace Spludlow.MameAO
 		{
 			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
 
-			DataTable machineTable = Database.ExecuteFill(database._MachineConnection, "SELECT machine_id, name, description, romof, cloneof FROM machine ORDER BY machine.name");
+			DataTable machineTable = Database.ExecuteFill(database._MachineConnection,
+				"SELECT machine_id, name, description, ao_rom_count FROM machine WHERE (ao_rom_count > 0 AND romof IS NULL) ORDER BY machine.name");
 
 			DataTable table = Tools.MakeDataTable(
-				"Status	Machine	RomOf	CloneOf	Filename	Size	FileSHA1	ModifiedTime",
-				"String	String	String	String	String		Int64	String		DateTime");
+				"Status	Machine	RomCount	Filename	Size	FileSHA1	ModifiedTime",
+				"String	String	Int64		String		Int64	String		DateTime");
 
 			foreach (DataRow machineRow in machineTable.Rows)
 			{
 				string machineName = (string)machineRow["name"];
-				string romof = Tools.DataRowValue(machineRow, "romof");
-				string cloneof = Tools.DataRowValue(machineRow, "cloneof");
+				long romCount = (long)machineRow["ao_rom_count"];
 
-				DataRow row = table.Rows.Add("", machineName, romof, cloneof);
+				DataRow row = table.Rows.Add("", machineName, romCount);
 
 				if (soureSet.AvailableDownloadFileInfos.ContainsKey(machineName) == true)
 				{
@@ -329,13 +329,13 @@ namespace Spludlow.MameAO
 			DataView view;
 			DataTable viewTable;
 
-			//view = new DataView(table);
-			//view.RowFilter = $"Status = 'MISSING'";
-			//viewTable = table.Clone();
-			//foreach (DataRowView rowView in view)
-			//	viewTable.ImportRow(rowView.Row);
-			//viewTable.TableName = "Missing in Source";
-			//dataSet.Tables.Add(viewTable);
+			view = new DataView(table);
+			view.RowFilter = $"Status = 'MISSING'";
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "Missing in Source";
+			dataSet.Tables.Add(viewTable);
 
 			view = new DataView(table);
 			view.RowFilter = $"Status = ''";
@@ -423,6 +423,8 @@ namespace Spludlow.MameAO
 
 		public void Report_SESR(Database database)
 		{
+
+			string commandText = "SELECT softwarelist.name, softwarelist.description, Count(rom.rom_Id) AS CountOfrom_Id\r\nFROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id) INNER JOIN part ON software.software_Id = part.software_Id) INNER JOIN dataarea ON part.part_Id = dataarea.part_Id) INNER JOIN rom ON dataarea.dataarea_Id = rom.dataarea_Id\r\nGROUP BY softwarelist.name, softwarelist.description\r\nORDER BY softwarelist.name;\r\n";
 			DataTable table = Tools.MakeDataTable(
 				"Status",
 				"String");

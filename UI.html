@@ -683,7 +683,7 @@
 			const group = reportGroups.results.filter((item) => item.key === groupKey)[0];
 			const report = reportData.results.filter((item) => item.key === reportKey)[0];
 
-			const html = `<p>${group.description}</p><hr/><p>${report.description}</p><hr/>` +
+			const html = `<p>GROUP: ${group.description}</p><hr/><p>REPORT: ${report.description}</p><hr/>` +
 				`<button type="submit" onclick="runCommand('.report ${report.code}'); return false;">Run Report</button> Will open in new browser when finished.`;
 
 			const div = document.createElement('div');
