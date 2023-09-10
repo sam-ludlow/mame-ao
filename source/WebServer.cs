@@ -521,7 +521,27 @@ namespace Spludlow.MameAO
 			JArray results = new JArray();
 
 			foreach (string reportName in _AO._Reports.ListReports())
-				results.Add(reportName);
+			{
+				dynamic result = new JObject();
+
+				result.name = reportName;
+
+				int index = reportName.IndexOf("_");
+
+				if (index != -1)
+				{
+					StringBuilder dateText = new StringBuilder(reportName.Substring(0, index));
+
+					dateText[13] = ':';
+					dateText[16] = ':';
+
+					result.date = DateTime.Parse(dateText.ToString());
+					result.description = reportName.Substring(index + 1);
+
+					results.Add(result);
+				}
+
+			}
 
 			dynamic json = new JObject();
 			json.offset = 0;

@@ -267,10 +267,7 @@
 						};
 					});
 				}
-
-
 			}
-
 
 
 			displayMenu();
@@ -349,10 +346,6 @@
 			});
 
 			canvas.appendChild(table);
-
-			//const debug = document.createElement('div');
-			//debug.innerHTML = renderHtmlTable(_info);
-			//canvas.appendChild(debug);
 		}
 
 		//
@@ -478,10 +471,6 @@
 
 			const inputText = document.getElementById('inputText');
 			inputText.focus();
-
-			//const debug = document.createElement('div');
-			//debug.innerHTML = renderHtmlTable(machinesData);
-			//canvas.appendChild(debug);
 		}
 		const searchButton = async () => {
 
@@ -615,14 +604,6 @@
 
 			const inputText = document.getElementById('inputText');
 			inputText.focus();
-
-			//let debug = document.createElement('div');
-			//debug.innerHTML = renderHtmlTable(machineData);
-			//canvas.appendChild(debug);
-
-			//debug = document.createElement('div');
-			//debug.innerHTML = renderHtmlTable(softwareData);
-			//canvas.appendChild(debug);
 		}
 
 		const changeFavoriteSoftware = async (checkBoxId, machineName, listName) => {
@@ -689,14 +670,6 @@
 			const div = document.createElement('div');
 			div.innerHTML = html;
 			canvas.appendChild(div);
-
-			//let debug = document.createElement('div');
-			//debug.innerHTML = renderHtmlTable(group);
-			//canvas.appendChild(debug);
-
-			//debug = document.createElement('div');
-			//debug.innerHTML = renderHtmlTable(report);
-			//canvas.appendChild(debug);
 		};
 
 		//
@@ -758,12 +731,7 @@
 				table.appendChild(tableRow);
 			});
 
-
 			canvas.appendChild(table);
-
-			//let debug = document.createElement('div');
-			//debug.innerHTML = renderHtmlTable(data);
-			//canvas.appendChild(debug);
 		}
 
 		//
@@ -778,24 +746,38 @@
 			const table = document.createElement('table');
 			table.style = 'width:100%;';
 
-			data.results.forEach((reportName) => {
+			// Headings
+			const headRow = document.createElement('tr');
+			let cell;
+
+			cell = document.createElement('th');
+			cell.innerHTML = 'Report Date';
+			headRow.appendChild(cell);
+
+			cell = document.createElement('th');
+			cell.innerHTML = 'Report Description';
+			headRow.appendChild(cell);
+
+			table.appendChild(headRow);
+
+			data.results.forEach((report) => {
 
 				const tableRow = document.createElement('tr');
 
-				const cell = document.createElement('td');
+				let cell;
+				
+				cell = document.createElement('td');
+				cell.innerHTML = `<a href="${_baseUrl}/api/report?name=${encodeURIComponent(report.name)}" target="_blank">${report.date}</a>`;
+				tableRow.appendChild(cell);
 
-				cell.innerHTML = `<a href="${_baseUrl}/api/report?name=${reportName}" target="_blank">${reportName}</a>`;
-
+				cell = document.createElement('td');
+				cell.innerHTML = `${report.description}`;
 				tableRow.appendChild(cell);
 
 				table.appendChild(tableRow);
 			});
 
 			canvas.appendChild(table);
-
-			//let debug = document.createElement('div');
-			//debug.innerHTML = renderHtmlTable(data);
-			//canvas.appendChild(debug);
 		}
 
 		//
@@ -824,8 +806,6 @@
 
 		const getRequestInfo = () => {
 
-			// URL & paramters
-
 			_baseUrl = window.location.origin;
 
 			_parameters = {};
@@ -837,8 +817,6 @@
 					const pair = part.split('=');
 					_parameters[pair[0]] = decodeURIComponent(pair[1]);
 				});
-
-				//console.log(parts);
 			}
 
 			if (_parameters['offset'] === undefined)
@@ -848,14 +826,6 @@
 
 			if (_parameters['search'] === undefined)
 				_parameters['search'] = '';
-
-			//console.log(`baseUrl: ${_baseUrl}`);
-
-   //         Object.keys(_parameters).forEach((key) => {
-   //             console.log(`parameters : ${key} : ${_parameters[key]}`);
-			//});
-
-			// Path
 
 			_path = document.location.pathname;
 
@@ -874,12 +844,6 @@
 					}
 				});
 			}
-
-			//console.log(`path: ${_path}`);
-
-			//_pathParts.forEach((part, index) => {
-			//	console.log(`pathPart : ${index} : ${part}`);
-			//});
 		}
 
 		const htmlEncode = (html) => html.replace(/[&<>'"]/g,

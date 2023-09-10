@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Reflection;
 using System.Text;
 
@@ -30,7 +31,7 @@ namespace Spludlow.MameAO
 			new ReportGroup(){
 				Key = "source-exists",
 				Text = "Source Exists",
-				Decription = "Check that files exist in the archive.org source metadata. No tests are performed to check if ROMs or CHDs are valid.",
+				Decription = "Check that files exist in the archive.org source metadata. Tests are NOT performed to check if ZIPs, ROMs, or CHDs are valid.",
 			},
 			//new ReportGroup(){
 			//	Key = "file-size",
@@ -44,30 +45,30 @@ namespace Spludlow.MameAO
 				Key = "machine-rom",
 				Group = "source-exists",
 				Code = "SEMR",
-				Text = "Source Exists - Machine Rom",
+				Text = "Machine Rom",
 				Decription = "Check that the file exists for all parent machines with ROMs.",
 			},
 			new ReportType(){
 				Key = "machine-disk",
 				Group = "source-exists",
 				Code = "SEMD",
-				Text = "Source Exists - Machine Disk",
+				Text = "Machine Disk",
 				Decription = "Check that all machine disks exist, including child machines.",
 			},
-			//new ReportType(){
-			//	Key = "software-rom",
-			//	Group = "source-exists",
-			//	Code = "SESR",
-			//	Text = "Source Exists - Software Rom",
-			//	Decription = "Source Exists - Software Rom",
-			//},
-			//new ReportType(){
-			//	Key = "software-disk",
-			//	Group = "source-exists",
-			//	Code = "SESD",
-			//	Text = "Source Exists - Software Disk",
-			//	Decription = "Source Exists - Software Disk",
-			//},
+			new ReportType(){
+				Key = "software-rom",
+				Group = "source-exists",
+				Code = "SESR",
+				Text = "Software Rom",
+				Decription = "Check that all software lists exist.",
+			},
+			new ReportType(){
+				Key = "software-disk",
+				Group = "source-exists",
+				Code = "SESD",
+				Text = "Software Disk",
+				Decription = "Check that all software disks exist, multiple sources are checked if avaialable.",
+			},
 
 			//new ReportType(){
 			//	Key = "machine",
@@ -416,22 +417,43 @@ namespace Spludlow.MameAO
 			this.SaveHtmlReport(dataSet, "Source Exists Machine Disk");
 		}
 
-
-
-
-
-
 		public void Report_SESR(Database database)
 		{
+			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.SoftwareRom)[0];
 
-			string commandText = "SELECT softwarelist.name, softwarelist.description, Count(rom.rom_Id) AS CountOfrom_Id\r\nFROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id) INNER JOIN part ON software.software_Id = part.software_Id) INNER JOIN dataarea ON part.part_Id = dataarea.part_Id) INNER JOIN rom ON dataarea.dataarea_Id = rom.dataarea_Id\r\nGROUP BY softwarelist.name, softwarelist.description\r\nORDER BY softwarelist.name;\r\n";
+			DataTable softwareListTable = Database.ExecuteFill(database._SoftwareConnection,
+				"SELECT softwarelist.name, softwarelist.description, Count(rom.rom_Id) AS rom_count " +
+				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id " +
+				"GROUP BY softwarelist.name, softwarelist.description ORDER BY softwarelist.name");
+			
 			DataTable table = Tools.MakeDataTable(
-				"Status",
-				"String");
+				"Status	Name	Description	RomCount	Filename	Size	FileSHA1	ModifiedTime",
+				"String	String	String		Int64		String		Int64	String		DateTime");
 
-			table.Rows.Add("TODO");
+			foreach (DataRow softwareListRow in softwareListTable.Rows)
+			{
+				string name = (string)softwareListRow["Name"];
+				string description = (string)softwareListRow["Description"];
+				long romCount = (long)softwareListRow["rom_count"];
 
-			table.TableName = "The report is coming soon";
+				DataRow row = table.Rows.Add("", name, description, romCount);
+
+				Sources.SourceFileInfo sourceFile = soureSet.AvailableDownloadFileInfos[name];
+
+				if (sourceFile != null)
+				{
+					row["Filename"] = sourceFile.name;
+					row["Size"] = sourceFile.size;
+					row["FileSHA1"] = sourceFile.sha1;
+					row["ModifiedTime"] = sourceFile.mtime;
+				}
+				else
+				{
+					row["Status"] = "MISSING";
+				}
+			}
+
+			table.TableName = "All Software Lists";
 
 			DataSet dataSet = new DataSet();
 			dataSet.Tables.Add(table);
@@ -441,16 +463,77 @@ namespace Spludlow.MameAO
 
 		public void Report_SESD(Database database)
 		{
+			Sources.MameSourceSet[] soureSets = Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk);
+
+			DataTable softwareDiskTable = Database.ExecuteFill(database._SoftwareConnection,
+				"SELECT softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description, software.name AS software_name, software.description AS software_description, disk.name, disk.sha1, disk.status " +
+				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
+				"WHERE (disk.sha1 IS NOT NULL) ORDER BY softwarelist.name, software.name, disk.name");
+
 			DataTable table = Tools.MakeDataTable(
-				"Status",
-				"String");
+				"Status	Sources	SoftwareListName	SoftwareName	DiskName	SHA1	DiskStatus	Size	ModifiedTime",
+				"String	String	String				String			String		String	String		Int64	DateTime");
 
-			table.Rows.Add("TODO");
+			foreach (DataRow softwareDiskRow in softwareDiskTable.Rows)
+			{
+				string softwarelist_name = (string)softwareDiskRow["softwarelist_name"];
+				string software_name = (string)softwareDiskRow["software_name"];
+				string name = (string)softwareDiskRow["name"];
+				string sha1 = (string)softwareDiskRow["sha1"];
+				string status = (string)softwareDiskRow["status"];
 
-			table.TableName = "The report is coming soon";
+				DataRow row = table.Rows.Add("", "", softwarelist_name, software_name, name, sha1, status);
+
+				List<Sources.MameSourceSet> foundSourceSets = new List<Sources.MameSourceSet>();
+				List<Sources.SourceFileInfo> foundFileInfos = new List<Sources.SourceFileInfo>();
+
+				foreach (Sources.MameSourceSet sourceSet in soureSets)
+				{
+					string key = $"{softwarelist_name}/{software_name}/{name}";
+
+					if (sourceSet.ListName != null && sourceSet.ListName != "*")
+						key = $"{software_name}/{name}";
+
+					if (sourceSet.AvailableDownloadFileInfos.ContainsKey(key) == true)
+					{
+						foundSourceSets.Add(sourceSet);
+						foundFileInfos.Add(sourceSet.AvailableDownloadFileInfos[key]);
+					}
+				}
+
+				if (foundSourceSets.Count > 0)
+				{
+					row["Sources"] = String.Join(", ", foundSourceSets.Select(set => set.ListName).ToArray());
+
+					row["Size"] = foundFileInfos[0].size;
+					row["ModifiedTime"] = foundFileInfos[0].mtime;
+				}
+				else
+				{
+					row["Status"] = "MISSING";
+				}
+			}
 
 			DataSet dataSet = new DataSet();
-			dataSet.Tables.Add(table);
+
+			DataView view;
+			DataTable viewTable;
+
+			view = new DataView(table);
+			view.RowFilter = $"Status = 'MISSING'";
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "Missing in Source";
+			dataSet.Tables.Add(viewTable);
+
+			view = new DataView(table);
+			view.RowFilter = $"Status = ''";
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "Available in Source";
+			dataSet.Tables.Add(viewTable);
 
 			this.SaveHtmlReport(dataSet, "Source Exists Software Disk");
 		}
