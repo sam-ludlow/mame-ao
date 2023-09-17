@@ -33,11 +33,11 @@ namespace Spludlow.MameAO
 				Text = "Source Exists",
 				Decription = "Check that files exist in the archive.org source metadata. Tests are NOT performed to check if ZIPs, ROMs, or CHDs are valid.",
 			},
-			//new ReportGroup(){
-			//	Key = "file-size",
-			//	Text = "File Size",
-			//	Decription = "Report om ROM & DISK sizes. ",
-			//},
+			new ReportGroup(){
+				Key = "available",
+				Text = "Available Machines & Software",
+				Decription = "Report on Machines & Software that are available, already downloaded.",
+			},
 		};
 
 		public static ReportType[] ReportTypes = new ReportType[] {
@@ -70,20 +70,21 @@ namespace Spludlow.MameAO
 				Decription = "Check that all software disks exist, multiple sources are checked if avaialable.",
 			},
 
-			//new ReportType(){
-			//	Key = "machine",
-			//	Group = "file-size",
-			//	Code = "FSM",
-			//	Text = "File Size - Machine",
-			//	Decription = "File Size - Machine",
-			//},
-			//new ReportType(){
-			//	Key = "software",
-			//	Group = "file-size",
-			//	Code = "FSS",
-			//	Text = "File Size - Software",
-			//	Decription = "File Size - Software",
-			//},
+			new ReportType(){
+				Key = "machine",
+				Group = "available",
+				Code = "AVM",
+				Text = "Machines",
+				Decription = "List Machines that are available to run.",
+			},
+			new ReportType(){
+				Key = "software",
+				Group = "available",
+				Code = "AVS",
+				Text = "Software",
+				Decription = "List Software that is available to run.",
+			},
+
 		};
 
 		private string _OutputDirectory;
@@ -269,7 +270,7 @@ namespace Spludlow.MameAO
 			return items.ToArray();
 		}
 
-		public bool RunReport(string reportCode, Database database)
+		public bool RunReport(string reportCode, Database database, HashStore romHashStore, HashStore diskHashStore)
 		{
 			reportCode = reportCode.ToUpper();
 
@@ -280,7 +281,7 @@ namespace Spludlow.MameAO
 
 			try
 			{
-				method.Invoke(this, new object[] { database });
+				method.Invoke(this, new object[] { database, romHashStore, diskHashStore });
 			}
 			catch (Exception e)
 			{
@@ -292,7 +293,7 @@ namespace Spludlow.MameAO
 		}
 
 
-		public void Report_SEMR(Database database)
+		public void Report_SEMR(Database database, HashStore romHashStore, HashStore diskHashStore)
 		{
 			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
 
@@ -350,7 +351,7 @@ namespace Spludlow.MameAO
 			this.SaveHtmlReport(dataSet, "Source Exists Machine Rom");
 		}
 
-		public void Report_SEMD(Database database)
+		public void Report_SEMD(Database database, HashStore romHashStore, HashStore diskHashStore)
 		{
 			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
 
@@ -417,7 +418,7 @@ namespace Spludlow.MameAO
 			this.SaveHtmlReport(dataSet, "Source Exists Machine Disk");
 		}
 
-		public void Report_SESR(Database database)
+		public void Report_SESR(Database database, HashStore romHashStore, HashStore diskHashStore)
 		{
 			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.SoftwareRom)[0];
 
@@ -461,7 +462,7 @@ namespace Spludlow.MameAO
 			this.SaveHtmlReport(dataSet, "Source Exists Software Rom");
 		}
 
-		public void Report_SESD(Database database)
+		public void Report_SESD(Database database, HashStore romHashStore, HashStore diskHashStore)
 		{
 			Sources.MameSourceSet[] soureSets = Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk);
 
@@ -536,6 +537,165 @@ namespace Spludlow.MameAO
 			dataSet.Tables.Add(viewTable);
 
 			this.SaveHtmlReport(dataSet, "Source Exists Software Disk");
+		}
+
+		public void Report_AVM(Database database, HashStore romHashStore, HashStore diskHashStore)
+		{
+			DataTable machineTable = Database.ExecuteFill(database._MachineConnection, "SELECT machine_id, name, description, romof, cloneof FROM machine ORDER BY machine.name");
+			DataTable romTable = Database.ExecuteFill(database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
+			DataTable diskTable = Database.ExecuteFill(database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
+
+			DataTable table = Tools.MakeDataTable(
+				"Status	Name	Description	Complete	RomCount	DiskCount	RomHave	DiskHave",
+				"String	String	String		Boolean		Int64		Int64		Int64	Int64");
+
+			foreach (DataRow machineRow in machineTable.Rows)
+			{
+				long machine_id = (long)machineRow["machine_id"];
+
+				DataRow[] romRows = romTable.Select($"machine_id = {machine_id}");
+				DataRow[] diskRows = diskTable.Select($"machine_id = {machine_id}");
+
+				int romHaveCount = 0;
+				foreach (DataRow romRow in romRows)
+				{
+					string sha1 = (string)romRow["sha1"];
+					if (romHashStore.Exists(sha1) == true)
+						++romHaveCount;
+				}
+
+				int diskHaveCount = 0;
+				foreach (DataRow diskRow in diskRows)
+				{
+					string sha1 = (string)diskRow["sha1"];
+					if (diskHashStore.Exists(sha1) == true)
+						++diskHaveCount;
+				}
+
+
+				if (romRows.Length == 0 && diskRows.Length == 0)
+					continue;
+
+				bool complete = false;
+				if (romRows.Length == romHaveCount && diskRows.Length == diskHaveCount)
+					complete = true;
+
+				table.Rows.Add("", (string)machineRow["name"], (string)machineRow["description"], complete, romRows.Length, diskRows.Length, romHaveCount, diskHaveCount);
+			}
+
+			DataSet dataSet = new DataSet();
+
+			DataView view;
+			DataTable viewTable;
+
+			view = new DataView(table);
+			view.RowFilter = $"DiskCount > 0 AND Complete = 1";
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "With DISK";
+			dataSet.Tables.Add(viewTable);
+
+			view = new DataView(table);
+			view.RowFilter = $"DiskCount = 0 AND Complete = 1";
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "Without DISK";
+			dataSet.Tables.Add(viewTable);
+
+			this.SaveHtmlReport(dataSet, "Avaliable Machine ROM and DISK");
+		}
+
+		public void Report_AVS(Database database, HashStore romHashStore, HashStore diskHashStore)
+		{
+			DataTable softwarelistTable = Database.ExecuteFill(database._SoftwareConnection,
+				"SELECT softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
+
+			DataTable softwareTable = Database.ExecuteFill(database._SoftwareConnection,
+				"SELECT softwarelist.name AS softwarelist_name, software.name, software.description FROM softwarelist " +
+				"INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id ORDER BY softwarelist.name, software.name");
+
+			DataTable romTable = Database.ExecuteFill(database._SoftwareConnection,
+				"SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, rom.sha1 " +
+				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) " +
+				"INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) " +
+				"INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id " +
+				"WHERE (rom.sha1 IS NOT NULL)");
+
+			DataTable diskTable = Database.ExecuteFill(database._SoftwareConnection,
+				"SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, disk.sha1 " +
+				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) " +
+				"INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_Id = diskarea.part_Id) " +
+				"INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
+				"WHERE (disk.sha1 IS NOT NULL)");
+
+
+			DataTable table = Tools.MakeDataTable(
+				"Status	ListName	ListDescription	SoftwareName	SoftwareDescription	Complete	RomCount	DiskCount	RomHave	DiskHave",
+				"String	String		String			String			String				Boolean		Int64		Int64		Int64	Int64");
+
+			foreach (DataRow softwarelistRow in softwarelistTable.Rows)
+			{
+				string softwarelist_name = (string)softwarelistRow["name"];
+				string softwarelist_description = (string)softwarelistRow["description"];
+
+				foreach (DataRow softwareRow in softwareTable.Select($"softwarelist_name = '{softwarelist_name}'"))
+				{
+					string software_name = (string)softwareRow["name"];
+					string software_description = (string)softwareRow["description"];
+
+					DataRow[] romRows = romTable.Select($"softwarelist_name = '{softwarelist_name}' AND software_name = '{software_name}'");
+					
+					DataRow[] diskRows = diskTable.Select($"softwarelist_name = '{softwarelist_name}' AND software_name = '{software_name}'");
+					
+					int romHaveCount = 0;
+					foreach (DataRow romRow in romRows)
+					{
+						string sha1 = (string)romRow["sha1"];
+						if (romHashStore.Exists(sha1) == true)
+							++romHaveCount;
+					}
+
+					int diskHaveCount = 0;
+					foreach (DataRow diskRow in diskRows)
+					{
+						string sha1 = (string)diskRow["sha1"];
+						if (diskHashStore.Exists(sha1) == true)
+							++diskHaveCount;
+					}
+
+
+					bool complete = romRows.Length == romHaveCount && diskRows.Length == diskHaveCount;
+
+					if (complete == true)
+						table.Rows.Add("", softwarelist_name, softwarelist_description, software_name, software_description, complete, romRows.Length, diskRows.Length, romHaveCount, diskHaveCount);
+				}
+			}
+
+			DataSet dataSet = new DataSet();
+
+			DataView view;
+			DataTable viewTable;
+
+			view = new DataView(table);
+			view.RowFilter = $"DiskCount > 0";
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "DISK Software";
+			dataSet.Tables.Add(viewTable);
+
+			view = new DataView(table);
+			view.RowFilter = $"DiskCount = 0";
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "ROM Software";
+			dataSet.Tables.Add(viewTable);
+
+			this.SaveHtmlReport(dataSet, "Avaliable Software ROM and DISK");
+
 		}
 
 
