@@ -37,6 +37,7 @@ namespace Spludlow.MameAO
 		{
 			public MameSetType SetType;
 			public string ListName;
+			public string DetailsUrl;
 			public string MetadataUrl;
 			public string DownloadUrl;
 			public string HtmlSizesUrl;
@@ -45,20 +46,44 @@ namespace Spludlow.MameAO
 		}
 
 		private static readonly MameSourceSet[] MameSourceSets = new MameSourceSet[] {
+			
+			//
+			// Machine ROM
+			//
 			new MameSourceSet
 			{
 				SetType = MameSetType.MachineRom,
+				DetailsUrl = "https://archive.org/details/mame-merged",
 				MetadataUrl = "https://archive.org/metadata/mame-merged",
 				DownloadUrl = "https://archive.org/download/mame-merged/mame-merged/@MACHINE@.zip",
 				HtmlSizesUrl = null,
 			},
+
+			//
+			// Machine DISK
+			//
 			new MameSourceSet
 			{
+				//	This item name is misleading, check the item's title on archive.org. It is a very good and kept up to date, 
 				SetType = MameSetType.MachineDisk,
-				MetadataUrl = "https://archive.org/metadata/mame-chds-roms-extras-complete",
-				DownloadUrl = "https://archive.org/download/mame-chds-roms-extras-complete/@MACHINE@/@DISK@.chd",
+				DetailsUrl = "https://archive.org/details/MAME_0.225_CHDs_merged",
+				MetadataUrl = "https://archive.org/metadata/MAME_0.225_CHDs_merged",
+				DownloadUrl = "https://archive.org/download/MAME_0.225_CHDs_merged/@MACHINE@/@DISK@.chd",
 				HtmlSizesUrl = null,
 			},
+			//new MameSourceSet	TODO: Add fallback support for multiple machine disk
+			//{
+			//	//	This item is not prefered for machine disk but will do if all else fails.
+			//	SetType = MameSetType.MachineDisk,
+			//	DetailsUrl = "https://archive.org/details/mame-chds-roms-extras-complete",
+			//	MetadataUrl = "https://archive.org/metadata/mame-chds-roms-extras-complete",
+			//	DownloadUrl = "https://archive.org/download/mame-chds-roms-extras-complete/@MACHINE@/@DISK@.chd",
+			//	HtmlSizesUrl = null,
+			//},
+
+			//
+			// Software ROM
+			//
 			new MameSourceSet
 			{
 				SetType = MameSetType.SoftwareRom,
@@ -67,8 +92,9 @@ namespace Spludlow.MameAO
 				HtmlSizesUrl = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/",
 			},
 
-
-
+			//
+			// Software DISK
+			//
 			new MameSourceSet
 			{
 				SetType = MameSetType.SoftwareDisk,
