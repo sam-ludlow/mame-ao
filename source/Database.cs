@@ -245,14 +245,20 @@ namespace Spludlow.MameAO
 		public DataRow[] GetMachineSoftwareLists(DataRow machine)
 		{
 			long machine_id = (long)machine["machine_id"];
+			string machineName = (string)machine["name"];
 			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM softwarelist WHERE machine_id = {machine_id}");
 
 			table.Columns.Add("description", typeof(string));
 
 			foreach (DataRow row in table.Rows)
 			{
-				DataRow softwarelistRow = _SoftwarelistTable.Rows.Find((string)row["name"]);
-				row["description"] = (string)softwarelistRow["description"];
+				string listName = (string)row["name"];
+				DataRow softwarelistRow = _SoftwarelistTable.Rows.Find(listName);
+
+				if (softwarelistRow != null)
+					row["description"] = (string)softwarelistRow["description"];
+				else
+					row["description"] = $"MAME DATA ERROR machine's {machineName} software list {listName} does not exist!";
 			}
 
 			return table.Rows.Cast<DataRow>().ToArray();
