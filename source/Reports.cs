@@ -6,6 +6,8 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Text;
+using System.Web.UI.WebControls;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace Spludlow.MameAO
 {
@@ -37,6 +39,11 @@ namespace Spludlow.MameAO
 				Key = "available",
 				Text = "Available Machines & Software",
 				Decription = "Report on Machines & Software that are available, already downloaded.",
+			},
+			new ReportGroup(){
+				Key = "integrity",
+				Text = "MAME Data Integrity",
+				Decription = "Report on various aspects of MAME Data Integrity.",
 			},
 		};
 
@@ -85,6 +92,14 @@ namespace Spludlow.MameAO
 				Decription = "List Software that is available to run.",
 			},
 
+			new ReportType(){
+				Key = "machine-softwarelists-exist",
+				Group = "integrity",
+				Code = "IMSLM",
+				Text = "Machine Lists Missing",
+				Decription = "Machines Software Lists Missing.",
+			},
+
 		};
 
 		private string _OutputDirectory;
@@ -97,8 +112,18 @@ namespace Spludlow.MameAO
 		{
 			List<string> results = new List<string>();
 
-			foreach (ReportType reportType in ReportTypes)
-				results.Add($"{reportType.Code} - {reportType.Text}");
+			foreach (ReportGroup reportGroup in ReportGroups)
+			{
+				foreach (ReportType reportType in ReportTypes)
+				{
+					if (reportType.Group != reportGroup.Key)
+						continue;
+
+					results.Add($"    {reportType.Code} : {reportType.Decription}");
+				}
+
+				results.Add("");
+			}
 
 			return results.ToArray();
 		}
@@ -281,7 +306,9 @@ namespace Spludlow.MameAO
 
 			try
 			{
+				Console.Write($"Running Report please wait {reportCode} ...");
 				method.Invoke(this, new object[] { database, romHashStore, diskHashStore });
+				Console.WriteLine("...done.");
 			}
 			catch (Exception e)
 			{
@@ -698,6 +725,33 @@ namespace Spludlow.MameAO
 
 		}
 
+		public void Report_IMSLM(Database database, HashStore romHashStore, HashStore diskHashStore)
+		{
+			DataTable machineListsTable = Database.ExecuteFill(database._MachineConnection,
+				"SELECT machine.name AS machine_name, machine.description, softwarelist.name AS softwarelist_name FROM machine INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id ORDER BY machine.name, softwarelist.name");
+
+			DataTable softwareListsTable = Database.ExecuteFill(database._SoftwareConnection,
+				"SELECT softwarelist.name AS softwarelist_name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
+
+			softwareListsTable.PrimaryKey = new DataColumn[] { softwareListsTable.Columns["softwarelist_name"] };
+
+			DataTable table = machineListsTable.Clone();
+
+			foreach (DataRow machineListRow in machineListsTable.Rows)
+			{
+				string softwarelist_name = (string)machineListRow["softwarelist_name"];
+
+				if (softwareListsTable.Rows.Find(softwarelist_name) == null)
+					table.ImportRow(machineListRow);
+			}
+
+			table.TableName = "Machines with Missing Lists";
+
+			DataSet dataSet = new DataSet();
+			dataSet.Tables.Add(table);
+
+			this.SaveHtmlReport(dataSet, "Machines Software Lists Missing");
+		}
 
 	}
 }

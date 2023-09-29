@@ -258,7 +258,7 @@ namespace Spludlow.MameAO
 				if (softwarelistRow != null)
 					row["description"] = (string)softwarelistRow["description"];
 				else
-					row["description"] = $"MAME DATA ERROR machine's {machineName} software list {listName} does not exist!";
+					row["description"] = $"MAME DATA ERROR machine '{machineName}' software list '{listName}' does not exist";
 			}
 
 			return table.Rows.Cast<DataRow>().ToArray();

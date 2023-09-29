@@ -656,7 +656,7 @@ namespace Spludlow.MameAO
 
 					case ".report":
 						if (parts.Length != 2)
-							throw new ApplicationException($"Usage: {parts[0]} <Report Code>" + Environment.NewLine +
+							throw new ApplicationException($"Usage: {parts[0]} <Report Code>" + Environment.NewLine + Environment.NewLine +
 								String.Join(Environment.NewLine, _Reports.ReportTypeText()) + Environment.NewLine
 								);
 
