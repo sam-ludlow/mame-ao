@@ -660,7 +660,15 @@ namespace Spludlow.MameAO
 								String.Join(Environment.NewLine, _Reports.ReportTypeText()) + Environment.NewLine
 								);
 
-						if (_Reports.RunReport(parts[1], _Database, _RomHashStore, _DiskHashStore) == false)
+						Reports.ReportContext reportContext = new Reports.ReportContext()
+						{
+							database = _Database,
+							romHashStore = _RomHashStore,
+							diskHashStore = _DiskHashStore,
+							versionDirectory = _VersionDirectory,
+						};
+
+						if (_Reports.RunReport(parts[1], reportContext) == false)
 							throw new ApplicationException("Report Unknown type.");
 						return;
 

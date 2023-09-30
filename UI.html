@@ -228,7 +228,7 @@
 			let reportData;
 
 			if (_pathParts.includes('/reports')) {
-				reportGroups = (await (await fetch(`${_baseUrl}/api/report-groups`)).json());
+				reportGroups = (await (await fetch(`${_baseUrl}/api/report_groups`)).json());
 
 				_rootMenu[0].menu[1].menu = reportGroups.results.map((group) => {
 					return {
@@ -255,7 +255,7 @@
 
 					console.log(`groupKey: ${groupKey}`);
 
-					reportData = (await (await fetch(`${_baseUrl}/api/report-types?group=${groupKey}`)).json());
+					reportData = (await (await fetch(`${_baseUrl}/api/report_types?group=${groupKey}`)).json());
 
 					console.log(reportData);
 

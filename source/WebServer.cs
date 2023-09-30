@@ -2,6 +2,7 @@
 using System.Data;
 using System.IO;
 using System.Net;
+using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -74,65 +75,17 @@ namespace Spludlow.MameAO
 							{
 								if (path.StartsWith("/api/") == true)
 								{
-									switch (path)
+									MethodInfo method = this.GetType().GetMethod(path.Replace("/", "_"));
+
+									if (method == null)
 									{
-										case "/api/command":
-											ApiCommand(context, writer);
-											break;
-
-										case "/api/update":
-											ApiUpdate(context, writer);
-											break;
-
-										case "/api/profiles":
-											ApiProfiles(context, writer);
-											break;
-
-										case "/api/machine":
-											ApiMachine(context, writer);
-											break;
-
-										case "/api/machines":
-											ApiMachines(context, writer);
-											break;
-
-										case "/api/software":
-											ApiSoftware(context, writer);
-											break;
-
-										case "/api/info":
-											ApiInfo(context, writer);
-											break;
-
-										case "/api/source_files":
-											ApiListSourceFiles(context, writer);
-											break;
-
-										case "/api/list":
-											ApiList(context, writer);
-											break;
-
-										case "/api/reports":
-											ApiReports(context, writer);
-											break;
-
-										case "/api/report":
-											ApiReport(context, writer);
-											break;
-
-										case "/api/report-groups":
-											ApiReportGroups(context, writer);
-											break;
-
-										case "/api/report-types":
-											ApiReportTypes(context, writer);
-											break;
-
-										default:
-											ApplicationException exception = new ApplicationException($"Not found: {path}");
-											exception.Data.Add("status", 404);
-											throw exception;
+										ApplicationException exception = new ApplicationException($"Not found: {path}");
+										exception.Data.Add("status", 404);
+										throw exception;
 									}
+
+									method.Invoke(this, new object[] { context, writer });
+
 								}
 								else
 								{
@@ -153,6 +106,9 @@ namespace Spludlow.MameAO
 						}
 						catch (Exception e)
 						{
+							if (e is TargetInvocationException && e.InnerException != null)
+								e = e.InnerException;
+
 							ErrorResponse(context, writer, e);
 						}
 					}	
@@ -192,7 +148,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(html);
 		}
 
-		private void ApiCommand(HttpListenerContext context, StreamWriter writer)
+		public void _api_command(HttpListenerContext context, StreamWriter writer)
 		{
 			string line = context.Request.QueryString["line"];
 
@@ -226,7 +182,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		public void ApiUpdate(HttpListenerContext context, StreamWriter writer)
+		public void _api_update(HttpListenerContext context, StreamWriter writer)
 		{
 			Console.WriteLine();
 			Tools.ConsoleHeading(1, new string[] {
@@ -245,7 +201,7 @@ namespace Spludlow.MameAO
 			context.Response.Headers["Content-Type"] = "text/html";
 		}
 
-		private void ApiProfiles(HttpListenerContext context, StreamWriter writer)
+		public void _api_profiles(HttpListenerContext context, StreamWriter writer)
 		{
 			dynamic results = new JArray();
 
@@ -271,7 +227,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		private void ApiMachines(HttpListenerContext context, StreamWriter writer)
+		public void _api_machines(HttpListenerContext context, StreamWriter writer)
 		{
 			string qs;
 
@@ -328,7 +284,7 @@ namespace Spludlow.MameAO
 		}
 
 
-		private void ApiMachine(HttpListenerContext context, StreamWriter writer)
+		public void _api_machine(HttpListenerContext context, StreamWriter writer)
 		{
 			string qs;
 
@@ -369,7 +325,7 @@ namespace Spludlow.MameAO
 		}
 
 
-		private void ApiSoftware(HttpListenerContext context, StreamWriter writer)
+		public void _api_software(HttpListenerContext context, StreamWriter writer)
 		{
 			string qs;
 
@@ -431,7 +387,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		private void ApiInfo(HttpListenerContext context, StreamWriter writer)
+		public void _api_info(HttpListenerContext context, StreamWriter writer)
 		{
 			dynamic json = new JObject();
 
@@ -466,7 +422,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		private void ApiListSourceFiles(HttpListenerContext context, StreamWriter writer)
+		public void _api_source_files(HttpListenerContext context, StreamWriter writer)
 		{
 			string qs;
 
@@ -494,7 +450,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		private void ApiList(HttpListenerContext context, StreamWriter writer)
+		public void _api_list(HttpListenerContext context, StreamWriter writer)
 		{
 			DataTable table = Mame.ListSavedState(_AO._RootDirectory, _AO._Database);
 
@@ -516,7 +472,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		private void ApiReports(HttpListenerContext context, StreamWriter writer)
+		public void _api_reports(HttpListenerContext context, StreamWriter writer)
 		{
 			JArray results = new JArray();
 
@@ -553,7 +509,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		private void ApiReport(HttpListenerContext context, StreamWriter writer)
+		public void _api_report(HttpListenerContext context, StreamWriter writer)
 		{
 			string name = context.Request.QueryString["name"] ?? throw new ApplicationException("name not passed");
 
@@ -564,7 +520,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(html);
 		}
 
-		private void ApiReportGroups(HttpListenerContext context, StreamWriter writer)
+		public void _api_report_groups(HttpListenerContext context, StreamWriter writer)
 		{
 			JArray results = new JArray();
 
@@ -589,7 +545,7 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-		private void ApiReportTypes(HttpListenerContext context, StreamWriter writer)
+		public void _api_report_types(HttpListenerContext context, StreamWriter writer)
 		{
 			string groupFilter = context.Request.QueryString["group"];
 
