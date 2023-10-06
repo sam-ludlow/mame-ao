@@ -18,7 +18,7 @@ namespace Spludlow.MameAO
 {
 	public class MameAOProcessor
 	{
-		private readonly HttpClient _HttpClient;
+		public readonly HttpClient _HttpClient;
 
 		public readonly string _RootDirectory;
 		private string _VersionDirectory;
@@ -954,7 +954,15 @@ namespace Spludlow.MameAO
 
 				foreach (DataRow machineSoftwarelist in softwarelists)
 				{
-					DataRow softwarelist = _Database.GetSoftwareList((string)machineSoftwarelist["name"]);
+					string softwarelistName = (string)machineSoftwarelist["name"];
+
+					DataRow softwarelist = _Database.GetSoftwareList(softwarelistName);
+
+					if (softwarelist == null)
+					{
+						Console.WriteLine($"!!! MAME DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
+						continue;
+					}
 
 					foreach (DataRow findSoftware in _Database.GetSoftwareListsSoftware(softwarelist))
 					{
@@ -983,6 +991,12 @@ namespace Spludlow.MameAO
 						string softwarelistName = (string)machineSoftwarelist["name"];
 
 						DataRow softwarelist = _Database.GetSoftwareList(softwarelistName);
+
+						if (softwarelist == null)
+						{
+							Console.WriteLine($"!!! MAME DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
+							continue;
+						}
 
 						foreach (DataRow findSoftware in _Database.GetSoftwareListsSoftware(softwarelist))
 						{

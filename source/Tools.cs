@@ -8,8 +8,10 @@ using System.Security.Cryptography;
 using System.Data;
 using System.Text;
 using System.Threading.Tasks;
+using System.ComponentModel;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -69,6 +71,27 @@ namespace Spludlow.MameAO
 			}
 
 			ConsoleRule(head);
+		}
+
+		public static void CleanDynamic(dynamic data)
+		{
+			List<string> deleteList = new List<string>();
+			foreach (PropertyDescriptor descriptor in TypeDescriptor.GetProperties(data))
+			{
+				if (descriptor.GetValue(data) == null)
+					deleteList.Add(descriptor.Name);
+			}
+
+			foreach (string key in deleteList)
+				((JObject)data).Remove(key);
+		}
+
+		public static void PopText(string text)
+		{
+			string filename = Path.GetTempFileName();
+			File.WriteAllText(filename, text, Encoding.UTF8);
+			Process.Start("notepad.exe", filename);
+			Environment.Exit(0);
 		}
 
 		private static List<char> _InvalidFileNameChars = new List<char>(Path.GetInvalidFileNameChars());
@@ -171,6 +194,8 @@ namespace Spludlow.MameAO
 				return responseBody;
 			}
 		}
+
+
 
 		public static long Download(string url, string filename, long progressSize, int timeoutMinutes)
 		{

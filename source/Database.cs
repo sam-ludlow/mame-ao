@@ -4,9 +4,10 @@ using System.Data;
 using System.Xml.Linq;
 using System.IO;
 using System.Linq;
+using System.Text;
+using System.Data.SqlClient;
 
 using System.Data.SQLite;
-using System.Text;
 
 namespace Spludlow.MameAO
 {
@@ -503,6 +504,12 @@ namespace Spludlow.MameAO
 			AddDataExtras(dataSet, document.Name.LocalName, assemblyVersion);
 			Console.WriteLine("...done.");
 
+			DatabaseFromXML(document, connection, dataSet);
+
+			return connection;
+		}
+		public static SQLiteConnection DatabaseFromXML(XElement document, SQLiteConnection connection, DataSet dataSet)
+		{
 			Console.Write($"Creating SQLite {document.Name.LocalName} ...");
 			connection.Open();
 			try
@@ -608,6 +615,20 @@ namespace Spludlow.MameAO
 
 			return true;
 		}
+		public static string[] TableList(SQLiteConnection connection)
+		{
+			List<string> tableNames = new List<string>();
+
+			DataTable table = Database.ExecuteFill(connection, "SELECT name FROM sqlite_master WHERE type = 'table'");
+			foreach (DataRow row in table.Rows)
+			{
+				string tableName = (string)row[0];
+
+				if (tableName.StartsWith("sqlite_") == false)
+					tableNames.Add(tableName);
+			}
+			return tableNames.ToArray();
+		}
 		public static object ExecuteScalar(SQLiteConnection connection, string commandText)
 		{
 			connection.Open();
@@ -620,7 +641,6 @@ namespace Spludlow.MameAO
 			{
 				connection.Close();
 			}
-
 		}
 
 		public static int ExecuteNonQuery(SQLiteConnection connection, string commandText)
@@ -635,7 +655,6 @@ namespace Spludlow.MameAO
 			{
 				connection.Close();
 			}
-
 		}
 
 		public static DataTable ExecuteFill(SQLiteConnection connection, string commandText)
@@ -651,6 +670,49 @@ namespace Spludlow.MameAO
 			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
 				adapter.Fill(dataSet);
 			return dataSet.Tables[0];
+		}
+
+		//
+		// MS SQL
+		//
+
+		public static bool DatabaseExists(SqlConnection connection, string databaseName)
+		{
+			object obj = ExecuteScalar(connection, $"SELECT name FROM sys.databases WHERE name = '{databaseName}'");
+
+			if (obj == null || obj is DBNull)
+				return false;
+
+			return true;
+		}
+
+		public static object ExecuteScalar(SqlConnection connection, string commandText)
+		{
+			connection.Open();
+			try
+			{
+				using (SqlCommand command = new SqlCommand(commandText, connection))
+					return command.ExecuteScalar();
+			}
+			finally
+			{
+				connection.Close();
+			}
+
+		}
+
+		public static int ExecuteNonQuery(SqlConnection connection, string commandText)
+		{
+			connection.Open();
+			try
+			{
+				using (SqlCommand command = new SqlCommand(commandText, connection))
+					return command.ExecuteNonQuery();
+			}
+			finally
+			{
+				connection.Close();
+			}
 		}
 
 	}

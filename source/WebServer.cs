@@ -155,7 +155,7 @@ namespace Spludlow.MameAO
 			if (line == null)
 				throw new ApplicationException("No line given.");
 
-			// Special commands
+			// Silent commands
 
 			if (line.StartsWith(".fav") == true)
 			{
@@ -410,9 +410,15 @@ namespace Spludlow.MameAO
 				dynamic source = new JObject();
 
 				source.type = sourceSet.SetType.ToString();
-				source.version = sourceSet.Version;
-				source.download = sourceSet.DownloadUrl;
+				source.list_name = sourceSet.ListName;
+				source.details = sourceSet.DetailsUrl;
 				source.metadata = sourceSet.MetadataUrl;
+				source.download = sourceSet.DownloadUrl;
+				source.html_sizes = sourceSet.HtmlSizesUrl;
+				source.file_count = sourceSet.AvailableDownloadFileInfos.Count;
+				source.version = sourceSet.Version;
+
+				Tools.CleanDynamic(source);
 
 				sources.Add(source);
 			}
@@ -436,16 +442,29 @@ namespace Spludlow.MameAO
 
 			Sources.MameSetType setType = (Sources.MameSetType)Enum.Parse(typeof(Sources.MameSetType), type);
 
-			Sources.MameSourceSet sourceSet = Sources.GetSourceSets(setType)[0];
+			Sources.MameSourceSet[] sourceSets = Sources.GetSourceSets(setType);
 
-			JArray files = JArray.FromObject(sourceSet.AvailableDownloadFileInfos.Values);
+			JArray results = new JArray();
+
+			foreach (Sources.MameSourceSet sourceSet in sourceSets)
+			{
+				dynamic source = new JObject();
+				
+				string listName = sourceSet.ListName;
+				if (listName != null)
+					source.list_name = sourceSet.ListName;
+				source.version = sourceSet.Version;
+				source.files = JArray.FromObject(sourceSet.AvailableDownloadFileInfos.Values);
+
+				results.Add(source);
+			}
 
 			dynamic json = new JObject();
 			json.offset = 0;
 			json.limit = 0;
-			json.total = files.Count;
-			json.count = files.Count;
-			json.results = files;
+			json.total = results.Count;
+			json.count = results.Count;
+			json.results = results;
 
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
