@@ -175,14 +175,51 @@ Machine DISKs that exist in a parent machine will not be exported, as the file w
 A HTML report will be created containing details of the export.
 
 ## HTML Reports
+Some MAME-AO functions will produce HTML reports, so you can see what it's been doing
 
-Some MAME-AO functions will produce HTML reports, so you can take a look what it's been doing, they are saved to the ___REPORTS__ directory. There is an option in the UI to view all saved reports.
+There are several informational reports that you can run from the UI or with the command __.report \<type\>__
 
-You can run the following reports with the command __.report \<type\>__
+Use the __.report__ command without any arguments to list available reports.
 
-- SEMD : Source Exists Machine Disk, use to see if all machine disks existing in the source (SHA1 not checked, only if exists).
+When the report has finished running it will pop up in the browser.
 
-TODO: Add reports for other sources
+You can list previous created reports in the UI or have a look in the ___REPORTS__ directory.
+
+## MAME Data Operations
+MAME-AO has the capability to perform various MAME Data operations by passing command line options when starting the program, it will exit immediately when finished.
+
+These may be used for generating data sets in various formats, you could use it for data processing pipelines for example automatically updating a database when MAME is updated.
+
+You have to get MAME first, all the data formats require XML to start with. If the operation has already been performed (file already exists) nothing will hapern.
+
+You can specify a specific version e.g. __VERSION=0250__ or use __VERSION=0__ to mean the latest avaialable.
+
+### Get MAME
+example: __mame-ao.exe OPERATION=GET_MAME VERSION=0 DIRECTORY="C:\My MAME Data"__
+
+Download and extract the MAME binaries from GitHub, needed to extract the XML.
+
+If a new version is found the processes exit code will be set to 1.
+
+### XML
+example: __mame-ao.exe OPERATION=MAKE_XML VERSION=0 DIRECTORY="C:\My MAME Data"__
+
+The native format output from the MAME binary, you need this first.
+
+### JSON
+example: __mame-ao.exe OPERATION=MAKE_JSON VERSION=0 DIRECTORY="C:\My MAME Data"__
+
+Convert the XML to JSON.
+
+### SQLite
+example: __mame-ao.exe OPERATION=MAKE_SQLITE VERSION=0 DIRECTORY="C:\My MAME Data"__
+
+Convert the XML to SQLite.
+
+### Microsoft SQL
+example: __mame-ao.exe OPERATION=MAKE_MSSQL VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"__
+
+Convert the XML to Microsoft SQL.
 
 ## Internal Workings
 

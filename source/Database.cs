@@ -202,8 +202,9 @@ namespace Spludlow.MameAO
 					DataRow[] driverRows = driverTable.Select($"machine_id={machine_id}");
 					DataRow[] inputRows = inputTable.Select($"machine_id={machine_id}");
 
-					machineRow["ao_rom_count"] = romRows.Length;
-					machineRow["ao_disk_count"] = diskRows.Length;
+					machineRow["ao_rom_count"] = romRows.Where(row => row.IsNull("sha1") == false).Count();
+					machineRow["ao_disk_count"] = diskRows.Where(row => row.IsNull("sha1") == false).Count();
+
 					machineRow["ao_softwarelist_count"] = softwarelistRows.Length;
 					if (driverRows.Length == 1)
 						machineRow["ao_driver_status"] = (string)driverRows[0]["status"];
