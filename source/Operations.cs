@@ -329,6 +329,8 @@ namespace Spludlow.MameAO
 				{
 					sqlBulkCopy.DestinationTableName = table.TableName;
 
+					sqlBulkCopy.BulkCopyTimeout = 15 * 60;
+
 					targetConnection.Open();
 					try
 					{
