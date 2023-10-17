@@ -86,12 +86,56 @@ namespace Spludlow.MameAO
 				((JObject)data).Remove(key);
 		}
 
+		public static void PopText(DataTable table)
+		{
+			PopText(TextTable(table));
+		}
 		public static void PopText(string text)
 		{
 			string filename = Path.GetTempFileName();
 			File.WriteAllText(filename, text, Encoding.UTF8);
 			Process.Start("notepad.exe", filename);
 			Environment.Exit(0);
+		}
+
+		public static string TextTable(DataTable table)
+		{
+			StringBuilder result = new StringBuilder();
+
+			foreach (DataColumn column in table.Columns)
+			{
+				if (column.Ordinal != 0)
+					result.Append('\t');
+
+				result.Append(column.ColumnName);
+			}
+			result.AppendLine();
+
+			foreach (DataColumn column in table.Columns)
+			{
+				if (column.Ordinal != 0)
+					result.Append('\t');
+
+				result.Append(column.DataType);
+			}
+			result.AppendLine();
+
+			foreach (DataRow row in table.Rows)
+			{
+				foreach (DataColumn column in table.Columns)
+				{
+					if (column.Ordinal != 0)
+						result.Append('\t');
+
+					object value = row[column];
+
+					if (value != null)
+						result.Append(Convert.ToString(value));
+				}
+				result.AppendLine();
+			}
+
+			return result.ToString();
 		}
 
 		private static List<char> _InvalidFileNameChars = new List<char>(Path.GetInvalidFileNameChars());

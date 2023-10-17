@@ -48,6 +48,11 @@ namespace Spludlow.MameAO
 
 					return MakeMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
 
+				case "MAKE_MSSQL_KEYS":
+					ValidateRequiredParameters(parameters, new string[] { "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
+
+					return MakeForeignKeys(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+
 				default:
 					throw new ApplicationException($"Unknown Operation {parameters["OPERATION"]}");
 			}
@@ -311,7 +316,7 @@ namespace Spludlow.MameAO
 							break;
 
 						case "Int64":
-							columnDefs.Add($"[{column.ColumnName}] BIGINT" + (columnDefs.Count == 0 ? " NOT NULL PRIMARY KEY" : ""));
+							columnDefs.Add($"[{column.ColumnName}] BIGINT" + (columnDefs.Count == 0 ? " NOT NULL" : ""));
 							break;
 
 						default:
@@ -319,10 +324,11 @@ namespace Spludlow.MameAO
 					}
 				}
 
+				columnDefs.Add($"CONSTRAINT [PK_{table.TableName}] PRIMARY KEY NONCLUSTERED ([{table.Columns[0].ColumnName}])");
+
 				string createText = $"CREATE TABLE [{table.TableName}]({String.Join(", ", columnDefs.ToArray())});";
 
 				Console.WriteLine(createText);
-
 				Database.ExecuteNonQuery(targetConnection, createText);
 
 				using (SqlBulkCopy sqlBulkCopy = new SqlBulkCopy(targetConnection))
@@ -342,6 +348,50 @@ namespace Spludlow.MameAO
 					}
 				}
 			}
+		}
+
+		public static int MakeForeignKeys(string serverConnectionString, string databaseNames)
+		{
+			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' });
+			for (int index = 0; index < databaseNamesEach.Length; ++index)
+				databaseNamesEach[index] = databaseNamesEach[index].Trim();
+
+			if (databaseNamesEach.Length != 2)
+				throw new ApplicationException("database names must be 2 parts comma delimited");
+
+			foreach (string databaseName in databaseNamesEach)
+			{
+				using (var connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+				{
+					DataTable table = Database.ExecuteFill(connection, "SELECT * FROM INFORMATION_SCHEMA.COLUMNS");
+
+					foreach (DataRow row in table.Rows)
+					{
+						string TABLE_NAME = (string)row["TABLE_NAME"];
+						string COLUMN_NAME = (string)row["COLUMN_NAME"];
+						int ORDINAL_POSITION = (int)row["ORDINAL_POSITION"];
+						string DATA_TYPE = (string)row["DATA_TYPE"];
+
+						if (ORDINAL_POSITION > 1 && COLUMN_NAME.EndsWith("_id") && DATA_TYPE == "bigint")
+						{
+							string parentTableName = COLUMN_NAME.Substring(0, COLUMN_NAME.Length - 3);
+
+							string commandText =
+								$"ALTER TABLE [{TABLE_NAME}] ADD CONSTRAINT [FK_{parentTableName}_{TABLE_NAME}] FOREIGN KEY ([{COLUMN_NAME}]) REFERENCES [{parentTableName}] ([{COLUMN_NAME}])";
+
+							Console.WriteLine(commandText);
+							Database.ExecuteNonQuery(connection, commandText);
+
+							commandText = $"CREATE INDEX [IX_{TABLE_NAME}_{COLUMN_NAME}] ON [{TABLE_NAME}] ([{COLUMN_NAME}])";
+
+							Console.WriteLine(commandText);
+							Database.ExecuteNonQuery(connection, commandText);
+						}
+					}
+				}
+			}
+
+			return 0;
 		}
 
 	}

@@ -221,6 +221,11 @@ example: __mame-ao.exe OPERATION=MAKE_MSSQL VERSION=0 DIRECTORY="C:\My MAME Data
 
 Convert the XML to Microsoft SQL.
 
+### Microsoft SQL - Make Foreign Keys
+example: __mame-ao.exe OPERATION=MAKE_MSSQL_KEYS MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"__
+
+Create foreign key constraints and indexes.
+
 ## Internal Workings
 
 ### Overall

@@ -715,6 +715,13 @@ namespace Spludlow.MameAO
 				connection.Close();
 			}
 		}
+		public static DataTable ExecuteFill(SqlConnection connection, string commandText)
+		{
+			DataSet dataSet = new DataSet();
+			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connection))
+				adapter.Fill(dataSet);
+			return dataSet.Tables[0];
+		}
 
 	}
 }
