@@ -227,7 +227,7 @@ example: __mame-ao.exe OPERATION=MAKE_MSSQL_KEYS MSSQL_SERVER="Data Source='MYSE
 Create foreign key constraints and indexes.
 
 ### Microsoft SQL - Make XML Tables
-example: __mame-ao.exe OPERATION=MAME_MSSQL_XML MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"__
+example: __mame-ao.exe OPERATION=MAME_MSSQL_XML VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"__
 
 Create XML payload tables for machine, softwarelist, and software.
 
