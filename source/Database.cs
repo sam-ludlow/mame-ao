@@ -723,5 +723,25 @@ namespace Spludlow.MameAO
 			return dataSet.Tables[0];
 		}
 
+		public static void BulkInsert(SqlConnection connection, DataTable table)
+		{
+			using (SqlBulkCopy sqlBulkCopy = new SqlBulkCopy(connection))
+			{
+				sqlBulkCopy.DestinationTableName = table.TableName;
+
+				sqlBulkCopy.BulkCopyTimeout = 15 * 60;
+
+				connection.Open();
+				try
+				{
+					sqlBulkCopy.WriteToServer(table);
+				}
+				finally
+				{
+					connection.Close();
+				}
+			}
+		}
+
 	}
 }

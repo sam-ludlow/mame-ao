@@ -9,7 +9,7 @@ using System.Net.Http;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-using System.Linq;
+using System.Web.Caching;
 
 namespace Spludlow.MameAO
 {
@@ -52,6 +52,11 @@ namespace Spludlow.MameAO
 					ValidateRequiredParameters(parameters, new string[] { "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
 					return MakeForeignKeys(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+
+				case "MAME_MSSQL_XML":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
+
+					return MakeMSSQLXML(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
 
 				default:
 					throw new ApplicationException($"Unknown Operation {parameters["OPERATION"]}");
@@ -331,22 +336,8 @@ namespace Spludlow.MameAO
 				Console.WriteLine(createText);
 				Database.ExecuteNonQuery(targetConnection, createText);
 
-				using (SqlBulkCopy sqlBulkCopy = new SqlBulkCopy(targetConnection))
-				{
-					sqlBulkCopy.DestinationTableName = table.TableName;
+				Database.BulkInsert(targetConnection, table);
 
-					sqlBulkCopy.BulkCopyTimeout = 15 * 60;
-
-					targetConnection.Open();
-					try
-					{
-						sqlBulkCopy.WriteToServer(table);
-					}
-					finally
-					{
-						targetConnection.Close();
-					}
-				}
 			}
 		}
 
@@ -393,6 +384,147 @@ namespace Spludlow.MameAO
 
 			return 0;
 		}
+
+		private static XmlReaderSettings _XmlReaderSettings = new XmlReaderSettings() {
+			DtdProcessing = DtdProcessing.Parse,
+			IgnoreComments = false,
+			IgnoreWhitespace = false,
+		};
+
+		public static int MakeMSSQLXML(string directory, string version, string serverConnectionString, string databaseNames)
+		{
+			if (version == "0")
+				version = GetLatestDownloadedVersion(directory);
+
+			string versionDirectory = Path.Combine(directory, version);
+
+			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' });
+
+			if (databaseNamesEach.Length != 2)
+				throw new ApplicationException("database names must be 2 parts comma delimited");
+
+			for (int index = 0; index < databaseNamesEach.Length; ++index)
+				databaseNamesEach[index] = databaseNamesEach[index].Trim();
+
+			string databaseName;
+			string xmlFilename;
+
+			//
+			// machine
+			//
+
+			databaseName = databaseNamesEach[0];
+			xmlFilename = Path.Combine(versionDirectory, $"_machine.xml");
+
+			MakeMSSQLXMLMachine(xmlFilename, serverConnectionString, databaseName);
+
+			//
+			// software
+			//
+
+			databaseName = databaseNamesEach[1];
+			xmlFilename = Path.Combine(versionDirectory, $"_software.xml");
+
+			MakeMSSQLXMLSoftware(xmlFilename, serverConnectionString, databaseName);
+
+			return 0;
+		}
+
+		public static void MakeMSSQLXMLMachine(string xmlFilename, string serverConnectionString, string databaseName)
+		{
+			DataTable table = new DataTable($"machine_xml");
+			table.Columns.Add("machine_name", typeof(string));
+			table.Columns.Add("xml", typeof(string));
+
+			using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+			{
+				reader.MoveToContent();
+
+				while (reader.Read())
+				{
+					if (reader.NodeType == XmlNodeType.Element && reader.Name == "machine")
+					{
+						XElement element = XElement.ReadFrom(reader) as XElement;
+
+						if (element != null)
+						{
+							string key = element.Attribute("name").Value;
+
+							table.Rows.Add(key, element.ToString());
+						}
+					}
+				}
+			}
+
+			MakeMSSQLXMLInsert(table, serverConnectionString, databaseName, new string[] { "machine_name" });
+		}
+
+		public static void MakeMSSQLXMLSoftware(string xmlFilename, string serverConnectionString, string databaseName)
+		{
+			DataTable listTable = new DataTable($"softwarelist_xml");
+			listTable.Columns.Add("softwarelist_name", typeof(string));
+			listTable.Columns.Add("xml", typeof(string));
+
+			DataTable softwareTable = new DataTable($"software_xml");
+			softwareTable.Columns.Add("softwarelist_name", typeof(string));
+			softwareTable.Columns.Add("software_name", typeof(string));
+			softwareTable.Columns.Add("xml", typeof(string));
+
+			using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+			{
+				reader.MoveToContent();
+
+				while (reader.Read())
+				{
+					if (reader.NodeType == XmlNodeType.Element&& reader.Name == "softwarelist")
+					{
+						XElement listElement = XElement.ReadFrom(reader) as XElement;
+						if (listElement == null)
+							continue;
+
+						string softwarelist_name = listElement.Attribute("name").Value;
+
+						listTable.Rows.Add(softwarelist_name, listElement.ToString());
+
+						foreach (XElement element in listElement.Elements("software"))
+						{
+							string software_name = element.Attribute("name").Value;
+
+							softwareTable.Rows.Add(softwarelist_name, software_name, element.ToString());
+						}
+					}
+				}
+			}
+
+			MakeMSSQLXMLInsert(listTable, serverConnectionString, databaseName, new string[] { "softwarelist_name" });
+
+			MakeMSSQLXMLInsert(softwareTable, serverConnectionString, databaseName, new string[] { "softwarelist_name", "software_name" });
+		}
+
+		public static void MakeMSSQLXMLInsert(DataTable table, string serverConnectionString, string databaseName, string[] primaryKeyNames)
+		{
+			using (SqlConnection targetConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			{
+				List<string> columnDefs = new List<string>();
+
+				foreach (string primaryKeyName in primaryKeyNames)
+					columnDefs.Add($"{primaryKeyName} VARCHAR(32)");
+
+				columnDefs.Add("[xml] NVARCHAR(MAX)");
+
+				columnDefs.Add($"CONSTRAINT [PK_{table.TableName}] PRIMARY KEY NONCLUSTERED ({String.Join(", ", primaryKeyNames)})");
+
+
+				string commandText = $"CREATE TABLE [{table.TableName}] ({String.Join(", ", columnDefs)});";
+
+				Console.WriteLine(commandText);
+				Database.ExecuteNonQuery(targetConnection, commandText);
+
+				Database.BulkInsert(targetConnection, table);
+			}
+		}
+
+
 
 	}
 
