@@ -9,6 +9,7 @@ using System.Net.Http;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
+using System.Web.UI.WebControls;
 
 namespace Spludlow.MameAO
 {
@@ -52,10 +53,10 @@ namespace Spludlow.MameAO
 
 					return MakeForeignKeys(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
 
-				case "MAME_MSSQL_XML":
+				case "MAME_MSSQL_PAYLOADS":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
-					return MakeMSSQLXML(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					return MakeMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
 
 				default:
 					throw new ApplicationException($"Unknown Operation {parameters["OPERATION"]}");
@@ -387,10 +388,10 @@ namespace Spludlow.MameAO
 		private static XmlReaderSettings _XmlReaderSettings = new XmlReaderSettings() {
 			DtdProcessing = DtdProcessing.Parse,
 			IgnoreComments = false,
-			IgnoreWhitespace = false,
+			IgnoreWhitespace = true,
 		};
 
-		public static int MakeMSSQLXML(string directory, string version, string serverConnectionString, string databaseNames)
+		public static int MakeMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseNames)
 		{
 			if (version == "0")
 				version = GetLatestDownloadedVersion(directory);
@@ -415,7 +416,7 @@ namespace Spludlow.MameAO
 			databaseName = databaseNamesEach[0];
 			xmlFilename = Path.Combine(versionDirectory, $"_machine.xml");
 
-			MakeMSSQLXMLMachine(xmlFilename, serverConnectionString, databaseName);
+			MakeMSSQLPayloadsMachine(xmlFilename, serverConnectionString, databaseName);
 
 			//
 			// software
@@ -424,16 +425,18 @@ namespace Spludlow.MameAO
 			databaseName = databaseNamesEach[1];
 			xmlFilename = Path.Combine(versionDirectory, $"_software.xml");
 
-			MakeMSSQLXMLSoftware(xmlFilename, serverConnectionString, databaseName);
+			MakeMSSQLPayloadsSoftware(xmlFilename, serverConnectionString, databaseName);
 
 			return 0;
 		}
 
-		public static void MakeMSSQLXMLMachine(string xmlFilename, string serverConnectionString, string databaseName)
+		public static void MakeMSSQLPayloadsMachine(string xmlFilename, string serverConnectionString, string databaseName)
 		{
-			DataTable table = new DataTable($"machine_xml");
+			DataTable table = new DataTable($"machine_payload");
 			table.Columns.Add("machine_name", typeof(string));
 			table.Columns.Add("xml", typeof(string));
+			table.Columns.Add("json", typeof(string));
+			table.Columns.Add("html", typeof(string));
 
 			using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
 			{
@@ -449,25 +452,33 @@ namespace Spludlow.MameAO
 						{
 							string key = element.Attribute("name").Value;
 
-							table.Rows.Add(key, element.ToString());
+							string xml = element.ToString();
+							string json = XML2JSON(element);
+							string html = $"<div><h1>{key}</h1></div>";
+
+							table.Rows.Add(key, xml, json, html);
 						}
 					}
 				}
 			}
 
-			MakeMSSQLXMLInsert(table, serverConnectionString, databaseName, new string[] { "machine_name" });
+			MakeMSSQLPayloadsInsert(table, serverConnectionString, databaseName, new string[] { "machine_name" });
 		}
 
-		public static void MakeMSSQLXMLSoftware(string xmlFilename, string serverConnectionString, string databaseName)
+		public static void MakeMSSQLPayloadsSoftware(string xmlFilename, string serverConnectionString, string databaseName)
 		{
-			DataTable listTable = new DataTable($"softwarelist_xml");
+			DataTable listTable = new DataTable($"softwarelist_payload");
 			listTable.Columns.Add("softwarelist_name", typeof(string));
 			listTable.Columns.Add("xml", typeof(string));
+			listTable.Columns.Add("json", typeof(string));
+			listTable.Columns.Add("html", typeof(string));
 
-			DataTable softwareTable = new DataTable($"software_xml");
+			DataTable softwareTable = new DataTable($"software_payload");
 			softwareTable.Columns.Add("softwarelist_name", typeof(string));
 			softwareTable.Columns.Add("software_name", typeof(string));
 			softwareTable.Columns.Add("xml", typeof(string));
+			softwareTable.Columns.Add("json", typeof(string));
+			softwareTable.Columns.Add("html", typeof(string));
 
 			using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
 			{
@@ -478,29 +489,37 @@ namespace Spludlow.MameAO
 					if (reader.NodeType == XmlNodeType.Element&& reader.Name == "softwarelist")
 					{
 						XElement listElement = XElement.ReadFrom(reader) as XElement;
-						if (listElement == null)
-							continue;
-
-						string softwarelist_name = listElement.Attribute("name").Value;
-
-						listTable.Rows.Add(softwarelist_name, listElement.ToString());
-
-						foreach (XElement element in listElement.Elements("software"))
+						if (listElement != null)
 						{
-							string software_name = element.Attribute("name").Value;
+							string softwarelist_name = listElement.Attribute("name").Value;
 
-							softwareTable.Rows.Add(softwarelist_name, software_name, element.ToString());
+							string xml = listElement.ToString();
+							string json = XML2JSON(listElement);
+							string html = $"<div><h1>{softwarelist_name}</h1></div>";
+
+							listTable.Rows.Add(softwarelist_name, xml, json, html);
+
+							foreach (XElement element in listElement.Elements("software"))
+							{
+								string software_name = element.Attribute("name").Value;
+
+								xml = element.ToString();
+								json = XML2JSON(element);
+								html = $"<div><h1>{softwarelist_name}, {software_name}</h1></div>";
+
+								softwareTable.Rows.Add(softwarelist_name, software_name, xml, json, html);
+							}
 						}
 					}
 				}
 			}
 
-			MakeMSSQLXMLInsert(listTable, serverConnectionString, databaseName, new string[] { "softwarelist_name" });
+			MakeMSSQLPayloadsInsert(listTable, serverConnectionString, databaseName, new string[] { "softwarelist_name" });
 
-			MakeMSSQLXMLInsert(softwareTable, serverConnectionString, databaseName, new string[] { "softwarelist_name", "software_name" });
+			MakeMSSQLPayloadsInsert(softwareTable, serverConnectionString, databaseName, new string[] { "softwarelist_name", "software_name" });
 		}
 
-		public static void MakeMSSQLXMLInsert(DataTable table, string serverConnectionString, string databaseName, string[] primaryKeyNames)
+		public static void MakeMSSQLPayloadsInsert(DataTable table, string serverConnectionString, string databaseName, string[] primaryKeyNames)
 		{
 			using (SqlConnection targetConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
 			{
@@ -510,9 +529,10 @@ namespace Spludlow.MameAO
 					columnDefs.Add($"{primaryKeyName} VARCHAR(32)");
 
 				columnDefs.Add("[xml] NVARCHAR(MAX)");
+				columnDefs.Add("[json] NVARCHAR(MAX)");
+				columnDefs.Add("[html] NVARCHAR(MAX)");
 
 				columnDefs.Add($"CONSTRAINT [PK_{table.TableName}] PRIMARY KEY NONCLUSTERED ({String.Join(", ", primaryKeyNames)})");
-
 
 				string commandText = $"CREATE TABLE [{table.TableName}] ({String.Join(", ", columnDefs)});";
 
@@ -520,6 +540,22 @@ namespace Spludlow.MameAO
 				Database.ExecuteNonQuery(targetConnection, commandText);
 
 				Database.BulkInsert(targetConnection, table);
+			}
+		}
+
+		public static string XML2JSON(XElement element)
+		{
+			JsonSerializerSettings serializerSettings = new JsonSerializerSettings();
+			serializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
+
+			using (StringWriter writer  = new StringWriter())
+			{
+				CustomJsonWriter customJsonWriter = new CustomJsonWriter(writer);
+
+				JsonSerializer jsonSerializer = JsonSerializer.Create(serializerSettings);
+				jsonSerializer.Serialize(customJsonWriter, element);
+
+				return writer.ToString();
 			}
 		}
 
@@ -532,7 +568,7 @@ namespace Spludlow.MameAO
 		public CustomJsonWriter(TextWriter writer) : base(writer) { }
 		public override void WritePropertyName(string name)
 		{
-			if (name.StartsWith("@") || name.StartsWith("#"))
+			if (name.StartsWith("@") == true)
 				base.WritePropertyName(name.Substring(1));
 			else
 				base.WritePropertyName(name);
