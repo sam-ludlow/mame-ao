@@ -9,7 +9,7 @@ using System.Net.Http;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-using System.Web.UI.WebControls;
+using System.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -21,46 +21,69 @@ namespace Spludlow.MameAO
 
 		public static int ProcessOperation(Dictionary<string, string> parameters, MameAOProcessor proc)
 		{
+			int exitCode;
+
+			DateTime timeStart = DateTime.Now;
+
 			switch (parameters["OPERATION"])
 			{
 				case "GET_MAME":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
 
-					return GetMame(parameters["DIRECTORY"], parameters["VERSION"], proc._HttpClient);
+					exitCode = GetMame(parameters["DIRECTORY"], parameters["VERSION"], proc._HttpClient);
+					break;
 
 				case "MAKE_XML":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
 
-					return MakeXML(parameters["DIRECTORY"], parameters["VERSION"]);
+					exitCode = MakeXML(parameters["DIRECTORY"], parameters["VERSION"]);
+					break;
 
 				case "MAKE_JSON":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
 
-					return MakeJSON(parameters["DIRECTORY"], parameters["VERSION"]);
+					exitCode = MakeJSON(parameters["DIRECTORY"], parameters["VERSION"]);
+					break;
 
 				case "MAKE_SQLITE":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
 
-					return MakeSQLite(parameters["DIRECTORY"], parameters["VERSION"]);
+					exitCode = MakeSQLite(parameters["DIRECTORY"], parameters["VERSION"]);
+					break;
 
 				case "MAKE_MSSQL":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
-					return MakeMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					exitCode = MakeMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					break;
 
 				case "MAKE_MSSQL_KEYS":
 					ValidateRequiredParameters(parameters, new string[] { "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
-					return MakeForeignKeys(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					exitCode = MakeForeignKeys(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					break;
 
 				case "MAME_MSSQL_PAYLOADS":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
-					return MakeMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					exitCode = MakeMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					break;
+
+				case "MAME_MSSQL_PAYLOADS_HTML":
+					ValidateRequiredParameters(parameters, new string[] { "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
+
+					exitCode = MakeMSSQLPayloadHtml(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					break;
 
 				default:
 					throw new ApplicationException($"Unknown Operation {parameters["OPERATION"]}");
 			}
+
+			TimeSpan timeTook = DateTime.Now - timeStart;
+
+			Console.WriteLine($"Operation '{parameters["OPERATION"]}' took: {Math.Round(timeTook.TotalSeconds, 0)} seconds");
+
+			return exitCode;
 		}
 
 		private static void ValidateRequiredParameters(Dictionary<string, string> parameters, string[] required)
@@ -444,17 +467,16 @@ namespace Spludlow.MameAO
 
 				while (reader.Read())
 				{
-					if (reader.NodeType == XmlNodeType.Element && reader.Name == "machine")
+					while (reader.NodeType == XmlNodeType.Element && reader.Name == "machine")
 					{
 						XElement element = XElement.ReadFrom(reader) as XElement;
-
 						if (element != null)
 						{
 							string key = element.Attribute("name").Value;
 
 							string xml = element.ToString();
 							string json = XML2JSON(element);
-							string html = $"<div><h1>{key}</h1></div>";
+							string html = "";
 
 							table.Rows.Add(key, xml, json, html);
 						}
@@ -486,7 +508,7 @@ namespace Spludlow.MameAO
 
 				while (reader.Read())
 				{
-					if (reader.NodeType == XmlNodeType.Element&& reader.Name == "softwarelist")
+					while (reader.NodeType == XmlNodeType.Element && reader.Name == "softwarelist")
 					{
 						XElement listElement = XElement.ReadFrom(reader) as XElement;
 						if (listElement != null)
@@ -495,7 +517,7 @@ namespace Spludlow.MameAO
 
 							string xml = listElement.ToString();
 							string json = XML2JSON(listElement);
-							string html = $"<div><h1>{softwarelist_name}</h1></div>";
+							string html = "";
 
 							listTable.Rows.Add(softwarelist_name, xml, json, html);
 
@@ -505,7 +527,7 @@ namespace Spludlow.MameAO
 
 								xml = element.ToString();
 								json = XML2JSON(element);
-								html = $"<div><h1>{softwarelist_name}, {software_name}</h1></div>";
+								html = "";
 
 								softwareTable.Rows.Add(softwarelist_name, software_name, xml, json, html);
 							}
@@ -543,6 +565,363 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		//
+		// HTML
+		//
+
+		public static int MakeMSSQLPayloadHtml(string serverConnectionString, string databaseNames)
+		{
+			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' });
+			for (int index = 0; index < databaseNamesEach.Length; ++index)
+				databaseNamesEach[index] = databaseNamesEach[index].Trim();
+
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNamesEach[0]}';"))
+				MakeMSSQLPayloadHtmlMachine(connection);
+
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNamesEach[1]}';"))
+				MakeMSSQLPayloadHtmlSoftware(connection);
+
+			return 0;
+		}
+
+		public static DataTable[] FindChildTables(string parentKeyName, DataSet dataSet)
+		{
+			List<DataTable> childTables = new List<DataTable>();
+
+			foreach (DataTable table in dataSet.Tables)
+			{
+				DataColumn column = table.Columns.Cast<DataColumn>().Where(col => col.Ordinal > 0 && col.ColumnName == parentKeyName).SingleOrDefault();
+
+				if (column != null)
+					childTables.Add(table);
+			}
+
+			return childTables.ToArray();
+		}
+
+		public static void MakeMSSQLPayloadHtmlMachine(SqlConnection connection)
+		{
+			//
+			// Load all database
+			//
+			DataSet dataSet = new DataSet();
+
+			List<string> conditionTableNames = new List<string>();
+
+			foreach (string tableName in Database.TableList(connection))
+			{
+				if (tableName.EndsWith("_payload") == true || tableName == "sysdiagrams")
+					continue;
+
+				using (SqlDataAdapter adapter = new SqlDataAdapter($"SELECT * from [{tableName}]", connection))
+					adapter.Fill(dataSet);
+
+				dataSet.Tables[dataSet.Tables.Count - 1].TableName = tableName;
+
+				if (tableName.EndsWith("_condition") == true)
+					conditionTableNames.Add(tableName);
+			}
+
+			//
+			// Merge condition tables
+			//
+			foreach (string conditionTableName in conditionTableNames)
+			{
+				string parentTableName = conditionTableName.Substring(0, conditionTableName.Length - 10);
+
+				DataTable parentTable = dataSet.Tables[parentTableName];
+				DataTable conditionTable = dataSet.Tables[conditionTableName];
+
+				conditionTable.PrimaryKey = new DataColumn[] { conditionTable.Columns[1] };
+
+				foreach (DataColumn column in conditionTable.Columns)
+				{
+					string newColumnName = $"condition_{column.ColumnName}";
+					parentTable.Columns.Add(newColumnName, column.DataType);
+				}
+
+				string keyColumnName = parentTable.Columns[0].ColumnName;
+
+				foreach (DataRow parentRow in parentTable.Rows)
+				{
+					long key = (long)parentRow[0];
+
+					DataRow conditionRow = conditionTable.Rows.Find(key);
+
+					if (conditionRow == null)
+						continue;
+
+					foreach (DataColumn column in conditionTable.Columns)
+					{
+						string newColumnName = $"condition_{column.ColumnName}";
+						parentRow[newColumnName] = conditionRow[column];
+					}
+				}
+			}
+
+			////
+			//// Report on table relations
+			////
+			//StringBuilder report = new StringBuilder();
+			//foreach (DataTable parentTable in dataSet.Tables)
+			//{
+			//	string pkName = parentTable.Columns[0].ColumnName;
+
+			//	DataTable[] childTables = FindChildTables(pkName, dataSet);
+
+			//	if (childTables.Length > 0)
+			//	{
+			//		foreach (DataTable childTable in childTables)
+			//		{
+			//			int min = Int32.MaxValue;
+			//			int max = Int32.MinValue;
+
+			//			foreach (DataRow row in parentTable.Rows)
+			//			{
+			//				long id = (long)row[pkName];
+
+			//				DataRow[] childRows = childTable.Select($"{pkName} = {id}");
+
+			//				min = Math.Min(min, childRows.Length);
+			//				max = Math.Max(max, childRows.Length);
+			//			}
+
+			//			report.AppendLine($"{parentTable.TableName}\t{childTable.TableName}\t{min}\t{max}");
+			//		}
+			//	}
+			//}
+			//Tools.PopText(report.ToString());
+
+			string[] simpleTableNames = new string[] {
+				"machine",
+				"display",
+				"driver",
+				"rom",
+				"disk",
+				"chip",
+				"softwarelist",
+				"device_ref",
+				"sample",
+				"adjuster",
+				"biosset",
+				"sound",
+				"feature",
+				"ramoption",
+			};
+
+			using (SqlCommand command = new SqlCommand("UPDATE machine_payload SET [html] = @html WHERE [machine_name] = @machine_name", connection))
+			{
+				command.Parameters.Add("@html", SqlDbType.NVarChar);
+				command.Parameters.Add("@machine_name", SqlDbType.VarChar);
+
+				connection.Open();
+
+				try
+				{
+					foreach (DataRow machineRow in dataSet.Tables["machine"].Rows)
+					{
+						long machine_id = (long)machineRow["machine_id"];
+						string machine_name = (string)machineRow["name"];
+
+						//if (machine_name != "cd6809")
+						//	continue;
+
+						StringBuilder html = new StringBuilder();
+
+						//
+						// Simple joins
+						//
+						foreach (string tableName in simpleTableNames)
+						{
+							DataTable sourceTable = dataSet.Tables[tableName];
+
+							DataRow[] rows = sourceTable.Select("machine_id = " + machine_id);
+
+							if (rows.Length == 0)
+								continue;
+
+							DataTable table = sourceTable.Clone();
+
+							foreach (DataRow row in rows)
+								table.ImportRow(row);
+
+							html.AppendLine($"<h2>{tableName}</h2>");
+							html.AppendLine(Reports.MakeHtmlTable(table, null));
+						}
+
+						//
+						// slot, slotoption
+						//
+						DataRow[] slotRows = dataSet.Tables["slot"].Select("machine_id = " + machine_id);
+						if (slotRows.Length > 0)
+						{
+							html.AppendLine($"<h2>slot, slotoption</h2>");
+
+							DataTable table = Tools.MakeDataTable(
+								"slot_name	slotoption_name	slotoption_devname	slotoption_default",
+								"String		String			String				String"
+							);
+
+							foreach (DataRow slotRow in slotRows)
+							{
+								long slot_id = (long)slotRow["slot_id"];
+								DataRow[] slotoptionRows = dataSet.Tables["slotoption"].Select("slot_id = " + slot_id);
+
+								if (slotoptionRows.Length == 0)
+									table.Rows.Add(slotRow["name"], null, null, null);
+
+								foreach (DataRow slotoptionRow in slotoptionRows)
+									table.Rows.Add(slotRow["name"], slotoptionRow["name"], slotoptionRow["devname"], slotoptionRow["default"]);
+							}
+
+							html.AppendLine(Reports.MakeHtmlTable(table, null));
+						}
+
+						//
+						// input, control
+						//
+						DataRow[] inputRows = dataSet.Tables["input"].Select("machine_id = " + machine_id);
+						if (inputRows.Length > 0)
+						{
+							if (inputRows.Length != 1)
+								throw new ApplicationException("Not one [input] row.");
+
+							long input_id = (long)inputRows[0]["input_id"];
+
+							html.AppendLine($"<h2>input</h2>");
+							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["input"], inputRows, null));
+
+							DataRow[] controlRows = dataSet.Tables["control"].Select("input_id = " + input_id);
+							if (controlRows.Length > 0)
+							{
+								html.AppendLine($"<h3>control</h3>");
+								html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["control"], controlRows, null));
+							}
+						}
+
+						//
+						// port, analog
+						//
+						DataRow[] portRows = dataSet.Tables["port"].Select("machine_id = " + machine_id);
+						if (portRows.Length > 0)
+						{
+							html.AppendLine($"<h2>port, analog</h2>");
+
+							DataTable table = Tools.MakeDataTable(
+								"port_tag	analog_masks",
+								"String		String"
+							);
+							foreach (DataRow portRow in portRows)
+							{
+								long port_id = (long)portRow["port_id"];
+
+								DataRow[] analogRows = dataSet.Tables["analog"].Select("port_id = " + port_id);
+
+								string masks = String.Join(", ", analogRows.Select(row => (string)row["mask"]));
+
+								table.Rows.Add((string)portRow["tag"], masks);
+							}
+
+							html.AppendLine(Reports.MakeHtmlTable(table, null));
+						}
+
+						//
+						// dipswitch
+						//
+						DataRow[] dipswitchRows = dataSet.Tables["dipswitch"].Select("machine_id = " + machine_id);
+						if (dipswitchRows.Length > 0)
+						{
+							html.AppendLine($"<h2>dipswitch</h2>");
+
+							html.AppendLine($"<hr />");
+
+							foreach (DataRow dipswitchRow in dipswitchRows)
+							{
+								long dipswitch_id = (long)dipswitchRow["dipswitch_id"];
+
+								html.AppendLine($"<h3>{(string)dipswitchRow["name"]}</h3>");
+
+								html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["dipswitch"], new[] { dipswitchRow }, null));
+								
+								DataRow[] diplocationRows = dataSet.Tables["diplocation"].Select("dipswitch_id = " + dipswitch_id);
+								if (diplocationRows.Length > 0)
+								{
+									html.AppendLine($"<h4>location</h4>");
+
+									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["diplocation"], diplocationRows, null));
+								}
+
+								DataRow[] dipvalueRows = dataSet.Tables["dipvalue"].Select("dipswitch_id = " + dipswitch_id);
+								if (dipvalueRows.Length > 0)
+								{
+									html.AppendLine($"<h4>value</h4>");
+
+									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["dipvalue"], dipvalueRows, null));
+								}
+
+								html.AppendLine($"<hr />");
+							}
+						}
+
+						//
+						// configuration
+						//
+						DataRow[] configurationRows = dataSet.Tables["configuration"].Select("machine_id = " + machine_id);
+						if (configurationRows.Length > 0)
+						{
+							html.AppendLine($"<h2>configuration</h2>");
+
+							html.AppendLine($"<hr />");
+
+							foreach (DataRow configurationRow in configurationRows)
+							{
+								long configuration_id = (long)configurationRow["configuration_id"];
+
+								html.AppendLine($"<h3>{(string)configurationRow["name"]}</h3>");
+
+								html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["configuration"], new[] { configurationRow }, null));
+
+								DataRow[] conflocationRows = dataSet.Tables["conflocation"].Select("configuration_id = " + configuration_id);
+								if (conflocationRows.Length > 0)
+								{
+									html.AppendLine($"<h4>location</h4>");
+
+									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["conflocation"], conflocationRows, null));
+								}
+
+								DataRow[] confsettingRows = dataSet.Tables["confsetting"].Select("configuration_id = " + configuration_id);
+								if (confsettingRows.Length > 0)
+								{
+									html.AppendLine($"<h4>setting</h4>");
+
+									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["confsetting"], confsettingRows, null));
+								}
+
+								html.AppendLine($"<hr />");
+							}
+						}
+
+						command.Parameters["@html"].Value = html.ToString();
+						command.Parameters["@machine_name"].Value = machine_name;
+
+						command.ExecuteNonQuery();
+
+					}
+				}
+				finally
+				{
+					connection.Close();
+				}
+			}
+		}
+
+		public static void MakeMSSQLPayloadHtmlSoftware(SqlConnection connection)
+		{
+
+		}
+
+
+
 		public static string XML2JSON(XElement element)
 		{
 			JsonSerializerSettings serializerSettings = new JsonSerializerSettings();
@@ -558,8 +937,6 @@ namespace Spludlow.MameAO
 				return writer.ToString();
 			}
 		}
-
-
 
 	}
 

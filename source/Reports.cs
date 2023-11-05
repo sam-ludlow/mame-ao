@@ -7,6 +7,7 @@ using System.Linq;
 using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
+using System.Net;
 
 namespace Spludlow.MameAO
 {
@@ -244,6 +245,11 @@ namespace Spludlow.MameAO
 
 		public static string MakeHtmlTable(DataTable table, string tableStyle)
 		{
+			return MakeHtmlTable(table, table.Rows.OfType<DataRow>(), tableStyle);
+		}
+
+		public static string MakeHtmlTable(DataTable table, IEnumerable<DataRow> rows, string tableStyle)
+		{
 			StringBuilder html = new StringBuilder();
 
 			html.Append("<table");
@@ -258,20 +264,26 @@ namespace Spludlow.MameAO
 			html.Append("<tr>");
 			foreach (DataColumn column in table.Columns)
 			{
+				if (column.ColumnName.EndsWith("_id") == true)
+					continue;
+
 				html.Append("<th>");
 				html.Append(column.ColumnName);
 				html.Append("</th>");
 			}
 			html.AppendLine("</tr>");
 
-			foreach (DataRow row in table.Rows)
+			foreach (DataRow row in rows)
 			{
 				html.Append("<tr>");
 				foreach (DataColumn column in table.Columns)
 				{
+					if (column.ColumnName.EndsWith("_id") == true)
+						continue;
+
 					html.Append("<td>");
 					if (row.IsNull(column) == false)
-						html.Append(Convert.ToString(row[column]));
+						html.Append(WebUtility.HtmlEncode(Convert.ToString(row[column])));
 					html.Append("</td>");
 				}
 				html.AppendLine("</tr>");

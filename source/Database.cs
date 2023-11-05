@@ -743,5 +743,18 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static string[] TableList(SqlConnection connection)
+		{
+			List<string> result = new List<string>();
+
+			DataTable table = ExecuteFill(connection,
+				"SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_TYPE='BASE TABLE' ORDER BY TABLE_NAME");
+
+			foreach (DataRow row in table.Rows)
+				result.Add((string)row["TABLE_NAME"]);
+
+			return result.ToArray();
+		}
+
 	}
 }
