@@ -66,7 +66,7 @@ namespace Spludlow.MameAO
 				case "MAME_MSSQL_PAYLOADS":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
-					exitCode = MakeMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					exitCode = MakeMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"], proc._AssemblyVersion);
 					break;
 
 				case "MAME_MSSQL_PAYLOADS_HTML":
@@ -414,7 +414,7 @@ namespace Spludlow.MameAO
 			IgnoreWhitespace = true,
 		};
 
-		public static int MakeMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseNames)
+		public static int MakeMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseNames, string assemblyVersion)
 		{
 			if (version == "0")
 				version = GetLatestDownloadedVersion(directory);
@@ -439,6 +439,8 @@ namespace Spludlow.MameAO
 			databaseName = databaseNamesEach[0];
 			xmlFilename = Path.Combine(versionDirectory, $"_machine.xml");
 
+			MakeMSSQLPayloadsInfoTable(version, serverConnectionString, databaseNamesEach[0], "mame", "machine", assemblyVersion, versionDirectory);
+
 			MakeMSSQLPayloadsMachine(xmlFilename, serverConnectionString, databaseName);
 
 			//
@@ -448,15 +450,77 @@ namespace Spludlow.MameAO
 			databaseName = databaseNamesEach[1];
 			xmlFilename = Path.Combine(versionDirectory, $"_software.xml");
 
+			MakeMSSQLPayloadsInfoTable(version, serverConnectionString, databaseNamesEach[1], "mame", "software", assemblyVersion, versionDirectory);
+
 			MakeMSSQLPayloadsSoftware(xmlFilename, serverConnectionString, databaseName);
 
 			return 0;
+		}
+
+		public static void MakeMSSQLPayloadsInfoTable(string version, string serverConnectionString, string databaseName, string dataSetName, string subSetName, string assemblyVersion, string versionDirectory)
+		{
+			string agent = $"mame-ao/{assemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
+
+			string exePath = Path.Combine(versionDirectory, "mame.exe");
+			string exeTime = File.GetLastWriteTime(exePath).ToString("s");
+
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			{
+				string[] columnDefs = new string[] {
+					"[_metadata_id] BIGINT NOT NULL PRIMARY KEY",
+					"[dataset] NVARCHAR(1024) NOT NULL",
+					"[subset] NVARCHAR(1024) NOT NULL",
+					"[version] NVARCHAR(1024) NOT NULL",
+					"[info] NVARCHAR(1024) NOT NULL",
+					"[processed] DATETIME NOT NULL",
+					"[agent] NVARCHAR(1024) NOT NULL",
+				};
+				string commandText = $"CREATE TABLE [_metadata] ({String.Join(", ", columnDefs)});";
+
+				Console.WriteLine(commandText);
+				Database.ExecuteNonQuery(connection, commandText);
+
+				DataTable table = Database.ExecuteFill(connection, "SELECT * FROM [_metadata]");
+				table.TableName = "_metadata";
+
+				string info;
+
+				switch (subSetName)
+				{
+					case "machine":
+
+						int machineCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM machine");
+						int romCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
+						int diskCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM disk");
+
+						info = $"MAME: {version} - Released: {exeTime} - Machines: {machineCount} - rom: {romCount} - disk: {diskCount}";
+						break;
+
+					case "software":
+
+						int softwarelistCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM softwarelist");
+						int softwareCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM software");
+						int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
+						int softDiskCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM disk");
+
+						info = $"MAME: {version} - Released: {exeTime} - Lists: {softwarelistCount} - Software: {softwareCount} - rom: {softRomCount} - disk: {softDiskCount}";
+						break;
+
+					default:
+						throw new ApplicationException($"bad subset: {subSetName}");
+				}
+
+				table.Rows.Add(1L, dataSetName, subSetName, version, info, DateTime.Now, agent);
+
+				Database.BulkInsert(connection, table);
+			}
 		}
 
 		public static void MakeMSSQLPayloadsMachine(string xmlFilename, string serverConnectionString, string databaseName)
 		{
 			DataTable table = new DataTable($"machine_payload");
 			table.Columns.Add("machine_name", typeof(string));
+			table.Columns.Add("title", typeof(string));
 			table.Columns.Add("xml", typeof(string));
 			table.Columns.Add("json", typeof(string));
 			table.Columns.Add("html", typeof(string));
@@ -474,11 +538,12 @@ namespace Spludlow.MameAO
 						{
 							string key = element.Attribute("name").Value;
 
+							string title = "";
 							string xml = element.ToString();
 							string json = XML2JSON(element);
 							string html = "";
 
-							table.Rows.Add(key, xml, json, html);
+							table.Rows.Add(key, title, xml, json, html);
 						}
 					}
 				}
@@ -491,6 +556,7 @@ namespace Spludlow.MameAO
 		{
 			DataTable listTable = new DataTable($"softwarelist_payload");
 			listTable.Columns.Add("softwarelist_name", typeof(string));
+			listTable.Columns.Add("title", typeof(string));
 			listTable.Columns.Add("xml", typeof(string));
 			listTable.Columns.Add("json", typeof(string));
 			listTable.Columns.Add("html", typeof(string));
@@ -498,6 +564,7 @@ namespace Spludlow.MameAO
 			DataTable softwareTable = new DataTable($"software_payload");
 			softwareTable.Columns.Add("softwarelist_name", typeof(string));
 			softwareTable.Columns.Add("software_name", typeof(string));
+			softwareTable.Columns.Add("title", typeof(string));
 			softwareTable.Columns.Add("xml", typeof(string));
 			softwareTable.Columns.Add("json", typeof(string));
 			softwareTable.Columns.Add("html", typeof(string));
@@ -515,21 +582,23 @@ namespace Spludlow.MameAO
 						{
 							string softwarelist_name = listElement.Attribute("name").Value;
 
+							string title = "";
 							string xml = listElement.ToString();
 							string json = XML2JSON(listElement);
 							string html = "";
 
-							listTable.Rows.Add(softwarelist_name, xml, json, html);
+							listTable.Rows.Add(softwarelist_name, title, xml, json, html);
 
 							foreach (XElement element in listElement.Elements("software"))
 							{
 								string software_name = element.Attribute("name").Value;
 
+								title = "";
 								xml = element.ToString();
 								json = XML2JSON(element);
 								html = "";
 
-								softwareTable.Rows.Add(softwarelist_name, software_name, xml, json, html);
+								softwareTable.Rows.Add(softwarelist_name, software_name, title, xml, json, html);
 							}
 						}
 					}
@@ -550,6 +619,7 @@ namespace Spludlow.MameAO
 				foreach (string primaryKeyName in primaryKeyNames)
 					columnDefs.Add($"{primaryKeyName} VARCHAR(32)");
 
+				columnDefs.Add("[title] NVARCHAR(MAX)");
 				columnDefs.Add("[xml] NVARCHAR(MAX)");
 				columnDefs.Add("[json] NVARCHAR(MAX)");
 				columnDefs.Add("[html] NVARCHAR(MAX)");
@@ -709,8 +779,9 @@ namespace Spludlow.MameAO
 				"ramoption",
 			};
 
-			using (SqlCommand command = new SqlCommand("UPDATE machine_payload SET [html] = @html WHERE [machine_name] = @machine_name", connection))
+			using (SqlCommand command = new SqlCommand("UPDATE machine_payload SET [title] = @title, [html] = @html WHERE [machine_name] = @machine_name", connection))
 			{
+				command.Parameters.Add("@title", SqlDbType.NVarChar);
 				command.Parameters.Add("@html", SqlDbType.NVarChar);
 				command.Parameters.Add("@machine_name", SqlDbType.VarChar);
 
@@ -745,6 +816,9 @@ namespace Spludlow.MameAO
 							foreach (DataRow row in rows)
 								table.ImportRow(row);
 
+							if (tableName != "machine")
+								html.AppendLine($"<hr />");
+
 							html.AppendLine($"<h2>{tableName}</h2>");
 							html.AppendLine(Reports.MakeHtmlTable(table, null));
 						}
@@ -755,6 +829,7 @@ namespace Spludlow.MameAO
 						DataRow[] slotRows = dataSet.Tables["slot"].Select("machine_id = " + machine_id);
 						if (slotRows.Length > 0)
 						{
+							html.AppendLine($"<hr />");
 							html.AppendLine($"<h2>slot, slotoption</h2>");
 
 							DataTable table = Tools.MakeDataTable(
@@ -788,6 +863,7 @@ namespace Spludlow.MameAO
 
 							long input_id = (long)inputRows[0]["input_id"];
 
+							html.AppendLine($"<hr />");
 							html.AppendLine($"<h2>input</h2>");
 							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["input"], inputRows, null));
 
@@ -805,6 +881,7 @@ namespace Spludlow.MameAO
 						DataRow[] portRows = dataSet.Tables["port"].Select("machine_id = " + machine_id);
 						if (portRows.Length > 0)
 						{
+							html.AppendLine($"<hr />");
 							html.AppendLine($"<h2>port, analog</h2>");
 
 							DataTable table = Tools.MakeDataTable(
@@ -831,13 +908,14 @@ namespace Spludlow.MameAO
 						DataRow[] dipswitchRows = dataSet.Tables["dipswitch"].Select("machine_id = " + machine_id);
 						if (dipswitchRows.Length > 0)
 						{
-							html.AppendLine($"<h2>dipswitch</h2>");
-
 							html.AppendLine($"<hr />");
+							html.AppendLine($"<h2>dipswitch</h2>");
 
 							foreach (DataRow dipswitchRow in dipswitchRows)
 							{
 								long dipswitch_id = (long)dipswitchRow["dipswitch_id"];
+
+								html.AppendLine($"<hr class='px2' />");
 
 								html.AppendLine($"<h3>{(string)dipswitchRow["name"]}</h3>");
 
@@ -858,8 +936,6 @@ namespace Spludlow.MameAO
 
 									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["dipvalue"], dipvalueRows, null));
 								}
-
-								html.AppendLine($"<hr />");
 							}
 						}
 
@@ -869,13 +945,14 @@ namespace Spludlow.MameAO
 						DataRow[] configurationRows = dataSet.Tables["configuration"].Select("machine_id = " + machine_id);
 						if (configurationRows.Length > 0)
 						{
-							html.AppendLine($"<h2>configuration</h2>");
-
 							html.AppendLine($"<hr />");
+							html.AppendLine($"<h2>configuration</h2>");
 
 							foreach (DataRow configurationRow in configurationRows)
 							{
 								long configuration_id = (long)configurationRow["configuration_id"];
+
+								html.AppendLine($"<hr class='px2' />");
 
 								html.AppendLine($"<h3>{(string)configurationRow["name"]}</h3>");
 
@@ -897,10 +974,10 @@ namespace Spludlow.MameAO
 									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["confsetting"], confsettingRows, null));
 								}
 
-								html.AppendLine($"<hr />");
 							}
 						}
 
+						command.Parameters["@title"].Value = $"{(string)machineRow["description"]} - mame machine";
 						command.Parameters["@html"].Value = html.ToString();
 						command.Parameters["@machine_name"].Value = machine_name;
 
