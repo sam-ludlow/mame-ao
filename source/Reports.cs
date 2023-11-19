@@ -283,7 +283,14 @@ namespace Spludlow.MameAO
 
 					html.Append("<td>");
 					if (row.IsNull(column) == false)
-						html.Append(WebUtility.HtmlEncode(Convert.ToString(row[column])));
+					{
+						string value = Convert.ToString(row[column]);
+
+						if (value.StartsWith("<a href=") == true)
+							html.Append(value);
+						else
+							html.Append(WebUtility.HtmlEncode(value));
+					}
 					html.Append("</td>");
 				}
 				html.AppendLine("</tr>");

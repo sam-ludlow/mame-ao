@@ -422,6 +422,10 @@
 							cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Machine.aspx?name=${row.name}" target="_blank">${row.name}</a>`;
 							break;
 
+						case 'description':
+							cell.innerHTML = `<a href="https://data.spludlow.co.uk/mame/machine/${row.name}" target="_blank">${row.description}</a>`;
+							break;
+
 						case 'favorite':
 							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavoriteMachine(this.id)" ${row.favorite ? 'checked' : ''}>`;
 							break;
@@ -555,6 +559,10 @@
 
 						case 'name':
 							cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Software.aspx?list=${softwarelist}&soft=${row.name}" target="_blank">${row.name}</a>`;
+							break;
+
+						case 'description':
+							cell.innerHTML = `<a href="https://data.spludlow.co.uk/mame/software/${softwarelist}/${row.name}" target="_blank">${row.description}</a>`;
 							break;
 
 						case 'favorite':

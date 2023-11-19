@@ -762,6 +762,10 @@ namespace Spludlow.MameAO
 			//}
 			//Tools.PopText(report.ToString());
 
+			DataRow metaRow = dataSet.Tables["_metadata"].Rows[0];
+
+			string version = (string)metaRow["version"];
+
 			string[] simpleTableNames = new string[] {
 				"machine",
 				"display",
@@ -814,12 +818,45 @@ namespace Spludlow.MameAO
 							DataTable table = sourceTable.Clone();
 
 							foreach (DataRow row in rows)
+							{
 								table.ImportRow(row);
 
-							if (tableName != "machine")
-								html.AppendLine($"<hr />");
+								DataRow targetRow = table.Rows[table.Rows.Count - 1];
 
-							html.AppendLine($"<h2>{tableName}</h2>");
+								switch (tableName)
+								{
+									case "machine":
+										if (targetRow.IsNull("sourcefile") == false)
+										{
+											string value = (string)targetRow["sourcefile"];
+											targetRow["sourcefile"] = $"<a href=\"https://github.com/mamedev/mame/blob/mame{version}/src/mame/{value}\" target=\"_blank\">{value}</a>";
+										}
+										if (targetRow.IsNull("romof") == false)
+										{
+											string value = (string)targetRow["romof"];
+											targetRow["romof"] = $"<a href=\"/mame/machine/{value}\" target=\"_blank\">{value}</a>";
+										}
+										if (targetRow.IsNull("cloneof") == false)
+										{
+											string value = (string)targetRow["cloneof"];
+											targetRow["cloneof"] = $"<a href=\"/mame/machine/{value}\" target=\"_blank\">{value}</a>";
+										}
+										break;
+								}
+							}
+
+							if (tableName == "machine")
+							{
+								html.AppendLine("<br />");
+								html.AppendLine($"<div><h2 style=\"display:inline;\">machine</h2> &bull; <a href=\"{machine_name}.xml\">XML</a> &bull; <a href=\"{machine_name}.json\">JSON</a> &bull; <a href=\"#\" onclick=\"mameAO('{machine_name}'); return false\">AO</a></div>");
+								html.AppendLine("<br />");
+							}
+							else
+							{
+								html.AppendLine($"<hr />");
+								html.AppendLine($"<h2>{tableName}</h2>");
+							}
+
 							html.AppendLine(Reports.MakeHtmlTable(table, null));
 						}
 
@@ -994,10 +1031,101 @@ namespace Spludlow.MameAO
 
 		public static void MakeMSSQLPayloadHtmlSoftware(SqlConnection connection)
 		{
+			DataSet dataSet = new DataSet();
+
+			foreach (string tableName in Database.TableList(connection))
+			{
+				if (tableName.EndsWith("_payload") == true || tableName == "sysdiagrams")
+					continue;
+
+				using (SqlDataAdapter adapter = new SqlDataAdapter($"SELECT * from [{tableName}]", connection))
+					adapter.Fill(dataSet);
+
+				dataSet.Tables[dataSet.Tables.Count - 1].TableName = tableName;
+			}
+
+			DataRow metaRow = dataSet.Tables["_metadata"].Rows[0];
+
+			string version = (string)metaRow["version"];
+
+			connection.Open();
+
+			try
+			{
+				SqlCommand softwarelistCommand = new SqlCommand("UPDATE softwarelist_payload SET [title] = @title, [html] = @html WHERE [softwarelist_name] = @softwarelist_name", connection);
+				softwarelistCommand.Parameters.Add("@title", SqlDbType.NVarChar);
+				softwarelistCommand.Parameters.Add("@html", SqlDbType.NVarChar);
+				softwarelistCommand.Parameters.Add("@softwarelist_name", SqlDbType.VarChar);
+
+				SqlCommand softwareCommand = new SqlCommand("UPDATE software_payload SET [title] = @title, [html] = @html WHERE ([softwarelist_name] = @softwarelist_name AND [software_name] = @software_name)", connection);
+				softwareCommand.Parameters.Add("@title", SqlDbType.NVarChar);
+				softwareCommand.Parameters.Add("@html", SqlDbType.NVarChar);
+				softwareCommand.Parameters.Add("@softwarelist_name", SqlDbType.VarChar);
+				softwareCommand.Parameters.Add("@software_name", SqlDbType.VarChar);
+
+				foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Rows)
+				{
+					long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
+					string softwarelist_name = (string)softwarelistRow["name"];
+
+					foreach (DataRow softwareRow in dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}"))
+					{
+						long software_id = (long)softwareRow["software_id"];
+						string software_name = (string)softwareRow["name"];
+
+						StringBuilder html = new StringBuilder();
+
+						html.AppendLine($"<h2>softwarelist</h2>");
+						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new[] { softwarelistRow }, null));
+
+						html.AppendLine($"<hr />");
+
+						html.AppendLine($"<h2>software</h2>");
+						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["software"], new[] { softwareRow }, null));
+
+						html.AppendLine($"<hr />");
+
+						html.AppendLine($"<h2>info</h2>");
+						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["info"], dataSet.Tables["info"].Select($"software_id = {software_id}"), null));
+
+						html.AppendLine($"<hr />");
+
+						html.AppendLine($"<h2>sharedfeat</h2>");
+						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["sharedfeat"], dataSet.Tables["sharedfeat"].Select($"software_id = {software_id}"), null));
+
+
+						// too slow use db join
+						//foreach (DataRow partRow in dataSet.Tables["part"].Select($"software_id = {software_id}"))
+						//{
+						//	long part_id = (long)partRow["part_id"];
+						//	string part_name = (string)partRow["name"];
+						//	string part_interface = (string)partRow["interface"];
+
+						//	//	feature
+						//	foreach (DataRow featureRow in dataSet.Tables["feature"].Select($"part_id = {part_id}"))
+						//	{
+
+						//	}
+
+						//}
+
+
+
+						softwareCommand.Parameters["@title"].Value = $"{(string)softwareRow["description"]} - {(string)softwarelistRow["description"]} - mame software";
+						softwareCommand.Parameters["@html"].Value = html.ToString();
+						softwareCommand.Parameters["@softwarelist_name"].Value = softwarelist_name;
+						softwareCommand.Parameters["@software_name"].Value = software_name;
+
+						softwareCommand.ExecuteNonQuery();
+					}
+				}
+			}
+			finally
+			{
+				connection.Close();
+			}
 
 		}
-
-
 
 		public static string XML2JSON(XElement element)
 		{
