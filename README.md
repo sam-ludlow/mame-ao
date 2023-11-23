@@ -13,7 +13,7 @@ You can also use the command line just enter machine / software short name.
 ## Installation & Usage
 
 - create an empty directory e.g. "C:\MameAO"
-- download release ZIP from https://github.com/sam-ludlow/mame-ao/releases
+- download latest release ZIP from https://github.com/sam-ludlow/mame-ao/releases/latest
 - put ZIP in empty directory and extract
 - double click "mame-ao.exe"
 - wait for the MAME Shell to start
