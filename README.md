@@ -221,7 +221,7 @@ Convert XML to SQLite.
 ### Microsoft SQL
 Convert XML to Microsoft SQL.
 
-`mame-ao.exe OPERATION=MAKE_MSSQL VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"__`
+`mame-ao.exe OPERATION=MAKE_MSSQL VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"`
 
 ### Microsoft SQL - Make Payload Tables (XML & JSON)
 Create payload tables for machine, softwarelist, and software. Create XML & JSON payloads.
