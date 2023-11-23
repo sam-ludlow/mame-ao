@@ -18,9 +18,9 @@ You can also use the command line just enter machine / software short name.
 - double click "mame-ao.exe"
 - wait for the MAME Shell to start
 - use the Web UI it will pop up
-- or use command line, enter a machine name and press enter e.g. __"mrdo"__
+- or use command line, enter a machine name and press enter e.g. `mrdo`
 
-TIP: Run command __.upany__ to self update program, this will stop the microsoft defender notice.
+TIP: Run command `.upany` to self update program, this will stop the microsoft defender notice.
 
 ## Important notes
 
@@ -69,62 +69,64 @@ Here are some quick MAME usage notes. For more detail see the official docs. htt
 
 ### Keyboard controls
 
-NOTE: Machines that emulate keyboards will take over, use __Scroll Lock__ to toggle between standard MAME controls and full keyboard.
+NOTE: Machines that emulate keyboards will take over, use `Scroll Lock` to toggle between standard MAME controls and full keyboard.
 
 You should use a joystick but you will need a few keyboard commands. Full keyboard docs here https://docs.mamedev.org/usingmame/defaultkeys.html
 
-- Player 1 Coin Up: __5__
-- Player 1 Start: __1__
+- Player 1 Coin Up: `5`
+- Player 1 Start: `1`
 
-NOTE: Other players continue along, coin:__5, 6, 7, 8__ start:__1, 2, 3, 4__
+NOTE: Other players continue along, coin: `5`, `6`, `7`, `8` start: `1`, `2`, `3`, `4`
 
-- Player 1 Joystick: __Cursor keys__
-- Player 1 Button 1: __Left Ctrl__
-- Player 1 Button 2: __Left Alt__
-- Player 1 Button 3: __Spacebar__
+- Player 1 Joystick: `Cursor keys`
+- Player 1 Button 1: `Left Ctrl`
+- Player 1 Button 2: `Left Alt`
+- Player 1 Button 3: `Spacebar`
 
-- Main Menu - __TAB__
-- Pause - __P__
+- Main Menu - `TAB`
+- Pause - `P`
 
-- Load Saved State: __F7__
-- Save Saved State: __Left Shift + F7__
+- Service Mode: `F2`
+
+- Load Saved State: `F7`
+- Save Saved State: `Left Shift` + `F7`
 
 NOTE: When saving state you have to then press another key or button to name the save, so you can have many.
 
-- Snap Screen: __F12__
+- Snap Screen: `F12`
 
-- Exit MAME: __ESC__
+- Exit MAME: `ESC`
 
-- Keyboard UI controls OR full keyboard : __Scroll Lock__
+- Keyboard UI controls OR full keyboard : `Scroll Lock`
 
 ### MAME UI
 
 When starting MAME without a machine you will get the MAME UI.
 
-Use the mouse or __Cursor keys__ and __Enter__ to navigate.
+Use the mouse or `Cursor keys` and `Enter` to navigate.
 
-Use __Tab__ to move between windows.
+Use `Tab` to move between windows.
 
-The __available__ filter (top left) is very handy when running previous MAME versions, use the mouse or __Tab__ to get to the filters.
+The `available` filter (top left) is very handy when running previous MAME versions, use the mouse or `Tab` to get to the filters.
 
-NOTE: Selecting machines that have software will then take you to the software lists, you can use the same __available__ filter trick.
+NOTE: Selecting machines that have software will then take you to the software lists, you can use the same `available` filter trick.
 
 ## Shell / Console
 From the shell you normally just enter machine name and maybe software name.
 
-There are also commands available they all start with a dot __.__
-- __.__	- Run current MAME without a machine (start MAME UI) you can also pass arguments to MAME
-- __.0255__ - Run a previous version of MAME, you can still pass the machine and software but MAME-AO will not place assets in previous versions, you are better off not passing the machine and use the MAME UI with the available filter.
-- __.list__ - Show all saved state across all MAME versions, previous MAME versions will also be listed even without saved state.
-- __.up__ - Self update MAME-AO to the latest on GitHub
-- __.import__ - Run the import function, see below.
-- __.export__ - Run the export function, see below.
+There are also commands available they all start with a dot `.`
+- `.`	- Run current MAME without a machine (start MAME UI) you can also pass arguments to MAME
+- `.0255` - Run a previous version of MAME, you can still pass the machine and software but MAME-AO will not place assets in previous versions, you are better off not passing the machine and use the MAME UI with the available filter.
+- `.list` - Show all saved state across all MAME versions, previous MAME versions will also be listed even without saved state.
+- `.up` - Self update MAME-AO to the latest on GitHub
+- `.import` - Run the import function, see below.
+- `.export` - Run the export function, see below.
 
 ## Saved State and previous MAME versions
 
 - Saved state often does not work between MAME versions. If you have started something with saved state you should continue to run the same MAME version.
-- MAME-AO leaves previous MAME versions isolated in their own directory. You can easily list all saved stated across all previous and current MAME versions with the command __".list"__.
-- You can start a particular version of MAME with the command __".VVVV"__ where V is the version e.g. __".0252"__ or pass arguments e.g. __".0252 mrdo -window"__.
+- MAME-AO leaves previous MAME versions isolated in their own directory. You can easily list all saved stated across all previous and current MAME versions with the command `.list`.
+- You can start a particular version of MAME with the command `.VVVV` where V is the version e.g. `.0252` or pass arguments e.g. `.0252 mrdo -window`.
 - NOTE: MAME-AO only allows placing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
 - You can list saved state in the UI. The link will start the chosen MAME version without any machine, select machine & software in the MAME UI, use the available filter (top left).
 - Sometimes a regression in MAME will break a machine in the current version, so if a machine doesn't work after updating MAME you can run a previous version.
@@ -138,7 +140,7 @@ This makes sense for large files, or files that are not available on archive.org
 
 Use the following command to perform an import
 
-__.import \<directory\>__
+`.import <directory>`
 
 Files are imported based on their filename extension.
 - .ZIP – Archives will be extracted and imported with the same rules, this is recursive (ZIPs in ZIPs... will also be imported).
@@ -155,9 +157,9 @@ If you want to use the downloaded assets (ROMs & DISKs) anywhere other than MAME
 
 Well that's what the export command is for use it like so:
 
-__.export \<type\> \<directory\>__
+`.export <type> <directory>`
 
-For example __.export mr C:\My MAME ROMs__
+For example `.export mr C:\My MAME ROMs`
 
 Type can be:
 - MR : Machine ROM
@@ -177,13 +179,13 @@ A HTML report will be created containing details of the export.
 ## HTML Reports
 Some MAME-AO functions will produce HTML reports, so you can see what it's been doing
 
-There are several informational reports that you can run from the UI or with the command __.report \<type\>__
+There are several informational reports that you can run from the UI or with the command `.report <type>`
 
-Use the __.report__ command without any arguments to list available reports.
+Use the `.report` command without any arguments to list available reports.
 
 When the report has finished running it will pop up in the browser.
 
-You can list previous created reports in the UI or have a look in the ___REPORTS__ directory.
+You can list previous created reports in the UI or have a look in the `_REPORTS` directory.
 
 ## MAME Data Operations
 MAME-AO has the capability to perform various MAME Data operations by passing command line options when starting the program, it will exit immediately when finished.
@@ -192,44 +194,44 @@ These may be used for generating data sets in various formats, you could use it 
 
 You have to get MAME first, all the data formats require XML to start with. If the operation has already been performed (file already exists) nothing will hapern.
 
-You can specify a specific version e.g. __VERSION=0250__ or use __VERSION=0__ to mean the latest avaialable.
+You can specify a specific version e.g. `VERSION=0250` or use `VERSION=0` to mean the latest avaialable.
 
 ### Get MAME
-example: __mame-ao.exe OPERATION=GET_MAME VERSION=0 DIRECTORY="C:\My MAME Data"__
-
 Download and extract the MAME binaries from GitHub, needed to extract the XML.
 
 If a new version is found the processes exit code will be set to 1.
 
-### XML
-example: __mame-ao.exe OPERATION=MAKE_XML VERSION=0 DIRECTORY="C:\My MAME Data"__
+`mame-ao.exe OPERATION=GET_MAME VERSION=0 DIRECTORY="C:\My MAME Data"`
 
+### XML
 The native format output from the MAME binary, you need this first.
 
-### JSON
-example: __mame-ao.exe OPERATION=MAKE_JSON VERSION=0 DIRECTORY="C:\My MAME Data"__
+`mame-ao.exe OPERATION=MAKE_XML VERSION=0 DIRECTORY="C:\My MAME Data"`
 
-Convert the XML to JSON.
+### JSON
+Convert XML to JSON.
+
+`mame-ao.exe OPERATION=MAKE_JSON VERSION=0 DIRECTORY="C:\My MAME Data"`
 
 ### SQLite
-example: __mame-ao.exe OPERATION=MAKE_SQLITE VERSION=0 DIRECTORY="C:\My MAME Data"__
+Convert XML to SQLite.
 
-Convert the XML to SQLite.
+`mame-ao.exe OPERATION=MAKE_SQLITE VERSION=0 DIRECTORY="C:\My MAME Data"`
 
 ### Microsoft SQL
-example: __mame-ao.exe OPERATION=MAKE_MSSQL VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"__
+Convert XML to Microsoft SQL.
 
-Convert the XML to Microsoft SQL.
+`mame-ao.exe OPERATION=MAKE_MSSQL VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"__`
 
-### Microsoft SQL - Make Foreign Keys
-example: __mame-ao.exe OPERATION=MAKE_MSSQL_KEYS MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"__
+### Microsoft SQL - Make Payload Tables (XML & JSON)
+Create payload tables for machine, softwarelist, and software. Create XML & JSON payloads.
 
-Create foreign key constraints and indexes.
+`mame-ao.exe OPERATION=MAME_MSSQL_PAYLOADS VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"`
 
-### Microsoft SQL - Make Payloads (XML, JSON, HTML) Tables
-example: __mame-ao.exe OPERATION=MAME_MSSQL_PAYLOADS VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"__
+### Microsoft SQL - Make HTML Payloads
+Create HTML payloads for machine, softwarelist, and software.
 
-Create XML payload tables for machine, softwarelist, and software.
+`mame-ao.exe OPERATION=MAME_MSSQL_PAYLOADS_HTML DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"`
 
 ## Internal Workings
 

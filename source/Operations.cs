@@ -57,12 +57,6 @@ namespace Spludlow.MameAO
 					exitCode = MakeMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
 					break;
 
-				case "MAKE_MSSQL_KEYS":
-					ValidateRequiredParameters(parameters, new string[] { "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
-
-					exitCode = MakeForeignKeys(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
-					break;
-
 				case "MAME_MSSQL_PAYLOADS":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
@@ -301,6 +295,8 @@ namespace Spludlow.MameAO
 
 				GC.Collect();
 			}
+
+			MakeForeignKeys(serverConnectionString, databaseNames);
 
 			return 0;
 		}
@@ -692,6 +688,8 @@ namespace Spludlow.MameAO
 					conditionTableNames.Add(tableName);
 			}
 
+			//ReportRelations(dataSet);
+
 			//
 			// Merge condition tables
 			//
@@ -728,39 +726,6 @@ namespace Spludlow.MameAO
 					}
 				}
 			}
-
-			////
-			//// Report on table relations
-			////
-			//StringBuilder report = new StringBuilder();
-			//foreach (DataTable parentTable in dataSet.Tables)
-			//{
-			//	string pkName = parentTable.Columns[0].ColumnName;
-
-			//	DataTable[] childTables = FindChildTables(pkName, dataSet);
-
-			//	if (childTables.Length > 0)
-			//	{
-			//		foreach (DataTable childTable in childTables)
-			//		{
-			//			int min = Int32.MaxValue;
-			//			int max = Int32.MinValue;
-
-			//			foreach (DataRow row in parentTable.Rows)
-			//			{
-			//				long id = (long)row[pkName];
-
-			//				DataRow[] childRows = childTable.Select($"{pkName} = {id}");
-
-			//				min = Math.Min(min, childRows.Length);
-			//				max = Math.Max(max, childRows.Length);
-			//			}
-
-			//			report.AppendLine($"{parentTable.TableName}\t{childTable.TableName}\t{min}\t{max}");
-			//		}
-			//	}
-			//}
-			//Tools.PopText(report.ToString());
 
 			DataRow metaRow = dataSet.Tables["_metadata"].Rows[0];
 
@@ -861,35 +826,6 @@ namespace Spludlow.MameAO
 						}
 
 						//
-						// slot, slotoption
-						//
-						DataRow[] slotRows = dataSet.Tables["slot"].Select("machine_id = " + machine_id);
-						if (slotRows.Length > 0)
-						{
-							html.AppendLine($"<hr />");
-							html.AppendLine($"<h2>slot, slotoption</h2>");
-
-							DataTable table = Tools.MakeDataTable(
-								"slot_name	slotoption_name	slotoption_devname	slotoption_default",
-								"String		String			String				String"
-							);
-
-							foreach (DataRow slotRow in slotRows)
-							{
-								long slot_id = (long)slotRow["slot_id"];
-								DataRow[] slotoptionRows = dataSet.Tables["slotoption"].Select("slot_id = " + slot_id);
-
-								if (slotoptionRows.Length == 0)
-									table.Rows.Add(slotRow["name"], null, null, null);
-
-								foreach (DataRow slotoptionRow in slotoptionRows)
-									table.Rows.Add(slotRow["name"], slotoptionRow["name"], slotoptionRow["devname"], slotoptionRow["default"]);
-							}
-
-							html.AppendLine(Reports.MakeHtmlTable(table, null));
-						}
-
-						//
 						// input, control
 						//
 						DataRow[] inputRows = dataSet.Tables["input"].Select("machine_id = " + machine_id);
@@ -940,40 +876,32 @@ namespace Spludlow.MameAO
 						}
 
 						//
-						// dipswitch
+						// slot, slotoption
 						//
-						DataRow[] dipswitchRows = dataSet.Tables["dipswitch"].Select("machine_id = " + machine_id);
-						if (dipswitchRows.Length > 0)
+						DataRow[] slotRows = dataSet.Tables["slot"].Select("machine_id = " + machine_id);
+						if (slotRows.Length > 0)
 						{
 							html.AppendLine($"<hr />");
-							html.AppendLine($"<h2>dipswitch</h2>");
+							html.AppendLine($"<h2>slot, slotoption</h2>");
 
-							foreach (DataRow dipswitchRow in dipswitchRows)
+							DataTable table = Tools.MakeDataTable(
+								"slot_name	slotoption_name	slotoption_devname	slotoption_default",
+								"String		String			String				String"
+							);
+
+							foreach (DataRow slotRow in slotRows)
 							{
-								long dipswitch_id = (long)dipswitchRow["dipswitch_id"];
+								long slot_id = (long)slotRow["slot_id"];
+								DataRow[] slotoptionRows = dataSet.Tables["slotoption"].Select("slot_id = " + slot_id);
 
-								html.AppendLine($"<hr class='px2' />");
+								if (slotoptionRows.Length == 0)
+									table.Rows.Add(slotRow["name"], null, null, null);
 
-								html.AppendLine($"<h3>{(string)dipswitchRow["name"]}</h3>");
-
-								html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["dipswitch"], new[] { dipswitchRow }, null));
-								
-								DataRow[] diplocationRows = dataSet.Tables["diplocation"].Select("dipswitch_id = " + dipswitch_id);
-								if (diplocationRows.Length > 0)
-								{
-									html.AppendLine($"<h4>location</h4>");
-
-									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["diplocation"], diplocationRows, null));
-								}
-
-								DataRow[] dipvalueRows = dataSet.Tables["dipvalue"].Select("dipswitch_id = " + dipswitch_id);
-								if (dipvalueRows.Length > 0)
-								{
-									html.AppendLine($"<h4>value</h4>");
-
-									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["dipvalue"], dipvalueRows, null));
-								}
+								foreach (DataRow slotoptionRow in slotoptionRows)
+									table.Rows.Add(slotRow["name"], slotoptionRow["name"], slotoptionRow["devname"], slotoptionRow["default"]);
 							}
+
+							html.AppendLine(Reports.MakeHtmlTable(table, null));
 						}
 
 						//
@@ -1014,6 +942,43 @@ namespace Spludlow.MameAO
 							}
 						}
 
+						//
+						// dipswitch
+						//
+						DataRow[] dipswitchRows = dataSet.Tables["dipswitch"].Select("machine_id = " + machine_id);
+						if (dipswitchRows.Length > 0)
+						{
+							html.AppendLine($"<hr />");
+							html.AppendLine($"<h2>dipswitch</h2>");
+
+							foreach (DataRow dipswitchRow in dipswitchRows)
+							{
+								long dipswitch_id = (long)dipswitchRow["dipswitch_id"];
+
+								html.AppendLine($"<hr class='px2' />");
+
+								html.AppendLine($"<h3>{(string)dipswitchRow["name"]}</h3>");
+
+								html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["dipswitch"], new[] { dipswitchRow }, null));
+
+								DataRow[] diplocationRows = dataSet.Tables["diplocation"].Select("dipswitch_id = " + dipswitch_id);
+								if (diplocationRows.Length > 0)
+								{
+									html.AppendLine($"<h4>location</h4>");
+
+									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["diplocation"], diplocationRows, null));
+								}
+
+								DataRow[] dipvalueRows = dataSet.Tables["dipvalue"].Select("dipswitch_id = " + dipswitch_id);
+								if (dipvalueRows.Length > 0)
+								{
+									html.AppendLine($"<h4>value</h4>");
+
+									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["dipvalue"], dipvalueRows, null));
+								}
+							}
+						}
+
 						command.Parameters["@title"].Value = $"{(string)machineRow["description"]} - mame machine";
 						command.Parameters["@html"].Value = html.ToString();
 						command.Parameters["@machine_name"].Value = machine_name;
@@ -1044,6 +1009,8 @@ namespace Spludlow.MameAO
 				dataSet.Tables[dataSet.Tables.Count - 1].TableName = tableName;
 			}
 
+			//ReportRelations(dataSet);
+
 			DataRow metaRow = dataSet.Tables["_metadata"].Rows[0];
 
 			string version = (string)metaRow["version"];
@@ -1063,10 +1030,28 @@ namespace Spludlow.MameAO
 				softwareCommand.Parameters.Add("@softwarelist_name", SqlDbType.VarChar);
 				softwareCommand.Parameters.Add("@software_name", SqlDbType.VarChar);
 
+				DataTable romTable = new DataTable();
+				foreach (DataColumn column in dataSet.Tables["dataarea"].Columns)
+					if (column.ColumnName.EndsWith("_id") == false)
+						romTable.Columns.Add("data_" + column.ColumnName);
+				foreach (DataColumn column in dataSet.Tables["rom"].Columns)
+					if (column.ColumnName.EndsWith("_id") == false)
+						romTable.Columns.Add(column.ColumnName);
+
+				DataTable diskTable = new DataTable();
+				foreach (DataColumn column in dataSet.Tables["diskarea"].Columns)
+					if (column.ColumnName.EndsWith("_id") == false)
+						diskTable.Columns.Add("data_" + column.ColumnName);
+				foreach (DataColumn column in dataSet.Tables["disk"].Columns)
+					if (column.ColumnName.EndsWith("_id") == false)
+						diskTable.Columns.Add(column.ColumnName);
+
 				foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Rows)
 				{
 					long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
 					string softwarelist_name = (string)softwarelistRow["name"];
+
+					softwarelistRow["name"] = $"<a href=\"/mame/software/{softwarelist_name}\">{softwarelist_name}</a>";
 
 					foreach (DataRow softwareRow in dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}"))
 					{
@@ -1075,41 +1060,139 @@ namespace Spludlow.MameAO
 
 						StringBuilder html = new StringBuilder();
 
-						html.AppendLine($"<h2>softwarelist</h2>");
-						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new[] { softwarelistRow }, null));
-
-						html.AppendLine($"<hr />");
-
-						html.AppendLine($"<h2>software</h2>");
+						html.AppendLine("<br />");
+						html.AppendLine($"<div><h2 style=\"display:inline;\">software</h2> &bull; <a href=\"{software_name}.xml\">XML</a> &bull; <a href=\"{software_name}.json\">JSON</a> </div>");
+						html.AppendLine("<br />");
 						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["software"], new[] { softwareRow }, null));
 
 						html.AppendLine($"<hr />");
 
-						html.AppendLine($"<h2>info</h2>");
-						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["info"], dataSet.Tables["info"].Select($"software_id = {software_id}"), null));
+						html.AppendLine($"<h2>softwarelist</h2>");
+						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new[] { softwarelistRow }, null));
 
-						html.AppendLine($"<hr />");
+						DataRow[] rows;
 
-						html.AppendLine($"<h2>sharedfeat</h2>");
-						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["sharedfeat"], dataSet.Tables["sharedfeat"].Select($"software_id = {software_id}"), null));
+						rows = dataSet.Tables["info"].Select($"software_id = {software_id}");
+						if (rows.Length > 0)
+						{
+							html.AppendLine($"<hr />");
+							html.AppendLine($"<h2>info</h2>");
+							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["info"], rows, null));
+						}
 
+						rows = dataSet.Tables["sharedfeat"].Select($"software_id = {software_id}");
+						if (rows.Length > 0)
+						{
+							html.AppendLine($"<hr />");
+							html.AppendLine($"<h2>sharedfeat</h2>");
+							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["sharedfeat"], rows, null));
+						}
 
-						// too slow use db join
-						//foreach (DataRow partRow in dataSet.Tables["part"].Select($"software_id = {software_id}"))
-						//{
-						//	long part_id = (long)partRow["part_id"];
-						//	string part_name = (string)partRow["name"];
-						//	string part_interface = (string)partRow["interface"];
+						foreach (DataRow partRow in dataSet.Tables["part"].Select($"software_id = {software_id}"))
+						{
+							long part_id = (long)partRow["part_id"];
+							string part_name = (string)partRow["name"];
+							string part_interface = (string)partRow["interface"];
 
-						//	//	feature
-						//	foreach (DataRow featureRow in dataSet.Tables["feature"].Select($"part_id = {part_id}"))
-						//	{
+							rows = dataSet.Tables["feature"].Select($"part_id = {part_id}");
+							if (rows.Length > 0)
+							{
+								DataTable table = Tools.MakeDataTable(
+									"part_name	part_interface	feature_name	feature_value",
+									"String		String			String			String"
+								);
+								foreach (DataRow row in rows)
+									table.Rows.Add(part_name, part_interface, row["name"], row["value"]);
 
-						//	}
+								html.AppendLine($"<hr />");
+								html.AppendLine($"<h2>part, feature</h2>");
+								html.AppendLine(Reports.MakeHtmlTable(table, null));
+							}
 
-						//}
+							rows = dataSet.Tables["dataarea"].Select($"part_id = {part_id}");
+							if (rows.Length > 0)
+							{
+								foreach (DataRow row in rows)
+								{
+									long dataarea_id = (long)row["dataarea_id"];
 
+									romTable.Clear();
+									
+									DataRow[] romRows = dataSet.Tables["rom"].Select($"dataarea_id = {dataarea_id}");
 
+									if (romRows.Length == 0)
+									{
+										DataRow targetRow = romTable.NewRow();
+
+										foreach (DataColumn column in dataSet.Tables["dataarea"].Columns)
+											if (column.ColumnName.EndsWith("_id") == false)
+												targetRow["data_" + column.ColumnName] = row[column.ColumnName];
+
+										romTable.Rows.Add(targetRow);
+									}
+									foreach (DataRow romRow in romRows)
+									{
+										DataRow targetRow = romTable.NewRow();
+
+										foreach (DataColumn column in dataSet.Tables["dataarea"].Columns)
+											if (column.ColumnName.EndsWith("_id") == false)
+												targetRow["data_" + column.ColumnName] = row[column.ColumnName];
+
+										foreach (DataColumn column in dataSet.Tables["rom"].Columns)
+											if (column.ColumnName.EndsWith("_id") == false)
+												targetRow[column.ColumnName] = romRow[column.ColumnName];
+
+										romTable.Rows.Add(targetRow);
+									}
+
+									html.AppendLine($"<hr />");
+									html.AppendLine($"<h2>dataarea, rom</h2>");
+									html.AppendLine(Reports.MakeHtmlTable(romTable, null));
+								}
+							}
+							
+							rows = dataSet.Tables["diskarea"].Select($"part_id = {part_id}");
+							if (rows.Length > 0)
+							{
+								foreach (DataRow row in rows)
+								{
+									long diskarea_id = (long)row["diskarea_id"];
+
+									diskTable.Clear();
+
+									DataRow[] diskRows = dataSet.Tables["disk"].Select($"diskarea_id = {diskarea_id}");
+
+									if (diskRows.Length == 0)
+									{
+										DataRow targetRow = diskTable.NewRow();
+
+										foreach (DataColumn column in dataSet.Tables["diskarea"].Columns)
+											if (column.ColumnName.EndsWith("_id") == false)
+												targetRow["data_" + column.ColumnName] = row[column.ColumnName];
+
+										diskTable.Rows.Add(targetRow);
+									}
+									foreach (DataRow diskRow in diskRows)
+									{
+										DataRow targetRow = diskTable.NewRow();
+
+										foreach (DataColumn column in dataSet.Tables["diskarea"].Columns)
+											if (column.ColumnName.EndsWith("_id") == false)
+												targetRow["data_" + column.ColumnName] = row[column.ColumnName];
+
+										foreach (DataColumn column in dataSet.Tables["disk"].Columns)
+											if (column.ColumnName.EndsWith("_id") == false)
+												targetRow[column.ColumnName] = diskRow[column.ColumnName];
+
+										diskTable.Rows.Add(targetRow);
+									}
+
+									html.AppendLine($"<hr />");
+									html.AppendLine($"<h2>diskarea, disk</h2>");
+									html.AppendLine(Reports.MakeHtmlTable(diskTable, null));
+								}
+							}
+						}
 
 						softwareCommand.Parameters["@title"].Value = $"{(string)softwareRow["description"]} - {(string)softwarelistRow["description"]} - mame software";
 						softwareCommand.Parameters["@html"].Value = html.ToString();
@@ -1125,6 +1208,39 @@ namespace Spludlow.MameAO
 				connection.Close();
 			}
 
+		}
+
+		public static void ReportRelations(DataSet dataSet)
+		{
+			StringBuilder report = new StringBuilder();
+			foreach (DataTable parentTable in dataSet.Tables)
+			{
+				string pkName = parentTable.Columns[0].ColumnName;
+
+				DataTable[] childTables = FindChildTables(pkName, dataSet);
+
+				if (childTables.Length > 0)
+				{
+					foreach (DataTable childTable in childTables)
+					{
+						int min = Int32.MaxValue;
+						int max = Int32.MinValue;
+
+						foreach (DataRow row in parentTable.Rows)
+						{
+							long id = (long)row[pkName];
+
+							DataRow[] childRows = childTable.Select($"{pkName} = {id}");
+
+							min = Math.Min(min, childRows.Length);
+							max = Math.Max(max, childRows.Length);
+						}
+
+						report.AppendLine($"{parentTable.TableName}\t{childTable.TableName}\t{min}\t{max}");
+					}
+				}
+			}
+			Tools.PopText(report.ToString());
 		}
 
 		public static string XML2JSON(XElement element)
