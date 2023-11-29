@@ -10,6 +10,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using System.Linq;
+using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -763,7 +764,7 @@ namespace Spludlow.MameAO
 						long machine_id = (long)machineRow["machine_id"];
 						string machine_name = (string)machineRow["name"];
 
-						//if (machine_name != "cd6809")
+						//if (machine_name != "bbcb")
 						//	continue;
 
 						StringBuilder html = new StringBuilder();
@@ -794,17 +795,42 @@ namespace Spludlow.MameAO
 										if (targetRow.IsNull("sourcefile") == false)
 										{
 											string value = (string)targetRow["sourcefile"];
-											targetRow["sourcefile"] = $"<a href=\"https://github.com/mamedev/mame/blob/mame{version}/src/mame/{value}\" target=\"_blank\">{value}</a>";
+
+											string baseUrl = $"https://github.com/mamedev/mame/blob/mame{version}/src";
+
+											if (value.Split(new char[] { '/' }).Length == 2)
+												value = $"<a href=\"{baseUrl}/mame/{value}\" target=\"_blank\">{value}</a>";
+											else
+												value = $"<a href=\"{baseUrl}/{value}\" target=\"_blank\">{value}</a>";
+
+											targetRow["sourcefile"] = value;
 										}
 										if (targetRow.IsNull("romof") == false)
 										{
 											string value = (string)targetRow["romof"];
-											targetRow["romof"] = $"<a href=\"/mame/machine/{value}\" target=\"_blank\">{value}</a>";
+											targetRow["romof"] = $"<a href=\"/mame/machine/{value}\">{value}</a>";
 										}
 										if (targetRow.IsNull("cloneof") == false)
 										{
 											string value = (string)targetRow["cloneof"];
-											targetRow["cloneof"] = $"<a href=\"/mame/machine/{value}\" target=\"_blank\">{value}</a>";
+											targetRow["cloneof"] = $"<a href=\"/mame/machine/{value}\">{value}</a>";
+										}
+										break;
+
+									case "device_ref":
+										if (targetRow.IsNull("name") == false)
+										{
+											string value = (string)targetRow["name"];
+											targetRow["name"] = $"<a href=\"/mame/machine/{value}\">{value}</a>";
+										}
+										break;
+
+
+									case "softwarelist":
+										if (targetRow.IsNull("name") == false)
+										{
+											string value = (string)targetRow["name"];
+											targetRow["name"] = $"<a href=\"/mame/software/{value}\">{value}</a>";
 										}
 										break;
 								}
@@ -898,7 +924,15 @@ namespace Spludlow.MameAO
 									table.Rows.Add(slotRow["name"], null, null, null);
 
 								foreach (DataRow slotoptionRow in slotoptionRows)
-									table.Rows.Add(slotRow["name"], slotoptionRow["name"], slotoptionRow["devname"], slotoptionRow["default"]);
+								{
+									DataRow row = table.Rows.Add(slotRow["name"], slotoptionRow["name"], slotoptionRow["devname"], slotoptionRow["default"]);
+
+									if (row.IsNull("slotoption_devname") == false)
+									{
+										string value = (string)row["slotoption_devname"];
+										row["slotoption_devname"] = $"<a href=\"/mame/machine/{value}\">{value}</a>";
+									}
+								}
 							}
 
 							html.AppendLine(Reports.MakeHtmlTable(table, null));
@@ -1051,14 +1085,52 @@ namespace Spludlow.MameAO
 					long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
 					string softwarelist_name = (string)softwarelistRow["name"];
 
+					//if (softwarelist_name != "bbc_cass")
+					//	continue;
+
+					DataRow[] softwareRows = dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}");
+
+					//
+					// SoftwareLists
+					//
+
+					StringBuilder html = new StringBuilder();
+
+					html.AppendLine("<br />");
+					html.AppendLine($"<div><h2 style=\"display:inline;\">softwarelist</h2> &bull; <a href=\"{softwarelist_name}.xml\">XML</a> &bull; <a href=\"{softwarelist_name}.json\">JSON</a> </div>");
+					html.AppendLine("<br />");
+					html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new DataRow[] { softwarelistRow }, null));
+					
+					html.AppendLine($"<hr />");
+					html.AppendLine($"<h2>software</h2>");
+					DataTable softwareTable = dataSet.Tables["software"].Clone();
+					foreach (DataRow softwareRow in softwareRows)
+					{
+						softwareTable.ImportRow(softwareRow);
+						DataRow row = softwareTable.Rows[softwareTable.Rows.Count - 1];
+						string value = (string)row["name"];
+						row["name"] = $"<a href=\"/mame/software/{softwarelist_name}/{value}\">{value}</a>";
+					}
+					html.AppendLine(Reports.MakeHtmlTable(softwareTable, null));
+
+					softwarelistCommand.Parameters["@title"].Value = $"{(string)softwarelistRow["description"]} - mame ({version}) software list";
+					softwarelistCommand.Parameters["@html"].Value = html.ToString();
+					softwarelistCommand.Parameters["@softwarelist_name"].Value = softwarelist_name;
+
+					softwarelistCommand.ExecuteNonQuery();
+
+					//
+					// Software
+					//
+
 					softwarelistRow["name"] = $"<a href=\"/mame/software/{softwarelist_name}\">{softwarelist_name}</a>";
 
-					foreach (DataRow softwareRow in dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}"))
+					foreach (DataRow softwareRow in softwareRows)
 					{
 						long software_id = (long)softwareRow["software_id"];
 						string software_name = (string)softwareRow["name"];
 
-						StringBuilder html = new StringBuilder();
+						html = new StringBuilder();
 
 						html.AppendLine("<br />");
 						html.AppendLine($"<div><h2 style=\"display:inline;\">software</h2> &bull; <a href=\"{software_name}.xml\">XML</a> &bull; <a href=\"{software_name}.json\">JSON</a> </div>");
@@ -1194,7 +1266,7 @@ namespace Spludlow.MameAO
 							}
 						}
 
-						softwareCommand.Parameters["@title"].Value = $"{(string)softwareRow["description"]} - {(string)softwarelistRow["description"]} - mame software";
+						softwareCommand.Parameters["@title"].Value = $"{(string)softwareRow["description"]} - {(string)softwarelistRow["description"]} - mame ({version}) software";
 						softwareCommand.Parameters["@html"].Value = html.ToString();
 						softwareCommand.Parameters["@softwarelist_name"].Value = softwarelist_name;
 						softwareCommand.Parameters["@software_name"].Value = software_name;
