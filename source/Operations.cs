@@ -551,6 +551,15 @@ namespace Spludlow.MameAO
 
 		public static void MakeMSSQLPayloadsSoftware(string xmlFilename, string serverConnectionString, string databaseName)
 		{
+			DataTable listsTable = new DataTable($"softwarelists_payload");
+			listsTable.Columns.Add("key_1", typeof(string));
+			listsTable.Columns.Add("title", typeof(string));
+			listsTable.Columns.Add("xml", typeof(string));
+			listsTable.Columns.Add("json", typeof(string));
+			listsTable.Columns.Add("html", typeof(string));
+
+			listsTable.Rows.Add("1", "", "", "", "");
+
 			DataTable listTable = new DataTable($"softwarelist_payload");
 			listTable.Columns.Add("softwarelist_name", typeof(string));
 			listTable.Columns.Add("title", typeof(string));
@@ -605,6 +614,8 @@ namespace Spludlow.MameAO
 			MakeMSSQLPayloadsInsert(listTable, serverConnectionString, databaseName, new string[] { "softwarelist_name" });
 
 			MakeMSSQLPayloadsInsert(softwareTable, serverConnectionString, databaseName, new string[] { "softwarelist_name", "software_name" });
+
+			MakeMSSQLPayloadsInsert(listsTable, serverConnectionString, databaseName, new string[] { "key_1" });
 		}
 
 		public static void MakeMSSQLPayloadsInsert(DataTable table, string serverConnectionString, string databaseName, string[] primaryKeyNames)
@@ -649,21 +660,6 @@ namespace Spludlow.MameAO
 				MakeMSSQLPayloadHtmlSoftware(connection);
 
 			return 0;
-		}
-
-		public static DataTable[] FindChildTables(string parentKeyName, DataSet dataSet)
-		{
-			List<DataTable> childTables = new List<DataTable>();
-
-			foreach (DataTable table in dataSet.Tables)
-			{
-				DataColumn column = table.Columns.Cast<DataColumn>().Where(col => col.Ordinal > 0 && col.ColumnName == parentKeyName).SingleOrDefault();
-
-				if (column != null)
-					childTables.Add(table);
-			}
-
-			return childTables.ToArray();
 		}
 
 		public static void MakeMSSQLPayloadHtmlMachine(SqlConnection connection)
@@ -764,7 +760,7 @@ namespace Spludlow.MameAO
 						long machine_id = (long)machineRow["machine_id"];
 						string machine_name = (string)machineRow["name"];
 
-						//if (machine_name != "bbcb")
+						//if (machine_name != "software_list")
 						//	continue;
 
 						StringBuilder html = new StringBuilder();
@@ -798,7 +794,7 @@ namespace Spludlow.MameAO
 
 											string baseUrl = $"https://github.com/mamedev/mame/blob/mame{version}/src";
 
-											if (value.Split(new char[] { '/' }).Length == 2)
+											if (value.Split(new char[] { '/' }).Length == 2 && value.StartsWith("emu/") == false)
 												value = $"<a href=\"{baseUrl}/mame/{value}\" target=\"_blank\">{value}</a>";
 											else
 												value = $"<a href=\"{baseUrl}/{value}\" target=\"_blank\">{value}</a>";
@@ -1080,12 +1076,18 @@ namespace Spludlow.MameAO
 					if (column.ColumnName.EndsWith("_id") == false)
 						diskTable.Columns.Add(column.ColumnName);
 
+				DataTable listTable = Tools.MakeDataTable(
+					"name	description",
+					"String	String"
+				);
+
 				foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Rows)
 				{
 					long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
 					string softwarelist_name = (string)softwarelistRow["name"];
+					string softwarelist_description = (string)softwarelistRow["description"];
 
-					//if (softwarelist_name != "bbc_cass")
+					//if (softwarelist_name != "vsmilem_cart")
 					//	continue;
 
 					DataRow[] softwareRows = dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}");
@@ -1110,10 +1112,17 @@ namespace Spludlow.MameAO
 						DataRow row = softwareTable.Rows[softwareTable.Rows.Count - 1];
 						string value = (string)row["name"];
 						row["name"] = $"<a href=\"/mame/software/{softwarelist_name}/{value}\">{value}</a>";
+						if (row.IsNull("cloneof") == false)
+						{
+							value = (string)row["cloneof"];
+							row["cloneof"] = $"<a href=\"/mame/software/{softwarelist_name}/{value}\">{value}</a>";
+						}
 					}
 					html.AppendLine(Reports.MakeHtmlTable(softwareTable, null));
 
-					softwarelistCommand.Parameters["@title"].Value = $"{(string)softwarelistRow["description"]} - mame ({version}) software list";
+					listTable.Rows.Add($"<a href=\"/mame/software/{softwarelist_name}\">{softwarelist_name}</a>", softwarelist_description);
+
+					softwarelistCommand.Parameters["@title"].Value = $"{softwarelist_description} - mame ({version}) software list";
 					softwarelistCommand.Parameters["@html"].Value = html.ToString();
 					softwarelistCommand.Parameters["@softwarelist_name"].Value = softwarelist_name;
 
@@ -1129,6 +1138,12 @@ namespace Spludlow.MameAO
 					{
 						long software_id = (long)softwareRow["software_id"];
 						string software_name = (string)softwareRow["name"];
+
+						if (softwareRow.IsNull("cloneof") == false)
+						{
+							string value = (string)softwareRow["cloneof"];
+							softwareRow["cloneof"] = $"<a href=\"/mame/software/{softwarelist_name}/{value}\">{value}</a>";
+						}
 
 						html = new StringBuilder();
 
@@ -1189,7 +1204,7 @@ namespace Spludlow.MameAO
 									long dataarea_id = (long)row["dataarea_id"];
 
 									romTable.Clear();
-									
+
 									DataRow[] romRows = dataSet.Tables["rom"].Select($"dataarea_id = {dataarea_id}");
 
 									if (romRows.Length == 0)
@@ -1222,7 +1237,7 @@ namespace Spludlow.MameAO
 									html.AppendLine(Reports.MakeHtmlTable(romTable, null));
 								}
 							}
-							
+
 							rows = dataSet.Tables["diskarea"].Select($"part_id = {part_id}");
 							if (rows.Length > 0)
 							{
@@ -1274,6 +1289,15 @@ namespace Spludlow.MameAO
 						softwareCommand.ExecuteNonQuery();
 					}
 				}
+
+				SqlCommand softwarelistsCommand = new SqlCommand("UPDATE softwarelists_payload SET [title] = @title, [html] = @html WHERE [key_1] = '1'", connection);
+				softwarelistsCommand.Parameters.Add("@title", SqlDbType.NVarChar);
+				softwarelistsCommand.Parameters.Add("@html", SqlDbType.NVarChar);
+
+				softwarelistsCommand.Parameters["@title"].Value = $"Software Lists - mame ({version}) software";
+				softwarelistsCommand.Parameters["@html"].Value = Reports.MakeHtmlTable(listTable, null);
+
+				softwarelistsCommand.ExecuteNonQuery();
 			}
 			finally
 			{
@@ -1313,6 +1337,21 @@ namespace Spludlow.MameAO
 				}
 			}
 			Tools.PopText(report.ToString());
+		}
+
+		public static DataTable[] FindChildTables(string parentKeyName, DataSet dataSet)
+		{
+			List<DataTable> childTables = new List<DataTable>();
+
+			foreach (DataTable table in dataSet.Tables)
+			{
+				DataColumn column = table.Columns.Cast<DataColumn>().Where(col => col.Ordinal > 0 && col.ColumnName == parentKeyName).SingleOrDefault();
+
+				if (column != null)
+					childTables.Add(table);
+			}
+
+			return childTables.ToArray();
 		}
 
 		public static string XML2JSON(XElement element)
