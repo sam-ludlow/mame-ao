@@ -653,11 +653,13 @@ namespace Spludlow.MameAO
 			for (int index = 0; index < databaseNamesEach.Length; ++index)
 				databaseNamesEach[index] = databaseNamesEach[index].Trim();
 
-			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNamesEach[0]}';"))
-				MakeMSSQLPayloadHtmlMachine(connection);
+			using (SqlConnection machineConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNamesEach[0]}';"))
+			{
+				MakeMSSQLPayloadHtmlMachine(machineConnection);
 
-			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNamesEach[1]}';"))
-				MakeMSSQLPayloadHtmlSoftware(connection);
+				using (SqlConnection softwareConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNamesEach[1]}';"))
+					MakeMSSQLPayloadHtmlSoftware(softwareConnection, machineConnection);
+			}
 
 			return 0;
 		}
@@ -1024,7 +1026,7 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static void MakeMSSQLPayloadHtmlSoftware(SqlConnection connection)
+		public static void MakeMSSQLPayloadHtmlSoftware(SqlConnection connection, SqlConnection machineConnection)
 		{
 			DataSet dataSet = new DataSet();
 
@@ -1038,6 +1040,9 @@ namespace Spludlow.MameAO
 
 				dataSet.Tables[dataSet.Tables.Count - 1].TableName = tableName;
 			}
+
+			DataTable machineListTable = Database.ExecuteFill(machineConnection, "SELECT machine.name AS machine_name, driver.status, softwarelist.name AS softwarelist_name " +
+				"FROM (machine INNER JOIN driver ON machine.machine_id = driver.machine_id) INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id");
 
 			//ReportRelations(dataSet);
 
@@ -1087,7 +1092,7 @@ namespace Spludlow.MameAO
 					string softwarelist_name = (string)softwarelistRow["name"];
 					string softwarelist_description = (string)softwarelistRow["description"];
 
-					//if (softwarelist_name != "vsmilem_cart")
+					//if (softwarelist_name != "amigaocs_flop")
 					//	continue;
 
 					DataRow[] softwareRows = dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}");
@@ -1279,6 +1284,24 @@ namespace Spludlow.MameAO
 									html.AppendLine(Reports.MakeHtmlTable(diskTable, null));
 								}
 							}
+						}
+
+						DataTable machinesTable = new DataTable();
+						machinesTable.Columns.Add("machine", typeof(string));
+						machinesTable.Columns.Add("status", typeof(string));
+						machinesTable.Columns.Add("AO", typeof(string));
+
+						foreach (DataRow row in machineListTable.Select($"softwarelist_name = '{softwarelist_name}'"))
+						{
+							string machine_name = (string)row["machine_name"];
+							machinesTable.Rows.Add($"<a href=\"/mame/machine/{machine_name}\">{machine_name}</a>", (string)row["status"], $"<a href=\"#\" onclick=\"mameAO('{machine_name} {software_name}'); return false\">AO</a>");
+						}
+
+						if (machinesTable.Rows.Count > 0)
+						{
+							html.AppendLine($"<hr />");
+							html.AppendLine($"<h2>machines</h2>");
+							html.AppendLine(Reports.MakeHtmlTable(machinesTable, null));
 						}
 
 						softwareCommand.Parameters["@title"].Value = $"{(string)softwareRow["description"]} - {(string)softwarelistRow["description"]} - mame ({version}) software";
