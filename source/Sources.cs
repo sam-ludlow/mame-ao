@@ -87,6 +87,7 @@ namespace Spludlow.MameAO
 			new MameSourceSet
 			{
 				SetType = MameSetType.SoftwareRom,
+				DetailsUrl = "https://archive.org/details/mame-sl",
 				MetadataUrl = "https://archive.org/metadata/mame-sl",
 				DownloadUrl = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/@LIST@%2f@SOFTWARE@.zip",
 				HtmlSizesUrl = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/",
@@ -99,6 +100,7 @@ namespace Spludlow.MameAO
 			{
 				SetType = MameSetType.SoftwareDisk,
 				ListName = "cdi",
+				DetailsUrl = "https://archive.org/details/mame-sl-chd-cdi",
 				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-cdi",
 				DownloadUrl = "https://archive.org/download/mame-sl-chd-cdi/@SOFTWARE@/@DISK@.chd",
 				HtmlSizesUrl = null,
@@ -108,6 +110,7 @@ namespace Spludlow.MameAO
 			{
 				SetType = MameSetType.SoftwareDisk,
 				ListName = "neocd",
+				DetailsUrl = "https://archive.org/details/mame-sl-chd-neocd",
 				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-neocd",
 				DownloadUrl = "https://archive.org/download/mame-sl-chd-neocd/@SOFTWARE@/@DISK@.chd",
 				HtmlSizesUrl = null,
@@ -117,6 +120,7 @@ namespace Spludlow.MameAO
 			{
 				SetType = MameSetType.SoftwareDisk,
 				ListName = "pcecd",
+				DetailsUrl = "https://archive.org/details/mame-sl-chd-pcecd",
 				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-pcecd",
 				DownloadUrl = "https://archive.org/download/mame-sl-chd-pcecd/@SOFTWARE@/@DISK@.chd",
 				HtmlSizesUrl = null,
@@ -126,6 +130,7 @@ namespace Spludlow.MameAO
 			{
 				SetType = MameSetType.SoftwareDisk,
 				ListName = "*",
+				DetailsUrl = "https://archive.org/details//mame-software-list-chds-2",
 				MetadataUrl = "https://archive.org/metadata/mame-software-list-chds-2",
 				DownloadUrl = "https://archive.org/download/mame-software-list-chds-2/@LIST@/@SOFTWARE@/@DISK@.chd",
 				HtmlSizesUrl = null,

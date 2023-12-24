@@ -10,7 +10,6 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using System.Linq;
-using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -655,7 +654,7 @@ namespace Spludlow.MameAO
 
 			using (SqlConnection machineConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNamesEach[0]}';"))
 			{
-				MakeMSSQLPayloadHtmlMachine(machineConnection);
+				//MakeMSSQLPayloadHtmlMachine(machineConnection);
 
 				using (SqlConnection softwareConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNamesEach[1]}';"))
 					MakeMSSQLPayloadHtmlSoftware(softwareConnection, machineConnection);
@@ -1042,7 +1041,16 @@ namespace Spludlow.MameAO
 			}
 
 			DataTable machineListTable = Database.ExecuteFill(machineConnection, "SELECT machine.name AS machine_name, driver.status, softwarelist.name AS softwarelist_name " +
-				"FROM (machine INNER JOIN driver ON machine.machine_id = driver.machine_id) INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id");
+				"FROM (machine LEFT JOIN driver ON machine.machine_id = driver.machine_id) INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id");
+
+			foreach (DataRow row in machineListTable.Rows)
+			{
+				if (row.IsNull("status") == true)
+					row["status"] = "no driver";
+			}
+
+			DataTable machineDetailTable = Database.ExecuteFill(machineConnection, "SELECT machine.name, machine.description FROM machine");
+			machineDetailTable.PrimaryKey = new DataColumn[] { machineDetailTable.Columns["name"] };
 
 			//ReportRelations(dataSet);
 
@@ -1092,7 +1100,10 @@ namespace Spludlow.MameAO
 					string softwarelist_name = (string)softwarelistRow["name"];
 					string softwarelist_description = (string)softwarelistRow["description"];
 
-					//if (softwarelist_name != "amigaocs_flop")
+					//if (softwarelist_name != "a800")
+					//	continue;
+
+					//if (softwarelist_name != "spectrum_flop_opus")
 					//	continue;
 
 					DataRow[] softwareRows = dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}");
@@ -1196,7 +1207,7 @@ namespace Spludlow.MameAO
 								foreach (DataRow row in rows)
 									table.Rows.Add(part_name, part_interface, row["name"], row["value"]);
 
-								html.AppendLine($"<hr />");
+								html.AppendLine($"<hr />");	//	!!!!!!!!!!!! dont always get feature hr is bad
 								html.AppendLine($"<h2>part, feature</h2>");
 								html.AppendLine(Reports.MakeHtmlTable(table, null));
 							}
@@ -1237,7 +1248,7 @@ namespace Spludlow.MameAO
 										romTable.Rows.Add(targetRow);
 									}
 
-									html.AppendLine($"<hr />");
+									html.AppendLine($"<hr class='px2' />");
 									html.AppendLine($"<h2>dataarea, rom</h2>");
 									html.AppendLine(Reports.MakeHtmlTable(romTable, null));
 								}
@@ -1279,29 +1290,38 @@ namespace Spludlow.MameAO
 										diskTable.Rows.Add(targetRow);
 									}
 
-									html.AppendLine($"<hr />");
+									html.AppendLine($"<hr class='px2' />");
 									html.AppendLine($"<h2>diskarea, disk</h2>");
 									html.AppendLine(Reports.MakeHtmlTable(diskTable, null));
 								}
 							}
 						}
 
-						DataTable machinesTable = new DataTable();
-						machinesTable.Columns.Add("machine", typeof(string));
-						machinesTable.Columns.Add("status", typeof(string));
-						machinesTable.Columns.Add("AO", typeof(string));
+						DataRow[] machineListRows = machineListTable.Select($"softwarelist_name = '{softwarelist_name}'");
 
-						foreach (DataRow row in machineListTable.Select($"softwarelist_name = '{softwarelist_name}'"))
+						foreach (string status in new string[] { "good", "imperfect", "preliminary", "no driver" })
 						{
-							string machine_name = (string)row["machine_name"];
-							machinesTable.Rows.Add($"<a href=\"/mame/machine/{machine_name}\">{machine_name}</a>", (string)row["status"], $"<a href=\"#\" onclick=\"mameAO('{machine_name} {software_name}'); return false\">AO</a>");
-						}
+							DataRow[] statusRows = machineListRows.Where(row => (string)row["status"] == status).ToArray();
 
-						if (machinesTable.Rows.Count > 0)
-						{
-							html.AppendLine($"<hr />");
-							html.AppendLine($"<h2>machines</h2>");
-							html.AppendLine(Reports.MakeHtmlTable(machinesTable, null));
+							if (statusRows.Length > 0)
+							{
+								DataTable machinesTable = new DataTable();
+								machinesTable.Columns.Add("name", typeof(string));
+								machinesTable.Columns.Add("description (AO)", typeof(string));
+
+								foreach (DataRow statusRow in statusRows)
+								{
+									string name = (string)statusRow["machine_name"];
+									DataRow detailRow = machineDetailTable.Rows.Find(name);
+									string description = detailRow != null ? (string)detailRow["description"] : "not found";
+
+									machinesTable.Rows.Add($"<a href=\"/mame/machine/{name}\">{name}</a>", $"<a href=\"#\" onclick=\"mameAO('{name} {software_name}'); return false\">{description}</a>");
+								}
+
+								html.AppendLine($"<hr />");
+								html.AppendLine($"<h2>machines ({status})</h2>");
+								html.AppendLine(Reports.MakeHtmlTable(machinesTable, null));
+							}
 						}
 
 						softwareCommand.Parameters["@title"].Value = $"{(string)softwareRow["description"]} - {(string)softwarelistRow["description"]} - mame ({version}) software";
