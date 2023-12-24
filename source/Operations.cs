@@ -654,7 +654,7 @@ namespace Spludlow.MameAO
 
 			using (SqlConnection machineConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNamesEach[0]}';"))
 			{
-				//MakeMSSQLPayloadHtmlMachine(machineConnection);
+				MakeMSSQLPayloadHtmlMachine(machineConnection);
 
 				using (SqlConnection softwareConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNamesEach[1]}';"))
 					MakeMSSQLPayloadHtmlSoftware(softwareConnection, machineConnection);
