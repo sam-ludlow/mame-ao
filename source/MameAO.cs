@@ -1218,7 +1218,7 @@ namespace Spludlow.MameAO
 
 					if (fileInfo.url == null)   //	Do at init not here.
 					{
-						string diskNameEnc = Uri.EscapeUriString(availableDiskName);
+						string diskNameEnc = Uri.EscapeDataString(availableDiskName);
 
 						string diskUrl = soureSet.DownloadUrl;
 						diskUrl = diskUrl.Replace("@MACHINE@", availableMachineName);
@@ -1400,7 +1400,7 @@ namespace Spludlow.MameAO
 						if (sourceSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
 							continue;
 
-						string nameEnc = Uri.EscapeUriString(diskName);
+						string nameEnc = Uri.EscapeDataString(diskName);
 
 						string url = sourceSet.DownloadUrl;
 						url = url.Replace("@LIST@", softwareListName);
@@ -1504,8 +1504,8 @@ namespace Spludlow.MameAO
 				if (parentSoftwareName != null)
 					requiredSoftwareName = parentSoftwareName;
 
-				string listEnc = Uri.EscapeUriString(softwareListName);
-				string softEnc = Uri.EscapeUriString(requiredSoftwareName);
+				string listEnc = Uri.EscapeDataString(softwareListName);
+				string softEnc = Uri.EscapeDataString(requiredSoftwareName);
 
 				string downloadSoftwareUrl = soureSet.DownloadUrl;
 				downloadSoftwareUrl = downloadSoftwareUrl.Replace("@LIST@", listEnc);
