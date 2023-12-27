@@ -1,4 +1,4 @@
-﻿using Newtonsoft.Json;
+using Newtonsoft.Json;
 using System;
 using System.Collections.Generic;
 using System.Data;
@@ -433,7 +433,7 @@ namespace Spludlow.MameAO
 			//
 
 			databaseName = databaseNamesEach[0];
-			xmlFilename = Path.Combine(versionDirectory, $"_machine.xml");
+			xmlFilename = Path.Combine(versionDirectory, "_machine.xml");
 
 			MakeMSSQLPayloadsInfoTable(version, serverConnectionString, databaseNamesEach[0], "mame", "machine", assemblyVersion, versionDirectory);
 
@@ -444,7 +444,7 @@ namespace Spludlow.MameAO
 			//
 
 			databaseName = databaseNamesEach[1];
-			xmlFilename = Path.Combine(versionDirectory, $"_software.xml");
+			xmlFilename = Path.Combine(versionDirectory, "_software.xml");
 
 			MakeMSSQLPayloadsInfoTable(version, serverConnectionString, databaseNamesEach[1], "mame", "software", assemblyVersion, versionDirectory);
 
@@ -514,7 +514,7 @@ namespace Spludlow.MameAO
 
 		public static void MakeMSSQLPayloadsMachine(string xmlFilename, string serverConnectionString, string databaseName)
 		{
-			DataTable table = new DataTable($"machine_payload");
+			DataTable table = new DataTable("machine_payload");
 			table.Columns.Add("machine_name", typeof(string));
 			table.Columns.Add("title", typeof(string));
 			table.Columns.Add("xml", typeof(string));
@@ -550,7 +550,7 @@ namespace Spludlow.MameAO
 
 		public static void MakeMSSQLPayloadsSoftware(string xmlFilename, string serverConnectionString, string databaseName)
 		{
-			DataTable listsTable = new DataTable($"softwarelists_payload");
+			DataTable listsTable = new DataTable("softwarelists_payload");
 			listsTable.Columns.Add("key_1", typeof(string));
 			listsTable.Columns.Add("title", typeof(string));
 			listsTable.Columns.Add("xml", typeof(string));
@@ -559,14 +559,14 @@ namespace Spludlow.MameAO
 
 			listsTable.Rows.Add("1", "", "", "", "");
 
-			DataTable listTable = new DataTable($"softwarelist_payload");
+			DataTable listTable = new DataTable("softwarelist_payload");
 			listTable.Columns.Add("softwarelist_name", typeof(string));
 			listTable.Columns.Add("title", typeof(string));
 			listTable.Columns.Add("xml", typeof(string));
 			listTable.Columns.Add("json", typeof(string));
 			listTable.Columns.Add("html", typeof(string));
 
-			DataTable softwareTable = new DataTable($"software_payload");
+			DataTable softwareTable = new DataTable("software_payload");
 			softwareTable.Columns.Add("softwarelist_name", typeof(string));
 			softwareTable.Columns.Add("software_name", typeof(string));
 			softwareTable.Columns.Add("title", typeof(string));
@@ -841,7 +841,7 @@ namespace Spludlow.MameAO
 							}
 							else
 							{
-								html.AppendLine($"<hr />");
+								html.AppendLine("<hr />");
 								html.AppendLine($"<h2>{tableName}</h2>");
 							}
 
@@ -859,14 +859,14 @@ namespace Spludlow.MameAO
 
 							long input_id = (long)inputRows[0]["input_id"];
 
-							html.AppendLine($"<hr />");
-							html.AppendLine($"<h2>input</h2>");
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>input</h2>");
 							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["input"], inputRows, null));
 
 							DataRow[] controlRows = dataSet.Tables["control"].Select("input_id = " + input_id);
 							if (controlRows.Length > 0)
 							{
-								html.AppendLine($"<h3>control</h3>");
+								html.AppendLine("<h3>control</h3>");
 								html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["control"], controlRows, null));
 							}
 						}
@@ -877,8 +877,8 @@ namespace Spludlow.MameAO
 						DataRow[] portRows = dataSet.Tables["port"].Select("machine_id = " + machine_id);
 						if (portRows.Length > 0)
 						{
-							html.AppendLine($"<hr />");
-							html.AppendLine($"<h2>port, analog</h2>");
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>port, analog</h2>");
 
 							DataTable table = Tools.MakeDataTable(
 								"port_tag	analog_masks",
@@ -904,8 +904,8 @@ namespace Spludlow.MameAO
 						DataRow[] slotRows = dataSet.Tables["slot"].Select("machine_id = " + machine_id);
 						if (slotRows.Length > 0)
 						{
-							html.AppendLine($"<hr />");
-							html.AppendLine($"<h2>slot, slotoption</h2>");
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>slot, slotoption</h2>");
 
 							DataTable table = Tools.MakeDataTable(
 								"slot_name	slotoption_name	slotoption_devname	slotoption_default",
@@ -941,14 +941,14 @@ namespace Spludlow.MameAO
 						DataRow[] configurationRows = dataSet.Tables["configuration"].Select("machine_id = " + machine_id);
 						if (configurationRows.Length > 0)
 						{
-							html.AppendLine($"<hr />");
-							html.AppendLine($"<h2>configuration</h2>");
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>configuration</h2>");
 
 							foreach (DataRow configurationRow in configurationRows)
 							{
 								long configuration_id = (long)configurationRow["configuration_id"];
 
-								html.AppendLine($"<hr class='px2' />");
+								html.AppendLine("<hr class='px2' />");
 
 								html.AppendLine($"<h3>{(string)configurationRow["name"]}</h3>");
 
@@ -957,7 +957,7 @@ namespace Spludlow.MameAO
 								DataRow[] conflocationRows = dataSet.Tables["conflocation"].Select("configuration_id = " + configuration_id);
 								if (conflocationRows.Length > 0)
 								{
-									html.AppendLine($"<h4>location</h4>");
+									html.AppendLine("<h4>location</h4>");
 
 									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["conflocation"], conflocationRows, null));
 								}
@@ -965,7 +965,7 @@ namespace Spludlow.MameAO
 								DataRow[] confsettingRows = dataSet.Tables["confsetting"].Select("configuration_id = " + configuration_id);
 								if (confsettingRows.Length > 0)
 								{
-									html.AppendLine($"<h4>setting</h4>");
+									html.AppendLine("<h4>setting</h4>");
 
 									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["confsetting"], confsettingRows, null));
 								}
@@ -979,14 +979,14 @@ namespace Spludlow.MameAO
 						DataRow[] dipswitchRows = dataSet.Tables["dipswitch"].Select("machine_id = " + machine_id);
 						if (dipswitchRows.Length > 0)
 						{
-							html.AppendLine($"<hr />");
-							html.AppendLine($"<h2>dipswitch</h2>");
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>dipswitch</h2>");
 
 							foreach (DataRow dipswitchRow in dipswitchRows)
 							{
 								long dipswitch_id = (long)dipswitchRow["dipswitch_id"];
 
-								html.AppendLine($"<hr class='px2' />");
+								html.AppendLine("<hr class='px2' />");
 
 								html.AppendLine($"<h3>{(string)dipswitchRow["name"]}</h3>");
 
@@ -995,7 +995,7 @@ namespace Spludlow.MameAO
 								DataRow[] diplocationRows = dataSet.Tables["diplocation"].Select("dipswitch_id = " + dipswitch_id);
 								if (diplocationRows.Length > 0)
 								{
-									html.AppendLine($"<h4>location</h4>");
+									html.AppendLine("<h4>location</h4>");
 
 									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["diplocation"], diplocationRows, null));
 								}
@@ -1003,7 +1003,7 @@ namespace Spludlow.MameAO
 								DataRow[] dipvalueRows = dataSet.Tables["dipvalue"].Select("dipswitch_id = " + dipswitch_id);
 								if (dipvalueRows.Length > 0)
 								{
-									html.AppendLine($"<h4>value</h4>");
+									html.AppendLine("<h4>value</h4>");
 
 									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["dipvalue"], dipvalueRows, null));
 								}
@@ -1119,8 +1119,8 @@ namespace Spludlow.MameAO
 					html.AppendLine("<br />");
 					html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new DataRow[] { softwarelistRow }, null));
 					
-					html.AppendLine($"<hr />");
-					html.AppendLine($"<h2>software</h2>");
+					html.AppendLine("<hr />");
+					html.AppendLine("<h2>software</h2>");
 					DataTable softwareTable = dataSet.Tables["software"].Clone();
 					foreach (DataRow softwareRow in softwareRows)
 					{
@@ -1168,9 +1168,9 @@ namespace Spludlow.MameAO
 						html.AppendLine("<br />");
 						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["software"], new[] { softwareRow }, null));
 
-						html.AppendLine($"<hr />");
+						html.AppendLine("<hr />");
 
-						html.AppendLine($"<h2>softwarelist</h2>");
+						html.AppendLine("<h2>softwarelist</h2>");
 						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new[] { softwarelistRow }, null));
 
 						DataRow[] rows;
@@ -1178,16 +1178,16 @@ namespace Spludlow.MameAO
 						rows = dataSet.Tables["info"].Select($"software_id = {software_id}");
 						if (rows.Length > 0)
 						{
-							html.AppendLine($"<hr />");
-							html.AppendLine($"<h2>info</h2>");
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>info</h2>");
 							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["info"], rows, null));
 						}
 
 						rows = dataSet.Tables["sharedfeat"].Select($"software_id = {software_id}");
 						if (rows.Length > 0)
 						{
-							html.AppendLine($"<hr />");
-							html.AppendLine($"<h2>sharedfeat</h2>");
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>sharedfeat</h2>");
 							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["sharedfeat"], rows, null));
 						}
 
@@ -1207,8 +1207,8 @@ namespace Spludlow.MameAO
 								foreach (DataRow row in rows)
 									table.Rows.Add(part_name, part_interface, row["name"], row["value"]);
 
-								html.AppendLine($"<hr />");	//	!!!!!!!!!!!! dont always get feature hr is bad
-								html.AppendLine($"<h2>part, feature</h2>");
+								html.AppendLine("<hr />");	//	!!!!!!!!!!!! dont always get feature hr is bad
+								html.AppendLine("<h2>part, feature</h2>");
 								html.AppendLine(Reports.MakeHtmlTable(table, null));
 							}
 
@@ -1248,8 +1248,8 @@ namespace Spludlow.MameAO
 										romTable.Rows.Add(targetRow);
 									}
 
-									html.AppendLine($"<hr class='px2' />");
-									html.AppendLine($"<h2>dataarea, rom</h2>");
+									html.AppendLine("<hr class='px2' />");
+									html.AppendLine("<h2>dataarea, rom</h2>");
 									html.AppendLine(Reports.MakeHtmlTable(romTable, null));
 								}
 							}
@@ -1290,8 +1290,8 @@ namespace Spludlow.MameAO
 										diskTable.Rows.Add(targetRow);
 									}
 
-									html.AppendLine($"<hr class='px2' />");
-									html.AppendLine($"<h2>diskarea, disk</h2>");
+									html.AppendLine("<hr class='px2' />");
+									html.AppendLine("<h2>diskarea, disk</h2>");
 									html.AppendLine(Reports.MakeHtmlTable(diskTable, null));
 								}
 							}
@@ -1318,7 +1318,7 @@ namespace Spludlow.MameAO
 									machinesTable.Rows.Add($"<a href=\"/mame/machine/{name}\">{name}</a>", $"<a href=\"#\" onclick=\"mameAO('{name} {software_name}'); return false\">{description}</a>");
 								}
 
-								html.AppendLine($"<hr />");
+								html.AppendLine("<hr />");
 								html.AppendLine($"<h2>machines ({status})</h2>");
 								html.AppendLine(Reports.MakeHtmlTable(machinesTable, null));
 							}

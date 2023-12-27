@@ -293,7 +293,7 @@ namespace Spludlow.MameAO
 			if (softwareListName == "@fav")
 			{
 				commandText = "SELECT software.*, softwarelist.name AS softwarelist_name, COUNT() OVER() AS ao_total FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id " +
-					$"WHERE ((@FAVORITES) @SEARCH) ORDER BY software.description COLLATE NOCASE ASC " +
+					"WHERE ((@FAVORITES) @SEARCH) ORDER BY software.description COLLATE NOCASE ASC " +
 					"LIMIT @LIMIT OFFSET @OFFSET";
 
 				string[][] listSoftwareNames = _Favorites.ListSoftwareUsedByMachine(favorites_machine);
@@ -412,7 +412,7 @@ namespace Spludlow.MameAO
 			{
 				search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
 				commandText = commandText.Replace("@SEARCH",
-					$" AND (machine.name LIKE @name OR machine.description LIKE @description)");
+					" AND (machine.name LIKE @name OR machine.description LIKE @description)");
 			}
 
 			if (profile.Key == "favorites")

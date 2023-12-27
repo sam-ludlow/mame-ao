@@ -1688,7 +1688,7 @@ namespace Spludlow.MameAO
 				DateTime startTime = DateTime.Now;
 				size = Tools.Download(url, archiveFilename, _DownloadDotSize, 30);
 				TimeSpan took = DateTime.Now - startTime;
-				Console.WriteLine($"...done");
+				Console.WriteLine("...done");
 
 				decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
 				Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
@@ -1698,7 +1698,7 @@ namespace Spludlow.MameAO
 
 				Console.Write($"Extracting {name}, {archiveFilename} ...");
 				ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
-				Console.WriteLine($"...done");
+				Console.WriteLine("...done");
 
 				Tools.ClearAttributes(tempDir.Path);
 
@@ -1735,7 +1735,7 @@ namespace Spludlow.MameAO
 			DateTime startTime = DateTime.Now;
 			long size = Tools.Download(url, tempFilename, _DownloadDotSize, 3 * 60);
 			TimeSpan took = DateTime.Now - startTime;
-			Console.WriteLine($"...done");
+			Console.WriteLine("...done");
 
 			decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
 			Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");

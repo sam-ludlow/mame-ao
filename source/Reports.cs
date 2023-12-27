@@ -1,4 +1,4 @@
-﻿using System;
+using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
@@ -394,7 +394,7 @@ namespace Spludlow.MameAO
 			DataTable viewTable;
 
 			view = new DataView(table);
-			view.RowFilter = $"Status = 'MISSING'";
+			view.RowFilter = "Status = 'MISSING'";
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -402,7 +402,7 @@ namespace Spludlow.MameAO
 			dataSet.Tables.Add(viewTable);
 
 			view = new DataView(table);
-			view.RowFilter = $"Status = ''";
+			view.RowFilter = "Status = ''";
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -462,7 +462,7 @@ namespace Spludlow.MameAO
 			DataTable viewTable;
 
 			view = new DataView(table);
-			view.RowFilter = $"Status = 'MISSING'";
+			view.RowFilter = "Status = 'MISSING'";
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -470,7 +470,7 @@ namespace Spludlow.MameAO
 			dataSet.Tables.Add(viewTable);
 
 			view = new DataView(table);
-			view.RowFilter = $"Status = ''";
+			view.RowFilter = "Status = ''";
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -583,7 +583,7 @@ namespace Spludlow.MameAO
 			DataTable viewTable;
 
 			view = new DataView(table);
-			view.RowFilter = $"Status = 'MISSING'";
+			view.RowFilter = "Status = 'MISSING'";
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -591,7 +591,7 @@ namespace Spludlow.MameAO
 			dataSet.Tables.Add(viewTable);
 
 			view = new DataView(table);
-			view.RowFilter = $"Status = ''";
+			view.RowFilter = "Status = ''";
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -651,7 +651,7 @@ namespace Spludlow.MameAO
 			DataTable viewTable;
 
 			view = new DataView(table);
-			view.RowFilter = $"DiskCount > 0 AND Complete = 1";
+			view.RowFilter = "DiskCount > 0 AND Complete = 1";
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -659,7 +659,7 @@ namespace Spludlow.MameAO
 			dataSet.Tables.Add(viewTable);
 
 			view = new DataView(table);
-			view.RowFilter = $"DiskCount = 0 AND Complete = 1";
+			view.RowFilter = "DiskCount = 0 AND Complete = 1";
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -741,7 +741,7 @@ namespace Spludlow.MameAO
 			DataTable viewTable;
 
 			view = new DataView(table);
-			view.RowFilter = $"DiskCount > 0";
+			view.RowFilter = "DiskCount > 0";
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -749,7 +749,7 @@ namespace Spludlow.MameAO
 			dataSet.Tables.Add(viewTable);
 
 			view = new DataView(table);
-			view.RowFilter = $"DiskCount = 0";
+			view.RowFilter = "DiskCount = 0";
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
