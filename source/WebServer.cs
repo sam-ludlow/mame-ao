@@ -428,6 +428,18 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
+		public void _api_status(HttpListenerContext context, StreamWriter writer)
+		{
+			dynamic json = new JObject();
+
+			string command = _AO._RunTaskCommand;
+
+			json.busy = command != null;
+			json.command = command ?? "";
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
 		public void _api_source_files(HttpListenerContext context, StreamWriter writer)
 		{
 			string qs;

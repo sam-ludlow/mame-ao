@@ -29,6 +29,7 @@ namespace Spludlow.MameAO
 		private bool _LinkingEnabled = false;
 
 		private Task _RunTask = null;
+		public string _RunTaskCommand = null;
 
 		public Database _Database;
 
@@ -534,8 +535,13 @@ namespace Spludlow.MameAO
 				{
 					ReportError(e, "WORKER ERROR", false);
 				}
+				finally
+				{
+					_RunTaskCommand = null;
+				}
 			});
 
+			_RunTaskCommand = line;
 			_RunTask.Start();
 
 			return true;

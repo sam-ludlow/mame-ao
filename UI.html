@@ -113,10 +113,16 @@
 		let _info;
 		let _currentMenu;
 		let _updateAvailable = false;
+		let _inTick = false;
 
 		const main = async () => {
 
 			try {
+
+				getRequestInfo();
+
+				tick();
+				setInterval(tick, 2000);
 
 				await mainWork();
 
@@ -139,16 +145,33 @@
 			}
 		}
 
+		//
+		// Status tick
+		//
+
+		const tick = async () => {
+
+			if (_inTick === true)
+				return;
+
+			try {
+
+				const status = await (await fetch(`${_baseUrl}/api/status`)).json();
+
+				document.body.style.backgroundColor = status.busy === true ? '#ffb6c1' : '#c6eafb';
+			}
+			finally {
+				_inTick = false;
+			}
+		}
+
 		const mainWork = async () => {
 
 			//
-			// Setup
+			// Info & update check
 			//
 
-			getRequestInfo();
-
 			_info = await (await fetch(`${_baseUrl}/api/info`)).json();
-
 
 			if (_info.version_name_current !== _info.version_name_available) {
 				_rootMenu.push({
@@ -253,11 +276,7 @@
 					let parts = _pathParts[2].split('/');
 					const groupKey = parts[parts.length - 1];
 
-					console.log(`groupKey: ${groupKey}`);
-
 					reportData = (await (await fetch(`${_baseUrl}/api/report_types?group=${groupKey}`)).json());
-
-					console.log(reportData);
 
 					current.menu = reportData.results.map((report) => {
 						return {
@@ -806,8 +825,6 @@
 
 			const result = await response.json();
 
-			console.log(result);
-
 			if (response.status !== 200)
 				alert(result.message);
 		}
@@ -1001,7 +1018,7 @@
 
 	<form>
 		<div id="canvas">
-			<p>MAME-AO no page here</p>
+			<p>Loading...</p>
 		</div>
 	</form>
 
