@@ -684,7 +684,7 @@ namespace Spludlow.MameAO
 						Process.Start(_ListenAddress);
 						return;
 
-					case ".u":
+					case ".r":
 						_WebServer.RefreshAssets();
 						return;
 
