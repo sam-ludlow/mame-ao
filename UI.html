@@ -95,6 +95,16 @@
 					href: '/saved',
 				},
 				{
+					text: 'Import',
+					title: 'Import ROM/CHD from directory',
+					href: '/import',
+				},
+				{
+					text: 'Export',
+					title: 'Export ROM/CHD standard MAME format',
+					href: '/export',
+				},
+				{
 					text: 'About',
 					title: 'Information',
 					href: '/about',
@@ -333,6 +343,17 @@
 				case '/update':
 					await update();
 					break;
+
+				case '/import':
+					await importFiles();
+					break;
+
+				case '/export':
+					await exportFiles();
+					break;
+
+				default:	//	404
+					break;
 			}
 
 		}
@@ -379,6 +400,43 @@
 
 			const html = `<p>New MAME-AO update avaialable ${_info.version_name_current} => ${_info.version_name_available}</p>` +
 				`<a href="${_baseUrl}/api/update">Click here to update immediately.</a>`;
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+		}
+
+		//
+		// Import
+		//
+		const importFiles = async () => {
+
+			const canvas = getCanvas();
+
+			let html = '';
+			html += '<p>Copy and paste the directory path to import from here.</p>';
+			html += '<input id="directory" type="text" value="" style="width:480px;" /><br />';
+			html += '<button type="submit" onclick="runCommand(encodeURIComponent(\'.import \' + directory.value)); return false;">Start Import</button><br />';
+			html += '<p>A report will pop up in the browser when finished. Look at the console shell to check progress.</p>';
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+		}
+
+		//
+		// Export
+		//
+		const exportFiles = async () => {
+
+			const canvas = getCanvas();
+
+			let html = '';
+			html += '<p>Copy and paste the directory path to export to here.</p>';
+			html += '<select id="exportType"><option value="*">Everything</option><option value="MR">Machine ROM</option><option value="MD">Machine DISK</option><option value="SR">Software ROM</option><option value="SD">Software DISK</option></select><br /><br />';
+			html += '<input id="directory" type="text" value="" style="width:480px;" /><br />';
+			html += '<button type="submit" onclick="runCommand(encodeURIComponent(\'.export \' + exportType.value + \' \' + directory.value)); return false;">Start Export</button><br />';
+			html += '<p>A report will pop up in the browser when finished. Look at the console shell to check progress.</p>';
 
 			const div = document.createElement('div');
 			div.innerHTML = html;
