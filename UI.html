@@ -160,6 +160,9 @@
 
 				document.body.style.backgroundColor = status.busy === true ? '#ffb6c1' : '#c6eafb';
 			}
+			catch (e) {
+				alert(`Problem connecting to MAME-AO server.\n\nHave you closed the console?\n\nStart MAME-AO again or close this window.\n\nError: ${e.message}`);
+			}
 			finally {
 				_inTick = false;
 			}

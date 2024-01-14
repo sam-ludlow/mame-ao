@@ -33,6 +33,8 @@ namespace Spludlow.MameAO
 
 		public Database _Database;
 
+		public WebServer _WebServer;
+
 		public HashStore _RomHashStore;
 		public HashStore _DiskHashStore;
 
@@ -478,8 +480,8 @@ namespace Spludlow.MameAO
 
 		public void Shell()
 		{
-			WebServer webServer = new WebServer(this);
-			webServer.StartListener();
+			_WebServer = new WebServer(this);
+			_WebServer.StartListener();
 
 			Tools.ConsoleHeading(1, new string[] {
 				"Remote Listener ready for commands",
@@ -676,6 +678,14 @@ namespace Spludlow.MameAO
 
 						if (_Reports.RunReport(parts[1], reportContext) == false)
 							throw new ApplicationException("Report Unknown type.");
+						return;
+
+					case ".ui":
+						Process.Start(_ListenAddress);
+						return;
+
+					case ".u":
+						_WebServer.RefreshAssets();
 						return;
 
 					default:

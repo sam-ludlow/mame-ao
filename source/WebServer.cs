@@ -15,6 +15,8 @@ namespace Spludlow.MameAO
 	{
 		private MameAOProcessor _AO;
 
+		private string _UIHTML;
+
 		private byte[] _FavIcon = Convert.FromBase64String(@"
 			AAABAAEAEBAAAAAAGABoAwAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAMAAAAAAAAAAAAAAAAA
 			AAAAAAD0tgDzuQDzsgD2xgD99NT++OP++OX++OX/+OPA67QA6t3j6KL/9tr++OP9+OX9+OX0vQD0
@@ -37,6 +39,13 @@ namespace Spludlow.MameAO
 		public WebServer(MameAOProcessor ao)
 		{
 			_AO = ao;
+
+			RefreshAssets();
+		}
+
+		public void RefreshAssets()
+		{
+			_UIHTML = File.ReadAllText(@"UI.html", Encoding.UTF8);
 		}
 
 		public void StartListener()
@@ -97,7 +106,8 @@ namespace Spludlow.MameAO
 											break;
 
 										default:
-											ServeUI(context, writer);
+											context.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
+											writer.WriteLine(_UIHTML);
 											break;
 									}
 								}
@@ -137,15 +147,6 @@ namespace Spludlow.MameAO
 			json.error = e.ToString();
 
 			writer.WriteLine(json.ToString(Formatting.Indented));
-		}
-
-		private void ServeUI(HttpListenerContext context, StreamWriter writer)
-		{
-			string html = File.ReadAllText(@"UI.html", Encoding.UTF8);
-
-			context.Response.Headers["Content-Type"] = "text/html; charset=utf-8";
-
-			writer.WriteLine(html);
 		}
 
 		public void _api_command(HttpListenerContext context, StreamWriter writer)

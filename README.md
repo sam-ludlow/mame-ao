@@ -33,7 +33,7 @@ TIP: Run command `.upany` to self update program, this will stop the microsoft d
 - You can access it at http://localhost:12380/.
 - Just click on image to start the machine. Select machine query profiles using the top menu.
 - If the machine has software it will be listed, you can change software list using the top menu, click what you want to run.
-- Click on the mame-ao console window to see what it's doing, no progress is shown in the UI (TODO).
+- UI background colour will change to pink when mame-ao is working. You can click on the mame-ao console window to see what it's doing.
 
 ## System requirements
 
@@ -119,8 +119,11 @@ There are also commands available they all start with a dot `.`
 - `.0255` - Run a previous version of MAME, you can still pass the machine and software but MAME-AO will not place assets in previous versions, you are better off not passing the machine and use the MAME UI with the available filter.
 - `.list` - Show all saved state across all MAME versions, previous MAME versions will also be listed even without saved state.
 - `.up` - Self update MAME-AO to the latest on GitHub
+- `.upany` - Self update MAME-AO anyway even if up to date, this can be used to clear the Windows Defender warning on first install. 
 - `.import` - Run the import function, see below.
 - `.export` - Run the export function, see below.
+- `.ui` - Launch the UI in default browser.
+- `.r` - Reload `UI.html` usfull when developing the UI.
 
 ## Saved State and previous MAME versions
 
