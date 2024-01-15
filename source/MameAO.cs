@@ -837,7 +837,7 @@ namespace Spludlow.MameAO
 
 				ZipFile.ExtractToDirectory(archiveFilename, updateDirectory);
 
-				int pid = Environment.ProcessId;
+				int pid = Process.GetCurrentProcess().Id;
 
 				ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(updateDirectory, "mame-ao.exe"))
 				{
