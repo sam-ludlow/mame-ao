@@ -680,6 +680,13 @@ namespace Spludlow.MameAO
 							throw new ApplicationException("Report Unknown type.");
 						return;
 
+					case ".snap":
+						if (parts.Length < 2)
+							throw new ApplicationException($"Usage: {parts[0]} <target directory>");
+
+						Mame.CollectSnaps(_RootDirectory, String.Join(" ", parts.Skip(1)), _Reports);
+						return;
+
 					case ".ui":
 						Process.Start(_ListenAddress);
 						return;

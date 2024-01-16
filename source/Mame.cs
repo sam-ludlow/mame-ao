@@ -182,6 +182,55 @@ namespace Spludlow.MameAO
 
 		}
 
+		public static void CollectSnaps(string rootDirectory, string targetDirectory, Reports reports)
+		{
+			DataTable table = Tools.MakeDataTable(
+				"Version	Machine	LastWriteTime	SourceFilename	TargetFilename",
+				"String		String	DateTime		String			String");
+
+			foreach (string versionDirectory in Directory.GetDirectories(rootDirectory))
+			{
+				string version = Path.GetFileName(versionDirectory);
+
+				if (version.StartsWith("_") == true)
+					continue;
+
+				string mameBin = Path.Combine(versionDirectory, "mame.exe");
+
+				if (File.Exists(mameBin) == false)
+					continue;
+
+				string snapDirectory = Path.Combine(versionDirectory, "snap");
+
+				if (Directory.Exists(snapDirectory) == false)
+					continue;
+
+				foreach (string machineDirectory in Directory.GetDirectories(snapDirectory))
+				{
+					string machineName = Path.GetFileName(machineDirectory);
+
+					foreach (string snapFilename in Directory.GetFiles(machineDirectory, "*.png"))
+					{
+						DateTime lastWriteTime = File.GetLastWriteTime(snapFilename);
+
+						string stamp = lastWriteTime.ToString("s").Replace(":", "-");
+
+						string name = Path.GetFileNameWithoutExtension(snapFilename);
+
+						string targetFilename = Path.Combine(targetDirectory, $"{machineName}.{version}.{stamp}.{name}.png");
+
+						File.Move(snapFilename, targetFilename);
+
+						table.Rows.Add(version, machineName, lastWriteTime, snapFilename, targetFilename);
+					}
+				}
+			}
+
+			reports.SaveHtmlReport(table, $"Collect Snaps ({table.Rows.Count})");
+
+			Console.WriteLine($"Collected {table.Rows.Count} Snaps.");
+		}
+
 
 	}
 }
