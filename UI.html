@@ -416,7 +416,7 @@
 			let html = '';
 			html += '<p>Copy and paste the directory path to import from here.</p>';
 			html += '<input id="directory" type="text" value="" style="width:480px;" /><br />';
-			html += '<button type="submit" onclick="runCommand(encodeURIComponent(\'.import \' + directory.value)); return false;">Start Import</button><br />';
+			html += '<button type="submit" onclick="runCommand(\'.import \' + directory.value); return false;">Start Import</button><br />';
 			html += '<p>A report will pop up in the browser when finished. Look at the console shell to check progress.</p>';
 
 			const div = document.createElement('div');
@@ -435,7 +435,7 @@
 			html += '<p>Copy and paste the directory path to export to here.</p>';
 			html += '<select id="exportType"><option value="*">Everything</option><option value="MR">Machine ROM</option><option value="MD">Machine DISK</option><option value="SR">Software ROM</option><option value="SD">Software DISK</option></select><br /><br />';
 			html += '<input id="directory" type="text" value="" style="width:480px;" /><br />';
-			html += '<button type="submit" onclick="runCommand(encodeURIComponent(\'.export \' + exportType.value + \' \' + directory.value)); return false;">Start Export</button><br />';
+			html += '<button type="submit" onclick="runCommand(\'.export \' + exportType.value + \' \' + directory.value); return false;">Start Export</button><br />';
 			html += '<p>A report will pop up in the browser when finished. Look at the console shell to check progress.</p>';
 
 			const div = document.createElement('div');

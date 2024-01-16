@@ -156,8 +156,6 @@ namespace Spludlow.MameAO
 			if (line == null)
 				throw new ApplicationException("No line given.");
 
-			line = Uri.UnescapeDataString(line);
-
 			// Silent commands
 
 			if (line.StartsWith(".fav") == true)
