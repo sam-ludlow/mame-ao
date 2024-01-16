@@ -119,9 +119,10 @@ There are also commands available they all start with a dot `.`
 - `.0255` - Run a previous version of MAME, you can still pass the machine and software but MAME-AO will not place assets in previous versions, you are better off not passing the machine and use the MAME UI with the available filter.
 - `.list` - Show all saved state across all MAME versions, previous MAME versions will also be listed even without saved state.
 - `.up` - Self update MAME-AO to the latest on GitHub
-- `.upany` - Self update MAME-AO anyway even if up to date, this can be used to clear the Windows Defender warning on first install. 
-- `.import` - Run the import function, see below.
-- `.export` - Run the export function, see below.
+- `.upany` - Self update MAME-AO anyway even if up to date, this can be used to clear the Windows Defender warning on first install.
+- `.report` - Run reports, [see reports section](#reports)
+- `.import` - Run the import function, [see import section](#import)
+- `.export` - Run the export function, [see export section](#export)
 - `.ui` - Launch the UI in default browser.
 - `.r` - Reload `UI.html` usfull when developing the UI.
 
@@ -179,7 +180,7 @@ Machine DISKs that exist in a parent machine will not be exported, as the file w
 
 A HTML report will be created containing details of the export.
 
-## HTML Reports
+## Reports
 Some MAME-AO functions will produce HTML reports, so you can see what it's been doing
 
 There are several informational reports that you can run from the UI or with the command `.report <type>`
