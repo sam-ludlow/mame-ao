@@ -80,19 +80,26 @@
 					href: '/machines',
 				},
 				{
-					text: 'Run Reports',
-					title: 'Run reports',
-					href: '/reports',
-				},
-				{
-					text: 'View Reports',
-					title: 'View reports',
-					href: '/view-reports',
-				},
-				{
 					text: 'Saved State',
 					title: 'View saved state',
 					href: '/saved',
+				},
+				{
+					text: 'Reporting',
+					title: 'Information Reporting',
+					href: '/reports',
+					menu: [
+						{
+							text: 'Run Reports',
+							title: 'Run Reports',
+							href: '/reports/run',
+						},
+						{
+							text: 'View Reports',
+							title: 'View Veports',
+							href: '/reports/view',
+						},
+					],
 				},
 				{
 					text: 'Import',
@@ -257,51 +264,6 @@
 
 			}
 
-			//
-			// load reports menu
-			//
-			let reportGroups;
-			let reportData;
-
-			if (_pathParts.includes('/reports')) {
-				reportGroups = (await (await fetch(`${_baseUrl}/api/report_groups`)).json());
-
-				_rootMenu[0].menu[1].menu = reportGroups.results.map((group) => {
-					return {
-						text: group.text,
-						title: group.description,
-						href: `/reports/${group.key}`,
-					};
-				});
-
-				if (_pathParts.length >= 3) {
-
-					let current;
-					_rootMenu[0].menu[1].menu.forEach((item) => {
-						if (_pathParts[2] === item.href)
-							current = item;
-					});
-
-					if (current === undefined)
-						throw new Error('current report menu not found');
-
-
-					let parts = _pathParts[2].split('/');
-					const groupKey = parts[parts.length - 1];
-
-					reportData = (await (await fetch(`${_baseUrl}/api/report_types?group=${groupKey}`)).json());
-
-					current.menu = reportData.results.map((report) => {
-						return {
-							text: report.text,
-							title: report.description,
-							href: `/reports/${groupKey}/${report.key}`,
-						};
-					});
-				}
-			}
-
-
 			displayMenu();
 
 			//
@@ -320,19 +282,17 @@
 				return;
 			}
 
-			if (_pathParts.includes('/reports') && _pathParts.length === 4) {
-
-				await reports(reportGroups, reportData);
-				return;
-			}
-
 			switch (_path) {
 
 				case '/saved':
 					await saved();
 					break;
 
-				case '/view-reports':
+				case '/reports/run':
+					await runReports();
+					break;
+
+				case '/reports/view':
 					await viewReports();
 					break;
 
@@ -352,7 +312,7 @@
 					await exportFiles();
 					break;
 
-				default:	//	404
+				default:
 					break;
 			}
 
@@ -735,31 +695,6 @@
 				`page: ${currentPage} / ${totalPages} - total: ${data.total} - viewing: ${data.count}`;
 		}
 
-
-		//
-		// Reports
-		//
-
-		const reports = async (reportGroups, reportData) => {
-
-			const canvas = getCanvas();
-
-			let parts = _pathParts[3].split('/');
-
-			const groupKey = parts[parts.length - 2];
-			const reportKey = parts[parts.length - 1];
-
-			const group = reportGroups.results.filter((item) => item.key === groupKey)[0];
-			const report = reportData.results.filter((item) => item.key === reportKey)[0];
-
-			const html = `<p>GROUP: ${group.description}</p><hr/><p>REPORT: ${report.description}</p><hr/>` +
-				`<button type="submit" onclick="runCommand('.report ${report.code}'); return false;">Run Report</button> Will open in new browser when finished.`;
-
-			const div = document.createElement('div');
-			div.innerHTML = html;
-			canvas.appendChild(div);
-		};
-
 		//
 		// Saved state
 		//
@@ -820,6 +755,44 @@
 			});
 
 			canvas.appendChild(table);
+		}
+
+		//
+		// Run Reports
+		//
+		const runReports = async () => {
+
+			const canvas = getCanvas();
+
+			let html = '';
+
+			html += 'Click report code to run report. It will pop up in default browser when finished.';
+
+			const report_groups = await (await fetch(`${_baseUrl}/api/report_groups`)).json();
+			const report_types = await (await fetch(`${_baseUrl}/api/report_types`)).json();
+
+			report_groups.results.forEach((report_group, index) => {
+
+				if (index > 0)
+					html += '<hr />';
+
+				html += `<h2>${report_group.text} (${report_group.key})</h2>`;
+				html += `<p>${report_group.description}</p>`;
+
+				html += '<table>';
+				html += '<tr><th>key</th><th>code</th><th>text</th><th>description</th></tr>';
+
+				report_types.results.filter(report_type => report_type.group === report_group.key).forEach(report_type => {
+
+					html += `<tr><td>${report_type.key}</td><td><a href="javascript:void(0);" onclick="runCommand('.report ${report_type.code}')" >${report_type.code}</a></td><td>${report_type.text}</td><td>${report_type.description}</td></tr>`;
+				});
+
+				html += '</table>';
+			});
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
 		}
 
 		//
