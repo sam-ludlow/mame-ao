@@ -687,6 +687,13 @@ namespace Spludlow.MameAO
 						Mame.CollectSnaps(_RootDirectory, String.Join(" ", parts.Skip(1)), _Reports);
 						return;
 
+					case ".svg":
+						if (parts.Length < 2)
+							throw new ApplicationException($"Usage: {parts[0]} <filename>");
+
+						Tools.Bitmap2SVG(String.Join(" ", parts.Skip(1)));
+						return;
+
 					case ".ui":
 						Process.Start(_ListenAddress);
 						return;

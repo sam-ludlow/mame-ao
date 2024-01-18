@@ -9,6 +9,7 @@ using System.Data;
 using System.Text;
 using System.Threading.Tasks;
 using System.ComponentModel;
+using System.Drawing;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -365,6 +366,42 @@ namespace Spludlow.MameAO
 			}
 
 			throw new ApplicationException("Failed to find Data Size: " + sizeBytes.ToString());
+		}
+
+		public static void Bitmap2SVG(string filename)
+		{
+			string targetFilename = Path.Combine(Path.GetDirectoryName(filename), Path.GetFileNameWithoutExtension(filename) + ".svg");
+
+			using (StreamWriter writer = new StreamWriter(targetFilename, false, Encoding.UTF8))
+			{
+				using (Image image = Image.FromFile(filename))
+				{
+					writer.WriteLine("<svg version=\"1.1\" id=\"mame-ao\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" " +
+						$"x=\"{0}px\" y=\"{0}px\" width=\"{image.Width}px\" height=\"{image.Height}px\">");
+
+					using (Bitmap bitmap = new Bitmap(image))
+					{
+						for (int y = 0; y < image.Height; ++y)
+						{
+							for (int x = 0; x < image.Width; ++x)
+							{
+								Color colour = bitmap.GetPixel(x, y);
+
+								if (colour.A == 0)
+									continue;
+
+								string fill = String.Format("{0:x6}", colour.ToArgb() & 0xFFFFFF);
+
+								writer.WriteLine($"<rect x=\"{x}\" y=\"{y}\" width=\"1\" height=\"1\" fill=\"#{fill}\"/>");
+							}
+						}
+					}
+
+					Console.WriteLine($"SVG: {image.Width} X {image.Height} : {targetFilename}");
+
+					writer.WriteLine("</svg>");
+				}
+			}
 		}
 	}
 
