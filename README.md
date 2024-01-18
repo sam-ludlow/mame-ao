@@ -25,7 +25,9 @@ TIP: Run command `.upany` to self update program, this will stop the microsoft d
 ## Important notes
 
 - The first time you run it will take a while and use a lot of CPU & RAM.
+- Extracting the XML from MAME and converting to SQLite takes some doing.
 - Please be patient, subsequent runs will not.
+- Version bumps in MAME or MAME-AO will trigger database re-creation.
 
 ## UI
 
@@ -43,8 +45,7 @@ TIP: Run command `.upany` to self update program, this will stop the microsoft d
 
 ## Known issues
 
-- Not all CHD SL (Software list) disks are available in the source & may contains incorect files (sha1 don't match). See section below "Sources - Software Disk" for more information.
-- UI could do with refinement.
+- Not all Software list disks (SL CHD) are available in the archive.org items & may contains incorect files (sha1 don't match), [see software disk section](#sources---software-disk).
 
 ## Reporting issues
 
@@ -123,6 +124,7 @@ There are also commands available they all start with a dot `.`
 - `.report` - Run reports, [see reports section](#reports)
 - `.import` - Run the import function, [see import section](#import)
 - `.export` - Run the export function, [see export section](#export)
+- `.snap` - Run the snapshot collection function, [see snapshots section](#snapshots)
 - `.ui` - Launch the UI in default browser.
 - `.r` - Reload `UI.html` usfull when developing the UI.
 
@@ -179,6 +181,17 @@ Machine ROMs will be in split-set format (separate parent ZIP & child diff ZIPs)
 Machine DISKs that exist in a parent machine will not be exported, as the file would be duplicated.
 
 A HTML report will be created containing details of the export.
+
+## Snapshots
+Within MAME you can hit `F12` to take a snapshot of the screen, dumped out at the machine's native resolution.
+
+You can use the snap feature to collect the snaps within the MAME directory and move them to a specified directory. Files are named like so:
+
+`[mame machine].[mame version].[time stamp].[mame filename].png`
+
+You can run from the UI or use the command:
+
+`.snap <target directory>`
 
 ## Reports
 Some MAME-AO functions will produce HTML reports, so you can see what it's been doing
@@ -272,6 +285,8 @@ Note that MAME support for machines with software disks is not that great, many 
 Of the consoles there are only really these 3: Philips CD-i, Neo-Geo CD, and PC Engine (with CD Super System Card). So currently these 3 have their own archive.org items.
 
 See the sources source code to see what archive.org items MAME-AO is using https://github.com/sam-ludlow/mame-ao/blob/main/source/Sources.cs
+
+You can run the source exists (SE) reports to see what is and isn't available.
 
 ## Credits
 

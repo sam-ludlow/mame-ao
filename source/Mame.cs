@@ -226,7 +226,8 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			reports.SaveHtmlReport(table, $"Collect Snaps ({table.Rows.Count})");
+			if (table.Rows.Count > 0)
+				reports.SaveHtmlReport(table, $"Collect Snaps ({table.Rows.Count})");
 
 			Console.WriteLine($"Collected {table.Rows.Count} Snaps.");
 		}

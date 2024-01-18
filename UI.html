@@ -102,6 +102,11 @@
 					],
 				},
 				{
+					text: 'Snaps',
+					title: 'Collect MAME Image Snapshots into single directory',
+					href: '/snaps',
+				},
+				{
 					text: 'Import',
 					title: 'Import ROM/CHD from directory',
 					href: '/import',
@@ -304,6 +309,10 @@
 					await update();
 					break;
 
+				case '/snaps':
+					await collectSnaps();
+					break;
+
 				case '/import':
 					await importFiles();
 					break;
@@ -360,6 +369,24 @@
 
 			const html = `<p>New MAME-AO update avaialable ${_info.version_name_current} => ${_info.version_name_available}</p>` +
 				`<a href="${_baseUrl}/api/update">Click here to update immediately.</a>`;
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+		}
+
+		//
+		// Snaps
+		//
+		const collectSnaps = async () => {
+			const canvas = getCanvas();
+
+			let html = '';
+
+			html += '<p>Copy and paste the directory path to move snaps to here.</p>';
+			html += '<input id="directory" type="text" value="" style="width:480px;" /><br />';
+			html += '<button type="submit" onclick="runCommand(\'.snap \' + directory.value); return false;">Start Snap Collection</button><br />';
+			html += '<p>A report will pop up in the browser when finished. Look at the console shell to check progress.</p>';
 
 			const div = document.createElement('div');
 			div.innerHTML = html;
