@@ -41,7 +41,7 @@ namespace Spludlow.MameAO
 		}
 		public string VerifyRaw(string filename)
 		{
-			return Run("verify -i \"" + filename + "\"");
+			return Run($"verify -i \"{filename}\"");
 		}
 		public bool VerifyOutput(string output)
 		{
@@ -55,7 +55,7 @@ namespace Spludlow.MameAO
 
 		public Dictionary<string, string> Info(string filename)
 		{
-			return ParseResult(Run("info -i \"" + filename + "\""));
+			return ParseResult(Run($"info -i \"{filename}\""));
 		}
 
 		public static Dictionary<string, string> ParseResult(string text)

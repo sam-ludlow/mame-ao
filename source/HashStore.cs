@@ -3,8 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.IO;
+using System.Data;
 
-namespace Spludlow
+namespace Spludlow.MameAO
 {
 	public class HashStore
 	{
@@ -173,6 +174,55 @@ namespace Spludlow
 			path.Append(sha1);
 
 			return path.ToString();
+		}
+
+		public static void ValidateHashStore(HashStore hashStore, string type, Reports reports, MameChdMan verifyChdMan)
+		{
+			string[] filenames = hashStore.FileNames();
+
+			DataTable table = Tools.MakeDataTable(
+				"Filename	Problem",
+				"String		String"
+			);
+
+			string title = $"Validate hashstore {type} {(verifyChdMan != null ? "(CHD verify)" : "")}, count: {filenames.Length}";
+
+			Console.Write($"{title} ...");
+
+			foreach (string filename in filenames)
+			{
+
+				try
+				{
+					string storeHash = Path.GetFileNameWithoutExtension(filename);
+					string actualHash = hashStore.Hash(filename);
+
+					if (storeHash != actualHash)
+						throw new ApplicationException(actualHash);
+
+					if (verifyChdMan != null && verifyChdMan.Verify(filename) == false)
+						throw new ApplicationException("SHA1 verification");
+
+					Console.Write(".");
+
+				}
+				catch (Exception ee)
+				{
+					table.Rows.Add(filename, ee.Message);
+
+					Console.Write("X");
+				}
+			}
+
+			Console.WriteLine("...done");
+
+			title += $", bad: {table.Rows.Count}";
+
+			if (table.Rows.Count > 0)
+			{
+				Console.WriteLine("!!! Bad files found see the report.");
+				reports.SaveHtmlReport(table, title);
+			}
 		}
 	}
 }

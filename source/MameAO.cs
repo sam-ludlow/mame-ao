@@ -702,6 +702,29 @@ namespace Spludlow.MameAO
 						_WebServer.RefreshAssets();
 						return;
 
+					case ".valid":
+						if (parts.Length != 2)
+							throw new ApplicationException($"Usage: {parts[0]} <rom, disk, diskv>");
+
+						switch (parts[1].ToUpper())
+						{
+							case "ROM":
+								HashStore.ValidateHashStore(_RomHashStore, "ROM", _Reports, null);
+								break;
+
+							case "DISK":
+								HashStore.ValidateHashStore(_DiskHashStore, "DISK", _Reports, null);
+								break;
+
+							case "DISKV":
+								HashStore.ValidateHashStore(_DiskHashStore, "DISK", _Reports, _MameChdMan);
+								break;
+
+							default:
+								throw new ApplicationException("Valid Unknown store type (row, disk, diskv).");
+						}
+						return;
+
 					default:
 						binFilename = Path.Combine(_RootDirectory, machine.Substring(1), "mame.exe");
 

@@ -203,7 +203,7 @@ namespace Spludlow.MameAO
 
 		public void SaveHtmlReport(DataSet dataSet, string title)
 		{
-			string name = DateTime.Now.ToString("s").Replace(":", "-") + "_" + title;
+			string name = DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(title);
 
 			title = "MAME-AO - " + title;
 
