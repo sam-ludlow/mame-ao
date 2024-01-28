@@ -368,10 +368,23 @@ namespace Spludlow.MameAO
 			throw new ApplicationException("Failed to find Data Size: " + sizeBytes.ToString());
 		}
 
-		public static void Bitmap2SVG(string filename)
+		public static void Bitmap2SVG(string filenameOrDirectory)
 		{
-			string targetFilename = Path.Combine(Path.GetDirectoryName(filename), Path.GetFileNameWithoutExtension(filename) + ".svg");
+			string[] filenames = new string[] { filenameOrDirectory };
 
+			if (Directory.Exists(filenameOrDirectory) == true)
+				filenames = Directory.GetFiles(filenameOrDirectory, "*.png");
+
+			foreach (string filename in filenames)
+			{
+				string targetFilename = Path.Combine(Path.GetDirectoryName(filename), Path.GetFileNameWithoutExtension(filename) + ".svg");
+
+				Bitmap2SVG(filename, targetFilename);
+			}
+
+		}
+		public static void Bitmap2SVG(string filename, string targetFilename)
+		{
 			using (StreamWriter writer = new StreamWriter(targetFilename, false, Encoding.UTF8))
 			{
 				using (Image image = Image.FromFile(filename))

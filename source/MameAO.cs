@@ -689,7 +689,7 @@ namespace Spludlow.MameAO
 
 					case ".svg":
 						if (parts.Length < 2)
-							throw new ApplicationException($"Usage: {parts[0]} <filename>");
+							throw new ApplicationException($"Usage: {parts[0]} <filename or directory>");
 
 						Tools.Bitmap2SVG(String.Join(" ", parts.Skip(1)));
 						return;
@@ -700,6 +700,10 @@ namespace Spludlow.MameAO
 
 					case ".r":
 						_WebServer.RefreshAssets();
+						return;
+
+					case ".readme":
+						Process.Start("https://github.com/sam-ludlow/mame-ao#mame-ao");
 						return;
 
 					case ".valid":

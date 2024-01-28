@@ -8,7 +8,7 @@ Built in web UI just click image and wait.
 
 You can also use the command line just enter machine / software short name.
 
-![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/mame-ao-ui.png)
+![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-ui.png)
 
 ## Installation & Usage
 
@@ -118,6 +118,7 @@ From the shell you normally just enter machine name and maybe software name.
 There are also commands available they all start with a dot `.`
 - `.`	- Run current MAME without a machine (start MAME UI) you can also pass arguments to MAME
 - `.0255` - Run a previous version of MAME, you can still pass the machine and software but MAME-AO will not place assets in previous versions, you are better off not passing the machine and use the MAME UI with the available filter.
+- `.readme` - Show the mame-ao README on github.com
 - `.list` - Show all saved state across all MAME versions, previous MAME versions will also be listed even without saved state.
 - `.up` - Self update MAME-AO to the latest on GitHub
 - `.upany` - Self update MAME-AO anyway even if up to date, this can be used to clear the Windows Defender warning on first install.
@@ -125,6 +126,8 @@ There are also commands available they all start with a dot `.`
 - `.import` - Run the import function, [see import section](#import)
 - `.export` - Run the export function, [see export section](#export)
 - `.snap` - Run the snapshot collection function, [see snapshots section](#snapshots)
+- `.valid` - Validate the hash store, [see validate store section](#validate-store)
+- `.svg` - SVG
 - `.ui` - Launch the UI in default browser.
 - `.r` - Reload `UI.html` usfull when developing the UI.
 
@@ -182,6 +185,13 @@ Machine DISKs that exist in a parent machine will not be exported, as the file w
 
 A HTML report will be created containing details of the export.
 
+## Validate Store
+You can check the hash store is in good order using the following commands:
+
+- `.valid rom` - Validate the ROM Hash Store, each file will be SHA1 hashed and compared to the filename.
+- `.valid disk` - Validate the DISK Hash Store, each file will have the SHA1 checked with chdman.exe and compared to the filename.
+- `.valid diskv` - Validate the DISK Hash Store, each file will have the SHA1 verified with chdman.exe and compared to the filename. WARNING: This can take a while, each CHD will have its SHA1 calculated to verify it is correct.
+
 ## Snapshots
 Within MAME you can hit `F12` to take a snapshot of the screen, dumped out at the machine's native resolution.
 
@@ -203,6 +213,15 @@ Use the `.report` command without any arguments to list available reports.
 When the report has finished running it will pop up in the browser.
 
 You can list previous created reports in the UI or have a look in the `_REPORTS` directory.
+
+## SVG
+Convert bitmaps (from snapshots) into Scalable Vector Graphics format.
+
+![MAME-AO SVG](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-svg.png)
+
+You can run from the UI or use the command, single file or all files in a directory:
+
+`.svg <filename or directory>`
 
 ## MAME Data Operations
 MAME-AO has the capability to perform various MAME Data operations by passing command line options when starting the program, it will exit immediately when finished.
