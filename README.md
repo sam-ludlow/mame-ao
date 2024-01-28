@@ -127,7 +127,7 @@ There are also commands available they all start with a dot `.`
 - `.export` - Run the export function, [see export section](#export)
 - `.snap` - Run the snapshot collection function, [see snapshots section](#snapshots)
 - `.valid` - Validate the hash store, [see validate store section](#validate-store)
-- `.svg` - SVG
+- `.svg` - Convert bitmaps to SVG, [see SVG section](#svg)
 - `.ui` - Launch the UI in default browser.
 - `.r` - Reload `UI.html` usfull when developing the UI.
 
