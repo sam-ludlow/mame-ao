@@ -59,6 +59,7 @@
     <Compile Include="source\Database.cs" />
     <Compile Include="source\Export.cs" />
     <Compile Include="source\Favorites.cs" />
+    <Compile Include="source\Genre.cs" />
     <Compile Include="source\HashStore.cs" />
     <Compile Include="source\Mame.cs" />
     <Compile Include="source\MameAO.cs" />
