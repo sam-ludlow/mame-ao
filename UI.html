@@ -343,6 +343,14 @@
 
 			const canvas = getCanvas();
 
+			const html = `<h2>MAME What's New</h2><a href="${_baseUrl}/api/what" target="_blank">View in browser</a><hr />` +
+			'<h2>System Information</h2>';
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+
+
 			delete _info.latest;
 
 			const table = document.createElement('table');

@@ -609,6 +609,13 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
+		public void _api_what(HttpListenerContext context, StreamWriter writer)
+		{
+			context.Response.Headers["Content-Type"] = "text/plain; charset=utf-8";
+
+			writer.Write(Mame.WhatsNew(_AO._RootDirectory));
+		}
+
 		private dynamic RowToJson(DataRow row)
 		{
 			dynamic json = new JObject();

@@ -729,6 +729,10 @@ namespace Spludlow.MameAO
 						}
 						return;
 
+					case ".what":
+						Process.Start(_ListenAddress + "api/what");
+						return;
+
 					default:
 						binFilename = Path.Combine(_RootDirectory, machine.Substring(1), "mame.exe");
 

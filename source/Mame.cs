@@ -3,6 +3,7 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
+using System.Collections.Generic;
 
 namespace Spludlow.MameAO
 {
@@ -180,6 +181,35 @@ namespace Spludlow.MameAO
 
 			return sortTable;
 
+		}
+
+		public static string WhatsNew(string rootDirectory)
+		{
+			string name = "whatsnew.txt";
+
+			List<string> versions = new List<string>();
+
+			foreach (string mameDirectory in Directory.GetDirectories(rootDirectory))
+			{
+				string version = Path.GetFileName(mameDirectory);
+
+				if (version.StartsWith("_") == true)
+					continue;
+
+				string txtFilename = Path.Combine(mameDirectory, name);
+
+				if (File.Exists(txtFilename) == true)
+					versions.Add(version);
+			}
+
+			versions.Sort();
+
+			if (versions.Count == 0)
+				throw new ApplicationException("Can't find any whatsnew.txt files.");
+
+			string filename = Path.Combine(rootDirectory, versions[versions.Count - 1], name);
+
+			return File.ReadAllText(filename, Encoding.UTF8);
 		}
 
 		public static void CollectSnaps(string rootDirectory, string targetDirectory, Reports reports)
