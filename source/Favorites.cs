@@ -17,7 +17,7 @@ namespace Spludlow.MameAO
 		public Dictionary<string, HashSet<string>> _Machines;
 		public Dictionary<string, HashSet<string>> _Software;
 
-		//	Machines	machine	[softwareLists...]
+		//	Machines	machine	[lists...]
 		//	Software	list	[software...]
 
 		public Favorites(string rootDirectory)

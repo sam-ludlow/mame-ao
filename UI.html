@@ -80,6 +80,11 @@
 					href: '/machines',
 				},
 				{
+					text: 'Genres',
+					title: 'Machines by Genre',
+					href: '/genres',
+				},
+				{
 					text: 'Saved State',
 					title: 'View saved state',
 					href: '/saved',
@@ -330,6 +335,10 @@
 					await exportFiles();
 					break;
 
+				case '/genres':
+					await genres();
+					break;
+
 				default:
 					break;
 			}
@@ -476,6 +485,56 @@
 			canvas.appendChild(div);
 
 			document.getElementById('directory').focus();
+		}
+
+		//
+		// Genres
+		//
+		const genres = async () => {
+
+			const canvas = getCanvas();
+
+			const genre_groups = await fetchJson('/api/genre_groups');
+
+			const columnDefs = [
+				{ heading: 'Genre Group', columnName: 'group_name' },
+				{ heading: 'Status Good', columnName: 'good' },
+				{ heading: 'Status Imperfect', columnName: 'imperfect' },
+				{ heading: 'Status Preliminary', columnName: 'preliminary' },
+			];
+
+			const table = document.createElement('table');
+			table.style = 'margin-left: auto; margin-right: auto;';
+
+			const headRow = document.createElement('tr');
+			columnDefs.forEach((columnDef) => {
+				const cell = document.createElement('th');
+				cell.innerHTML = columnDef.heading;
+				headRow.appendChild(cell);
+			});
+			table.appendChild(headRow);
+
+			genre_groups.results.forEach(result => {
+
+				const row = document.createElement('tr');
+
+				columnDefs.forEach((columnDef) => {
+
+					const cell = document.createElement('td');
+
+					switch (columnDef.columnName) {
+
+						default:
+							cell.innerHTML = result[columnDef.columnName];
+							break;
+					}
+
+					row.appendChild(cell);
+				});
+				table.appendChild(row);
+			});
+
+			canvas.appendChild(table);
 		}
 
 		//
@@ -789,7 +848,7 @@
 			];
 
 			const table = document.createElement('table');
-			table.style = 'width:100%;';
+			table.style = 'margin-left: auto; margin-right: auto;';
 
 			// Headings
 			const headRow = document.createElement('tr');
@@ -880,7 +939,7 @@
 			const data = await (await fetch(`${_baseUrl}/api/reports`)).json();
 
 			const table = document.createElement('table');
-			table.style = 'width:100%;';
+			table.style = 'margin-left: auto; margin-right: auto;';
 
 			// Headings
 			const headRow = document.createElement('tr');
@@ -903,7 +962,7 @@
 				let cell;
 				
 				cell = document.createElement('td');
-				cell.innerHTML = `<a href="${_baseUrl}/api/report?name=${encodeURIComponent(report.name)}" target="_blank">${report.date}</a>`;
+				cell.innerHTML = `<a href="${_baseUrl}/api/report?name=${encodeURIComponent(report.name)}" target="_blank">${report.date.replace('T', ' ')}</a>`;
 				tableRow.appendChild(cell);
 
 				cell = document.createElement('td');
@@ -921,6 +980,8 @@
 		//
 
 		const sleep = ms => new Promise(r => setTimeout(r, ms));
+
+		const fetchJson = async url => (await fetch(`${_baseUrl}${url}`)).json();
 
         const getCanvas = () => {
             const page = document.getElementById('canvas');

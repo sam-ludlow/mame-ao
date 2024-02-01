@@ -128,6 +128,7 @@ There are also commands available they all start with a dot `.`
 - `.snap` - Run the snapshot collection function, [see snapshots section](#snapshots)
 - `.valid` - Validate the hash store, [see validate store section](#validate-store)
 - `.svg` - Convert bitmaps to SVG, [see SVG section](#svg)
+- `.what` - View current MAME whatsnew.txt in default browser.
 - `.ui` - Launch the UI in default browser.
 - `.r` - Reload `UI.html` usfull when developing the UI.
 

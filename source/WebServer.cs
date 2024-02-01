@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Net;
@@ -8,6 +9,7 @@ using System.Threading.Tasks;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using static Spludlow.MameAO.Reports;
 
 namespace Spludlow.MameAO
 {
@@ -616,14 +618,66 @@ namespace Spludlow.MameAO
 			writer.Write(Mame.WhatsNew(_AO._RootDirectory));
 		}
 
+		public void _api_genre_groups(HttpListenerContext context, StreamWriter writer)
+		{
+			JArray results = new JArray();
+
+			HashSet<string> keepColumnNames = new HashSet<string>(new string[] { "genre_id", "group_id" });
+
+			foreach (DataRow row in _AO._Genre.Data.Tables["groups"].Rows)
+			{
+				dynamic result = RowToJson(row, keepColumnNames);
+				results.Add(result);
+			}
+
+			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = results.Count;
+			json.count = results.Count;
+			json.results = results;
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+		public void _api_genres(HttpListenerContext context, StreamWriter writer)
+		{
+			JArray results = new JArray();
+
+			HashSet<string> keepColumnNames = new HashSet<string>(new string[] { "genre_id", "group_id" });
+
+			foreach (DataRow row in _AO._Genre.Data.Tables["genres"].Rows)
+			{
+				dynamic result = RowToJson(row, keepColumnNames);
+				results.Add(result);
+			}
+
+			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = results.Count;
+			json.count = results.Count;
+			json.results = results;
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+
 		private dynamic RowToJson(DataRow row)
+		{
+			return RowToJson(row, null);
+		}
+		private dynamic RowToJson(DataRow row, HashSet<string> keepColumnNames)
 		{
 			dynamic json = new JObject();
 
 			foreach (DataColumn column in row.Table.Columns)
 			{
-				if (column.ColumnName.EndsWith("_id") == true || column.ColumnName.EndsWith("_id1") == true)
-					continue;
+				if (keepColumnNames == null || keepColumnNames.Contains(column.ColumnName) == false)
+				{
+					if (column.ColumnName.EndsWith("_id") == true || column.ColumnName.EndsWith("_id1") == true)
+						continue;
+				}
 
 				if (column.ColumnName == "ao_total")
 					continue;
@@ -639,6 +693,10 @@ namespace Spludlow.MameAO
 
 					case "Int64":
 						json[column.ColumnName] = (long)row[column];
+						break;
+
+					case "Int32":
+						json[column.ColumnName] = (int)row[column];
 						break;
 
 					case "DateTime":

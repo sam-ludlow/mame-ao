@@ -87,6 +87,22 @@ namespace Spludlow.MameAO
 				((JObject)data).Remove(key);
 		}
 
+		public static void PopText(DataSet dataSet)
+		{
+			StringBuilder text = new StringBuilder();
+
+			foreach (DataTable table in dataSet.Tables)
+			{
+				string hr = new string('-', table.TableName.Length);
+				text.AppendLine(hr);
+				text.AppendLine(table.TableName);
+				text.AppendLine(hr);
+				text.AppendLine(TextTable(table));
+				text.AppendLine();
+			}
+
+			PopText(text.ToString());
+		}
 		public static void PopText(DataTable table)
 		{
 			PopText(TextTable(table));
