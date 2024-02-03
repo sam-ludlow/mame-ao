@@ -46,8 +46,6 @@ namespace Spludlow.MameAO
 				return;
 			}
 
-			Data = new DataSet();
-
 			Console.Write($"Genre version using: {version}, loading...");
 
 			string filename = Path.Combine(RootDirectory, version, "catver.ini");
@@ -56,63 +54,30 @@ namespace Spludlow.MameAO
 			// Parse .ini
 			//
 
-			DataTable machineGroupGenreTable = Tools.MakeDataTable(
-				"machine	group	genre",
-				"String		String	String"
-			);
-
 			List<string> groups = new List<string>();
 			List<string> genres = new List<string>();
 
-			bool inData = false;
+			DataTable machineGroupGenreTable;
 
-			foreach (string rawLine in File.ReadAllLines(filename))
+			try
 			{
-				string line = rawLine.Trim();
-				if (line.Length == 0)
-					continue;
-
-				if (line == "[Category]")
-				{
-					inData = true;
-					continue;
-				}
-
-				if (line == "[VerAdded]")
-					break;
-
-				if (inData == false)
-					continue;
-
-				string[] parts;
-
-				parts = line.Split(new char[] { '=' });
-
-				if (parts.Length != 2)
-					throw new ApplicationException("Not 2 parts on line");
-
-				string machine = parts[0];
-				string genre = parts[1];
-
-				if (genres.Contains(genre) == false)
-					genres.Add(genre);
-
-				parts = parts[1].Split(new char[] { '/' });
-
-				string group = parts[0].Trim();
-
-				if (groups.Contains(group) == false)
-					groups.Add(group);
-
-				machineGroupGenreTable.Rows.Add(machine, group, genre);
+				machineGroupGenreTable = ParseIni(filename, groups, genres);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine($"!!! Error parsing genres file, {e.Message}");
+				return;
 			}
 
 			groups.Sort();
 			genres.Sort();
 
+
 			string[] statuses = new string[] { "good", "imperfect", "preliminary" };
 
 			Dictionary<string, string> machineStatus = GetMachineDriverStatuses();
+
+			Data = new DataSet();
 
 			//
 			// Groups
@@ -184,6 +149,58 @@ namespace Spludlow.MameAO
 
 
 			Console.WriteLine("...done");
+		}
+
+		public DataTable ParseIni(string filename, List<string> groups, List<string> genres)
+		{
+			DataTable table = Tools.MakeDataTable(
+				"machine	group	genre",
+				"String		String	String"
+			);
+
+			bool inData = false;
+
+			foreach (string rawLine in File.ReadAllLines(filename))
+			{
+				string line = rawLine.Trim();
+				if (line.Length == 0)
+					continue;
+
+				if (line == "[Category]")
+				{
+					inData = true;
+					continue;
+				}
+
+				if (line == "[VerAdded]")
+					break;
+
+				if (inData == false)
+					continue;
+
+				string[] parts;
+
+				parts = line.Split(new char[] { '=' });
+
+				if (parts.Length != 2)
+					throw new ApplicationException("Not 2 parts on line");
+
+				string machine = parts[0];
+				string genre = parts[1];
+
+				if (genres.Contains(genre) == false)
+					genres.Add(genre);
+
+				parts = parts[1].Split(new char[] { '/' });
+				string group = parts[0].Trim();
+
+				if (groups.Contains(group) == false)
+					groups.Add(group);
+
+				table.Rows.Add(machine, group, genre);
+			}
+
+			return table;
 		}
 
 		public string GetLatestZipLink()

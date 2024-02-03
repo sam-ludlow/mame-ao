@@ -279,6 +279,36 @@
 
 			}
 
+			//
+			// genre menu
+			//
+			if (_pathParts.includes('/genres') && _pathParts.length >= 3) {
+
+				let parts = _pathParts[2].split('/');
+				const group_name_enc = parts[parts.length - 1];
+				const group_name = decodeURIComponent(group_name_enc);
+
+				_rootMenu[0].menu[1].menu = [{
+					text: group_name,
+					title: group_name,
+					href: `/genres/${group_name_enc}`,
+				}];
+
+				if (_pathParts.length >= 4) {
+
+					parts = _pathParts[3].split('/');
+					const genre_name_enc = parts[parts.length - 1];
+					const genre_name = decodeURIComponent(genre_name_enc);
+
+					_rootMenu[0].menu[1].menu[0].menu = [{
+						text: genre_name,
+						title: genre_name,
+						href: `/genres/${group_name_enc}/${genre_name_enc}`,
+					}];
+
+				}
+			}
+
 			displayMenu();
 
 			//
@@ -294,6 +324,16 @@
 			if (_pathParts.includes('/machines') && _pathParts.length === 5) {
 
 				await machine(machineData);
+				return;
+			}
+
+			if (_pathParts.includes('/genres') && _pathParts.length === 3) {
+				await genresGroup();
+				return;
+			}
+
+			if (_pathParts.includes('/genres') && _pathParts.length === 4) {
+				await genreMachines();
 				return;
 			}
 
@@ -359,6 +399,7 @@
 			div.innerHTML = html;
 			canvas.appendChild(div);
 
+			// readme link, git hub, credits, sources section, better info
 
 			delete _info.latest;
 
@@ -422,7 +463,6 @@
 			const div = document.createElement('div');
 			div.innerHTML = html;
 			canvas.appendChild(div);
-
 		}
 
 		//
@@ -506,35 +546,94 @@
 			const table = document.createElement('table');
 			table.style = 'margin-left: auto; margin-right: auto;';
 
-			const headRow = document.createElement('tr');
-			columnDefs.forEach((columnDef) => {
-				const cell = document.createElement('th');
-				cell.innerHTML = columnDef.heading;
-				headRow.appendChild(cell);
-			});
-			table.appendChild(headRow);
+			buildTable(columnDefs, genre_groups.results, table, (columnDef, result, resultIndex, row, cell) => {
 
-			genre_groups.results.forEach(result => {
+				let html;
 
-				const row = document.createElement('tr');
+				const value = result[columnDef.columnName];
 
-				columnDefs.forEach((columnDef) => {
+				switch (columnDef.columnName) {
 
-					const cell = document.createElement('td');
+					case 'group_name':
+						html = `<a href="${_baseUrl}/genres/${encodeURIComponent(value)}">${value}</a>`;
+						break;
 
-					switch (columnDef.columnName) {
+					default:
+						html = value;
+						break;
+				}
 
-						default:
-							cell.innerHTML = result[columnDef.columnName];
-							break;
-					}
+				if (html === '0')
+					html = '';
 
-					row.appendChild(cell);
-				});
-				table.appendChild(row);
+				cell.innerHTML = html;
+			
 			});
 
 			canvas.appendChild(table);
+		}
+
+		//
+		// Genres Group
+		//
+		const genresGroup = async () => {
+
+			const canvas = getCanvas();
+
+			let parts = _pathParts[2].split('/');
+			const group_name = decodeURIComponent(parts[parts.length - 1]);
+
+			const genres = await fetchJson(`/api/genres?group_name=${encodeURIComponent(group_name)}`);
+
+			const columnDefs = [
+				{ heading: 'Genre', columnName: 'genre_name' },
+				{ heading: 'Status Good', columnName: 'good' },
+				{ heading: 'Status Imperfect', columnName: 'imperfect' },
+				{ heading: 'Status Preliminary', columnName: 'preliminary' },
+			];
+
+			const table = document.createElement('table');
+			table.style = 'margin-left: auto; margin-right: auto;';
+
+			buildTable(columnDefs, genres.results, table, (columnDef, result, resultIndex, row, cell) => {
+
+				let html;
+
+				const value = result[columnDef.columnName];
+
+				switch (columnDef.columnName) {
+
+					case 'genre_name':
+						html = `<a href="${_baseUrl}/genres/${encodeURIComponent(group_name)}/${encodeURIComponent(value)}">${value}</a>`;
+						break;
+
+					default:
+						html = value;
+						break;
+				}
+
+				if (html === '0')
+					html = '';
+
+				cell.innerHTML = html;
+
+			});
+
+			canvas.appendChild(table);
+		}
+
+		//
+		// Genre Machines
+		//
+		const genreMachines = async () => {
+
+			const canvas = getCanvas();
+
+			let html = 'Genre Machines todo';
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
 		}
 
 		//
@@ -568,64 +667,44 @@
 			const table = document.createElement('table');
 			table.style = 'width:100%;';
 
-			// Headings
-			const headRow = document.createElement('tr');
-			columnDefs.forEach((colDef) => {
-				const cell = document.createElement('th');
-				cell.innerHTML = colDef.heading;
-				headRow.appendChild(cell);
-			});
-			table.appendChild(headRow);
+			buildTable(columnDefs, machinesData.results, table, (columnDef, result, resultIndex, row, cell) => {
 
-			// Rows
-			machinesData.results.forEach((row, rowIndex) => {
-				const tableRow = document.createElement('tr');
-
-				columnDefs.forEach((colDef) => {
-					const cell = document.createElement('td');
-
-					switch (colDef.columnName) {
-						case 'ao_image':
-							if (row.ao_softwarelist_count > 0)
-								cell.innerHTML = `<a id="${row.name}" href="${_baseUrl}/machines/${profileKey}/${row.name}"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
-							else
-								cell.innerHTML = `<a id="${row.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
-							break;
-
-						case 'name':
-							cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Machine.aspx?name=${row.name}" target="_blank">${row.name}</a>`;
-							break;
-
-						case 'description':
-							cell.innerHTML = `<a href="https://data.spludlow.co.uk/mame/machine/${row.name}" target="_blank">${row.description}</a>`;
-							break;
-
-						case 'favorite':
-							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavoriteMachine(this.id)" ${row.favorite ? 'checked' : ''}>`;
-							break;
-
-						default:
-							if (row[colDef.columnName] !== undefined)
-								cell.innerHTML = row[colDef.columnName];
-							break;
-					}
-
-					if (cell.innerHTML === '0')
-						cell.innerHTML = '';
-
-					if (row.favorite === true) {
-						if ((rowIndex % 2) == 0)
-							cell.style.background = '#cccc00';
+				switch (columnDef.columnName) {
+					case 'ao_image':
+						if (result.ao_softwarelist_count > 0)
+							cell.innerHTML = `<a id="${result.name}" href="${_baseUrl}/machines/${profileKey}/${result.name}"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
 						else
-							cell.style.background = '#e6e600';
-					}
+							cell.innerHTML = `<a id="${result.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
+						break;
 
-					tableRow.appendChild(cell);
-				});
+					case 'name':
+						cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Machine.aspx?name=${result.name}" target="_blank">${result.name}</a>`;
+						break;
 
-				tableRow.id = `row${rowIndex}`;
+					case 'description':
+						cell.innerHTML = `<a href="https://data.spludlow.co.uk/mame/machine/${result.name}" target="_blank">${result.description}</a>`;
+						break;
 
-				table.appendChild(tableRow);
+					case 'favorite':
+						cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteMachine(this.id)" ${result.favorite ? 'checked' : ''}>`;
+						break;
+
+					default:
+						if (result[columnDef.columnName] !== undefined)
+							cell.innerHTML = result[columnDef.columnName];
+						break;
+				}
+
+				if (cell.innerHTML === '0')
+					cell.innerHTML = '';
+
+				if (result.favorite === true) {
+					if ((resultIndex % 2) == 0)
+						cell.style.background = '#cccc00';
+					else
+						cell.style.background = '#e6e600';
+				}
+
 			});
 
 			const navHtml = navigateHtml(machinesData);
@@ -709,14 +788,7 @@
 			const table = document.createElement('table');
 			table.style = 'width:100%;';
 
-			// Headings
-			const headRow = document.createElement('tr');
-			columnDefs.forEach((colDef) => {
-				const cell = document.createElement('th');
-				cell.innerHTML = colDef.heading;
-				headRow.appendChild(cell);
-			});
-			table.appendChild(headRow);
+			buildTableHeader(columnDefs, table);
 
 			// Rows
 			softwareData.results.forEach((row, rowIndex) => {
@@ -850,15 +922,7 @@
 			const table = document.createElement('table');
 			table.style = 'margin-left: auto; margin-right: auto;';
 
-			// Headings
-			const headRow = document.createElement('tr');
-			columnDefs.forEach((colDef) => {
-				const cell = document.createElement('th');
-				cell.innerHTML = colDef.heading;
-				headRow.appendChild(cell);
-			});
-			table.appendChild(headRow);
-
+			buildTableHeader(columnDefs, table);
 
 			// Rows
 			data.results.forEach((row) => {
@@ -997,6 +1061,34 @@
 
 			if (response.status !== 200)
 				alert(result.message);
+		}
+
+		const buildTableHeader = (columnDefs, table) => {
+			const headRow = document.createElement('tr');
+			columnDefs.forEach((columnDef) => {
+				const cell = document.createElement('th');
+				cell.innerHTML = columnDef.heading;
+				headRow.appendChild(cell);
+			});
+			table.appendChild(headRow);
+		}
+
+		const buildTable = (columnDefs, results, table, cellFunction) => {
+
+			buildTableHeader(columnDefs, table);
+
+			results.forEach((result, resultIndex) => {
+
+				const row = document.createElement('tr');
+
+				columnDefs.forEach((columnDef) => {
+					const cell = document.createElement('td');
+					cellFunction(columnDef, result, resultIndex, row, cell);
+					row.appendChild(cell);
+				});
+
+				table.appendChild(row);
+			});
 		}
 
 		const getRequestInfo = () => {

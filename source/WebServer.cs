@@ -642,12 +642,37 @@ namespace Spludlow.MameAO
 
 		public void _api_genres(HttpListenerContext context, StreamWriter writer)
 		{
+			string qs;
+
+			long group_id = 0;
+			qs = context.Request.QueryString["group_id"];
+			if (qs != null)
+				group_id = Int64.Parse(qs);
+
+			string group_name = null;
+			qs = context.Request.QueryString["group_name"];
+			if (qs != null)
+				group_name = qs;
+
+			if (group_name != null)
+			{
+				DataRow[] rows = _AO._Genre.Data.Tables["groups"].Select($"group_name = '{group_name.Replace("'", "''")}'");
+
+				if (rows.Length == 0)
+					throw new ApplicationException($"group name not found: {group_name}");
+
+				group_id = (long)rows[0]["group_id"];
+			}
+
 			JArray results = new JArray();
 
 			HashSet<string> keepColumnNames = new HashSet<string>(new string[] { "genre_id", "group_id" });
 
 			foreach (DataRow row in _AO._Genre.Data.Tables["genres"].Rows)
 			{
+				if (group_id != 0 && (long)row["group_id"] != group_id)
+					continue;
+
 				dynamic result = RowToJson(row, keepColumnNames);
 				results.Add(result);
 			}
