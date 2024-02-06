@@ -383,12 +383,33 @@ namespace Spludlow.MameAO
 		{
 			DataQueryProfile found = null;
 
-			foreach (DataQueryProfile profile in Database.DataQueryProfiles)
+			if (key.StartsWith("genre") == true)
 			{
-				if (profile.Key == key)
+				long genre_id = Int64.Parse(key.Split(new char[] { '-' })[1]);
+
+				found = new DataQueryProfile() {
+					Key = key,
+					Text = "genre",
+					Decription = "genre",
+					CommandText =
+					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
+					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+					"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (genre_id = @genre_id) @SEARCH) " +
+					"ORDER BY machine.description COLLATE NOCASE ASC " +
+					"LIMIT @LIMIT OFFSET @OFFSET",
+				};
+
+				found.CommandText = found.CommandText.Replace("@genre_id", genre_id.ToString());
+			}
+			else
+			{
+				foreach (DataQueryProfile profile in Database.DataQueryProfiles)
 				{
-					found = profile;
-					break;
+					if (profile.Key == key)
+					{
+						found = profile;
+						break;
+					}
 				}
 			}
 

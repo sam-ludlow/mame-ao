@@ -654,6 +654,13 @@ namespace Spludlow.MameAO
 			if (qs != null)
 				group_name = qs;
 
+			string genre_name = null;
+			qs = context.Request.QueryString["genre_name"];
+			if (qs != null)
+				genre_name = qs;
+
+			long genre_id = 0;
+
 			if (group_name != null)
 			{
 				DataRow[] rows = _AO._Genre.Data.Tables["groups"].Select($"group_name = '{group_name.Replace("'", "''")}'");
@@ -664,6 +671,16 @@ namespace Spludlow.MameAO
 				group_id = (long)rows[0]["group_id"];
 			}
 
+			if (genre_name != null)
+			{
+				DataRow[] rows = _AO._Genre.Data.Tables["genres"].Select($"genre_name = '{genre_name.Replace("'", "''")}'");
+
+				if (rows.Length == 0)
+					throw new ApplicationException($"genre name not found: {genre_name}");
+
+				genre_id = (long)rows[0]["genre_id"];
+			}
+
 			JArray results = new JArray();
 
 			HashSet<string> keepColumnNames = new HashSet<string>(new string[] { "genre_id", "group_id" });
@@ -671,6 +688,9 @@ namespace Spludlow.MameAO
 			foreach (DataRow row in _AO._Genre.Data.Tables["genres"].Rows)
 			{
 				if (group_id != 0 && (long)row["group_id"] != group_id)
+					continue;
+
+				if (genre_id != 0 && (long)row["genre_id"] != genre_id)
 					continue;
 
 				dynamic result = RowToJson(row, keepColumnNames);

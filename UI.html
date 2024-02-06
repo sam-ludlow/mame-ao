@@ -563,7 +563,7 @@
 						break;
 				}
 
-				if (html === '0')
+				if (html === 0)
 					html = '';
 
 				cell.innerHTML = html;
@@ -612,7 +612,7 @@
 						break;
 				}
 
-				if (html === '0')
+				if (html === 0)
 					html = '';
 
 				cell.innerHTML = html;
@@ -629,24 +629,22 @@
 
 			const canvas = getCanvas();
 
-			let html = 'Genre Machines todo';
+			let parts = _pathParts[3].split('/');
+			const genre_name = decodeURIComponent(parts[parts.length - 1]);
 
-			const div = document.createElement('div');
-			div.innerHTML = html;
-			canvas.appendChild(div);
-		}
+			const genres = await fetchJson(`/api/genres?genre_name=${encodeURIComponent(genre_name)}`);
+			const genre_id = genres.results[0].genre_id;
 
-		//
-		// Machines
-		//
-		const machines = async () => {
-
-			const canvas = getCanvas();
-
-			let parts = _pathParts[2].split('/');
-			const profileKey = parts[parts.length - 1];
+			let profileKey = `genre-${genre_id}`;
 
 			const machinesData = await (await fetch(`${_baseUrl}/api/machines?profile=${profileKey}&offset=${_parameters.offset}&search=${_parameters.search}`)).json();
+
+			profileKey = 'everything';
+
+			showMachines(canvas, machinesData, profileKey);
+		}
+
+		const showMachines = (canvas, machinesData, profileKey) => {
 
 			const columnDefs = [
 				{ heading: '', columnName: 'ao_image' },
@@ -728,6 +726,21 @@
 
 			const inputText = document.getElementById('inputText');
 			inputText.focus();
+		}
+
+		//
+		// Machines
+		//
+		const machines = async () => {
+
+			const canvas = getCanvas();
+
+			let parts = _pathParts[2].split('/');
+			const profileKey = parts[parts.length - 1];
+
+			const machinesData = await (await fetch(`${_baseUrl}/api/machines?profile=${profileKey}&offset=${_parameters.offset}&search=${_parameters.search}`)).json();
+
+			showMachines(canvas, machinesData, profileKey);
 		}
 		const searchButton = async () => {
 
