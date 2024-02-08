@@ -26,7 +26,7 @@ namespace Spludlow.MameAO
 		public string _Version;
 		public string _AssemblyVersion;
 
-		private bool _LinkingEnabled = false;
+		public bool _LinkingEnabled = false;
 
 		private Task _RunTask = null;
 		public string _RunTaskCommand = null;
@@ -185,14 +185,6 @@ namespace Spludlow.MameAO
 			//
 			// Prepare sources
 			//
-
-			// Clear legacy files - from 1.53 - TODO: remove later
-			foreach (string name in new string[] { "_metadata_MachineDisk.json", "_metadata_MachineRom.json", "_metadata_SoftwareDisk.json", "_metadata_SoftwareRom.json" })
-			{
-				string filename = Path.Combine(_RootDirectory, name);
-				if (File.Exists(filename) == true)
-					File.Delete(filename);
-			}
 
 			string metaDataDirectory = Path.Combine(_RootDirectory, "_METADATA");
 			if (Directory.Exists(metaDataDirectory) == false)

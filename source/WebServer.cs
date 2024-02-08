@@ -400,6 +400,8 @@ namespace Spludlow.MameAO
 			json.directory = _AO._RootDirectory;
 			json.rom_store_count = _AO._RomHashStore.Length;
 			json.disk_store_count = _AO._DiskHashStore.Length;
+			json.genre_version = _AO._Genre.Data != null ? _AO._Genre.Version : "";
+			json.linking_enabled = _AO._LinkingEnabled;
 
 			json.latest = _AO._MameAoLatest;
 
@@ -622,12 +624,15 @@ namespace Spludlow.MameAO
 		{
 			JArray results = new JArray();
 
-			HashSet<string> keepColumnNames = new HashSet<string>(new string[] { "genre_id", "group_id" });
-
-			foreach (DataRow row in _AO._Genre.Data.Tables["groups"].Rows)
+			if (_AO._Genre.Data != null)
 			{
-				dynamic result = RowToJson(row, keepColumnNames);
-				results.Add(result);
+				HashSet<string> keepColumnNames = new HashSet<string>(new string[] { "genre_id", "group_id" });
+
+				foreach (DataRow row in _AO._Genre.Data.Tables["groups"].Rows)
+				{
+					dynamic result = RowToJson(row, keepColumnNames);
+					results.Add(result);
+				}
 			}
 
 			dynamic json = new JObject();
@@ -661,40 +666,43 @@ namespace Spludlow.MameAO
 
 			long genre_id = 0;
 
-			if (group_name != null)
-			{
-				DataRow[] rows = _AO._Genre.Data.Tables["groups"].Select($"group_name = '{group_name.Replace("'", "''")}'");
-
-				if (rows.Length == 0)
-					throw new ApplicationException($"group name not found: {group_name}");
-
-				group_id = (long)rows[0]["group_id"];
-			}
-
-			if (genre_name != null)
-			{
-				DataRow[] rows = _AO._Genre.Data.Tables["genres"].Select($"genre_name = '{genre_name.Replace("'", "''")}'");
-
-				if (rows.Length == 0)
-					throw new ApplicationException($"genre name not found: {genre_name}");
-
-				genre_id = (long)rows[0]["genre_id"];
-			}
-
 			JArray results = new JArray();
 
-			HashSet<string> keepColumnNames = new HashSet<string>(new string[] { "genre_id", "group_id" });
-
-			foreach (DataRow row in _AO._Genre.Data.Tables["genres"].Rows)
+			if (_AO._Genre.Data != null)
 			{
-				if (group_id != 0 && (long)row["group_id"] != group_id)
-					continue;
+				if (group_name != null)
+				{
+					DataRow[] rows = _AO._Genre.Data.Tables["groups"].Select($"group_name = '{group_name.Replace("'", "''")}'");
 
-				if (genre_id != 0 && (long)row["genre_id"] != genre_id)
-					continue;
+					if (rows.Length == 0)
+						throw new ApplicationException($"group name not found: {group_name}");
 
-				dynamic result = RowToJson(row, keepColumnNames);
-				results.Add(result);
+					group_id = (long)rows[0]["group_id"];
+				}
+
+				if (genre_name != null)
+				{
+					DataRow[] rows = _AO._Genre.Data.Tables["genres"].Select($"genre_name = '{genre_name.Replace("'", "''")}'");
+
+					if (rows.Length == 0)
+						throw new ApplicationException($"genre name not found: {genre_name}");
+
+					genre_id = (long)rows[0]["genre_id"];
+				}
+
+				HashSet<string> keepColumnNames = new HashSet<string>(new string[] { "genre_id", "group_id" });
+
+				foreach (DataRow row in _AO._Genre.Data.Tables["genres"].Rows)
+				{
+					if (group_id != 0 && (long)row["group_id"] != group_id)
+						continue;
+
+					if (genre_id != 0 && (long)row["genre_id"] != genre_id)
+						continue;
+
+					dynamic result = RowToJson(row, keepColumnNames);
+					results.Add(result);
+				}
 			}
 
 			dynamic json = new JObject();

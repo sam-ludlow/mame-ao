@@ -282,30 +282,34 @@
 			//
 			// genre menu
 			//
-			if (_pathParts.includes('/genres') && _pathParts.length >= 3) {
 
-				let parts = _pathParts[2].split('/');
-				const group_name_enc = parts[parts.length - 1];
-				const group_name = decodeURIComponent(group_name_enc);
+			if (_info.genre_version === '') {
+				_rootMenu[0].menu.splice(1, 1);
+			} else {
+				if (_pathParts.includes('/genres') && _pathParts.length >= 3) {
 
-				_rootMenu[0].menu[1].menu = [{
-					text: group_name,
-					title: group_name,
-					href: `/genres/${group_name_enc}`,
-				}];
+					let parts = _pathParts[2].split('/');
+					const group_name_enc = parts[parts.length - 1];
+					const group_name = decodeURIComponent(group_name_enc);
 
-				if (_pathParts.length >= 4) {
-
-					parts = _pathParts[3].split('/');
-					const genre_name_enc = parts[parts.length - 1];
-					const genre_name = decodeURIComponent(genre_name_enc);
-
-					_rootMenu[0].menu[1].menu[0].menu = [{
-						text: genre_name,
-						title: genre_name,
-						href: `/genres/${group_name_enc}/${genre_name_enc}`,
+					_rootMenu[0].menu[1].menu = [{
+						text: group_name,
+						title: group_name,
+						href: `/genres/${group_name_enc}`,
 					}];
 
+					if (_pathParts.length >= 4) {
+
+						parts = _pathParts[3].split('/');
+						const genre_name_enc = parts[parts.length - 1];
+						const genre_name = decodeURIComponent(genre_name_enc);
+
+						_rootMenu[0].menu[1].menu[0].menu = [{
+							text: genre_name,
+							title: genre_name,
+							href: `/genres/${group_name_enc}/${genre_name_enc}`,
+						}];
+					}
 				}
 			}
 
@@ -392,14 +396,18 @@
 
 			const canvas = getCanvas();
 
-			const html = `<h2>MAME What's New</h2><a href="${_baseUrl}/api/what" target="_blank">View in browser</a><hr />` +
-			'<h2>System Information</h2>';
+			let html =
+				`<h2>What's New in the latest MAME release</h2><a href="${_baseUrl}/api/what" target="_blank">Open whatsnew.txt</a><hr />` +
+				'<h2>MAME-AO README on github</h2><a href="https://github.com/sam-ludlow/mame-ao#mame-ao" target="_blank">View instructions</a><hr />';
+
+			if (_info.linking_enabled !== true)
+				html += '<h2>Warning - Symbolic Links not enabled</h2><a href="https://github.com/sam-ludlow/mame-ao?tab=readme-ov-file#symbolic-links---save-disk-space" target="_blank">View instructions on enabling</a><hr />';
+
+			html += '<h2>System Information</h2>';
 
 			const div = document.createElement('div');
 			div.innerHTML = html;
 			canvas.appendChild(div);
-
-			// readme link, git hub, credits, sources section, better info
 
 			delete _info.latest;
 
@@ -623,7 +631,7 @@
 		}
 
 		//
-		// Genre Machines
+		// Machines in Genre
 		//
 		const genreMachines = async () => {
 
@@ -644,6 +652,24 @@
 			showMachines(canvas, machinesData, profileKey);
 		}
 
+		//
+		// Machines in Data Profile
+		//
+		const machines = async () => {
+
+			const canvas = getCanvas();
+
+			let parts = _pathParts[2].split('/');
+			const profileKey = parts[parts.length - 1];
+
+			const machinesData = await (await fetch(`${_baseUrl}/api/machines?profile=${profileKey}&offset=${_parameters.offset}&search=${_parameters.search}`)).json();
+
+			showMachines(canvas, machinesData, profileKey);
+		}
+
+		//
+		// Show Machines
+		//
 		const showMachines = (canvas, machinesData, profileKey) => {
 
 			const columnDefs = [
@@ -684,7 +710,13 @@
 						break;
 
 					case 'favorite':
-						cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteMachine(this.id)" ${result.favorite ? 'checked' : ''}>`;
+						cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteMachine(this.id, ${resultIndex})" ${result.favorite ? 'checked' : ''}>`;
+						if (result.favorite === true) {
+							if ((resultIndex % 2) == 0)
+								cell.style.background = '#cccc00';
+							else
+								cell.style.background = '#e6e600';
+						}
 						break;
 
 					default:
@@ -695,13 +727,6 @@
 
 				if (cell.innerHTML === '0')
 					cell.innerHTML = '';
-
-				if (result.favorite === true) {
-					if ((resultIndex % 2) == 0)
-						cell.style.background = '#cccc00';
-					else
-						cell.style.background = '#e6e600';
-				}
 
 			});
 
@@ -727,29 +752,14 @@
 			const inputText = document.getElementById('inputText');
 			inputText.focus();
 		}
-
-		//
-		// Machines
-		//
-		const machines = async () => {
-
-			const canvas = getCanvas();
-
-			let parts = _pathParts[2].split('/');
-			const profileKey = parts[parts.length - 1];
-
-			const machinesData = await (await fetch(`${_baseUrl}/api/machines?profile=${profileKey}&offset=${_parameters.offset}&search=${_parameters.search}`)).json();
-
-			showMachines(canvas, machinesData, profileKey);
-		}
 		const searchButton = async () => {
 
 			const inputText = document.getElementById('inputText');
 
 			document.location = `${_path}?search=${encodeURIComponent(inputText.value)}`;
-			
+
 		}
-		const changeFavoriteMachine = async (checkBoxId) => {
+		const changeFavoriteMachine = async (checkBoxId, resultIndex) => {
 			const checkBox = document.getElementById(checkBoxId);
 
 			const name = checkBoxId.substring(4);
@@ -760,24 +770,19 @@
 
 			const row = checkBox.parentElement.parentElement;
 
-			const rowIndex = parseInt(row.id.substring(3), 10);
-
-			for (let cellIndex = 0; cellIndex < row.cells.length; ++cellIndex) {
-				const cell = row.cells[cellIndex];
-
-				if (checkBox.checked === false) {
-					cell.style.background = '';
-				} else {
-					if ((rowIndex % 2) == 0)
-						cell.style.background = '#cccc00';
-					else
-						cell.style.background = '#e6e600';
-				}
+			const cell = row.cells[1];
+			if (checkBox.checked === false) {
+				cell.style.background = '';
+			} else {
+				if ((resultIndex % 2) == 0)
+					cell.style.background = '#cccc00';
+				else
+					cell.style.background = '#e6e600';
 			}
 		}
 
 		//
-		// Machine
+		// Machine (Show software)
 		//
 		const machine = async (machineData) => {
 
@@ -803,7 +808,6 @@
 
 			buildTableHeader(columnDefs, table);
 
-			// Rows
 			softwareData.results.forEach((row, rowIndex) => {
 
 				const tableRow = document.createElement('tr');
@@ -825,7 +829,13 @@
 							break;
 
 						case 'favorite':
-							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavoriteSoftware(this.id, '${machineData.name}', '${row.softwarelist_name}')" ${row.favorite ? 'checked' : ''}>`;
+							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavoriteSoftware(this.id, '${machineData.name}', '${row.softwarelist_name}', ${rowIndex})" ${row.favorite ? 'checked' : ''}>`;
+							if (row.favorite === true) {
+								if ((rowIndex % 2) == 0)
+									cell.style.background = '#cccc00';
+								else
+									cell.style.background = '#e6e600';
+							}
 							break;
 
 						default:
@@ -835,13 +845,6 @@
 
 					if (cell.innerHTML === '0')
 						cell.innerHTML = '';
-
-					if (row.favorite === true) {
-						if ((rowIndex % 2) == 0)
-							cell.style.background = '#cccc00';
-						else
-							cell.style.background = '#e6e600';
-					}
 
 					tableRow.appendChild(cell);
 				});
@@ -873,7 +876,7 @@
 			inputText.focus();
 		}
 
-		const changeFavoriteSoftware = async (checkBoxId, machineName, listName) => {
+		const changeFavoriteSoftware = async (checkBoxId, machineName, listName, rowIndex) => {
 			const checkBox = document.getElementById(checkBoxId);
 
 			const softwareName = checkBoxId.substring(4);
@@ -884,19 +887,15 @@
 
 			const row = checkBox.parentElement.parentElement;
 
-			const rowIndex = parseInt(row.id.substring(3), 10);
+			const cell = row.cells[1];
 
-			for (let cellIndex = 0; cellIndex < row.cells.length; ++cellIndex) {
-				const cell = row.cells[cellIndex];
-
-				if (checkBox.checked === false) {
-					cell.style.background = '';
-				} else {
-					if ((rowIndex % 2) == 0)
-						cell.style.background = '#cccc00';
-					else
-						cell.style.background = '#e6e600';
-				}
+			if (checkBox.checked === false) {
+				cell.style.background = '';
+			} else {
+				if ((rowIndex % 2) == 0)
+					cell.style.background = '#cccc00';
+				else
+					cell.style.background = '#e6e600';
 			}
 		}
 
@@ -937,7 +936,6 @@
 
 			buildTableHeader(columnDefs, table);
 
-			// Rows
 			data.results.forEach((row) => {
 				const tableRow = document.createElement('tr');
 
@@ -1018,7 +1016,6 @@
 			const table = document.createElement('table');
 			table.style = 'margin-left: auto; margin-right: auto;';
 
-			// Headings
 			const headRow = document.createElement('tr');
 			let cell;
 
@@ -1060,8 +1057,8 @@
 
 		const fetchJson = async url => (await fetch(`${_baseUrl}${url}`)).json();
 
-        const getCanvas = () => {
-            const page = document.getElementById('canvas');
+		const getCanvas = () => {
+			const page = document.getElementById('canvas');
 			page.innerHTML = '';
 			return page;
 		}

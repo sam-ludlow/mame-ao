@@ -10,6 +10,7 @@ namespace Spludlow.MameAO
 {
 	public class Genre
 	{
+		const string SourceUrl = "https://www.progettosnaps.net/catver/";
 		private readonly HttpClient HttpClient;
 		private readonly string RootDirectory;
 		private readonly Database Database;
@@ -28,9 +29,13 @@ namespace Spludlow.MameAO
 			Directory.CreateDirectory(RootDirectory);
 		}
 
-
 		public void Initialize()
 		{
+			Tools.ConsoleHeading(2, new string[] {
+				$"Machine Genres",
+				SourceUrl
+			});
+
 			try
 			{
 				RefreshRomote();
@@ -44,13 +49,9 @@ namespace Spludlow.MameAO
 
 			if (Version == null)
 			{
-				Console.WriteLine("!!! Genres not available remote or local.");
+				Console.WriteLine("!!! Warning Genres not available remote or local.");
 				return;
 			}
-
-			Tools.ConsoleHeading(2, new string[] {
-				$"Genre version: {Version}"
-			});
 
 			string filename = Path.Combine(RootDirectory, Version, "catver.ini");
 
@@ -65,9 +66,7 @@ namespace Spludlow.MameAO
 
 			try
 			{
-				Console.Write("Parse .ini ...");
 				machineGroupGenreTable = ParseIni(filename, groups, genres);
-				Console.WriteLine("...done");
 			}
 			catch (Exception e)
 			{
@@ -77,7 +76,6 @@ namespace Spludlow.MameAO
 
 			groups.Sort();
 			genres.Sort();
-
 
 			string[] statuses = new string[] { "good", "imperfect", "preliminary" };
 
@@ -89,7 +87,7 @@ namespace Spludlow.MameAO
 			// Groups
 			//
 
-			Console.Write("Groups...");
+			Console.Write("Loading Genres...");
 
 			DataTable groupTable = Tools.MakeDataTable(
 				"group_id	group_name",
@@ -119,15 +117,11 @@ namespace Spludlow.MameAO
 
 			Data.Tables.Add(groupTable);
 
-			Console.WriteLine("...done");
-
 			//
 			// Genres
 			//
 
 			Dictionary<string, long[]> machineGenreIds = new Dictionary<string, long[]>();
-
-			Console.Write("Genres...");
 
 			DataTable genreTable = Tools.MakeDataTable(
 				"genre_id	group_id	genre_name",
@@ -168,6 +162,7 @@ namespace Spludlow.MameAO
 
 			SetMachines(machineGenreIds);
 
+			Console.WriteLine($"Version:\t{Version}");
 		}
 
 		public DataTable ParseIni(string filename, List<string> groups, List<string> genres)
@@ -224,9 +219,7 @@ namespace Spludlow.MameAO
 
 		public string GetLatestZipLink()
 		{
-			string url = "https://www.progettosnaps.net/catver/";
-
-			string html = Tools.Query(HttpClient, url);
+			string html = Tools.Query(HttpClient, SourceUrl);
 
 			int index = html.IndexOf("href=\"/download/?tipo=catver");
 
@@ -242,7 +235,7 @@ namespace Spludlow.MameAO
 
 			html = html.Substring(0, index);
 
-			return new Uri(new Uri(url), html).AbsoluteUri;
+			return new Uri(new Uri(SourceUrl), html).AbsoluteUri;
 		}
 
 		public void RefreshRomote()
@@ -271,12 +264,12 @@ namespace Spludlow.MameAO
 
 				string zipFilename = Path.Combine(versionDirectory, version + ".zip");
 
+				Console.WriteLine($"New Genres {zipUrl} => {zipFilename}");
+
 				if (File.Exists(zipFilename) == false)
 					Tools.Download(zipUrl, zipFilename, 0, 3);
 
 				ZipFile.ExtractToDirectory(zipFilename, versionDirectory);
-
-				Console.WriteLine("progettosnaps.net/catver new version");
 			}
 
 			string filename = Path.Combine(versionDirectory, "catver.ini");
@@ -331,28 +324,20 @@ namespace Spludlow.MameAO
 
 			string databaseVersion = (string)infoTable.Rows[0]["genre_version"];
 
-			Console.WriteLine($"version: {Version}, database: {databaseVersion}");
-
 			if (Version == databaseVersion)
-			{
-				Console.WriteLine("Genre machines up to date.");
 				return;
-			}
 
-			Console.WriteLine();
+			Console.Write("Update Machines database with genre IDs ...");
 
 			DataTable machineTable = Database.ExecuteFill(Database._MachineConnection, "SELECT * FROM machine WHERE machine_id = 0");
 
 			if (machineTable.Columns.Contains("genre_id") == false)
 				Database.ExecuteNonQuery(Database._MachineConnection, "ALTER TABLE machine ADD COLUMN genre_id INTEGER");
 
-			Console.Write("set zero ...");
 			Database.ExecuteNonQuery(Database._MachineConnection, "UPDATE machine SET genre_id = 0");
-			Console.WriteLine("...done");
 
 			machineTable = Database.ExecuteFill(Database._MachineConnection, "SELECT machine_id, name FROM machine");
 
-			Console.Write("set machine genres ...");
 			using (SQLiteCommand command = new SQLiteCommand("UPDATE machine SET genre_id = @genre_id WHERE machine_id = @machine_id", Database._MachineConnection))
 			{
 				command.Parameters.Add("@genre_id", DbType.Int64);
@@ -392,6 +377,9 @@ namespace Spludlow.MameAO
 					Database._MachineConnection.Close();
 				}
 			}
+
+			Database.ExecuteNonQuery(Database._MachineConnection, $"UPDATE ao_info SET genre_version = '{Version}' WHERE ao_info_id = 1");
+
 			Console.WriteLine("...done");
 
 		}
