@@ -57,6 +57,24 @@ namespace Spludlow.MameAO
 
 		private IntPtr _ConsoleHandle;
 
+		private string WelcomeText = @"@VERSION
+'##::::'##::::'###::::'##::::'##:'########:::::::'###:::::'#######::
+ ###::'###:::'## ##::: ###::'###: ##.....:::::::'## ##:::'##.... ##:
+ ####'####::'##:. ##:: ####'####: ##:::::::::::'##:. ##:: ##:::: ##:
+ ## ### ##:'##:::. ##: ## ### ##: ######::::::'##:::. ##: ##:::: ##:
+ ##. #: ##: #########: ##. #: ##: ##...::::::: #########: ##:::: ##:
+ ##:.:: ##: ##.... ##: ##:.:: ##: ##:::::::::: ##.... ##: ##:::: ##:
+ ##:::: ##: ##:::: ##: ##:::: ##: ########:::: ##:::: ##:. #######::
+..:::::..::..:::::..::..:::::..::........:::::..:::::..:::.......:::
+
+       Please wait the first time it has to prepare the data
+
+         The Web User Interface will pop up when ready
+
+              See the README for more information
+             https://github.com/sam-ludlow/mame-ao
+
+";
 
 		[DllImport("user32.dll")]
 		[return: MarshalAs(UnmanagedType.Bool)]
@@ -121,41 +139,11 @@ namespace Spludlow.MameAO
 
 		public void Initialize()
 		{
-			Console.Title = $"Spludlow MAME-AO Shell V{_AssemblyVersion}";
+			Console.Title = $"MAME-AO {_AssemblyVersion}";
 
-			Tools.ConsoleHeading(1, new string[] {
-				$"Welcome to Spludlow MAME-AO Shell V{_AssemblyVersion}",
-				"https://github.com/sam-ludlow/mame-ao",
-			});
-			Console.WriteLine("");
-			Console.WriteLine("Give it a moment the first time you run");
-			Console.WriteLine("");
-			Console.WriteLine("Usage: type the MAME machine name and press enter e.g. \"mrdo\"");
-			Console.WriteLine("       or a CHD e.g. \"gauntleg\"");
-			Console.WriteLine("       or with MAME arguments e.g. \"mrdo -window\"");
-			Console.WriteLine("");
-			Console.WriteLine("SL usage: type the MAME machine name and the software name and press enter e.g. \"a2600 et\"");
-			Console.WriteLine("       or a CHD e.g. \"cdimono1 aidsawar\" (Note: Not all CHD SLs are not currently available)");
-			Console.WriteLine("       or with MAME arguments e.g. \"a2600 et -window\"");
-			Console.WriteLine("");
-			Console.WriteLine("Use dot to run mame without a machine e.g. \".\", or with paramters \". -window\"");
-			Console.WriteLine("If you have alreay loaded a machine (in current MAME version) you can use the MAME UI, filter on avaialable.");
-			Console.WriteLine("");
-			Console.WriteLine("List saved state: \".list\".");
-			Console.WriteLine("");
-			Console.WriteLine("You can start a particular version of MAME with the command \".VVVV\" where V is the version e.g. \".0252\" or pass arguments e.g. \".0252 mrdo -window\".");
-			Console.WriteLine("");
-			Console.WriteLine("WARNING: Large downloads like CHD will take a while, each dot represents 1 MiB (about a floppy disk) you do the maths.");
-			Console.WriteLine("");
+			Console.Write(WelcomeText.Replace("@VERSION", _AssemblyVersion));
 
 			Tools.ConsoleHeading(1, "Initializing");
-			Console.WriteLine("");
-
-			//
-			// Root Directory
-			//
-			Console.WriteLine($"Data Directory: {_RootDirectory}");
-			Console.WriteLine("");
 
 			//
 			// Symbolic Links check
@@ -177,10 +165,8 @@ namespace Spludlow.MameAO
 			if (File.Exists(targetFilename) == true)
 				File.Delete(targetFilename);
 
-			Console.WriteLine($"Symbolic Links Enabled: {_LinkingEnabled}");
 			if (_LinkingEnabled == false)
 				Console.WriteLine("!!! You can save a lot of disk space by enabling symbolic links, see the README.");
-			Console.WriteLine();
 
 			//
 			// Prepare sources
@@ -238,7 +224,6 @@ namespace Spludlow.MameAO
 
 						sourceSet.Version = version;
 
-						Console.WriteLine($"Title:\t{title}");
 						Console.WriteLine($"Version:\t{version}");
 
 						if (setType == Sources.MameSetType.MachineRom)
@@ -249,7 +234,7 @@ namespace Spludlow.MameAO
 
 							if (Directory.Exists(_VersionDirectory) == false)
 							{
-								Console.WriteLine($"New MAME version: {_Version}");
+								Console.WriteLine($"!!! MAME Version Bump: {_Version}");
 								Directory.CreateDirectory(_VersionDirectory);
 							}
 						}
