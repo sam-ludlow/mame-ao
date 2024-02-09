@@ -188,7 +188,7 @@
 
 			try {
 
-				const status = await (await fetch(`${_baseUrl}/api/status`)).json();
+				const status = await fetchJson('/api/status');
 
 				document.body.style.backgroundColor = status.busy === true ? '#ffb6c1' : '#c6eafb';
 			}
@@ -206,7 +206,7 @@
 			// Info & update check
 			//
 
-			_info = await (await fetch(`${_baseUrl}/api/info`)).json();
+			_info = await fetchJson('/api/info');
 
 			if (_info.version_name_current !== _info.version_name_available) {
 				_rootMenu.push({
@@ -222,7 +222,7 @@
 			// load machines menu
 			//
 			if (_pathParts.includes('/machines')) {
-				const dataProfiles = (await (await fetch(`${_baseUrl}/api/profiles`)).json());
+				const dataProfiles = await fetchJson('/api/profiles');
 
 				_rootMenu[0].menu[0].menu = dataProfiles.results.map((profile) => {
 					return {
@@ -255,7 +255,7 @@
 				parts = _pathParts[3].split('/');
 				const machineName = parts[parts.length - 1];
 
-				machineData = (await (await fetch(`${_baseUrl}/api/machine?name=${machineName}`)).json());
+				machineData = await fetchJson(`/api/machine?name=${machineName}`);
 
 				current.menu = [{
 					text: `${machineData.name} &bull; ${machineData.description}`,
@@ -536,6 +536,128 @@
 		}
 
 		//
+		// Saved state
+		//
+		const saved = async () => {
+
+			const canvas = getCanvas();
+
+			const data = await fetchJson('/api/list');
+
+			const columnDefs = [
+				{ heading: 'MAME Version', columnName: 'version' },
+				{ heading: 'MAME Binary Time', columnName: 'binary_time' },
+				{ heading: 'Save Name', columnName: 'sta_name' },
+				{ heading: 'Save Time', columnName: 'sta_time' },
+				{ heading: 'Machine Name', columnName: 'sta_machine' },
+				{ heading: 'Machine Description', columnName: 'sta_description' },
+			];
+
+			const table = document.createElement('table');
+			table.style = 'margin-left: auto; margin-right: auto;';
+
+			buildTable(columnDefs, data.results, table, (columnDef, result, resultIndex, row, cell) => {
+
+				switch (columnDef.columnName) {
+
+					case 'version':
+						cell.innerHTML = `<a onclick="runCommand('.${result.version}')" href="javascript:void(0);">${result.version}</a>`;
+						break;
+
+					default:
+						if (result[columnDef.columnName] !== undefined)
+							cell.innerHTML = result[columnDef.columnName];
+						break;
+				}
+			});
+
+			canvas.appendChild(table);
+		}
+
+		//
+		// Run Reports
+		//
+		const runReports = async () => {
+
+			const canvas = getCanvas();
+
+			let html = '';
+
+			html += 'Click report code to run report. It will pop up in default browser when finished.';
+
+			const report_groups = await fetchJson('/api/report_groups');
+			const report_types = await fetchJson('/api/report_types');
+
+			report_groups.results.forEach((report_group, index) => {
+
+				if (index > 0)
+					html += '<hr />';
+
+				html += `<h2>${report_group.text} (${report_group.key})</h2>`;
+				html += `<p>${report_group.description}</p>`;
+
+				html += '<table>';
+				html += '<tr><th>key</th><th>code</th><th>text</th><th>description</th></tr>';
+
+				report_types.results.filter(report_type => report_type.group === report_group.key).forEach(report_type => {
+
+					html += `<tr><td>${report_type.key}</td><td><a href="javascript:void(0);" onclick="runCommand('.report ${report_type.code}')" >${report_type.code}</a></td><td>${report_type.text}</td><td>${report_type.description}</td></tr>`;
+				});
+
+				html += '</table>';
+			});
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+		}
+
+		//
+		// View Reports
+		//
+		const viewReports = async () => {
+
+			const canvas = getCanvas();
+
+			const data = await fetchJson('/api/reports');
+
+			const table = document.createElement('table');
+			table.style = 'margin-left: auto; margin-right: auto;';
+
+			const headRow = document.createElement('tr');
+			let cell;
+
+			cell = document.createElement('th');
+			cell.innerHTML = 'Report Date';
+			headRow.appendChild(cell);
+
+			cell = document.createElement('th');
+			cell.innerHTML = 'Report Description';
+			headRow.appendChild(cell);
+
+			table.appendChild(headRow);
+
+			data.results.forEach((report) => {
+
+				const tableRow = document.createElement('tr');
+
+				let cell;
+
+				cell = document.createElement('td');
+				cell.innerHTML = `<a href="${_baseUrl}/api/report?name=${encodeURIComponent(report.name)}" target="_blank">${report.date.replace('T', ' ')}</a>`;
+				tableRow.appendChild(cell);
+
+				cell = document.createElement('td');
+				cell.innerHTML = `${report.description}`;
+				tableRow.appendChild(cell);
+
+				table.appendChild(tableRow);
+			});
+
+			canvas.appendChild(table);
+		}
+
+		//
 		// Genres
 		//
 		const genres = async () => {
@@ -662,7 +784,7 @@
 			let parts = _pathParts[2].split('/');
 			const profileKey = parts[parts.length - 1];
 
-			const machinesData = await (await fetch(`${_baseUrl}/api/machines?profile=${profileKey}&offset=${_parameters.offset}&search=${_parameters.search}`)).json();
+			const machinesData = await fetchJson(`/api/machines?profile=${profileKey}&offset=${_parameters.offset}&search=${_parameters.search}`);
 
 			showMachines(canvas, machinesData, profileKey);
 		}
@@ -752,13 +874,6 @@
 			const inputText = document.getElementById('inputText');
 			inputText.focus();
 		}
-		const searchButton = async () => {
-
-			const inputText = document.getElementById('inputText');
-
-			document.location = `${_path}?search=${encodeURIComponent(inputText.value)}`;
-
-		}
 		const changeFavoriteMachine = async (checkBoxId, resultIndex) => {
 			const checkBox = document.getElementById(checkBoxId);
 
@@ -791,7 +906,7 @@
 			let parts = _pathParts[4].split('/');
 			const softwarelist = parts[parts.length - 1];
 
-			const softwareData = await (await fetch(`${_baseUrl}/api/software?softwarelist=${softwarelist}&offset=${_parameters.offset}&search=${_parameters.search}&favorites_machine=${machineData.name}`)).json();
+			const softwareData = await fetchJson(`/api/software?softwarelist=${softwarelist}&offset=${_parameters.offset}&search=${_parameters.search}&favorites_machine=${machineData.name}`);
 
 			const columnDefs = [
 				{ heading: '', columnName: 'ao_image' },
@@ -806,51 +921,35 @@
 			const table = document.createElement('table');
 			table.style = 'width:100%;';
 
-			buildTableHeader(columnDefs, table);
+			buildTable(columnDefs, softwareData.results, table, (columnDef, result, resultIndex, row, cell) => {
 
-			softwareData.results.forEach((row, rowIndex) => {
+				switch (columnDef.columnName) {
+					case 'ao_image':
+						cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${machineData.name} ${result.name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
+						break;
 
-				const tableRow = document.createElement('tr');
+					case 'name':
+						cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Software.aspx?list=${result.softwarelist_name}&soft=${result.name}" target="_blank">${result.name}</a>`;
+						break;
 
-				columnDefs.forEach((colDef) => {
-					const cell = document.createElement('td');
+					case 'description':
+						cell.innerHTML = `<a href="https://data.spludlow.co.uk/mame/software/${result.softwarelist_name}/${result.name}" target="_blank">${result.description}</a>`;
+						break;
 
-					switch (colDef.columnName) {
-						case 'ao_image':
-							cell.innerHTML = `<a id="${row.name}" onclick="runCommand('${machineData.name} ${row.name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${row.ao_image}" loading="lazy" /></div></a>`;
-							break;
+					case 'favorite':
+						cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteSoftware(this.id, '${machineData.name}', '${result.softwarelist_name}', ${resultIndex})" ${result.favorite ? 'checked' : ''}>`;
+						if (result.favorite === true) {
+							if ((resultIndex % 2) == 0)
+								cell.style.background = '#cccc00';
+							else
+								cell.style.background = '#e6e600';
+						}
+						break;
 
-						case 'name':
-							cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Software.aspx?list=${row.softwarelist_name}&soft=${row.name}" target="_blank">${row.name}</a>`;
-							break;
-
-						case 'description':
-							cell.innerHTML = `<a href="https://data.spludlow.co.uk/mame/software/${row.softwarelist_name}/${row.name}" target="_blank">${row.description}</a>`;
-							break;
-
-						case 'favorite':
-							cell.innerHTML = `<input type="checkbox" id="fav_${row.name}" onclick="changeFavoriteSoftware(this.id, '${machineData.name}', '${row.softwarelist_name}', ${rowIndex})" ${row.favorite ? 'checked' : ''}>`;
-							if (row.favorite === true) {
-								if ((rowIndex % 2) == 0)
-									cell.style.background = '#cccc00';
-								else
-									cell.style.background = '#e6e600';
-							}
-							break;
-
-						default:
-							cell.innerHTML = row[colDef.columnName];
-							break;
-					}
-
-					if (cell.innerHTML === '0')
-						cell.innerHTML = '';
-
-					tableRow.appendChild(cell);
-				});
-
-				table.appendChild(tableRow);
-
+					default:
+						cell.innerHTML = result[columnDef.columnName];
+						break;
+				}
 			});
 
 			const navHtml = navigateHtml(softwareData);
@@ -875,7 +974,6 @@
 			const inputText = document.getElementById('inputText');
 			inputText.focus();
 		}
-
 		const changeFavoriteSoftware = async (checkBoxId, machineName, listName, rowIndex) => {
 			const checkBox = document.getElementById(checkBoxId);
 
@@ -899,6 +997,14 @@
 			}
 		}
 
+		const searchButton = async () => {
+
+			const inputText = document.getElementById('inputText');
+
+			document.location = `${_path}?search=${encodeURIComponent(inputText.value)}`;
+
+		}
+
 		const navigateHtml = (data) => {
 
 			const limit = 100;
@@ -911,142 +1017,6 @@
 				`<a href="${_path}?offset=${_parameters.offset + limit}&search=${encodeURIComponent(_parameters.search)}">NEXT</a>` +
 				'&nbsp; - &nbsp;' +
 				`page: ${currentPage} / ${totalPages} - total: ${data.total} - viewing: ${data.count}`;
-		}
-
-		//
-		// Saved state
-		//
-		const saved = async () => {
-
-			const canvas = getCanvas();
-
-			const data = await (await fetch(`${_baseUrl}/api/list`)).json();
-
-			const columnDefs = [
-				{ heading: 'MAME Version', columnName: 'version' },
-				{ heading: 'MAME Binary Time', columnName: 'binary_time' },
-				{ heading: 'Save Name', columnName: 'sta_name' },
-				{ heading: 'Save Time', columnName: 'sta_time' },
-				{ heading: 'Machine Name', columnName: 'sta_machine' },
-				{ heading: 'Machine Description', columnName: 'sta_description' },
-			];
-
-			const table = document.createElement('table');
-			table.style = 'margin-left: auto; margin-right: auto;';
-
-			buildTableHeader(columnDefs, table);
-
-			data.results.forEach((row) => {
-				const tableRow = document.createElement('tr');
-
-				columnDefs.forEach((colDef) => {
-					const cell = document.createElement('td');
-
-					switch (colDef.columnName) {
-
-						case 'version':
-							cell.innerHTML = `<a onclick="runCommand('.${row.version}')" href="javascript:void(0);">${row.version}</a>`;
-							break;
-
-						default:
-							if (row[colDef.columnName] !== undefined)
-								cell.innerHTML = row[colDef.columnName];
-							break;
-					}
-
-					if (cell.innerHTML === '0')
-						cell.innerHTML = '';
-
-					tableRow.appendChild(cell);
-				});
-
-				table.appendChild(tableRow);
-			});
-
-			canvas.appendChild(table);
-		}
-
-		//
-		// Run Reports
-		//
-		const runReports = async () => {
-
-			const canvas = getCanvas();
-
-			let html = '';
-
-			html += 'Click report code to run report. It will pop up in default browser when finished.';
-
-			const report_groups = await (await fetch(`${_baseUrl}/api/report_groups`)).json();
-			const report_types = await (await fetch(`${_baseUrl}/api/report_types`)).json();
-
-			report_groups.results.forEach((report_group, index) => {
-
-				if (index > 0)
-					html += '<hr />';
-
-				html += `<h2>${report_group.text} (${report_group.key})</h2>`;
-				html += `<p>${report_group.description}</p>`;
-
-				html += '<table>';
-				html += '<tr><th>key</th><th>code</th><th>text</th><th>description</th></tr>';
-
-				report_types.results.filter(report_type => report_type.group === report_group.key).forEach(report_type => {
-
-					html += `<tr><td>${report_type.key}</td><td><a href="javascript:void(0);" onclick="runCommand('.report ${report_type.code}')" >${report_type.code}</a></td><td>${report_type.text}</td><td>${report_type.description}</td></tr>`;
-				});
-
-				html += '</table>';
-			});
-
-			const div = document.createElement('div');
-			div.innerHTML = html;
-			canvas.appendChild(div);
-		}
-
-		//
-		// View Reports
-		//
-		const viewReports = async () => {
-
-			const canvas = getCanvas();
-
-			const data = await (await fetch(`${_baseUrl}/api/reports`)).json();
-
-			const table = document.createElement('table');
-			table.style = 'margin-left: auto; margin-right: auto;';
-
-			const headRow = document.createElement('tr');
-			let cell;
-
-			cell = document.createElement('th');
-			cell.innerHTML = 'Report Date';
-			headRow.appendChild(cell);
-
-			cell = document.createElement('th');
-			cell.innerHTML = 'Report Description';
-			headRow.appendChild(cell);
-
-			table.appendChild(headRow);
-
-			data.results.forEach((report) => {
-
-				const tableRow = document.createElement('tr');
-
-				let cell;
-				
-				cell = document.createElement('td');
-				cell.innerHTML = `<a href="${_baseUrl}/api/report?name=${encodeURIComponent(report.name)}" target="_blank">${report.date.replace('T', ' ')}</a>`;
-				tableRow.appendChild(cell);
-
-				cell = document.createElement('td');
-				cell.innerHTML = `${report.description}`;
-				tableRow.appendChild(cell);
-
-				table.appendChild(tableRow);
-			});
-
-			canvas.appendChild(table);
 		}
 
 		//
@@ -1241,8 +1211,8 @@
 
 					itemClass = 'nav-on';
 					found = item;
-					document.title = `MAME-AO ${item.title}`;
-					heading.innerHTML = `MAME-AO ${item.title}`;
+					document.title = item.title;
+					heading.innerHTML = item.title;
 				}
 
 				if (_path === item.href)
