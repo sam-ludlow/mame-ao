@@ -64,6 +64,34 @@
 			text-align: center;
 		}
 
+		td.fav-even {
+			background-color: #ffd700;
+		}
+		td.fav-odd {
+			background-color: #ffdf00;
+		}
+
+		td.good-even {
+			background-color: #90ee90;
+		}
+		td.good-odd {
+			background-color: #98fb98;
+		}
+
+		td.imperfect-even {
+			background-color: #fff000;
+		}
+		td.imperfect-odd {
+			background-color: #ffef00;
+		}
+
+		td.preliminary-even {
+			background-color: #fa8072;
+		}
+		td.preliminary-odd {
+			background-color: #f08080;
+		}
+
 	</style>
 
 	<script type="text/javascript">
@@ -815,6 +843,9 @@
 
 			buildTable(columnDefs, machinesData.results, table, (columnDef, result, resultIndex, row, cell) => {
 
+				if (result[columnDef.columnName] !== undefined)
+					cell.innerHTML = result[columnDef.columnName];
+
 				switch (columnDef.columnName) {
 					case 'ao_image':
 						if (result.ao_softwarelist_count > 0)
@@ -833,23 +864,17 @@
 
 					case 'favorite':
 						cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteMachine(this.id, ${resultIndex})" ${result.favorite ? 'checked' : ''}>`;
-						if (result.favorite === true) {
-							if ((resultIndex % 2) == 0)
-								cell.style.background = '#cccc00';
-							else
-								cell.style.background = '#e6e600';
-						}
+						if (result.favorite === true)
+							cell.className = (resultIndex % 2) ? 'fav-odd' : 'fav-even';
 						break;
 
-					default:
-						if (result[columnDef.columnName] !== undefined)
-							cell.innerHTML = result[columnDef.columnName];
+					case 'status':
+						cell.className = result.status + (resultIndex % 2 ? '-odd' : '-even');
 						break;
 				}
 
 				if (cell.innerHTML === '0')
 					cell.innerHTML = '';
-
 			});
 
 			const navHtml = navigateHtml(machinesData);
@@ -886,14 +911,10 @@
 			const row = checkBox.parentElement.parentElement;
 
 			const cell = row.cells[1];
-			if (checkBox.checked === false) {
-				cell.style.background = '';
-			} else {
-				if ((resultIndex % 2) == 0)
-					cell.style.background = '#cccc00';
-				else
-					cell.style.background = '#e6e600';
-			}
+			if (checkBox.checked === false)
+				cell.className = '';
+			else
+				cell.className = (resultIndex % 2) ? 'fav-odd' : 'fav-even';
 		}
 
 		//
@@ -938,12 +959,8 @@
 
 					case 'favorite':
 						cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteSoftware(this.id, '${machineData.name}', '${result.softwarelist_name}', ${resultIndex})" ${result.favorite ? 'checked' : ''}>`;
-						if (result.favorite === true) {
-							if ((resultIndex % 2) == 0)
-								cell.style.background = '#cccc00';
-							else
-								cell.style.background = '#e6e600';
-						}
+						if (result.favorite === true)
+							cell.className = (resultIndex % 2) ? 'fav-odd' : 'fav-even';
 						break;
 
 					default:
@@ -974,7 +991,7 @@
 			const inputText = document.getElementById('inputText');
 			inputText.focus();
 		}
-		const changeFavoriteSoftware = async (checkBoxId, machineName, listName, rowIndex) => {
+		const changeFavoriteSoftware = async (checkBoxId, machineName, listName, resultIndex) => {
 			const checkBox = document.getElementById(checkBoxId);
 
 			const softwareName = checkBoxId.substring(4);
@@ -986,15 +1003,10 @@
 			const row = checkBox.parentElement.parentElement;
 
 			const cell = row.cells[1];
-
-			if (checkBox.checked === false) {
-				cell.style.background = '';
-			} else {
-				if ((rowIndex % 2) == 0)
-					cell.style.background = '#cccc00';
-				else
-					cell.style.background = '#e6e600';
-			}
+			if (checkBox.checked === false)
+				cell.className = '';
+			else
+				cell.className = (resultIndex % 2) ? 'fav-odd' : 'fav-even';
 		}
 
 		const searchButton = async () => {
