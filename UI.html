@@ -39,7 +39,7 @@
 		}
 
 		tr:nth-child(even) {
-			background-color: #b6daeb;
+			background-color: #b1e2fa;
 		}
 
 		a.nav-off {
@@ -90,6 +90,13 @@
 		}
 		td.preliminary-odd {
 			background-color: #f08080;
+		}
+
+		tr.clone-even {
+			background-color: #65c6f5;
+		}
+		tr.clone-odd {
+			background-color: #77ccf6;
 		}
 
 	</style>
@@ -433,31 +440,76 @@
 
 			html += '<h2>System Information</h2>';
 
-			const div = document.createElement('div');
+			let div = document.createElement('div');
 			div.innerHTML = html;
 			canvas.appendChild(div);
 
-			delete _info.latest;
+			// System Information
 
-			const table = document.createElement('table');
-			table.style = 'width:100%;';
+			const infoData = [];
 
 			Object.keys(_info).forEach((key) => {
 
-				const row = document.createElement('tr');
+				if (key === 'latest' || key === 'sources')
+					return;
 
-				let cell;
+				infoData.push({ key: key, value: _info[key] });
+			});
 
-				cell = document.createElement('td');
-				cell.innerHTML = key;
-				row.appendChild(cell);
+			let table = document.createElement('table');
 
-				cell = document.createElement('td');
-				cell.innerHTML = renderHtmlTable(_info[key]);
-				row.appendChild(cell);
+			let columnDefs = [
+				{ heading: 'Key', columnName: 'key' },
+				{ heading: 'Value', columnName: 'value' },
+			];
 
-				table.appendChild(row);
+			buildTable(columnDefs, infoData, table, (columnDef, result, resultIndex, row, cell) => {
 
+				const value = result[columnDef.columnName];
+
+				if (value === undefined)
+					return;
+
+				cell.innerHTML = value;
+			});
+
+			canvas.appendChild(table);
+
+			// Sources
+
+			div = document.createElement('div');
+			div.innerHTML = '<hr /><h2>Archive.org Sources</h2>';
+			canvas.appendChild(div);
+
+			columnDefs = [
+				{ heading: 'Type', columnName: 'type' },
+				{ heading: 'SL', columnName: 'list_name' },
+				{ heading: 'Version', columnName: 'version' },
+				{ heading: 'File Count', columnName: 'file_count' },
+				{ heading: 'Details Link', columnName: 'details' },
+				{ heading: 'Metadata Link', columnName: 'metadata' },
+				{ heading: 'download template', columnName: 'download' },
+				{ heading: 'html sizes template', columnName: 'html_sizes' },
+			];
+
+			table = document.createElement('table');
+
+			buildTable(columnDefs, _info.sources, table, (columnDef, result, resultIndex, row, cell) => {
+
+				const value = result[columnDef.columnName];
+
+				if (value === undefined)
+					return;
+
+				cell.innerHTML = value;
+
+				switch (columnDef.columnName) {
+
+					case 'details':
+					case 'metadata':
+						cell.innerHTML = `<a href="${value}" target="_blank">${value}</a>`;
+						break;
+				}
 			});
 
 			canvas.appendChild(table);
@@ -832,8 +884,8 @@
 				{ heading: 'roms', columnName: 'ao_rom_count' },
 				{ heading: 'disks', columnName: 'ao_disk_count' },
 				{ heading: 'lists', columnName: 'ao_softwarelist_count' },
-				{ heading: 'romof', columnName: 'romof' },
 				{ heading: 'cloneof', columnName: 'cloneof' },
+				{ heading: 'romof', columnName: 'romof' },
 				{ heading: 'status', columnName: 'status' },
 				{ heading: 'emulation', columnName: 'emulation' },
 			];
@@ -843,8 +895,12 @@
 
 			buildTable(columnDefs, machinesData.results, table, (columnDef, result, resultIndex, row, cell) => {
 
-				if (result[columnDef.columnName] !== undefined)
-					cell.innerHTML = result[columnDef.columnName];
+				const value = result[columnDef.columnName];
+
+				if (value === undefined)
+					return;
+
+				cell.innerHTML = value;
 
 				switch (columnDef.columnName) {
 					case 'ao_image':
@@ -862,6 +918,15 @@
 						cell.innerHTML = `<a href="https://data.spludlow.co.uk/mame/machine/${result.name}" target="_blank">${result.description}</a>`;
 						break;
 
+					case 'cloneof':
+						cell.innerHTML = `<a href="/machines/everything?search=${value}">${value}</a>`;
+						row.className = (resultIndex % 2) ? 'clone-odd' : 'clone-even';
+						break;
+
+					case 'romof':
+						cell.innerHTML = `<a href="/machines/everything?search=${value}">${value}</a>`;
+						break;
+
 					case 'favorite':
 						cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteMachine(this.id, ${resultIndex})" ${result.favorite ? 'checked' : ''}>`;
 						if (result.favorite === true)
@@ -871,6 +936,7 @@
 					case 'status':
 						cell.className = result.status + (resultIndex % 2 ? '-odd' : '-even');
 						break;
+
 				}
 
 				if (cell.innerHTML === '0')
