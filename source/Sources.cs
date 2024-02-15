@@ -42,6 +42,7 @@ namespace Spludlow.MameAO
 			public string DownloadUrl;
 			public string HtmlSizesUrl;
 			public Dictionary<string, SourceFileInfo> AvailableDownloadFileInfos = new Dictionary<string, SourceFileInfo>();
+			public string Title;
 			public string Version;
 		}
 

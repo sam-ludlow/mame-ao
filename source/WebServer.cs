@@ -421,6 +421,7 @@ namespace Spludlow.MameAO
 				source.download = sourceSet.DownloadUrl;
 				source.html_sizes = sourceSet.HtmlSizesUrl;
 				source.file_count = sourceSet.AvailableDownloadFileInfos.Count;
+				source.title = sourceSet.Title;
 				source.version = sourceSet.Version;
 
 				Tools.CleanDynamic(source);

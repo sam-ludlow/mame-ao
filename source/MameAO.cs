@@ -214,7 +214,7 @@ namespace Spludlow.MameAO
 								break;
 
 							case Sources.MameSetType.SoftwareDisk:
-								version = title;
+								version = "";
 
 								sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
 								break;
@@ -222,6 +222,7 @@ namespace Spludlow.MameAO
 
 						version = version.Replace(".", "").Trim();
 
+						sourceSet.Title = title;
 						sourceSet.Version = version;
 
 						Console.WriteLine($"Version:\t{version}");
@@ -1557,7 +1558,7 @@ namespace Spludlow.MameAO
 				downloadSoftwareUrl = downloadSoftwareUrl.Replace("@LIST@", listEnc);
 				downloadSoftwareUrl = downloadSoftwareUrl.Replace("@SOFTWARE@", softEnc);
 
-				Dictionary<string, long> softwareSizes = GetSoftwareSizes(softwareListName, soureSet.HtmlSizesUrl);
+				Dictionary<string, long> softwareSizes = GetSoftwareSizes(softwareListName, soureSet.HtmlSizesUrl, soureSet.Version);
 
 				if (softwareSizes.ContainsKey(requiredSoftwareName) == false)
 					throw new ApplicationException($"Did GetSoftwareSize {softwareListName}, {requiredSoftwareName} ");
@@ -1602,11 +1603,11 @@ namespace Spludlow.MameAO
 			return missingCount;
 		}
 
-		private Dictionary<string, long> GetSoftwareSizes(string listName, string htmlSizesUrl)
+		private Dictionary<string, long> GetSoftwareSizes(string listName, string htmlSizesUrl, string version)
 		{
-			string cacheDirectory = Path.Combine(_VersionDirectory, "_SoftwareSizes");
-			if (Directory.Exists(cacheDirectory) == false)
-				Directory.CreateDirectory(cacheDirectory);
+			string cacheDirectory = Path.Combine(_RootDirectory, "_METADATA", "SoftwareSizes", version);
+
+			Directory.CreateDirectory(cacheDirectory);
 
 			string filename = Path.Combine(cacheDirectory, listName + ".htm");
 
