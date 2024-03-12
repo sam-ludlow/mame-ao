@@ -36,6 +36,7 @@ TIP: Run command `.upany` to self update program, this will stop the microsoft d
 - Just click on image to start the machine. Select machine query profiles using the top menu.
 - If the machine has software it will be listed, you can change software list using the top menu, click what you want to run.
 - UI background colour will change to pink when mame-ao is working. You can click on the mame-ao console window to see what it's doing.
+- mame-ao 
 
 ## System requirements
 

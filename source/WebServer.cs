@@ -9,7 +9,6 @@ using System.Threading.Tasks;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using static Spludlow.MameAO.Reports;
 
 namespace Spludlow.MameAO
 {
@@ -18,6 +17,11 @@ namespace Spludlow.MameAO
 		private MameAOProcessor _AO;
 
 		private string _UIHTML;
+
+		private readonly string MACHINE_IMAGE_URL = "https://mame.spludlow.co.uk/snap/machine/@machine.jpg";
+		//private readonly string MACHINE_IMAGE_URL = "https://raw.githubusercontent.com/AntoPISA/MAME_SnapTitles/main/snap/@machine.png";
+
+		private readonly string SOFTWARE_IMAGE_URL = "https://mame.spludlow.co.uk/snap/software/@softwarelist/@software.jpg";
 
 		private byte[] _FavIcon = Convert.FromBase64String(@"
 			AAABAAEAEBAAAAAAGABoAwAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAMAAAAAAAAAAAAAAAAA
@@ -270,7 +274,7 @@ namespace Spludlow.MameAO
 
 				string name = (string)row["name"];
 
-				result.ao_image = $"https://mame.spludlow.co.uk/snap/machine/{name}.jpg";
+				result.ao_image = MACHINE_IMAGE_URL.Replace("@machine", name);
 
 				results.Add(result);
 			}
@@ -305,7 +309,7 @@ namespace Spludlow.MameAO
 
 			dynamic json = RowToJson(machineRow);
 
-			json.ao_image = $"https://mame.spludlow.co.uk/snap/machine/{machine}.jpg";
+			json.ao_image = MACHINE_IMAGE_URL.Replace("@machine", machine);
 
 			if (machineSoftwareListRows.Length > 0)
 			{
@@ -374,7 +378,9 @@ namespace Spludlow.MameAO
 
 				string name = (string)row["name"];
 
-				result.ao_image = $"https://mame.spludlow.co.uk/snap/software/{(softwarelist == "@fav" ? (string)row["softwarelist_name"] : softwarelist)}/{name}.jpg";
+				result.ao_image = SOFTWARE_IMAGE_URL
+					.Replace("@softwarelist", softwarelist == "@fav" ? (string)row["softwarelist_name"] : softwarelist)
+					.Replace("@software", name);
 
 				results.Add(result);
 			}
@@ -438,10 +444,15 @@ namespace Spludlow.MameAO
 		{
 			dynamic json = new JObject();
 
-			string command = _AO._RunTaskCommand;
+		
+			lock (_AO._TaskInfo)
+			{
+				json.busy = _AO._TaskInfo.Command != "";
+				json.command = _AO._TaskInfo.Command;
 
-			json.busy = command != null;
-			json.command = command ?? "";
+				json.bytesCurrent = _AO._TaskInfo.BytesCurrent;
+				json.bytesTotal = _AO._TaskInfo.BytesTotal;
+			}
 
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}

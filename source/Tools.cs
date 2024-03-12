@@ -13,6 +13,7 @@ using System.Drawing;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using static Spludlow.MameAO.MameAOProcessor;
 
 namespace Spludlow.MameAO
 {
@@ -257,8 +258,12 @@ namespace Spludlow.MameAO
 		}
 
 
-
 		public static long Download(string url, string filename, long progressSize, int timeoutMinutes)
+		{
+			return Download(url, filename, progressSize, timeoutMinutes, null);
+		}
+
+		public static long Download(string url, string filename, long progressSize, int timeoutMinutes, MameAOProcessor.TaskInfo taskInfo)
 		{
 			long total = 0;
 			byte[] buffer = new byte[64 * 1024];
@@ -290,6 +295,12 @@ namespace Spludlow.MameAO
 									Console.Write(".");
 									progress = 0;
 								}
+							}
+
+							if (taskInfo != null)
+							{
+								lock (taskInfo)
+									taskInfo.BytesCurrent = total;
 							}
 						}
 					}

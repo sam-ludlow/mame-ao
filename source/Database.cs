@@ -163,7 +163,7 @@ namespace Spludlow.MameAO
 
 			Console.WriteLine("...done");
 
-			Console.Write("Getting all SHA1s...");
+			Console.Write("Getting all database SHA1s...");
 			_AllSHA1s = GetAllSHA1s();
 			Console.WriteLine("...done.");
 		}

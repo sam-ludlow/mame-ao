@@ -29,7 +29,14 @@ namespace Spludlow.MameAO
 		public bool _LinkingEnabled = false;
 
 		private Task _RunTask = null;
-		public string _RunTaskCommand = null;
+
+		public class TaskInfo
+		{
+			public string Command = "";
+			public long BytesCurrent = 0;
+			public long BytesTotal = 0;
+		}
+		public TaskInfo _TaskInfo = new TaskInfo();
 
 		public Database _Database;
 
@@ -525,11 +532,22 @@ namespace Spludlow.MameAO
 				}
 				finally
 				{
-					_RunTaskCommand = null;
+					lock (_TaskInfo)
+					{
+						_TaskInfo.Command = "";
+						_TaskInfo.BytesCurrent = 0;
+						_TaskInfo.BytesTotal = 0;
+					}
 				}
 			});
 
-			_RunTaskCommand = line;
+			lock (_TaskInfo)
+			{
+				_TaskInfo.Command = line;
+				_TaskInfo.BytesCurrent = 0;
+				_TaskInfo.BytesTotal = 0;
+			}
+
 			_RunTask.Start();
 
 			return true;
@@ -1725,9 +1743,14 @@ namespace Spludlow.MameAO
 
 			string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(name) + ".chd");
 
+			lock (_TaskInfo)
+			{
+				_TaskInfo.BytesTotal = sourceInfo.size;
+			}
+
 			Console.Write($"Downloading {name} size:{Tools.DataSize(sourceInfo.size)} url:{url} ...");
 			DateTime startTime = DateTime.Now;
-			long size = Tools.Download(url, tempFilename, _DownloadDotSize, 3 * 60);
+			long size = Tools.Download(url, tempFilename, _DownloadDotSize, 3 * 60, _TaskInfo);
 			TimeSpan took = DateTime.Now - startTime;
 			Console.WriteLine("...done");
 

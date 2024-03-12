@@ -188,10 +188,10 @@
 
 				getRequestInfo();
 
-				tick();
-				setInterval(tick, 2000);
-
 				await mainWork();
+
+				await tick();
+				setInterval(tick, 2000);
 
 			} catch (error) {
 
@@ -221,14 +221,42 @@
 			if (_inTick === true)
 				return;
 
+			let status;
+
 			try {
-
-				const status = await fetchJson('/api/status');
-
-				document.body.style.backgroundColor = status.busy === true ? '#ffb6c1' : '#c6eafb';
+				status = await fetchJson('/api/status');
 			}
 			catch (e) {
 				alert(`Problem connecting to MAME-AO server.\n\nHave you closed the console?\n\nStart MAME-AO again or close this window.\n\nError: ${e.message}`);
+			}
+
+			try {
+
+				document.body.style.backgroundColor = status.busy === true ? '#ffbf00' : '#c6eafb';
+
+				const topRow = document.getElementById('nav').children[0].rows[0];
+
+				let statusElement = [...topRow.children].find(element => element.id === 'status');
+
+				if (status.busy === false && statusElement)
+					statusElement.remove();
+
+				if (status.busy == true) {
+					if (!statusElement) {
+						statusElement = document.createElement('td');
+						statusElement.id = 'status';
+						topRow.appendChild(statusElement);
+					}
+
+					let message = `Running Command: "${status.command}"`;
+
+					if (status.bytesTotal > 0)
+						message += `, Progress: ${status.bytesCurrent} of ${status.bytesTotal}`;
+
+					statusElement.innerHTML = message;
+					statusElement.style.backgroundColor = '#ffbf00';
+					statusElement.style.textAlign = 'center';
+				}
 			}
 			finally {
 				_inTick = false;
@@ -248,7 +276,7 @@
 					text: `Update Available ${_info.version_name_current} => ${_info.version_name_available}`,
 					title: `Update ${_info.version_name_current} => ${_info.version_name_available}`,
 					href: '/update',
-					style: 'background-color: red;',
+					style: 'background-color: #ffa500;',
 				});
 			}
 
