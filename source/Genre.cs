@@ -211,7 +211,12 @@ namespace Spludlow.MameAO
 				if (groups.Contains(group) == false)
 					groups.Add(group);
 
-				table.Rows.Add(machine, group, genre);
+				DataRow existingRow = table.Rows.Find(machine);
+
+				if (existingRow != null)
+					Console.WriteLine($"Parse Genre Duplicate - machine: \"{machine}\" genre: \"{genre}\" mismatch: {genre != (string)existingRow["genre"]}");
+				else
+					table.Rows.Add(machine, group, genre);
 			}
 
 			return table;

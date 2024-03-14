@@ -248,14 +248,16 @@
 						topRow.appendChild(statusElement);
 					}
 
+					statusElement.style.textAlign = 'center';
+
 					let message = `Running Command: "${status.command}"`;
 
-					if (status.bytesTotal > 0)
-						message += `, Progress: ${status.bytesCurrent} of ${status.bytesTotal}`;
+					if (status.bytesTotal > 0) {
+						const percent = ((100 / status.bytesTotal) * status.bytesCurrent).toFixed(2);
+						message += `, Progress: ${status.bytesCurrent} of ${status.bytesTotal} (${percent}%)`;
+					}
 
 					statusElement.innerHTML = message;
-					statusElement.style.backgroundColor = '#ffbf00';
-					statusElement.style.textAlign = 'center';
 				}
 			}
 			finally {
