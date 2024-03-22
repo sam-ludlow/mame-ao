@@ -38,6 +38,9 @@
 			color: white;
 		}
 
+		tr:nth-child(odd) {
+			background-color: #c6eafb;
+		}
 		tr:nth-child(even) {
 			background-color: #b1e2fa;
 		}
@@ -255,6 +258,15 @@
 					if (status.bytesTotal > 0) {
 						const percent = ((100 / status.bytesTotal) * status.bytesCurrent).toFixed(2);
 						message += `, Progress: ${status.bytesCurrent} of ${status.bytesTotal} (${percent}%)`;
+
+						statusElement.style.color = percent < 30 ? '#ffffff' : '#000000';
+
+						let red = (percent >= 50) ? Math.round((50 - (percent - 50)) * 5.1) : 255;
+						let green = (percent < 50) ? Math.round(percent * 5.1) : 255;
+
+						statusElement.style.backgroundColor = `rgb(${red}, ${green}, 0)`;
+					} else {
+						statusElement.style.backgroundColor = '#ffff00';
 					}
 
 					statusElement.innerHTML = message;
