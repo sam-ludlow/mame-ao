@@ -29,7 +29,7 @@ namespace Spludlow.MameAO
 				CommandText =
 					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0) @SEARCH) " +
+					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins > 0) @SEARCH) " +
 					"ORDER BY machine.description COLLATE NOCASE ASC " +
 					"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -40,7 +40,7 @@ namespace Spludlow.MameAO
 				CommandText =
 					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins > 0) @SEARCH) " +
+					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins > 0) @SEARCH) " +
 					"ORDER BY machine.description COLLATE NOCASE ASC " +
 					"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -51,7 +51,7 @@ namespace Spludlow.MameAO
 				CommandText =
 					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
+					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
 					"ORDER BY machine.description COLLATE NOCASE ASC " +
 					"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -62,7 +62,7 @@ namespace Spludlow.MameAO
 				CommandText =
 					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
+					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
 					"ORDER BY machine.description COLLATE NOCASE ASC " +
 					"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -73,7 +73,7 @@ namespace Spludlow.MameAO
 				CommandText =
 					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
+					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
 					"ORDER BY machine.description COLLATE NOCASE ASC " +
 					"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -84,7 +84,7 @@ namespace Spludlow.MameAO
 				CommandText =
 					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
+					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
 					"ORDER BY machine.description COLLATE NOCASE ASC " +
 					"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -95,7 +95,7 @@ namespace Spludlow.MameAO
 				CommandText =
 					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') @SEARCH) " +
+					"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') @SEARCH) " +
 					"ORDER BY machine.description COLLATE NOCASE ASC " +
 					"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -106,7 +106,7 @@ namespace Spludlow.MameAO
 				CommandText =
 					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') @FAVORITES @SEARCH) " +
+					"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') @FAVORITES @SEARCH) " +
 					"ORDER BY machine.description COLLATE NOCASE ASC " +
 					"LIMIT @LIMIT OFFSET @OFFSET",
 			},
@@ -394,7 +394,7 @@ namespace Spludlow.MameAO
 					CommandText =
 					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (machine.ismechanical = 'no') AND (genre_id = @genre_id) @SEARCH) " +
+					"WHERE ((genre_id = @genre_id) @SEARCH) " +
 					"ORDER BY machine.description COLLATE NOCASE ASC " +
 					"LIMIT @LIMIT OFFSET @OFFSET",
 				};
