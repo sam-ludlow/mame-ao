@@ -12,7 +12,7 @@ namespace Spludlow.MameAO
 			"machine",
 			"rom",
 			"device_ref",
-			//"sample",
+			"sample",
 			//"chip",
 			//"display",
 			//"sound",

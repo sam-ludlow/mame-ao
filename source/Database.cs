@@ -277,6 +277,13 @@ namespace Spludlow.MameAO
 			return _DevicesRefs[machineName];
 		}
 
+		public DataRow[] GetMachineSamples(DataRow machine)
+		{
+			long machine_id = (long)machine["machine_id"];
+			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM sample WHERE machine_id = {machine_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
 		public DataRow[] GetSoftwareListsSoftware(DataRow softwarelist)
 		{
 			long softwarelist_id = (long)softwarelist["softwarelist_id"];

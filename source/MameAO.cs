@@ -1002,6 +1002,12 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 
 			//
+			// Samples
+			//
+
+			Console.WriteLine($"Samples requierd: {_Database.GetMachineSamples(machine).Length}");
+
+			//
 			// Info
 			//
 			Tools.ConsoleHeading(1, new string[] {
