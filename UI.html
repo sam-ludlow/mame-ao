@@ -224,6 +224,8 @@
 			if (_inTick === true)
 				return;
 
+			_inTick = true;
+
 			let status;
 
 			try {
@@ -525,6 +527,7 @@
 
 			columnDefs = [
 				{ heading: 'Type', columnName: 'type' },
+				{ heading: 'Status', columnName: 'status' },
 				{ heading: 'SL', columnName: 'list_name' },
 				{ heading: 'Version', columnName: 'version' },
 				{ heading: 'Title', columnName: 'title' },

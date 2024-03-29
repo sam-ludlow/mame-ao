@@ -301,11 +301,11 @@ The other 3 sources have very good archive.org items, they are complete, accurat
 
 Software Disks are a little trickier there is not a single archive.org item that covers them all. So multiple archive.org items are used.
 
-Note that MAME support for machines with software disks is not that great, many of them have preliminary status, meaning that they barely work, you are better off using another emulator. Examples being Sony PlayStation & Sega Saturn, the disks are massive and the machines have preliminary status. You can see here that there isn't actually that many https://mame.spludlow.co.uk/WorkingMachines/SoftwareListDisk.aspx
+Note that many machines with software disks have preliminary status, meaning they may not work well, although you may find certain software perfectly playable.
 
-Of the consoles there are only really these 3: Philips CD-i, Neo-Geo CD, and PC Engine (with CD Super System Card). So currently these 3 have their own archive.org items.
+If your looking for machines with working status you can see a list here https://mame.spludlow.co.uk/WorkingMachines/SoftwareListDisk.aspx
 
-See the sources source code to see what archive.org items MAME-AO is using https://github.com/sam-ludlow/mame-ao/blob/main/source/Sources.cs
+See the sources in the source code to see what archive.org items MAME-AO is using https://github.com/sam-ludlow/mame-ao/blob/main/source/Sources.cs
 
 You can run the source exists (SE) reports to see what is and isn't available.
 

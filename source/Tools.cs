@@ -13,7 +13,6 @@ using System.Drawing;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using static Spludlow.MameAO.MameAOProcessor;
 
 namespace Spludlow.MameAO
 {
@@ -73,6 +72,27 @@ namespace Spludlow.MameAO
 			}
 
 			ConsoleRule(head);
+		}
+
+		public static void ReportError(Exception e, string title, bool fatal)
+		{
+			Console.WriteLine();
+			Console.WriteLine($"!!! {title}: " + e.Message);
+			Console.WriteLine();
+			Console.WriteLine(e.ToString());
+			Console.WriteLine();
+			Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
+			Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
+			Console.WriteLine();
+			Console.WriteLine("Report issues here https://github.com/sam-ludlow/mame-ao/issues");
+
+			if (fatal == true)
+			{
+				Console.WriteLine();
+				Console.WriteLine("Press any key to continue, program has crashed and will exit.");
+				Console.ReadKey();
+				Environment.Exit(1);
+			}
 		}
 
 		public static void CleanDynamic(dynamic data)

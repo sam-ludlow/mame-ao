@@ -416,7 +416,7 @@ namespace Spludlow.MameAO
 
 			dynamic sources = new JArray();
 
-			foreach (Sources.MameSourceSet sourceSet in Sources.GetSourceSets())
+			foreach (Sources.MameSourceSet sourceSet in _AO._Sources.GetSourceSets())
 			{
 				dynamic source = new JObject();
 
@@ -429,6 +429,7 @@ namespace Spludlow.MameAO
 				source.file_count = sourceSet.AvailableDownloadFileInfos.Count;
 				source.title = sourceSet.Title;
 				source.version = sourceSet.Version;
+				source.status = sourceSet.Status;
 
 				Tools.CleanDynamic(source);
 
@@ -471,7 +472,7 @@ namespace Spludlow.MameAO
 
 			Sources.MameSetType setType = (Sources.MameSetType)Enum.Parse(typeof(Sources.MameSetType), type);
 
-			Sources.MameSourceSet[] sourceSets = Sources.GetSourceSets(setType);
+			Sources.MameSourceSet[] sourceSets = _AO._Sources.GetSourceSets(setType);
 
 			JArray results = new JArray();
 

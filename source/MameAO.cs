@@ -53,6 +53,7 @@ namespace Spludlow.MameAO
 		public Reports _Reports;
 		private Export _Export;
 		public Genre _Genre;
+		public Sources _Sources;
 
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
@@ -111,30 +112,11 @@ namespace Spludlow.MameAO
 			}
 			catch (Exception e)
 			{
-				ReportError(e, "FATAL ERROR", true);
+				Tools.ReportError(e, "FATAL ERROR", true);
 			}
 		}
 
-		public void ReportError(Exception e, string title, bool fatal)
-		{
-			Console.WriteLine();
-			Console.WriteLine($"!!! {title}: " + e.Message);
-			Console.WriteLine();
-			Console.WriteLine(e.ToString());
-			Console.WriteLine();
-			Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
-			Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
-			Console.WriteLine();
-			Console.WriteLine("Report issues here https://github.com/sam-ludlow/mame-ao/issues");
 
-			if (fatal == true)
-			{
-				Console.WriteLine();
-				Console.WriteLine("Press any key to continue, program has crashed and will exit.");
-				Console.ReadKey();
-				Environment.Exit(1);
-			}
-		}
 
 		public void BringToFront()
 		{
@@ -183,60 +165,21 @@ namespace Spludlow.MameAO
 			if (Directory.Exists(metaDataDirectory) == false)
 				Directory.CreateDirectory(metaDataDirectory);
 
+			_Sources = new Sources(metaDataDirectory, _HttpClient);
+
 			foreach (Sources.MameSetType setType in Enum.GetValues(typeof(Sources.MameSetType)))
 			{
 				Tools.ConsoleHeading(2, $"Prepare source: {setType}");
 
-				try
+				foreach (Sources.MameSourceSet sourceSet in _Sources.GetSourceSets(setType))
 				{
-					string setTypeName = setType.ToString();
-
-					foreach (Sources.MameSourceSet sourceSet in Sources.GetSourceSets(setType))
+					try
 					{
-						string metadataFilename = Path.Combine(metaDataDirectory, $"{setTypeName}_{Path.GetFileName(sourceSet.MetadataUrl)}.json");
-
-						dynamic metadata = GetArchiveOrgMeteData(setTypeName, sourceSet.MetadataUrl, metadataFilename);
-
-						string title = metadata.metadata.title;
-						string version = "";
-
-						switch (setType)
-						{
-							case Sources.MameSetType.MachineRom:
-								version = title.Substring(5, 5);
-
-								sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-merged/", metadata);
-								break;
-
-							case Sources.MameSetType.MachineDisk:
-								version = title.Substring(5, 5);
-
-								sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
-								break;
-
-							case Sources.MameSetType.SoftwareRom:
-								version = title.Substring(8, 5);
-
-								sourceSet.AvailableDownloadFileInfos = AvailableFilesInMetadata("mame-sl/", metadata);
-								break;
-
-							case Sources.MameSetType.SoftwareDisk:
-								version = "";
-
-								sourceSet.AvailableDownloadFileInfos = AvailableDiskFilesInMetadata(metadata);
-								break;
-						}
-
-						version = version.Replace(".", "").Trim();
-
-						sourceSet.Title = title;
-						sourceSet.Version = version;
-
-						Console.WriteLine($"Version:\t{version}");
+						_Sources.LoadSourceSet(sourceSet, false);
 
 						if (setType == Sources.MameSetType.MachineRom)
 						{
-							_Version = version;
+							_Version = sourceSet.Version;
 
 							_VersionDirectory = Path.Combine(_RootDirectory, _Version);
 
@@ -250,15 +193,15 @@ namespace Spludlow.MameAO
 						{
 							if (setType != Sources.MameSetType.SoftwareDisk)    //	Source not kept up to date, like others (pot luck)
 							{
-								if (_Version != version)
-									Console.WriteLine($"!!! {setType} on archive.org version mismatch, expected:{_Version} got:{version}. You may have problems.");
+								if (_Version != sourceSet.Version)
+									Console.WriteLine($"!!! {setType} on archive.org version mismatch, expected:{_Version} got:{sourceSet.Version}. You may have problems.");
 							}
 						}
 					}
-				}
-				catch (Exception ee)
-				{
-					ReportError(ee, $"Error in source, you will have problems downloading new things from {setType}.", false);
+					catch (Exception ee)
+					{
+						Tools.ReportError(ee, $"Error in source, you will have problems downloading new things from {setType}.", false);
+					}
 				}
 			}
 
@@ -269,7 +212,7 @@ namespace Spludlow.MameAO
 			string reportDirectory = Path.Combine(_RootDirectory, "_REPORTS");
 			if (Directory.Exists(reportDirectory) == false)
 				Directory.CreateDirectory(reportDirectory);
-			_Reports = new Reports(reportDirectory);
+			_Reports = new Reports(reportDirectory, _Sources);
 
 			_BadSources = new BadSources(_RootDirectory);
 
@@ -418,59 +361,6 @@ namespace Spludlow.MameAO
 			Console.WriteLine("");
 		}
 
-		private Dictionary<string, Sources.SourceFileInfo> AvailableFilesInMetadata(string find, dynamic metadata)
-		{
-			var result = new Dictionary<string, Sources.SourceFileInfo>();
-
-			foreach (dynamic file in metadata.files)
-			{
-				string name = (string)file.name;
-				if (name.StartsWith(find) == true && name.EndsWith(".zip") == true)
-				{
-					name = name.Substring(find.Length);
-					name = name.Substring(0, name.Length - 4);
-
-					result.Add(name, new Sources.SourceFileInfo(file));
-				}
-			}
-
-			return result;
-		}
-
-		private Dictionary<string, Sources.SourceFileInfo> AvailableDiskFilesInMetadata(dynamic metadata)
-		{
-			var result = new Dictionary<string, Sources.SourceFileInfo>();
-
-			foreach (dynamic file in metadata.files)
-			{
-				string name = (string)file.name;
-				if (name.EndsWith(".chd") == true)
-				{
-					name = name.Substring(0, name.Length - 4);
-
-					result.Add(name, new Sources.SourceFileInfo(file));
-				}
-			}
-
-			return result;
-		}
-
-		private dynamic GetArchiveOrgMeteData(string name, string metadataUrl, string metadataCacheFilename)
-		{
-			if (File.Exists(metadataCacheFilename) == false || (DateTime.Now - File.GetLastWriteTime(metadataCacheFilename) > TimeSpan.FromHours(3)))
-			{
-				Console.Write($"Downloading {name} metadata JSON {metadataUrl} ...");
-				File.WriteAllText(metadataCacheFilename, Tools.PrettyJSON(Tools.Query(_HttpClient, metadataUrl)), Encoding.UTF8);
-				Console.WriteLine("...done.");
-			}
-
-			Console.Write($"Loading {name} metadata JSON {metadataCacheFilename} ...");
-			dynamic metadata = JsonConvert.DeserializeObject<dynamic>(File.ReadAllText(metadataCacheFilename, Encoding.UTF8));
-			Console.WriteLine("...done.");
-
-			return metadata;
-		}
-
 		public void Shell()
 		{
 			_WebServer = new WebServer(this);
@@ -528,7 +418,7 @@ namespace Spludlow.MameAO
 				}
 				catch (Exception e)
 				{
-					ReportError(e, "WORKER ERROR", false);
+					Tools.ReportError(e, "WORKER ERROR", false);
 				}
 				finally
 				{
@@ -919,7 +809,7 @@ namespace Spludlow.MameAO
 				}
 				catch (Exception e)
 				{
-					ReportError(e, "UPDATE FATAL ERROR", true);
+					Tools.ReportError(e, "UPDATE FATAL ERROR", true);
 				}
 			}
 		}
@@ -1144,7 +1034,7 @@ namespace Spludlow.MameAO
 
 		private int GetRomsMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
+			Sources.MameSourceSet soureSet = _Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
 
 			//
 			// Related/Required machines (parent/bios/devices)
@@ -1301,7 +1191,7 @@ namespace Spludlow.MameAO
 
 		private int GetDisksMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
+			Sources.MameSourceSet soureSet = _Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
 
 			DataRow machineRow = _Database.GetMachine(machineName);
 			if (machineRow == null)
@@ -1404,7 +1294,7 @@ namespace Spludlow.MameAO
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
 
-			Sources.MameSourceSet[] soureSets = Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk, softwareListName);
+			Sources.MameSourceSet[] soureSets = _Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk, softwareListName);
 
 			DataRow[] disks = _Database.GetSoftwareDisks(software);
 
@@ -1520,7 +1410,7 @@ namespace Spludlow.MameAO
 
 		private int GetRomsSoftware(DataRow softwareList, DataRow software, List<string[]> romStoreFilenames)
 		{
-			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.SoftwareRom)[0];
+			Sources.MameSourceSet soureSet = _Sources.GetSourceSets(Sources.MameSetType.SoftwareRom)[0];
 
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];

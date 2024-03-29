@@ -117,9 +117,11 @@ namespace Spludlow.MameAO
 		};
 
 		private string _OutputDirectory;
-		public Reports(string outputDirectory)
+		private Sources _Sources;
+		public Reports(string outputDirectory, Sources sources)
 		{
 			_OutputDirectory = outputDirectory;
+			_Sources = sources;
 		}
 
 		public string[] ReportTypeText()
@@ -357,7 +359,7 @@ namespace Spludlow.MameAO
 
 		public void Report_SEMR(ReportContext context)
 		{
-			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
+			Sources.MameSourceSet soureSet = _Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
 
 			DataTable machineTable = Database.ExecuteFill(context.database._MachineConnection,
 				"SELECT machine_id, name, description, ao_rom_count FROM machine WHERE (ao_rom_count > 0 AND romof IS NULL) ORDER BY machine.name");
@@ -415,7 +417,7 @@ namespace Spludlow.MameAO
 
 		public void Report_SEMD(ReportContext context)
 		{
-			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
+			Sources.MameSourceSet soureSet = _Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
 
 			DataTable machineTable = Database.ExecuteFill(context.database._MachineConnection, "SELECT machine_id, name, description, romof FROM machine ORDER BY machine.name");
 			DataTable diskTable = Database.ExecuteFill(context.database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
@@ -482,7 +484,7 @@ namespace Spludlow.MameAO
 
 		public void Report_SESR(ReportContext context)
 		{
-			Sources.MameSourceSet soureSet = Sources.GetSourceSets(Sources.MameSetType.SoftwareRom)[0];
+			Sources.MameSourceSet soureSet = _Sources.GetSourceSets(Sources.MameSetType.SoftwareRom)[0];
 
 			DataTable softwareListTable = Database.ExecuteFill(context.database._SoftwareConnection,
 				"SELECT softwarelist.name, softwarelist.description, Count(rom.rom_Id) AS rom_count " +
@@ -526,7 +528,7 @@ namespace Spludlow.MameAO
 
 		public void Report_SESD(ReportContext context)
 		{
-			Sources.MameSourceSet[] soureSets = Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk);
+			Sources.MameSourceSet[] soureSets = _Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk);
 
 			DataTable softwareDiskTable = Database.ExecuteFill(context.database._SoftwareConnection,
 				"SELECT softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description, software.name AS software_name, software.description AS software_description, disk.name, disk.sha1, disk.status " +
