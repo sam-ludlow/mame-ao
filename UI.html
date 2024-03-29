@@ -1048,6 +1048,7 @@
 				{ heading: 'description', columnName: 'description' },
 				{ heading: 'year', columnName: 'year' },
 				{ heading: 'publisher', columnName: 'publisher' },
+				{ heading: 'cloneof', columnName: 'cloneof' },
 				{ heading: 'supported', columnName: 'supported' },
 			];
 
@@ -1076,7 +1077,7 @@
 						break;
 
 					default:
-						cell.innerHTML = result[columnDef.columnName];
+						cell.innerHTML = result[columnDef.columnName] ?? '';
 						break;
 				}
 			});

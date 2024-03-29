@@ -1332,10 +1332,11 @@ namespace Spludlow.MameAO
 			//
 			if (missingDisks.Count > 0)
 			{
-				string downloadSoftwareName = softwareName;
+				List<string> downloadSoftwareNames = new List<string>(new string[] { softwareName });
+
 				string parentSoftwareName = Tools.DataRowValue(software, "cloneof");
 				if (parentSoftwareName != null)
-					downloadSoftwareName = parentSoftwareName;
+					downloadSoftwareNames.Add(parentSoftwareName);
 
 				foreach (DataRow disk in missingDisks)
 				{
@@ -1343,30 +1344,34 @@ namespace Spludlow.MameAO
 					string sha1 = Tools.DataRowValue(disk, "sha1");
 
 					bool imported = false;
+
 					for (int sourceIndex = 0; sourceIndex < soureSets.Length && imported == false; ++sourceIndex)
 					{
 						Sources.MameSourceSet sourceSet = soureSets[sourceIndex];
 
-						string key = $"{softwareListName}/{downloadSoftwareName}/{diskName}";
+						foreach (string downloadSoftwareName in downloadSoftwareNames)
+						{
+							string key = $"{softwareListName}/{downloadSoftwareName}/{diskName}";
 
-						if (sourceSet.ListName != null && sourceSet.ListName != "*")
-							key = $"{downloadSoftwareName}/{diskName}";
+							if (sourceSet.ListName != null && sourceSet.ListName != "*")
+								key = $"{downloadSoftwareName}/{diskName}";
 
-						if (sourceSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
-							continue;
+							if (sourceSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
+								continue;
 
-						string nameEnc = Uri.EscapeDataString(diskName);
+							string nameEnc = Uri.EscapeDataString(diskName);
 
-						string url = sourceSet.DownloadUrl;
-						url = url.Replace("@LIST@", softwareListName);
-						url = url.Replace("@SOFTWARE@", downloadSoftwareName);
-						url = url.Replace("@DISK@", nameEnc);
+							string url = sourceSet.DownloadUrl;
+							url = url.Replace("@LIST@", softwareListName);
+							url = url.Replace("@SOFTWARE@", downloadSoftwareName);
+							url = url.Replace("@DISK@", nameEnc);
 
-						imported = ImportDisk(url, $"software disk: '{key}'", sha1, sourceSet.AvailableDownloadFileInfos[key]);
+							imported = ImportDisk(url, $"software disk: '{key}'", sha1, sourceSet.AvailableDownloadFileInfos[key]);
+						}
 					}
 
 					if (imported == false)
-						throw new ApplicationException($"Software list disk not on archive.org {softwareListName}/{downloadSoftwareName}/{diskName}");
+						throw new ApplicationException($"Software list disk not on archive.org {softwareListName}/{softwareName}/{diskName}");
 				}
 			}
 

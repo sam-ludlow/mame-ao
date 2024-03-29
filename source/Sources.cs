@@ -221,9 +221,11 @@ namespace Spludlow.MameAO
 						}
 				}
 
-				sourceSet.Version = sourceSet.Version.Replace(".", "").Trim();
-
-				Console.WriteLine($"Version:\t{sourceSet.Version}");
+				if (sourceSet.Version != "")
+				{
+					sourceSet.Version = sourceSet.Version.Replace(".", "").Trim();
+					Console.WriteLine($"Version:\t{sourceSet.Version}");
+				}
 
 				sourceSet.Status = "ok";
 			}
