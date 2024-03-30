@@ -52,7 +52,7 @@ namespace Spludlow.MameAO
 			public string Status;
 		}
 
-		private readonly MameSourceSet[] MameSourceSets = new MameSourceSet[] {
+		private List<MameSourceSet> MameSourceSets = new List<MameSourceSet>(new MameSourceSet[] {
 			
 			//
 			// Machine ROM
@@ -99,80 +99,60 @@ namespace Spludlow.MameAO
 				DownloadUrl = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/@LIST@%2f@SOFTWARE@.zip",
 				HtmlSizesUrl = "https://archive.org/download/mame-sl/mame-sl/@LIST@.zip/",
 			},
+		});
 
-			//
-			// Software DISK
-			//
-			new MameSourceSet
-			{
-				SetType = MameSetType.SoftwareDisk,
-				ListName = "cdi",
-				DetailsUrl = "https://archive.org/details/mame-sl-chd-cdi",
-				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-cdi",
-				DownloadUrl = "https://archive.org/download/mame-sl-chd-cdi/@SOFTWARE@/@DISK@.chd",
-				HtmlSizesUrl = null,
-			},
-
-			new MameSourceSet
-			{
-				SetType = MameSetType.SoftwareDisk,
-				ListName = "neocd",
-				DetailsUrl = "https://archive.org/details/mame-sl-chd-neocd",
-				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-neocd",
-				DownloadUrl = "https://archive.org/download/mame-sl-chd-neocd/@SOFTWARE@/@DISK@.chd",
-				HtmlSizesUrl = null,
-			},
-
-			new MameSourceSet
-			{
-				SetType = MameSetType.SoftwareDisk,
-				ListName = "pcecd",
-				DetailsUrl = "https://archive.org/details/mame-sl-chd-pcecd",
-				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-pcecd",
-				DownloadUrl = "https://archive.org/download/mame-sl-chd-pcecd/@SOFTWARE@/@DISK@.chd",
-				HtmlSizesUrl = null,
-			},
-
-			new MameSourceSet
-			{
-				SetType = MameSetType.SoftwareDisk,
-				ListName = "dc",
-				DetailsUrl = "https://archive.org/details/mame-sl-chd-dc",
-				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-dc",
-				DownloadUrl = "https://archive.org/download/mame-sl-chd-dc/@SOFTWARE@/@DISK@.chd",
-				HtmlSizesUrl = null,
-			},
-
-			new MameSourceSet
-			{
-				SetType = MameSetType.SoftwareDisk,
-				ListName = "psx",
-				DetailsUrl = "https://archive.org/details/mame-sl-chd-psx",
-				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-psx",
-				DownloadUrl = "https://archive.org/download/mame-sl-chd-psx/@SOFTWARE@/@DISK@.chd",
-				HtmlSizesUrl = null,
-			},
-
-			new MameSourceSet
-			{
-				SetType = MameSetType.SoftwareDisk,
-				ListName = "saturn",
-				DetailsUrl = "https://archive.org/details/mame-sl-chd-saturn",
-				MetadataUrl = "https://archive.org/metadata/mame-sl-chd-saturn",
-				DownloadUrl = "https://archive.org/download/mame-sl-chd-saturn/@SOFTWARE@/@DISK@.chd",
-				HtmlSizesUrl = null,
-			},
-
-			new MameSourceSet
-			{
-				SetType = MameSetType.SoftwareDisk,
-				ListName = "*",
-				DetailsUrl = "https://archive.org/details//mame-software-list-chds-2",
-				MetadataUrl = "https://archive.org/metadata/mame-software-list-chds-2",
-				DownloadUrl = "https://archive.org/download/mame-software-list-chds-2/@LIST@/@SOFTWARE@/@DISK@.chd",
-				HtmlSizesUrl = null,
-			},
-		};
+		public static string TuffyTDogSoftwareItems = @"
+			3do_m2
+			abc1600_hdd
+			abc800_hdd
+			amiga_hdd
+			amiga_workbench
+			archimedes_hdd
+			bbc_hdd
+			cd32
+			cdi
+			cdtv
+			dc
+			fmtowns_cd
+			gtfore
+			hp9k3xx_cdrom
+			hp9k3xx_hdd
+			hyperscan
+			ibm5150_hdd
+			ibm5170_cdrom
+			ibm5170_hdd
+			interpro
+			jazz
+			kpython2
+			mac_cdrom
+			mac_hdd
+			megacd
+			megacdj
+			mtx_hdd
+			neocd
+			next_cdrom
+			next_hdd
+			nuon
+			pc1512_hdd
+			pc1640_hdd
+			pc8801_cdrom
+			pc98_cd
+			pcecd
+			pcfx
+			pet_hdd
+			pico
+			pippin
+			psx
+			saturn
+			segacd
+			sgi_mips
+			sgi_mips_hdd
+			snes_vkun
+			softbox
+			v1050_hdd
+			vis
+			vsmile_cd
+		";
 
 		private string _MetaDataDirectory;
 		private HttpClient _HttpClient;
@@ -181,6 +161,37 @@ namespace Spludlow.MameAO
 		{
 			_MetaDataDirectory = metaDataDirectory;
 			_HttpClient = httpClient;
+
+			using (StringReader reader = new StringReader(TuffyTDogSoftwareItems))
+			{
+				string softwareList;
+				while ((softwareList = reader.ReadLine()) != null)
+				{
+					softwareList = softwareList.Trim();
+					if (softwareList.Length == 0)
+						continue;
+
+					MameSourceSets.Add(new MameSourceSet
+					{
+						SetType = MameSetType.SoftwareDisk,
+						ListName = softwareList,
+						DetailsUrl = $"https://archive.org/details/mame-sl-chd-{softwareList}",
+						MetadataUrl = $"https://archive.org/metadata/mame-sl-chd-{softwareList}",
+						DownloadUrl = $"https://archive.org/download/mame-sl-chd-{softwareList}/@SOFTWARE@/@DISK@.chd",
+						HtmlSizesUrl = null,
+					});
+				}
+			}
+
+			MameSourceSets.Add(new MameSourceSet
+			{
+				SetType = MameSetType.SoftwareDisk,
+				ListName = "*",
+				DetailsUrl = "https://archive.org/details//mame-software-list-chds-2",
+				MetadataUrl = "https://archive.org/metadata/mame-software-list-chds-2",
+				DownloadUrl = "https://archive.org/download/mame-software-list-chds-2/@LIST@/@SOFTWARE@/@DISK@.chd",
+				HtmlSizesUrl = null,
+			});
 		}
 
 
@@ -332,7 +343,7 @@ namespace Spludlow.MameAO
 
 		public MameSourceSet[] GetSourceSets()
 		{
-			return MameSourceSets;
+			return MameSourceSets.ToArray();
 		}
 	}
 }
