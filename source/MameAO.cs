@@ -54,6 +54,7 @@ namespace Spludlow.MameAO
 		private Export _Export;
 		public Genre _Genre;
 		public Sources _Sources;
+		public Samples _Samples;
 
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
@@ -337,6 +338,12 @@ namespace Spludlow.MameAO
 
 			_Genre = new Genre(_HttpClient, _RootDirectory, _Database);
 			_Genre.Initialize();
+
+			//
+			// Samples
+			//
+			_Samples = new Samples(_HttpClient);
+			//_Samples.Initialize();
 
 			//
 			// New version Check
