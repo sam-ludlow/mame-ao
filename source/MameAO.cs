@@ -342,8 +342,8 @@ namespace Spludlow.MameAO
 			//
 			// Samples
 			//
-			_Samples = new Samples(_HttpClient);
-			//_Samples.Initialize();
+			_Samples = new Samples(_HttpClient, _RootDirectory, _VersionDirectory, _Database, _RomHashStore, _LinkingEnabled);
+			_Samples.Initialize();
 
 			//
 			// New version Check
@@ -1012,7 +1012,7 @@ namespace Spludlow.MameAO
 			// Samples
 			//
 
-			Console.WriteLine($"Samples requierd: {_Database.GetMachineSamples(machine).Length}");
+			_Samples.PlaceSamples(machine);
 
 			//
 			// Info
