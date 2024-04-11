@@ -16,17 +16,52 @@ using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
 {
+	public static class Globals
+	{
+		static Globals()
+		{
+			Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
+			AssemblyVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}";
+
+			HttpClient = new HttpClient();
+			HttpClient.DefaultRequestHeaders.Add("User-Agent", $"mame-ao/{Globals.AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)");
+
+			HttpClient.Timeout = TimeSpan.FromSeconds(180); // TimeSpan.FromSeconds(100);
+		}
+
+		public static string AssemblyVersion;
+
+		public static HttpClient HttpClient;
+
+
+		public static Dictionary<string, string> Arguments = new Dictionary<string, string>();
+
+		public static string RootDirectory;
+		public static string MameDirectory;
+
+		public static bool LinkingEnabled = false;
+
+		public static Dictionary<string, ArchiveOrgItem> ArchiveOrgItems = new Dictionary<string, ArchiveOrgItem>();
+
+		public static HashStore RomHashStore;
+		public static HashStore DiskHashStore;
+
+		public static Database Database;
+		public static Sources Sources;
+		public static Reports Reports;
+		public static MameChdMan MameChdMan;
+		public static BadSources BadSources;
+		public static Favorites Favorites;
+		public static Export Export;
+		public static Genre Genre;
+		public static Samples Samples;
+	}
+
 	public class MameAOProcessor
 	{
-		public readonly HttpClient _HttpClient;
-
-		public readonly string _RootDirectory;
-		private string _VersionDirectory;
-
 		public string _Version;
-		public string _AssemblyVersion;
 
-		public bool _LinkingEnabled = false;
+
 
 		private Task _RunTask = null;
 
@@ -38,23 +73,18 @@ namespace Spludlow.MameAO
 		}
 		public TaskInfo _TaskInfo = new TaskInfo();
 
-		public Database _Database;
+
 
 		public WebServer _WebServer;
 
-		public HashStore _RomHashStore;
-		public HashStore _DiskHashStore;
+
 
 		private string _DownloadTempDirectory;
 
-		private MameChdMan _MameChdMan;
-		private BadSources _BadSources;
-		public Favorites _Favorites;
-		public Reports _Reports;
-		private Export _Export;
-		public Genre _Genre;
-		public Sources _Sources;
-		public Samples _Samples;
+
+
+
+
 
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
@@ -93,15 +123,8 @@ namespace Spludlow.MameAO
 		static extern IntPtr FindWindowByCaption(IntPtr zeroOnly, string lpWindowName);
 
 
-		public MameAOProcessor(string rootDirectory)
+		public MameAOProcessor()
 		{
-			Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
-			_AssemblyVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}";
-
-			_RootDirectory = rootDirectory;
-
-			_HttpClient = new HttpClient();
-			_HttpClient.DefaultRequestHeaders.Add("User-Agent", $"mame-ao/{_AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)");
 		}
 
 		public void Run()
@@ -129,65 +152,91 @@ namespace Spludlow.MameAO
 
 		public void Initialize()
 		{
-			Console.Title = $"MAME-AO {_AssemblyVersion}";
+			Globals.RootDirectory = Globals.Arguments["DIRECTORY"];
 
-			Console.Write(WelcomeText.Replace("@VERSION", _AssemblyVersion));
+			Console.Title = $"MAME-AO {Globals.AssemblyVersion}";
 
+			Console.Write(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
 			Tools.ConsoleHeading(1, "Initializing");
 
 			//
 			// Symbolic Links check
 			//
 
-			string linkFilename = Path.Combine(_RootDirectory, @"_LINK_TEST.txt");
-			string targetFilename = Path.Combine(_RootDirectory, @"_TARGET_TEST.txt");
+			string linkFilename = Path.Combine(Globals.RootDirectory, @"_LINK_TEST.txt");
+			string targetFilename = Path.Combine(Globals.RootDirectory, @"_TARGET_TEST.txt");
 
-			if (File.Exists(linkFilename) == true)
-				File.Delete(linkFilename);
+			File.Delete(linkFilename);
 			File.WriteAllText(targetFilename, "TEST");
 
 			Tools.LinkFiles(new string[][] { new string[] { linkFilename, targetFilename } });
 
-			_LinkingEnabled = File.Exists(linkFilename);
+			Globals.LinkingEnabled = File.Exists(linkFilename);
 
-			if (File.Exists(linkFilename) == true)
-				File.Delete(linkFilename);
-			if (File.Exists(targetFilename) == true)
-				File.Delete(targetFilename);
+			File.Delete(linkFilename);
+			File.Delete(targetFilename);
 
-			if (_LinkingEnabled == false)
+			if (Globals.LinkingEnabled == false)
 				Console.WriteLine("!!! You can save a lot of disk space by enabling symbolic links, see the README.");
+
+			//
+			// Archive.Org Items
+			//
+
+			// Machine ROM
+			Globals.ArchiveOrgItems.Add("mame-merged", new ArchiveOrgItem("mame-merged", "mame-merged/"));
+
+			// Machine Disk
+			Globals.ArchiveOrgItems.Add("MAME_0.225_CHDs_merged", new ArchiveOrgItem("MAME_0.225_CHDs_merged", null));
+			Globals.ArchiveOrgItems.Add("mame-chds-roms-extras-complete", new ArchiveOrgItem("mame-chds-roms-extras-complete", null));
+
+			// Software ROM
+			Globals.ArchiveOrgItems.Add("mame-sl", new ArchiveOrgItem("mame-sl", "mame-sl/"));
+
+			// Software DISK
+			string[] tuffyTDogSoftwareLists = new string[] { "3do_m2", "abc1600_hdd", "abc800_hdd", "amiga_hdd", "amiga_workbench", "archimedes_hdd", "bbc_hdd", "cd32", "cdi", "cdtv", "dc", "fmtowns_cd", "gtfore", "hp9k3xx_cdrom", "hp9k3xx_hdd", "hyperscan", "ibm5150_hdd", "ibm5170_cdrom", "ibm5170_hdd", "interpro", "jazz", "kpython2", "mac_cdrom", "mac_hdd", "megacd", "megacdj", "mtx_hdd", "neocd", "next_cdrom", "next_hdd", "nuon", "pc1512_hdd", "pc1640_hdd", "pc8801_cdrom", "pc98_cd", "pcecd", "pcfx", "pet_hdd", "pico", "pippin", "psx", "saturn", "segacd", "sgi_mips", "sgi_mips_hdd", "snes_vkun", "softbox", "v1050_hdd", "vis", "vsmile_cd" };
+			foreach (string softwareList in tuffyTDogSoftwareLists)
+			{
+				string key = $"mame-sl-chd-{softwareList}";
+				Globals.ArchiveOrgItems.Add(key, new ArchiveOrgItem(key, null));
+			}
+			Globals.ArchiveOrgItems.Add("mame-software-list-chds-2", new ArchiveOrgItem("mame-software-list-chds-2", "mame-sl/"));
+
+			// Samples & Artwork
+			Globals.ArchiveOrgItems.Add("mame-support", new ArchiveOrgItem("mame-support", "Support/"));
+
+
+
 
 			//
 			// Prepare sources
 			//
 
-			string metaDataDirectory = Path.Combine(_RootDirectory, "_METADATA");
-			if (Directory.Exists(metaDataDirectory) == false)
-				Directory.CreateDirectory(metaDataDirectory);
+			string metaDataDirectory = Path.Combine(Globals.RootDirectory, "_METADATA");
+			Directory.CreateDirectory(metaDataDirectory);
 
-			_Sources = new Sources(metaDataDirectory, _HttpClient);
+			Globals.Sources = new Sources(metaDataDirectory, Globals.HttpClient);
 
 			foreach (Sources.MameSetType setType in Enum.GetValues(typeof(Sources.MameSetType)))
 			{
 				Tools.ConsoleHeading(2, $"Prepare source: {setType}");
 
-				foreach (Sources.MameSourceSet sourceSet in _Sources.GetSourceSets(setType))
+				foreach (Sources.MameSourceSet sourceSet in Globals.Sources.GetSourceSets(setType))
 				{
 					try
 					{
-						_Sources.LoadSourceSet(sourceSet, false);
+						Globals.Sources.LoadSourceSet(sourceSet, false);
 
 						if (setType == Sources.MameSetType.MachineRom)
 						{
 							_Version = sourceSet.Version;
 
-							_VersionDirectory = Path.Combine(_RootDirectory, _Version);
+							Globals.MameDirectory = Path.Combine(Globals.RootDirectory, _Version);
 
-							if (Directory.Exists(_VersionDirectory) == false)
+							if (Directory.Exists(Globals.MameDirectory) == false)
 							{
 								Console.WriteLine($"!!! MAME Version Bump: {_Version}");
-								Directory.CreateDirectory(_VersionDirectory);
+								Directory.CreateDirectory(Globals.MameDirectory);
 							}
 						}
 						else
@@ -210,14 +259,9 @@ namespace Spludlow.MameAO
 			// Bits & Bobs
 			//
 
-			string reportDirectory = Path.Combine(_RootDirectory, "_REPORTS");
-			if (Directory.Exists(reportDirectory) == false)
-				Directory.CreateDirectory(reportDirectory);
-			_Reports = new Reports(reportDirectory, _Sources);
-
-			_BadSources = new BadSources(_RootDirectory);
-
-			_Favorites = new Favorites(_RootDirectory);
+			Globals.Reports = new Reports();
+			Globals.BadSources = new BadSources();
+			Globals.Favorites = new Favorites();
 
 			_ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
 
@@ -232,14 +276,14 @@ namespace Spludlow.MameAO
 				binUrl,
 			});
 
-			string binCacheFilename = Path.Combine(_VersionDirectory, "_" + Path.GetFileName(binUrl));
+			string binCacheFilename = Path.Combine(Globals.MameDirectory, "_" + Path.GetFileName(binUrl));
 
-			string binFilename = Path.Combine(_VersionDirectory, "mame.exe");
+			string binFilename = Path.Combine(Globals.MameDirectory, "mame.exe");
 
-			if (Directory.Exists(_VersionDirectory) == false)
+			if (Directory.Exists(Globals.MameDirectory) == false)
 			{
 				Console.WriteLine($"New MAME version: {_Version}");
-				Directory.CreateDirectory(_VersionDirectory);
+				Directory.CreateDirectory(Globals.MameDirectory);
 			}
 
 			if (File.Exists(binCacheFilename) == false)
@@ -260,39 +304,35 @@ namespace Spludlow.MameAO
 			// CHD Manager
 			//
 
-			_MameChdMan = new MameChdMan(_VersionDirectory);
+			Globals.MameChdMan = new MameChdMan();
 
 			//
 			// Hash Stores
 			//
 
-			string directory = Path.Combine(_RootDirectory, "_STORE");
-			if (Directory.Exists(directory) == false)
-				Directory.CreateDirectory(directory);
-			_RomHashStore = new HashStore(directory, Tools.SHA1HexFile);
+			string directory = Path.Combine(Globals.RootDirectory, "_STORE");
+			Directory.CreateDirectory(directory);
+			Globals.RomHashStore = new HashStore(directory, Tools.SHA1HexFile);
 
-			directory = Path.Combine(_RootDirectory, "_STORE_DISK");
-			
-			if (Directory.Exists(directory) == false)
-				Directory.CreateDirectory(directory);
-			_DiskHashStore = new HashStore(directory, _MameChdMan.Hash);
+			directory = Path.Combine(Globals.RootDirectory, "_STORE_DISK");
+			Directory.CreateDirectory(directory);
+			Globals.DiskHashStore = new HashStore(directory, Globals.MameChdMan.Hash);
 
-			directory = Path.Combine(_RootDirectory, "_TEMP");
-			if (Directory.Exists(directory) == false)
-				Directory.CreateDirectory(directory);
+			directory = Path.Combine(Globals.RootDirectory, "_TEMP");
+			Directory.CreateDirectory(directory);
 			_DownloadTempDirectory = directory;
 
 			//
 			// Database
 			//
 
-			_Database = new Database(_Favorites);
+			Globals.Database = new Database();
 
 			//
 			// MAME Machine XML & SQL
 			//
 
-			string machineXmlFilename = Path.Combine(_VersionDirectory, "_machine.xml");
+			string machineXmlFilename = Path.Combine(Globals.MameDirectory, "_machine.xml");
 
 			if (File.Exists(machineXmlFilename) == false)
 			{
@@ -301,9 +341,9 @@ namespace Spludlow.MameAO
 				Console.WriteLine("...done.");
 			}
 
-			string machineDatabaseFilename = Path.Combine(_VersionDirectory, "_machine.sqlite");
+			string machineDatabaseFilename = Path.Combine(Globals.MameDirectory, "_machine.sqlite");
 
-			_Database.InitializeMachine(machineXmlFilename, machineDatabaseFilename, _AssemblyVersion);
+			Globals.Database.InitializeMachine(machineXmlFilename, machineDatabaseFilename, Globals.AssemblyVersion);
 
 			GC.Collect();
 
@@ -311,7 +351,7 @@ namespace Spludlow.MameAO
 			// MAME Software XML & SQL
 			//
 
-			string softwareXmlFilename = Path.Combine(_VersionDirectory, "_software.xml");
+			string softwareXmlFilename = Path.Combine(Globals.MameDirectory, "_software.xml");
 
 			if (File.Exists(softwareXmlFilename) == false)
 			{
@@ -320,9 +360,9 @@ namespace Spludlow.MameAO
 				Console.WriteLine("...done.");
 			}
 
-			string softwareDatabaseFilename = Path.Combine(_VersionDirectory, "_software.sqlite");
+			string softwareDatabaseFilename = Path.Combine(Globals.MameDirectory, "_software.sqlite");
 
-			_Database.InitializeSoftware(softwareXmlFilename, softwareDatabaseFilename, _AssemblyVersion);
+			Globals.Database.InitializeSoftware(softwareXmlFilename, softwareDatabaseFilename, Globals.AssemblyVersion);
 
 			GC.Collect();
 
@@ -330,32 +370,32 @@ namespace Spludlow.MameAO
 			// Export
 			//
 
-			_Export = new Export(_Database, _RomHashStore, _DiskHashStore, _Reports);
+			Globals.Export = new Export();
 
 			//
 			// Genre
 			//
 
-			_Genre = new Genre(_HttpClient, _RootDirectory, _Database);
-			_Genre.Initialize();
+			Globals.Genre = new Genre();
+			Globals.Genre.Initialize();
 
 			//
 			// Samples
 			//
-			_Samples = new Samples(_HttpClient, _RootDirectory, _VersionDirectory, _Database, _RomHashStore, _LinkingEnabled);
-			_Samples.Initialize();
+			Globals.Samples = new Samples();
+			Globals.Samples.Initialize();
 
 			//
 			// New version Check
 			//
 
-			_MameAoLatest = JsonConvert.DeserializeObject<dynamic>(Tools.Query(_HttpClient, "https://api.github.com/repos/sam-ludlow/mame-ao/releases/latest"));
+			_MameAoLatest = JsonConvert.DeserializeObject<dynamic>(Tools.Query(Globals.HttpClient, "https://api.github.com/repos/sam-ludlow/mame-ao/releases/latest"));
 
 			if (_MameAoLatest.assets.Count != 1)
 				throw new ApplicationException("Expected one github release asset." + _MameAoLatest.assets.Count);
 
 			string latestName = Path.GetFileNameWithoutExtension((string)_MameAoLatest.assets[0].name);
-			string currentName = $"mame-ao-{_AssemblyVersion}";
+			string currentName = $"mame-ao-{Globals.AssemblyVersion}";
 			if (latestName != currentName)
 				Tools.ConsoleHeading(1, new string[] {
 					"New MAME-AO version available",
@@ -452,7 +492,7 @@ namespace Spludlow.MameAO
 
 		public void RunLine(string line)
 		{
-			string binFilename = Path.Combine(_VersionDirectory, "mame.exe");
+			string binFilename = Path.Combine(Globals.MameDirectory, "mame.exe");
 
 			string machine;
 			string software = "";
@@ -502,9 +542,9 @@ namespace Spludlow.MameAO
 						ValidateFavorite(machine, null, null);
 
 						if (parts[0].EndsWith("x") == true)
-							_Favorites.RemoveMachine(machine);
+							Globals.Favorites.RemoveMachine(machine);
 						else
-							_Favorites.AddMachine(machine);
+							Globals.Favorites.AddMachine(machine);
 
 						return;
 
@@ -520,9 +560,9 @@ namespace Spludlow.MameAO
 						ValidateFavorite(machine, list, software);
 
 						if (parts[0].EndsWith("x") == true)
-							_Favorites.RemoveSoftware(machine, list, software);
+							Globals.Favorites.RemoveSoftware(machine, list, software);
 						else
-							_Favorites.AddSoftware(machine, list, software);
+							Globals.Favorites.AddSoftware(machine, list, software);
 
 						return;
 
@@ -538,23 +578,23 @@ namespace Spludlow.MameAO
 						switch (parts[1].ToUpper())
 						{
 							case "MR":
-								_Export.MachineRoms(arguments);
+								Globals.Export.MachineRoms(arguments);
 								break;
 							case "MD":
-								_Export.MachineDisks(arguments);
+								Globals.Export.MachineDisks(arguments);
 								break;
 							case "SR":
-								_Export.SoftwareRoms(arguments);
+								Globals.Export.SoftwareRoms(arguments);
 								break;
 							case "SD":
-								_Export.SoftwareDisks(arguments);
+								Globals.Export.SoftwareDisks(arguments);
 								break;
 
 							case "*":
-								_Export.MachineRoms(arguments);
-								_Export.MachineDisks(arguments);
-								_Export.SoftwareRoms(arguments);
-								_Export.SoftwareDisks(arguments);
+								Globals.Export.MachineRoms(arguments);
+								Globals.Export.MachineDisks(arguments);
+								Globals.Export.SoftwareRoms(arguments);
+								Globals.Export.SoftwareDisks(arguments);
 								break;
 
 							default:
@@ -566,18 +606,18 @@ namespace Spludlow.MameAO
 					case ".report":
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <Report Code>" + Environment.NewLine + Environment.NewLine +
-								String.Join(Environment.NewLine, _Reports.ReportTypeText()) + Environment.NewLine
+								String.Join(Environment.NewLine, Globals.Reports.ReportTypeText()) + Environment.NewLine
 								);
 
 						Reports.ReportContext reportContext = new Reports.ReportContext()
 						{
-							database = _Database,
-							romHashStore = _RomHashStore,
-							diskHashStore = _DiskHashStore,
-							versionDirectory = _VersionDirectory,
+							database = Globals.Database,
+							romHashStore = Globals.RomHashStore,
+							diskHashStore = Globals.DiskHashStore,
+							versionDirectory = Globals.MameDirectory,
 						};
 
-						if (_Reports.RunReport(parts[1], reportContext) == false)
+						if (Globals.Reports.RunReport(parts[1], reportContext) == false)
 							throw new ApplicationException("Report Unknown type.");
 						return;
 
@@ -585,7 +625,7 @@ namespace Spludlow.MameAO
 						if (parts.Length < 2)
 							throw new ApplicationException($"Usage: {parts[0]} <target directory>");
 
-						Mame.CollectSnaps(_RootDirectory, String.Join(" ", parts.Skip(1)), _Reports);
+						Mame.CollectSnaps(Globals.RootDirectory, String.Join(" ", parts.Skip(1)), Globals.Reports);
 						return;
 
 					case ".svg":
@@ -614,15 +654,15 @@ namespace Spludlow.MameAO
 						switch (parts[1].ToUpper())
 						{
 							case "ROM":
-								HashStore.ValidateHashStore(_RomHashStore, "ROM", _Reports, null);
+								HashStore.ValidateHashStore(Globals.RomHashStore, "ROM", Globals.Reports, null);
 								break;
 
 							case "DISK":
-								HashStore.ValidateHashStore(_DiskHashStore, "DISK", _Reports, null);
+								HashStore.ValidateHashStore(Globals.DiskHashStore, "DISK", Globals.Reports, null);
 								break;
 
 							case "DISKV":
-								HashStore.ValidateHashStore(_DiskHashStore, "DISK", _Reports, _MameChdMan);
+								HashStore.ValidateHashStore(Globals.DiskHashStore, "DISK", Globals.Reports, Globals.MameChdMan);
 								break;
 
 							default:
@@ -635,7 +675,7 @@ namespace Spludlow.MameAO
 						return;
 
 					default:
-						binFilename = Path.Combine(_RootDirectory, machine.Substring(1), "mame.exe");
+						binFilename = Path.Combine(Globals.RootDirectory, machine.Substring(1), "mame.exe");
 
 						if (File.Exists(binFilename) == false)
 							throw new ApplicationException($"Unknown command: {machine}");
@@ -681,7 +721,7 @@ namespace Spludlow.MameAO
 
 		private void ValidateFavorite(string machine, string list, string software)
 		{
-			DataRow machineRow = _Database.GetMachine(machine);
+			DataRow machineRow = Globals.Database.GetMachine(machine);
 			if (machineRow == null)
 				throw new ApplicationException($"Machine not found: {machine}.");
 
@@ -689,7 +729,7 @@ namespace Spludlow.MameAO
 				return;
 
 			DataRow machineListRow = null;
-			foreach (DataRow row in _Database.GetMachineSoftwareLists(machineRow))
+			foreach (DataRow row in Globals.Database.GetMachineSoftwareLists(machineRow))
 			{
 				if (list == (string)row["name"])
 					machineListRow = row;
@@ -698,13 +738,13 @@ namespace Spludlow.MameAO
 			if (machineListRow == null)
 				throw new ApplicationException($"Machine does not have that software list: {machine}, {list}");
 
-			DataRow softwareListRow = _Database.GetSoftwareList(list);
+			DataRow softwareListRow = Globals.Database.GetSoftwareList(list);
 
 			if (softwareListRow == null)
 				throw new ApplicationException($"Software list not found: {list}");
 
 			DataRow softwareRow = null;
-			foreach (DataRow row in _Database.GetSoftwareListsSoftware(softwareListRow))
+			foreach (DataRow row in Globals.Database.GetSoftwareListsSoftware(softwareListRow))
 			{
 				if (software == (string)row["name"])
 					softwareRow = row;
@@ -718,7 +758,7 @@ namespace Spludlow.MameAO
 		{
 			Tools.ConsoleHeading(2, "Saved Games");
 
-			DataTable table = Mame.ListSavedState(_RootDirectory, _Database);
+			DataTable table = Mame.ListSavedState(Globals.RootDirectory, Globals.Database);
 
 			StringBuilder line = new StringBuilder();
 
@@ -747,9 +787,9 @@ namespace Spludlow.MameAO
 
 		public void Update(int startingPid)
 		{
-			string currentName = $"mame-ao-{_AssemblyVersion}";
+			string currentName = $"mame-ao-{Globals.AssemblyVersion}";
 
-			string updateDirectory = Path.Combine(_RootDirectory, "_TEMP", "UPDATE");
+			string updateDirectory = Path.Combine(Globals.RootDirectory, "_TEMP", "UPDATE");
 
 			if (startingPid <= 0)
 			{
@@ -765,7 +805,7 @@ namespace Spludlow.MameAO
 				Console.WriteLine($"Updating MAME-AO '{currentName}' => '{latestName}'...");
 
 				string archiveUrl = (string)_MameAoLatest.assets[0].browser_download_url;
-				string archiveFilename = Path.Combine(_RootDirectory, latestName + ".zip");
+				string archiveFilename = Path.Combine(Globals.RootDirectory, latestName + ".zip");
 
 				Tools.Download(archiveUrl, archiveFilename, 0, 5);
 
@@ -787,8 +827,8 @@ namespace Spludlow.MameAO
 
 				ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(updateDirectory, "mame-ao.exe"))
 				{
-					WorkingDirectory = _RootDirectory,
-					Arguments = $"UPDATE={pid} DIRECTORY=\"{_RootDirectory}\"",
+					WorkingDirectory = Globals.RootDirectory,
+					Arguments = $"UPDATE={pid} DIRECTORY=\"{Globals.RootDirectory}\"",
 					UseShellExecute = true,
 				};
 
@@ -824,7 +864,7 @@ namespace Spludlow.MameAO
 		public void UpdateChild(string currentName, string updateDirectory, int startingPid)
 		{
 			Console.WriteLine($"MAME-AO UPDATER {currentName}");
-			Console.WriteLine($"Target Directory: {_RootDirectory}, Update From Directory {updateDirectory}.");
+			Console.WriteLine($"Target Directory: {Globals.RootDirectory}, Update From Directory {updateDirectory}.");
 
 			Console.WriteLine("Waiting for starting process to exit...");
 			using (Process startingProcess = Process.GetProcessById(startingPid))
@@ -835,7 +875,7 @@ namespace Spludlow.MameAO
 
 			try
 			{
-				File.Delete(Path.Combine(_RootDirectory, "mame-ao.exe"));
+				File.Delete(Path.Combine(Globals.RootDirectory, "mame-ao.exe"));
 			}
 			catch (UnauthorizedAccessException e)
 			{
@@ -844,7 +884,7 @@ namespace Spludlow.MameAO
 
 			foreach (string sourceFilename in Directory.GetFiles(updateDirectory))
 			{
-				string targetFilename = Path.Combine(_RootDirectory, Path.GetFileName(sourceFilename));
+				string targetFilename = Path.Combine(Globals.RootDirectory, Path.GetFileName(sourceFilename));
 				if (File.Exists(targetFilename) == true)
 					File.Delete(targetFilename);
 				File.Copy(sourceFilename, targetFilename);
@@ -852,9 +892,9 @@ namespace Spludlow.MameAO
 				Console.WriteLine(targetFilename);
 			}
 
-			ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(_RootDirectory, "mame-ao.exe"))
+			ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(Globals.RootDirectory, "mame-ao.exe"))
 			{
-				WorkingDirectory = _RootDirectory,
+				WorkingDirectory = Globals.RootDirectory,
 				UseShellExecute = true,
 			};
 
@@ -884,11 +924,11 @@ namespace Spludlow.MameAO
 			//
 			// Machine
 			//
-			DataRow machine = _Database.GetMachine(machineName);
+			DataRow machine = Globals.Database.GetMachine(machineName);
 			if (machine == null)
 				throw new ApplicationException($"Machine not found: {machineName}");
 
-			DataRow[] softwarelists = _Database.GetMachineSoftwareLists(machine);
+			DataRow[] softwarelists = Globals.Database.GetMachineSoftwareLists(machine);
 
 			List<string[]> romStoreFilenames = new List<string[]>();
 
@@ -918,7 +958,7 @@ namespace Spludlow.MameAO
 				{
 					string softwarelistName = (string)machineSoftwarelist["name"];
 
-					DataRow softwarelist = _Database.GetSoftwareList(softwarelistName);
+					DataRow softwarelist = Globals.Database.GetSoftwareList(softwarelistName);
 
 					if (softwarelist == null)
 					{
@@ -926,12 +966,12 @@ namespace Spludlow.MameAO
 						continue;
 					}
 
-					foreach (DataRow findSoftware in _Database.GetSoftwareListsSoftware(softwarelist))
+					foreach (DataRow findSoftware in Globals.Database.GetSoftwareListsSoftware(softwarelist))
 					{
 						if ((string)findSoftware["name"] == softwareName)
 						{
 							// Does this need to be recursive ?
-							foreach (DataRow sharedFeat in _Database.GetSoftwareSharedFeats(findSoftware))
+							foreach (DataRow sharedFeat in Globals.Database.GetSoftwareSharedFeats(findSoftware))
 							{
 								if ((string)sharedFeat["name"] == "requirement")
 								{
@@ -952,7 +992,7 @@ namespace Spludlow.MameAO
 					{
 						string softwarelistName = (string)machineSoftwarelist["name"];
 
-						DataRow softwarelist = _Database.GetSoftwareList(softwarelistName);
+						DataRow softwarelist = Globals.Database.GetSoftwareList(softwarelistName);
 
 						if (softwarelist == null)
 						{
@@ -960,7 +1000,7 @@ namespace Spludlow.MameAO
 							continue;
 						}
 
-						foreach (DataRow findSoftware in _Database.GetSoftwareListsSoftware(softwarelist))
+						foreach (DataRow findSoftware in Globals.Database.GetSoftwareListsSoftware(softwarelist))
 						{
 							if ((string)findSoftware["name"] == requiredSoftwareName)
 							{
@@ -988,7 +1028,7 @@ namespace Spludlow.MameAO
 			//
 			// Place ROMs
 			//
-			if (_LinkingEnabled == true)
+			if (Globals.LinkingEnabled == true)
 			{
 				Tools.LinkFiles(romStoreFilenames.ToArray());
 			}
@@ -1012,7 +1052,7 @@ namespace Spludlow.MameAO
 			// Samples
 			//
 
-			_Samples.PlaceSamples(machine);
+			Globals.Samples.PlaceSamples(machine);
 
 			//
 			// Info
@@ -1024,7 +1064,7 @@ namespace Spludlow.MameAO
 			});
 			Console.WriteLine();
 
-			DataRow[] features = _Database.GetMachineFeatures(machine);
+			DataRow[] features = Globals.Database.GetMachineFeatures(machine);
 
 			Console.WriteLine($"Name:           {Tools.DataRowValue(machine, "name")}");
 			Console.WriteLine($"Description:    {Tools.DataRowValue(machine, "description")}");
@@ -1047,7 +1087,7 @@ namespace Spludlow.MameAO
 
 		private int GetRomsMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			Sources.MameSourceSet soureSet = _Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
+			Sources.MameSourceSet soureSet = Globals.Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
 
 			//
 			// Related/Required machines (parent/bios/devices)
@@ -1067,7 +1107,7 @@ namespace Spludlow.MameAO
 
 			foreach (string requiredMachineName in requiredMachines)
 			{
-				DataRow requiredMachine = _Database.GetMachine(requiredMachineName);
+				DataRow requiredMachine = Globals.Database.GetMachine(requiredMachineName);
 				if (requiredMachine == null)
 					throw new ApplicationException("requiredMachine not found: " + requiredMachineName);
 
@@ -1076,7 +1116,7 @@ namespace Spludlow.MameAO
 				//
 				HashSet<string> missingRoms = new HashSet<string>();
 
-				foreach (DataRow romRow in _Database.GetMachineRoms(requiredMachine))
+				foreach (DataRow romRow in Globals.Database.GetMachineRoms(requiredMachine))
 				{
 					string name = Tools.DataRowValue(romRow, "name");
 					string sha1 = Tools.DataRowValue(romRow, "sha1");
@@ -1084,7 +1124,7 @@ namespace Spludlow.MameAO
 					if (name == null || sha1 == null)
 						continue;
 
-					bool inStore = _RomHashStore.Exists(sha1);
+					bool inStore = Globals.RomHashStore.Exists(sha1);
 
 					Console.WriteLine($"Checking machine ROM: {inStore}\t{sha1}\t{requiredMachineName}\t{name}");
 
@@ -1116,11 +1156,11 @@ namespace Spludlow.MameAO
 
 			foreach (string requiredMachineName in requiredMachines)
 			{
-				DataRow requiredMachine = _Database.GetMachine(requiredMachineName);
+				DataRow requiredMachine = Globals.Database.GetMachine(requiredMachineName);
 				if (requiredMachine == null)
 					throw new ApplicationException("requiredMachine not found: " + requiredMachineName);
 
-				foreach (DataRow romRow in _Database.GetMachineRoms(requiredMachine))
+				foreach (DataRow romRow in Globals.Database.GetMachineRoms(requiredMachine))
 				{
 					string name = Tools.DataRowValue(romRow, "name");
 					string sha1 = Tools.DataRowValue(romRow, "sha1");
@@ -1128,17 +1168,17 @@ namespace Spludlow.MameAO
 					if (name == null || sha1 == null)
 						continue;
 
-					string romFilename = Path.Combine(_VersionDirectory, "roms", requiredMachineName, name);
+					string romFilename = Path.Combine(Globals.MameDirectory, "roms", requiredMachineName, name);
 					string romDirectory = Path.GetDirectoryName(romFilename);
 					if (Directory.Exists(romDirectory) == false)
 						Directory.CreateDirectory(romDirectory);
 
-					bool have = _RomHashStore.Exists(sha1);
+					bool have = Globals.RomHashStore.Exists(sha1);
 
 					if (have == true)
 					{
 						if (File.Exists(romFilename) == false)
-							romStoreFilenames.Add(new string[] { romFilename, _RomHashStore.Filename(sha1) });
+							romStoreFilenames.Add(new string[] { romFilename, Globals.RomHashStore.Filename(sha1) });
 					}
 					else
 					{
@@ -1204,13 +1244,13 @@ namespace Spludlow.MameAO
 
 		private int GetDisksMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			Sources.MameSourceSet soureSet = _Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
+			Sources.MameSourceSet soureSet = Globals.Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
 
-			DataRow machineRow = _Database.GetMachine(machineName);
+			DataRow machineRow = Globals.Database.GetMachine(machineName);
 			if (machineRow == null)
 				throw new ApplicationException("GetDisksMachine machine not found: " + machineName);
 
-			DataRow[] diskRows = _Database.GetMachineDisks(machineRow);
+			DataRow[] diskRows = Globals.Database.GetMachineDisks(machineRow);
 
 			if (diskRows.Length == 0)
 				return 0;
@@ -1233,7 +1273,7 @@ namespace Spludlow.MameAO
 				if (name == null || sha1 == null)
 					continue;
 
-				bool inStore = _DiskHashStore.Exists(sha1);
+				bool inStore = Globals.DiskHashStore.Exists(sha1);
 
 				Console.WriteLine($"Checking machine Disk: {inStore}\t{sha1}\t{machineName}\t{name}");
 
@@ -1251,7 +1291,7 @@ namespace Spludlow.MameAO
 					string diskName = Tools.DataRowValue(diskRow, "name");
 					string sha1 = Tools.DataRowValue(diskRow, "sha1");
 
-					Sources.SourceFileInfo sourceFile = MachineDiskAvailableSourceFile(machineRow, diskRow, soureSet, _Database);
+					Sources.SourceFileInfo sourceFile = MachineDiskAvailableSourceFile(machineRow, diskRow, soureSet, Globals.Database);
 
 					if (sourceFile == null)
 					{
@@ -1278,18 +1318,18 @@ namespace Spludlow.MameAO
 				if (name == null || sha1 == null)
 					continue;
 
-				string filename = Path.Combine(_VersionDirectory, "roms", machineName, name + ".chd");
+				string filename = Path.Combine(Globals.MameDirectory, "roms", machineName, name + ".chd");
 				string directory = Path.GetDirectoryName(filename);
 
 				if (Directory.Exists(directory) == false)
 					Directory.CreateDirectory(directory);
 
-				bool have = _DiskHashStore.Exists(sha1);
+				bool have = Globals.DiskHashStore.Exists(sha1);
 
 				if (have == true)
 				{
 					if (File.Exists(filename) == false)
-						romStoreFilenames.Add(new string[] { filename, _DiskHashStore.Filename(sha1) });
+						romStoreFilenames.Add(new string[] { filename, Globals.DiskHashStore.Filename(sha1) });
 				}
 				else
 				{
@@ -1307,9 +1347,9 @@ namespace Spludlow.MameAO
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
 
-			Sources.MameSourceSet[] soureSets = _Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk, softwareListName);
+			Sources.MameSourceSet[] soureSets = Globals.Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk, softwareListName);
 
-			DataRow[] disks = _Database.GetSoftwareDisks(software);
+			DataRow[] disks = Globals.Database.GetSoftwareDisks(software);
 
 			if (disks.Length == 0)
 				return 0;
@@ -1332,7 +1372,7 @@ namespace Spludlow.MameAO
 				if (name == null || sha1 == null)
 					continue;
 
-				bool inStore = _DiskHashStore.Exists(sha1);
+				bool inStore = Globals.DiskHashStore.Exists(sha1);
 
 				Console.WriteLine($"Checking software Disk: {inStore}\t{sha1}\t{softwareListName}\t{softwareName}\t{name}");
 
@@ -1402,18 +1442,18 @@ namespace Spludlow.MameAO
 				if (name == null || sha1 == null)
 					continue;
 
-				string filename = Path.Combine(_VersionDirectory, "roms", softwareListName, softwareName, name + ".chd");
+				string filename = Path.Combine(Globals.MameDirectory, "roms", softwareListName, softwareName, name + ".chd");
 				string directory = Path.GetDirectoryName(filename);
 
 				if (Directory.Exists(directory) == false)
 					Directory.CreateDirectory(directory);
 
-				bool have = _DiskHashStore.Exists(sha1);
+				bool have = Globals.DiskHashStore.Exists(sha1);
 
 				if (have == true)
 				{
 					if (File.Exists(filename) == false)
-						romStoreFilenames.Add(new string[] { filename, _DiskHashStore.Filename(sha1) });
+						romStoreFilenames.Add(new string[] { filename, Globals.DiskHashStore.Filename(sha1) });
 				}
 				else
 				{
@@ -1428,12 +1468,12 @@ namespace Spludlow.MameAO
 
 		private int GetRomsSoftware(DataRow softwareList, DataRow software, List<string[]> romStoreFilenames)
 		{
-			Sources.MameSourceSet soureSet = _Sources.GetSourceSets(Sources.MameSetType.SoftwareRom)[0];
+			Sources.MameSourceSet soureSet = Globals.Sources.GetSourceSets(Sources.MameSetType.SoftwareRom)[0];
 
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
 
-			DataRow[] roms = _Database.GetSoftwareRoms(software);
+			DataRow[] roms = Globals.Database.GetSoftwareRoms(software);
 
 			if (roms.Length == 0)
 				return 0;
@@ -1459,7 +1499,7 @@ namespace Spludlow.MameAO
 				if (romName == null || sha1 == null)
 					continue;
 
-				bool inStore = _RomHashStore.Exists(sha1);
+				bool inStore = Globals.RomHashStore.Exists(sha1);
 
 				Console.WriteLine($"Checking Software ROM: {inStore}\t{sha1}\t{softwareListName}\t{softwareName}\t{romName}");
 
@@ -1507,17 +1547,17 @@ namespace Spludlow.MameAO
 				if (romName == null || sha1 == null)
 					continue;
 
-				string romFilename = Path.Combine(_VersionDirectory, "roms", softwareListName, softwareName, romName);
+				string romFilename = Path.Combine(Globals.MameDirectory, "roms", softwareListName, softwareName, romName);
 				string romDirectory = Path.GetDirectoryName(romFilename);
 				if (Directory.Exists(romDirectory) == false)
 					Directory.CreateDirectory(romDirectory);
 
-				bool have = _RomHashStore.Exists(sha1);
+				bool have = Globals.RomHashStore.Exists(sha1);
 
 				if (have == true)
 				{
 					if (File.Exists(romFilename) == false)
-						romStoreFilenames.Add(new string[] { romFilename, _RomHashStore.Filename(sha1) });
+						romStoreFilenames.Add(new string[] { romFilename, Globals.RomHashStore.Filename(sha1) });
 				}
 				else
 				{
@@ -1531,7 +1571,7 @@ namespace Spludlow.MameAO
 
 		private Dictionary<string, long> GetSoftwareSizes(string listName, string htmlSizesUrl, string version)
 		{
-			string cacheDirectory = Path.Combine(_RootDirectory, "_METADATA", "SoftwareSizes", version);
+			string cacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "SoftwareSizes", version);
 
 			Directory.CreateDirectory(cacheDirectory);
 
@@ -1541,7 +1581,7 @@ namespace Spludlow.MameAO
 			if (File.Exists(filename) == false)
 			{
 				string url = htmlSizesUrl.Replace("@LIST@", listName);
-				html = Tools.Query(_HttpClient, url);
+				html = Tools.Query(Globals.HttpClient, url);
 				File.WriteAllText(filename, html, Encoding.UTF8);
 			}
 			else
@@ -1626,11 +1666,11 @@ namespace Spludlow.MameAO
 				{
 					string partFilename = romFilename.Substring(extractDirectory.Length);
 
-					string sha1 = _RomHashStore.Hash(romFilename);
+					string sha1 = Globals.RomHashStore.Hash(romFilename);
 
 					required.Remove(sha1);
 
-					bool imported = _RomHashStore.Add(romFilename, false, sha1);
+					bool imported = Globals.RomHashStore.Add(romFilename, false, sha1);
 					Console.WriteLine($"ROM Store Import: {imported} {sha1} {name} {partFilename}");
 				}
 			}
@@ -1643,7 +1683,7 @@ namespace Spludlow.MameAO
 
 		private bool ImportDisk(string url, string name, string expectedSha1, Sources.SourceFileInfo sourceInfo)
 		{
-			if (_BadSources.AlreadyDownloaded(sourceInfo) == true)
+			if (Globals.BadSources.AlreadyDownloaded(sourceInfo) == true)
 			{
 				Console.WriteLine($"!!! Already Downloaded before and it didn't work (bad in source) chd-sha1:{expectedSha1} source-sha1: {sourceInfo.sha1}");
 				return false;
@@ -1668,25 +1708,25 @@ namespace Spludlow.MameAO
 			if (sourceInfo.size != size)
 				Console.WriteLine($"!!! Unexpected downloaded file size expect:{sourceInfo.size} actual:{size}");
 
-			string sha1 = _DiskHashStore.Hash(tempFilename);
+			string sha1 = Globals.DiskHashStore.Hash(tempFilename);
 
 			if (sha1 != expectedSha1)
 			{
 				Console.WriteLine($"!!! Unexpected downloaded CHD SHA1. It's wrong in the source and will not work. expect:{expectedSha1} actual:{sha1}");
-				_BadSources.ReportSourceFile(sourceInfo, expectedSha1, sha1);
+				Globals.BadSources.ReportSourceFile(sourceInfo, expectedSha1, sha1);
 			}
 
-			if (_Database._AllSHA1s.Contains(sha1) == false)
+			if (Globals.Database._AllSHA1s.Contains(sha1) == false)
 			{
 				Console.WriteLine($"!!! Unkown downloaded CHD SHA1. It will be left in the TEMP directory, {sha1}, {tempFilename}");
 				return false;
 			}
 
-			bool imported = _DiskHashStore.Add(tempFilename, true, sha1);
+			bool imported = Globals.DiskHashStore.Add(tempFilename, true, sha1);
 
 			Console.WriteLine($"Disk Store Import: {imported} {sha1} {name}");
 
-			return _DiskHashStore.Exists(expectedSha1);
+			return Globals.DiskHashStore.Exists(expectedSha1);
 		}
 
 		public void ImportDirectory(string importDirectory)
@@ -1704,9 +1744,9 @@ namespace Spludlow.MameAO
 				"String		String	String	String"
 			);
 
-			ImportDirectory(importDirectory, _Database._AllSHA1s, reportTable);
+			ImportDirectory(importDirectory, Globals.Database._AllSHA1s, reportTable);
 
-			_Reports.SaveHtmlReport(reportTable, "Import Directory");
+			Globals.Reports.SaveHtmlReport(reportTable, "Import Directory");
 		}
 		public void ImportDirectory(string importDirectory, HashSet<string> allSHA1s, DataTable reportTable)
 		{
@@ -1740,9 +1780,9 @@ namespace Spludlow.MameAO
 						break;
 
 					case ".chd":
-						sha1 = _DiskHashStore.Hash(filename);
+						sha1 = Globals.DiskHashStore.Hash(filename);
 						if (allSHA1s.Contains(sha1) == true)
-							status = _DiskHashStore.Add(filename, false, sha1) ? "" : "Have";
+							status = Globals.DiskHashStore.Add(filename, false, sha1) ? "" : "Have";
 						else
 							status = "Unknown";
 
@@ -1750,9 +1790,9 @@ namespace Spludlow.MameAO
 						break;
 
 					default:
-						sha1 = _RomHashStore.Hash(filename);
+						sha1 = Globals.RomHashStore.Hash(filename);
 						if (allSHA1s.Contains(sha1) == true)
-							status = _RomHashStore.Add(filename, false, sha1) ? "" : "Have";
+							status = Globals.RomHashStore.Add(filename, false, sha1) ? "" : "Have";
 						else
 							status = "Unknown";
 
@@ -1767,7 +1807,7 @@ namespace Spludlow.MameAO
 			if (requiredMachines.Contains(machineName) == true)
 				return;
 
-			DataRow machineRow = _Database.GetMachine(machineName);
+			DataRow machineRow = Globals.Database.GetMachine(machineName);
 
 			if (machineRow == null)
 				throw new ApplicationException("FindAllMachines machine not found: " + machineName);
@@ -1782,7 +1822,7 @@ namespace Spludlow.MameAO
 			if (romof != null)
 				FindAllMachines(romof, requiredMachines);
 
-			foreach (DataRow row in _Database.GetMachineDeviceRefs(machineName))
+			foreach (DataRow row in Globals.Database.GetMachineDeviceRefs(machineName))
 				FindAllMachines((string)row["name"], requiredMachines);
 		}
 

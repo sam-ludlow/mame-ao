@@ -120,11 +120,8 @@ namespace Spludlow.MameAO
 
 		public HashSet<string> _AllSHA1s;
 
-		public Favorites _Favorites;
-
-		public Database(Favorites favorites)
+		public Database()
 		{
-			_Favorites = favorites;
 		}
 
 		public void InitializeMachine(string xmlFilename, string databaseFilename, string assemblyVersion)
@@ -303,7 +300,7 @@ namespace Spludlow.MameAO
 					"WHERE ((@FAVORITES) @SEARCH) ORDER BY software.description COLLATE NOCASE ASC " +
 					"LIMIT @LIMIT OFFSET @OFFSET";
 
-				string[][] listSoftwareNames = _Favorites.ListSoftwareUsedByMachine(favorites_machine);
+				string[][] listSoftwareNames = Globals.Favorites.ListSoftwareUsedByMachine(favorites_machine);
 
 				if (listSoftwareNames.Length == 0)
 				{
@@ -348,7 +345,7 @@ namespace Spludlow.MameAO
 			DataTable table = ExecuteFill(command);
 
 			if (favorites_machine != null)
-				_Favorites.AddColumnSoftware(table, favorites_machine, softwareListName, "name", "favorite");
+				Globals.Favorites.AddColumnSoftware(table, favorites_machine, softwareListName, "name", "favorite");
 
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
@@ -446,10 +443,10 @@ namespace Spludlow.MameAO
 			if (profile.Key == "favorites")
 			{
 				string favorites = "machine.machine_id = -1";
-				if (_Favorites._Machines.Count > 0)
+				if (Globals.Favorites._Machines.Count > 0)
 				{
 					StringBuilder text = new StringBuilder();
-					foreach (string name in _Favorites._Machines.Keys)
+					foreach (string name in Globals.Favorites._Machines.Keys)
 					{
 						if (text.Length > 0)
 							text.Append(" OR ");
@@ -473,7 +470,7 @@ namespace Spludlow.MameAO
 
 			DataTable table = ExecuteFill(command);
 
-			_Favorites.AddColumnMachines(table, "name", "favorite");
+			Globals.Favorites.AddColumnMachines(table, "name", "favorite");
 
 			return table;
 		}

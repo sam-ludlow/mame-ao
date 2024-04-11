@@ -7,9 +7,9 @@ namespace Spludlow.MameAO
 	public class BadSources
 	{
 		private string _DataFilename;
-		public BadSources(string rootDirectory)
+		public BadSources()
 		{
-			_DataFilename = Path.Combine(rootDirectory, "_BadSources.txt");
+			_DataFilename = Path.Combine(Globals.RootDirectory, "_BadSources.txt");
 
 			if (File.Exists(_DataFilename) == false)
 				File.WriteAllText(_DataFilename, "", Encoding.UTF8);

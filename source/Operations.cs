@@ -30,7 +30,7 @@ namespace Spludlow.MameAO
 				case "GET_MAME":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
 
-					exitCode = GetMame(parameters["DIRECTORY"], parameters["VERSION"], proc._HttpClient);
+					exitCode = GetMame(parameters["DIRECTORY"], parameters["VERSION"], Globals.HttpClient);
 					break;
 
 				case "MAKE_XML":
@@ -60,7 +60,7 @@ namespace Spludlow.MameAO
 				case "MAME_MSSQL_PAYLOADS":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
-					exitCode = MakeMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"], proc._AssemblyVersion);
+					exitCode = MakeMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"], Globals.AssemblyVersion);
 					break;
 
 				case "MAME_MSSQL_PAYLOADS_HTML":

@@ -166,7 +166,7 @@ namespace Spludlow.MameAO
 
 			if (line.StartsWith(".fav") == true)
 			{
-				_AO._Favorites.AddCommandLine(line);
+				Globals.Favorites.AddCommandLine(line);
 			}
 			else
 			{
@@ -262,9 +262,9 @@ namespace Spludlow.MameAO
 			if (profile == null)
 				throw new ApplicationException("profile not passed");
 
-			Database.DataQueryProfile dataQueryProfile = _AO._Database.GetDataQueryProfile(profile);
+			Database.DataQueryProfile dataQueryProfile = Globals.Database.GetDataQueryProfile(profile);
 
-			DataTable table = _AO._Database.QueryMachine(dataQueryProfile.Key, offset, limit, search);
+			DataTable table = Globals.Database.QueryMachine(dataQueryProfile.Key, offset, limit, search);
 
 			JArray results = new JArray();
 
@@ -303,9 +303,9 @@ namespace Spludlow.MameAO
 			if (machine == null)
 				throw new ApplicationException("machine not passed");
 
-			DataRow machineRow = _AO._Database.GetMachine(machine);
+			DataRow machineRow = Globals.Database.GetMachine(machine);
 
-			DataRow[] machineSoftwareListRows = _AO._Database.GetMachineSoftwareLists(machineRow);
+			DataRow[] machineSoftwareListRows = Globals.Database.GetMachineSoftwareLists(machineRow);
 
 			dynamic json = RowToJson(machineRow);
 
@@ -368,7 +368,7 @@ namespace Spludlow.MameAO
 			if (favorites_machine != null)
 				favorites_machine = favorites_machine.Trim();
 
-			DataRow[] rows = _AO._Database.GetSoftwareListsSoftware(softwarelist, offset, limit, search, favorites_machine);
+			DataRow[] rows = Globals.Database.GetSoftwareListsSoftware(softwarelist, offset, limit, search, favorites_machine);
 
 			JArray results = new JArray();
 
@@ -401,22 +401,22 @@ namespace Spludlow.MameAO
 			dynamic json = new JObject();
 
 			json.time = DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture);
-			json.version = _AO._AssemblyVersion;
+			json.version = Globals.AssemblyVersion;
 			json.mame_version = _AO._Version;
-			json.directory = _AO._RootDirectory;
-			json.rom_store_count = _AO._RomHashStore.Length;
-			json.disk_store_count = _AO._DiskHashStore.Length;
-			json.genre_version = _AO._Genre.Data != null ? _AO._Genre.Version : "";
-			json.linking_enabled = _AO._LinkingEnabled;
+			json.directory = Globals.RootDirectory;
+			json.rom_store_count = Globals.RomHashStore.Length;
+			json.disk_store_count = Globals.DiskHashStore.Length;
+			json.genre_version = Globals.Genre.Data != null ? Globals.Genre.Version : "";
+			json.linking_enabled = Globals.LinkingEnabled;
 
 			json.latest = _AO._MameAoLatest;
 
 			json.version_name_available = Path.GetFileNameWithoutExtension((string)_AO._MameAoLatest.assets[0].name);
-			json.version_name_current = $"mame-ao-{_AO._AssemblyVersion}";
+			json.version_name_current = $"mame-ao-{Globals.AssemblyVersion}";
 
 			dynamic sources = new JArray();
 
-			foreach (Sources.MameSourceSet sourceSet in _AO._Sources.GetSourceSets())
+			foreach (Sources.MameSourceSet sourceSet in Globals.Sources.GetSourceSets())
 			{
 				dynamic source = new JObject();
 
@@ -472,7 +472,7 @@ namespace Spludlow.MameAO
 
 			Sources.MameSetType setType = (Sources.MameSetType)Enum.Parse(typeof(Sources.MameSetType), type);
 
-			Sources.MameSourceSet[] sourceSets = _AO._Sources.GetSourceSets(setType);
+			Sources.MameSourceSet[] sourceSets = Globals.Sources.GetSourceSets(setType);
 
 			JArray results = new JArray();
 
@@ -501,7 +501,7 @@ namespace Spludlow.MameAO
 
 		public void _api_list(HttpListenerContext context, StreamWriter writer)
 		{
-			DataTable table = Mame.ListSavedState(_AO._RootDirectory, _AO._Database);
+			DataTable table = Mame.ListSavedState(Globals.RootDirectory, Globals.Database);
 
 			JArray results = new JArray();
 
@@ -525,7 +525,7 @@ namespace Spludlow.MameAO
 		{
 			JArray results = new JArray();
 
-			foreach (string reportName in _AO._Reports.ListReports())
+			foreach (string reportName in Globals.Reports.ListReports())
 			{
 				dynamic result = new JObject();
 
@@ -562,7 +562,7 @@ namespace Spludlow.MameAO
 		{
 			string name = context.Request.QueryString["name"] ?? throw new ApplicationException("name not passed");
 
-			string html = _AO._Reports.GetHtml(name);
+			string html = Globals.Reports.GetHtml(name);
 
 			context.Response.Headers["Content-Type"] = "text/html";
 
@@ -630,18 +630,18 @@ namespace Spludlow.MameAO
 		{
 			context.Response.Headers["Content-Type"] = "text/plain; charset=utf-8";
 
-			writer.Write(Mame.WhatsNew(_AO._RootDirectory));
+			writer.Write(Mame.WhatsNew(Globals.RootDirectory));
 		}
 
 		public void _api_genre_groups(HttpListenerContext context, StreamWriter writer)
 		{
 			JArray results = new JArray();
 
-			if (_AO._Genre.Data != null)
+			if (Globals.Genre.Data != null)
 			{
 				HashSet<string> keepColumnNames = new HashSet<string>(new string[] { "genre_id", "group_id" });
 
-				foreach (DataRow row in _AO._Genre.Data.Tables["groups"].Rows)
+				foreach (DataRow row in Globals.Genre.Data.Tables["groups"].Rows)
 				{
 					dynamic result = RowToJson(row, keepColumnNames);
 					results.Add(result);
@@ -681,11 +681,11 @@ namespace Spludlow.MameAO
 
 			JArray results = new JArray();
 
-			if (_AO._Genre.Data != null)
+			if (Globals.Genre.Data != null)
 			{
 				if (group_name != null)
 				{
-					DataRow[] rows = _AO._Genre.Data.Tables["groups"].Select($"group_name = '{group_name.Replace("'", "''")}'");
+					DataRow[] rows = Globals.Genre.Data.Tables["groups"].Select($"group_name = '{group_name.Replace("'", "''")}'");
 
 					if (rows.Length == 0)
 						throw new ApplicationException($"group name not found: {group_name}");
@@ -695,7 +695,7 @@ namespace Spludlow.MameAO
 
 				if (genre_name != null)
 				{
-					DataRow[] rows = _AO._Genre.Data.Tables["genres"].Select($"genre_name = '{genre_name.Replace("'", "''")}'");
+					DataRow[] rows = Globals.Genre.Data.Tables["genres"].Select($"genre_name = '{genre_name.Replace("'", "''")}'");
 
 					if (rows.Length == 0)
 						throw new ApplicationException($"genre name not found: {genre_name}");
@@ -705,7 +705,7 @@ namespace Spludlow.MameAO
 
 				HashSet<string> keepColumnNames = new HashSet<string>(new string[] { "genre_id", "group_id" });
 
-				foreach (DataRow row in _AO._Genre.Data.Tables["genres"].Rows)
+				foreach (DataRow row in Globals.Genre.Data.Tables["genres"].Rows)
 				{
 					if (group_id != 0 && (long)row["group_id"] != group_id)
 						continue;

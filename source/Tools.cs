@@ -13,6 +13,7 @@ using System.Drawing;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Xml.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -259,21 +260,66 @@ namespace Spludlow.MameAO
 			return table;
 		}
 
+		public static string FetchTextCached(string url, string filename)
+		{
+			string result = null;
+
+			if (File.Exists(filename) == false || (DateTime.Now - File.GetLastWriteTime(filename) > TimeSpan.FromHours(3)))
+			{
+				try
+				{
+					Console.Write($"Downloading {url} ...");
+					result = Query(Globals.HttpClient, url);
+					Console.WriteLine("...done");
+
+					if (result.StartsWith("{") == true)
+						result = PrettyJSON(result);
+				}
+				catch (TaskCanceledException e)
+				{
+					Console.WriteLine($"ERROR Fetch client timeout: {url} {e.Message}");
+				}
+				catch (HttpRequestException e)
+				{
+					Console.WriteLine($"ERROR Fetch request: {url} {e.Message} {e.InnerException?.Message}");
+				}
+				catch (Exception e)
+				{
+					Console.WriteLine($"ERROR Fetch: {url} {e.Message} {e.InnerException?.Message}");
+				}
+
+				if (result != null)
+					File.WriteAllText(filename, result, Encoding.UTF8);
+			}
+
+			if (result == null && File.Exists(filename) == true)
+				result = File.ReadAllText(filename, Encoding.UTF8);
+
+			return result;
+		}
+
 		public static string Query(HttpClient client, string url)
 		{
-			using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url))
+			try
 			{
-				Task<HttpResponseMessage> requestTask = client.SendAsync(requestMessage);
-				requestTask.Wait();
-				HttpResponseMessage responseMessage = requestTask.Result;
+				using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url))
+				{
+					Task<HttpResponseMessage> requestTask = client.SendAsync(requestMessage);
+					requestTask.Wait();
+					HttpResponseMessage responseMessage = requestTask.Result;
 
-				responseMessage.EnsureSuccessStatusCode();
+					responseMessage.EnsureSuccessStatusCode();
 
-				Task<string> responseMessageTask = responseMessage.Content.ReadAsStringAsync();
-				responseMessageTask.Wait();
-				string responseBody = responseMessageTask.Result;
+					Task<string> responseMessageTask = responseMessage.Content.ReadAsStringAsync();
+					responseMessageTask.Wait();
+					string responseBody = responseMessageTask.Result;
 
-				return responseBody;
+					return responseBody;
+				}
+			}
+			catch (AggregateException e)
+			{
+				throw e.InnerException ?? e;
 			}
 		}
 
@@ -388,6 +434,13 @@ namespace Spludlow.MameAO
 					process.WaitForExit();
 				}
 			}
+		}
+
+		private static readonly DateTime EpochDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+
+		public static DateTime FromEpochDate(double epoch)
+		{
+			return EpochDateTime.AddSeconds(epoch);
 		}
 
 		public static string DataSize(long sizeBytes)

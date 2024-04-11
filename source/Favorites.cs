@@ -20,10 +20,10 @@ namespace Spludlow.MameAO
 		//	Machines	machine	[lists...]
 		//	Software	list	[software...]
 
-		public Favorites(string rootDirectory)
+		public Favorites()
 		{
-			_MachinesFilename = Path.Combine(rootDirectory, "_FavoritesMachines.txt");
-			_SoftwareFilename = Path.Combine(rootDirectory, "_FavoritesSoftware.txt");
+			_MachinesFilename = Path.Combine(Globals.RootDirectory, "_FavoritesMachines.txt");
+			_SoftwareFilename = Path.Combine(Globals.RootDirectory, "_FavoritesSoftware.txt");
 
 			_Machines = Load(_MachinesFilename);
 			_Software = Load(_SoftwareFilename);

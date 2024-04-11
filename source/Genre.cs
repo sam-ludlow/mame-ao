@@ -11,21 +11,15 @@ namespace Spludlow.MameAO
 	public class Genre
 	{
 		const string SourceUrl = "https://www.progettosnaps.net/catver/";
-		private readonly HttpClient HttpClient;
+
 		private readonly string RootDirectory;
-		private readonly Database Database;
 
 		public string Version = "";
 		public DataSet Data = null;
 
-		public Genre(HttpClient httpClient, string rootDirectory, Database database)
+		public Genre()
 		{
-			HttpClient = httpClient;
-
-			RootDirectory = Path.Combine(rootDirectory, "_METADATA", "Genre");
-
-			Database = database;
-
+			RootDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "Genre");
 			Directory.CreateDirectory(RootDirectory);
 		}
 
@@ -224,7 +218,7 @@ namespace Spludlow.MameAO
 
 		public string GetLatestZipLink()
 		{
-			string html = Tools.Query(HttpClient, SourceUrl);
+			string html = Tools.Query(Globals.HttpClient, SourceUrl);
 
 			int index = html.IndexOf("href=\"/download/?tipo=catver");
 
@@ -304,7 +298,7 @@ namespace Spludlow.MameAO
 
 		private Dictionary<string, string> GetMachineDriverStatuses()
 		{
-			DataTable table = Database.ExecuteFill(Database._MachineConnection,
+			DataTable table = Database.ExecuteFill(Globals.Database._MachineConnection,
 				"SELECT machine.name, driver.status FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id");
 
 			Dictionary<string, string> result = new Dictionary<string, string>();
@@ -317,15 +311,15 @@ namespace Spludlow.MameAO
 
 		public void SetMachines(Dictionary<string, long[]> machineGenreIds)
 		{
-			DataTable infoTable = Database.ExecuteFill(Database._MachineConnection, "SELECT * FROM ao_info");
+			DataTable infoTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT * FROM ao_info");
 
 			if (infoTable.Columns.Contains("genre_version") == false)
 			{
-				Database.ExecuteNonQuery(Database._MachineConnection, "ALTER TABLE ao_info ADD COLUMN genre_version TEXT");
-				Database.ExecuteNonQuery(Database._MachineConnection, "UPDATE ao_info SET genre_version = '' WHERE ao_info_id = 1");
+				Database.ExecuteNonQuery(Globals.Database._MachineConnection, "ALTER TABLE ao_info ADD COLUMN genre_version TEXT");
+				Database.ExecuteNonQuery(Globals.Database._MachineConnection, "UPDATE ao_info SET genre_version = '' WHERE ao_info_id = 1");
 			}
 
-			infoTable = Database.ExecuteFill(Database._MachineConnection, "SELECT * FROM ao_info");
+			infoTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT * FROM ao_info");
 
 			string databaseVersion = (string)infoTable.Rows[0]["genre_version"];
 
@@ -334,23 +328,23 @@ namespace Spludlow.MameAO
 
 			Console.Write("Update Machines database with genre IDs ...");
 
-			DataTable machineTable = Database.ExecuteFill(Database._MachineConnection, "SELECT * FROM machine WHERE machine_id = 0");
+			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT * FROM machine WHERE machine_id = 0");
 
 			if (machineTable.Columns.Contains("genre_id") == false)
-				Database.ExecuteNonQuery(Database._MachineConnection, "ALTER TABLE machine ADD COLUMN genre_id INTEGER");
+				Database.ExecuteNonQuery(Globals.Database._MachineConnection, "ALTER TABLE machine ADD COLUMN genre_id INTEGER");
 
-			Database.ExecuteNonQuery(Database._MachineConnection, "UPDATE machine SET genre_id = 0");
+			Database.ExecuteNonQuery(Globals.Database._MachineConnection, "UPDATE machine SET genre_id = 0");
 
-			machineTable = Database.ExecuteFill(Database._MachineConnection, "SELECT machine_id, name FROM machine");
+			machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name FROM machine");
 
-			using (SQLiteCommand command = new SQLiteCommand("UPDATE machine SET genre_id = @genre_id WHERE machine_id = @machine_id", Database._MachineConnection))
+			using (SQLiteCommand command = new SQLiteCommand("UPDATE machine SET genre_id = @genre_id WHERE machine_id = @machine_id", Globals.Database._MachineConnection))
 			{
 				command.Parameters.Add("@genre_id", DbType.Int64);
 				command.Parameters.Add("@machine_id", DbType.Int64);
 
-				Database._MachineConnection.Open();
+				Globals.Database._MachineConnection.Open();
 
-				SQLiteTransaction transaction = Database._MachineConnection.BeginTransaction();
+				SQLiteTransaction transaction = Globals.Database._MachineConnection.BeginTransaction();
 
 				try
 				{
@@ -379,11 +373,11 @@ namespace Spludlow.MameAO
 				}
 				finally
 				{
-					Database._MachineConnection.Close();
+					Globals.Database._MachineConnection.Close();
 				}
 			}
 
-			Database.ExecuteNonQuery(Database._MachineConnection, $"UPDATE ao_info SET genre_version = '{Version}' WHERE ao_info_id = 1");
+			Database.ExecuteNonQuery(Globals.Database._MachineConnection, $"UPDATE ao_info SET genre_version = '{Version}' WHERE ao_info_id = 1");
 
 			Console.WriteLine("...done");
 

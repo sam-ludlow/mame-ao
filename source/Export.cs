@@ -7,25 +7,16 @@ namespace Spludlow.MameAO
 {
 	public class Export
 	{
-		private Database _Database;
-		private HashStore _RomHashStore;
-		private HashStore _DiskHashStore;
-		private Reports _Reports;
-
-		public Export(Database database, HashStore romHashStore, HashStore diskHashStore, Reports reports)
+		public Export()
 		{
-			_Database = database;
-			_RomHashStore = romHashStore;
-			_DiskHashStore = diskHashStore;
-			_Reports = reports;
 		}
 
 		public void MachineRoms(string targetDirectory)
 		{
 			Tools.ConsoleHeading(1, new string[] { "Export Machine ROM", targetDirectory });
 
-			DataTable machineTable = Database.ExecuteFill(_Database._MachineConnection, "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
-			DataTable romTable = Database.ExecuteFill(_Database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
 
 			DataTable reportTable = Tools.MakeDataTable(
 				"Name	Description	Status	CopyCount	ParentCount",
@@ -56,7 +47,7 @@ namespace Spludlow.MameAO
 							continue;
 						}
 
-						if (_RomHashStore.Exists(sha1) == false)
+						if (Globals.RomHashStore.Exists(sha1) == false)
 						{
 							++dontHaveCount;
 							continue;
@@ -94,7 +85,7 @@ namespace Spludlow.MameAO
 
 					foreach (string name in nameHashes.Keys)
 					{
-						string storeFilename = _RomHashStore.Filename(nameHashes[name]);
+						string storeFilename = Globals.RomHashStore.Filename(nameHashes[name]);
 						string romFilename = archiveDirectory + @"\" + name;
 						File.Copy(storeFilename, romFilename);
 					}
@@ -107,15 +98,15 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			_Reports.SaveHtmlReport(reportTable, "Export Machine ROM");
+			Globals.Reports.SaveHtmlReport(reportTable, "Export Machine ROM");
 		}
 
 		public void MachineDisks(string targetDirectory)
 		{
 			Tools.ConsoleHeading(1, new string[] { "Export Machine DISK", targetDirectory });
 
-			DataTable machineTable = Database.ExecuteFill(_Database._MachineConnection, "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
-			DataTable diskTable = Database.ExecuteFill(_Database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
+			DataTable diskTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
 
 			DataTable reportTable = Tools.MakeDataTable(
 				"Name	Description	DiskName	Status",
@@ -135,7 +126,7 @@ namespace Spludlow.MameAO
 						string sha1 = (string)row["sha1"];
 						string name = (string)row["name"];
 
-						if (_DiskHashStore.Exists(sha1) == false)
+						if (Globals.DiskHashStore.Exists(sha1) == false)
 							continue;
 
 						DataRow reportRow = reportTable.Rows.Add(machine_name, machine_description, name, "");
@@ -158,23 +149,23 @@ namespace Spludlow.MameAO
 						if (Directory.Exists(directory) == false)
 							Directory.CreateDirectory(directory);
 
-						File.Copy(_DiskHashStore.Filename(sha1), filename);
+						File.Copy(Globals.DiskHashStore.Filename(sha1), filename);
 
 						Console.WriteLine(filename);
 					}
 				}
 			}
 
-			_Reports.SaveHtmlReport(reportTable, "Export Machine DISK");
+			Globals.Reports.SaveHtmlReport(reportTable, "Export Machine DISK");
 		}
 
 		public void SoftwareRoms(string targetDirectory)
 		{
 			Tools.ConsoleHeading(1, new string[] { "Export Software ROM", targetDirectory });
 
-			DataTable softwarelistTable = Database.ExecuteFill(_Database._SoftwareConnection, "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
-			DataTable softwareTable = Database.ExecuteFill(_Database._SoftwareConnection, "SELECT software.software_id, software.softwarelist_id, software.name, software.description FROM software ORDER BY software.name");
-			DataTable romTable = Database.ExecuteFill(_Database._SoftwareConnection, "SELECT part.software_id, rom.name, rom.sha1 FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.sha1 IS NOT NULL)");
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnection, "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
+			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnection, "SELECT software.software_id, software.softwarelist_id, software.name, software.description FROM software ORDER BY software.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Database._SoftwareConnection, "SELECT part.software_id, rom.name, rom.sha1 FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.sha1 IS NOT NULL)");
 
 			DataTable reportTable = Tools.MakeDataTable(
 				"List	Software	Description	Status	CopyCount",
@@ -203,7 +194,7 @@ namespace Spludlow.MameAO
 							string name = (string)row["name"];
 							string sha1 = (string)row["sha1"];
 
-							if (_RomHashStore.Exists(sha1) == false)
+							if (Globals.RomHashStore.Exists(sha1) == false)
 							{
 								++dontHaveCount;
 								continue;
@@ -244,7 +235,7 @@ namespace Spludlow.MameAO
 
 						foreach (string name in nameHashes.Keys)
 						{
-							string storeFilename = _RomHashStore.Filename(nameHashes[name]);
+							string storeFilename = Globals.RomHashStore.Filename(nameHashes[name]);
 							string romFilename = archiveDirectory + @"\" + name;
 							File.Copy(storeFilename, romFilename);
 						}
@@ -258,16 +249,16 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			_Reports.SaveHtmlReport(reportTable, "Export Software ROM");
+			Globals.Reports.SaveHtmlReport(reportTable, "Export Software ROM");
 		}
 
 		public void SoftwareDisks(string targetDirectory)
 		{
 			Tools.ConsoleHeading(1, new string[] { "Export Software DISK", targetDirectory });
 
-			DataTable softwarelistTable = Database.ExecuteFill(_Database._SoftwareConnection, "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
-			DataTable softwareTable = Database.ExecuteFill(_Database._SoftwareConnection, "SELECT software.software_id, software.softwarelist_id, software.name, software.description FROM software ORDER BY software.name");
-			DataTable diskTable = Database.ExecuteFill(_Database._SoftwareConnection, "SELECT part.software_id, disk.name, disk.sha1 FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.sha1 IS NOT NULL)");
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnection, "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
+			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnection, "SELECT software.software_id, software.softwarelist_id, software.name, software.description FROM software ORDER BY software.name");
+			DataTable diskTable = Database.ExecuteFill(Globals.Database._SoftwareConnection, "SELECT part.software_id, disk.name, disk.sha1 FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.sha1 IS NOT NULL)");
 
 			DataTable reportTable = Tools.MakeDataTable(
 				"List	Software	Description	DiskName	Status",
@@ -292,7 +283,7 @@ namespace Spludlow.MameAO
 							string name = (string)diskRow["name"];
 							string sha1 = (string)diskRow["sha1"];
 
-							if (_DiskHashStore.Exists(sha1) == false)
+							if (Globals.DiskHashStore.Exists(sha1) == false)
 								continue;
 
 							DataRow reportRow = reportTable.Rows.Add(softwarelist_name, software_name, software_description, name, "");
@@ -309,14 +300,14 @@ namespace Spludlow.MameAO
 							if (Directory.Exists(directory) == false)
 								Directory.CreateDirectory(directory);
 
-							File.Copy(_DiskHashStore.Filename(sha1), filename);
+							File.Copy(Globals.DiskHashStore.Filename(sha1), filename);
 
 							Console.WriteLine(filename);
 						}
 					}
 				}
 			}
-			_Reports.SaveHtmlReport(reportTable, "Export Software DISK");
+			Globals.Reports.SaveHtmlReport(reportTable, "Export Software DISK");
 		}
 
 

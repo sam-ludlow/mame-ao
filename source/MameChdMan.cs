@@ -10,9 +10,9 @@ namespace Spludlow.MameAO
 	{
 		private readonly string _ChdManPath;
 
-		public MameChdMan(string mameBinPath)
+		public MameChdMan()
 		{
-			_ChdManPath = Path.Combine(mameBinPath, "chdman.exe");
+			_ChdManPath = Path.Combine(Globals.MameDirectory, "chdman.exe");
 
 			if (File.Exists(_ChdManPath) == false)
 				throw new ApplicationException($"CHD man, Program not found: '{_ChdManPath}'");

@@ -19,24 +19,15 @@ namespace Spludlow.MameAO
 
 		public readonly string SourceUrl = "https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/MAME_dat/MAME_Samples.dat";
 
-		private readonly HttpClient HttpClient;
 		private readonly string CacheDirectory;
 		private readonly string SamplesDirectory;
-		private readonly Database Database;
-		private readonly HashStore HashStore;
-		private readonly bool LinkingEnabled;
 
-		public Samples(HttpClient httpClient, string rootDirectory, string versionDirectory, Database database, HashStore hashStore, bool linkingEnabled)
+		public Samples()
 		{
-			HttpClient = httpClient;
-			CacheDirectory = Path.Combine(rootDirectory, "_METADATA", "samples");
-			SamplesDirectory = Path.Combine(versionDirectory, "samples");
-			Database = database;
-			HashStore = hashStore;
-			LinkingEnabled = linkingEnabled;
+			CacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "samples");
+			SamplesDirectory = Path.Combine(Globals.MameDirectory, "samples");
 
 			Directory.CreateDirectory(CacheDirectory);
-
 		}
 
 		public void Initialize()
@@ -54,7 +45,7 @@ namespace Spludlow.MameAO
 
 			if (Version == null || (DateTime.Now - File.GetLastWriteTime(cacheFilename) > TimeSpan.FromHours(3)))
 			{
-				xml = Tools.Query(HttpClient, SourceUrl);
+				xml = Tools.Query(Globals.HttpClient, SourceUrl);
 				Version = ParseXML(xml);
 				cacheFilename = Path.Combine(CacheDirectory, Version + ".xml");
 				File.WriteAllText(cacheFilename, xml, Encoding.UTF8);
@@ -113,7 +104,7 @@ namespace Spludlow.MameAO
 			if (DataSet == null)
 				return;
 
-			DataRow[] sampleRows = Database.GetMachineSamples(machineRow);
+			DataRow[] sampleRows = Globals.Database.GetMachineSamples(machineRow);
 
 			if (sampleRows.Length == 0)
 				return;
@@ -165,7 +156,7 @@ namespace Spludlow.MameAO
 			{
 				string sha1 = (string)row["sha1"];
 
-				if (HashStore.Exists(sha1) == false)
+				if (Globals.RomHashStore.Exists(sha1) == false)
 					download = true;
 			}
 
@@ -186,7 +177,7 @@ namespace Spludlow.MameAO
 					Tools.ClearAttributes(tempDir.Path);
 
 					foreach (string wavFilename in Directory.GetFiles(tempDir.Path, "*.wav"))
-						HashStore.Add(wavFilename);
+						Globals.RomHashStore.Add(wavFilename);
 
 					Tools.ClearAttributes(tempDir.Path);
 				}
@@ -206,17 +197,17 @@ namespace Spludlow.MameAO
 				string wavFilename = Path.Combine(SamplesDirectory, machineName, name);
 
 				bool fileExists = File.Exists(wavFilename);
-				bool storeExists = HashStore.Exists(sha1);
+				bool storeExists = Globals.RomHashStore.Exists(sha1);
 
 				if (fileExists == false && storeExists == true)
 				{
-					wavStoreFilenames.Add(new string[] { wavFilename, HashStore.Filename(sha1) });
+					wavStoreFilenames.Add(new string[] { wavFilename, Globals.RomHashStore.Filename(sha1) });
 				}
 
 				Console.WriteLine($"Place Sample:\t{fileExists}\t{storeExists}\t{sha1}\t{wavFilename}");
 			}
 
-			if (LinkingEnabled == true)
+			if (Globals.LinkingEnabled == true)
 			{
 				Tools.LinkFiles(wavStoreFilenames.ToArray());
 			}

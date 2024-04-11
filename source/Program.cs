@@ -7,28 +7,26 @@ namespace Spludlow.MameAO
 	{
 		static int Main(string[] args)
 		{
-			Dictionary<string, string> parameters = new Dictionary<string, string>();
-
 			foreach (string arg in args)
 			{
 				int index = arg.IndexOf('=');
 				if (index == -1)
 					throw new ApplicationException("Bad argument, expecting KEY=VALUE, " + arg);
 
-				parameters.Add(arg.Substring(0, index).ToUpper(), arg.Substring(index + 1));
+				Globals.Arguments.Add(arg.Substring(0, index).ToUpper(), arg.Substring(index + 1));
 			}
 
-			if (parameters.ContainsKey("DIRECTORY") == false)
-				parameters.Add("DIRECTORY", Environment.CurrentDirectory);
+			if (Globals.Arguments.ContainsKey("DIRECTORY") == false)
+				Globals.Arguments.Add("DIRECTORY", Environment.CurrentDirectory);
 
-			MameAOProcessor proc = new MameAOProcessor(parameters["DIRECTORY"]);
+			MameAOProcessor proc = new MameAOProcessor();
 
-			if (parameters.ContainsKey("OPERATION") == true)
-				return Operations.ProcessOperation(parameters, proc);
+			if (Globals.Arguments.ContainsKey("OPERATION") == true)
+				return Operations.ProcessOperation(Globals.Arguments, proc);
 
-			if (parameters.ContainsKey("UPDATE") == true)
+			if (Globals.Arguments.ContainsKey("UPDATE") == true)
 			{
-				proc.Update(Int32.Parse(parameters["UPDATE"]));
+				proc.Update(Int32.Parse(Globals.Arguments["UPDATE"]));
 				return 0;
 			}
 
