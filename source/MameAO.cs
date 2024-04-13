@@ -29,6 +29,8 @@ namespace Spludlow.MameAO
 			HttpClient.Timeout = TimeSpan.FromSeconds(180); // TimeSpan.FromSeconds(100);
 		}
 
+		public static string ListenAddress = "http://localhost:12380/";
+
 		public static string AssemblyVersion;
 
 		public static HttpClient HttpClient;
@@ -39,12 +41,17 @@ namespace Spludlow.MameAO
 		public static string RootDirectory;
 		public static string MameDirectory;
 
+		public static string MameVersion;
+
 		public static bool LinkingEnabled = false;
 
 		public static Dictionary<string, ArchiveOrgItem> ArchiveOrgItems = new Dictionary<string, ArchiveOrgItem>();
+		public static Dictionary<string, GitHubRepo> GitHubRepos = new Dictionary<string, GitHubRepo>();
 
 		public static HashStore RomHashStore;
 		public static HashStore DiskHashStore;
+
+		public static MameAOProcessor AO;
 
 		public static Database Database;
 		public static Sources Sources;
@@ -55,44 +62,26 @@ namespace Spludlow.MameAO
 		public static Export Export;
 		public static Genre Genre;
 		public static Samples Samples;
+		public static WebServer WebServer;
+	}
+
+	public class TaskInfo
+	{
+		public string Command = "";
+		public long BytesCurrent = 0;
+		public long BytesTotal = 0;
 	}
 
 	public class MameAOProcessor
 	{
-		public string _Version;
-
-
-
 		private Task _RunTask = null;
-
-		public class TaskInfo
-		{
-			public string Command = "";
-			public long BytesCurrent = 0;
-			public long BytesTotal = 0;
-		}
 		public TaskInfo _TaskInfo = new TaskInfo();
-
-
-
-		public WebServer _WebServer;
-
-
 
 		private string _DownloadTempDirectory;
 
-
-
-
-
-
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
-		public readonly string _ListenAddress = "http://localhost:12380/";
-
 		private readonly string _BinariesDownloadUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
-
-		public dynamic _MameAoLatest;
 
 		private IntPtr _ConsoleHandle;
 
@@ -122,7 +111,6 @@ namespace Spludlow.MameAO
 		[DllImport("user32.dll", EntryPoint = "FindWindow", SetLastError = true)]
 		static extern IntPtr FindWindowByCaption(IntPtr zeroOnly, string lpWindowName);
 
-
 		public MameAOProcessor()
 		{
 		}
@@ -140,8 +128,6 @@ namespace Spludlow.MameAO
 			}
 		}
 
-
-
 		public void BringToFront()
 		{
 			if (_ConsoleHandle == IntPtr.Zero)
@@ -158,6 +144,8 @@ namespace Spludlow.MameAO
 
 			Console.Write(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
 			Tools.ConsoleHeading(1, "Initializing");
+
+			Globals.AO = this;
 
 			//
 			// Symbolic Links check
@@ -200,22 +188,35 @@ namespace Spludlow.MameAO
 				string key = $"mame-sl-chd-{softwareList}";
 				Globals.ArchiveOrgItems.Add(key, new ArchiveOrgItem(key, null));
 			}
-			Globals.ArchiveOrgItems.Add("mame-software-list-chds-2", new ArchiveOrgItem("mame-software-list-chds-2", "mame-sl/"));
+			Globals.ArchiveOrgItems.Add("mame-software-list-chds-2", new ArchiveOrgItem("mame-software-list-chds-2", null));
 
-			// Samples & Artwork
+			// Artwork & Samples
 			Globals.ArchiveOrgItems.Add("mame-support", new ArchiveOrgItem("mame-support", "Support/"));
 
+			//
+			// GitHub Repos
+			//
 
+			Globals.GitHubRepos.Add("sam-ludlow/mame-ao", new GitHubRepo("sam-ludlow", "mame-ao"));
+
+			Globals.GitHubRepos.Add("mamedev/mame", new GitHubRepo("mamedev", "mame"));
+
+			Globals.GitHubRepos.Add("AntoPISA/MAME_Dats", new GitHubRepo("AntoPISA", "MAME_Dats"));
+			//	https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/MAME_dat/MAME_Samples.dat
+			//	Hopfully will get Artwork soon?	<driver  requiresartwork="yes"/>
+
+			Globals.GitHubRepos.Add("AntoPISA/MAME_SnapTitles", new GitHubRepo("AntoPISA", "MAME_SnapTitles"));
+			//	https://raw.githubusercontent.com/AntoPISA/MAME_SnapTitles/main/snap/005.png
+
+			Globals.GitHubRepos.Add("AntoPISA/MAME_SupportFiles", new GitHubRepo("AntoPISA", "MAME_SupportFiles"));
+			//	https://raw.githubusercontent.com/AntoPISA/MAME_SupportFiles/main/catver.ini/catver.ini
 
 
 			//
 			// Prepare sources
 			//
 
-			string metaDataDirectory = Path.Combine(Globals.RootDirectory, "_METADATA");
-			Directory.CreateDirectory(metaDataDirectory);
-
-			Globals.Sources = new Sources(metaDataDirectory, Globals.HttpClient);
+			Globals.Sources = new Sources();
 
 			foreach (Sources.MameSetType setType in Enum.GetValues(typeof(Sources.MameSetType)))
 			{
@@ -229,13 +230,13 @@ namespace Spludlow.MameAO
 
 						if (setType == Sources.MameSetType.MachineRom)
 						{
-							_Version = sourceSet.Version;
+							Globals.MameVersion = sourceSet.Version;
 
-							Globals.MameDirectory = Path.Combine(Globals.RootDirectory, _Version);
+							Globals.MameDirectory = Path.Combine(Globals.RootDirectory, Globals.MameVersion);
 
 							if (Directory.Exists(Globals.MameDirectory) == false)
 							{
-								Console.WriteLine($"!!! MAME Version Bump: {_Version}");
+								Console.WriteLine($"!!! MAME Version Bump: {Globals.MameVersion}");
 								Directory.CreateDirectory(Globals.MameDirectory);
 							}
 						}
@@ -243,8 +244,8 @@ namespace Spludlow.MameAO
 						{
 							if (setType != Sources.MameSetType.SoftwareDisk)    //	Source not kept up to date, like others (pot luck)
 							{
-								if (_Version != sourceSet.Version)
-									Console.WriteLine($"!!! {setType} on archive.org version mismatch, expected:{_Version} got:{sourceSet.Version}. You may have problems.");
+								if (Globals.MameVersion != sourceSet.Version)
+									Console.WriteLine($"!!! {setType} on archive.org version mismatch, expected:{Globals.MameVersion} got:{sourceSet.Version}. You may have problems.");
 							}
 						}
 					}
@@ -269,7 +270,7 @@ namespace Spludlow.MameAO
 			// MAME Binaries
 			//
 
-			string binUrl = _BinariesDownloadUrl.Replace("@VERSION@", _Version);
+			string binUrl = _BinariesDownloadUrl.Replace("@VERSION@", Globals.MameVersion);
 
 			Tools.ConsoleHeading(2, new string[] {
 				"MAME",
@@ -282,7 +283,7 @@ namespace Spludlow.MameAO
 
 			if (Directory.Exists(Globals.MameDirectory) == false)
 			{
-				Console.WriteLine($"New MAME version: {_Version}");
+				Console.WriteLine($"New MAME version: {Globals.MameVersion}");
 				Directory.CreateDirectory(Globals.MameDirectory);
 			}
 
@@ -389,18 +390,12 @@ namespace Spludlow.MameAO
 			// New version Check
 			//
 
-			_MameAoLatest = JsonConvert.DeserializeObject<dynamic>(Tools.Query(Globals.HttpClient, "https://api.github.com/repos/sam-ludlow/mame-ao/releases/latest"));
-
-			if (_MameAoLatest.assets.Count != 1)
-				throw new ApplicationException("Expected one github release asset." + _MameAoLatest.assets.Count);
-
-			string latestName = Path.GetFileNameWithoutExtension((string)_MameAoLatest.assets[0].name);
-			string currentName = $"mame-ao-{Globals.AssemblyVersion}";
-			if (latestName != currentName)
+			string tag_name = Globals.GitHubRepos["sam-ludlow/mame-ao"].tag_name;
+			if (Globals.AssemblyVersion != tag_name)
 				Tools.ConsoleHeading(1, new string[] {
 					"New MAME-AO version available",
 					"",
-					$"{currentName} => {latestName}",
+					$"{Globals.AssemblyVersion} => {tag_name}",
 					"",
 					"Automatically update with shell command \".up\".",
 				});
@@ -410,25 +405,25 @@ namespace Spludlow.MameAO
 
 		public void Shell()
 		{
-			_WebServer = new WebServer(this);
-			_WebServer.StartListener();
+			Globals.WebServer = new WebServer();
+			Globals.WebServer.StartListener();
 
 			Tools.ConsoleHeading(1, new string[] {
 				"Remote Listener ready for commands",
-				_ListenAddress,
-				$"e.g. {_ListenAddress}api/command?line=a2600 et -window"
+				Globals.ListenAddress,
+				$"e.g. {Globals.ListenAddress}api/command?line=a2600 et -window"
 
 			});
 			Console.WriteLine("");
 
-			Process.Start(_ListenAddress);
+			Process.Start(Globals.ListenAddress);
 
 			Tools.ConsoleHeading(1, "Shell ready for commands");
 			Console.WriteLine("");
 
 			while (true)
 			{
-				Console.Write($"MAME Shell ({_Version})> ");
+				Console.Write($"MAME Shell ({Globals.MameVersion})> ");
 				string line = Console.ReadLine();
 				line = line.Trim();
 
@@ -636,11 +631,11 @@ namespace Spludlow.MameAO
 						return;
 
 					case ".ui":
-						Process.Start(_ListenAddress);
+						Process.Start(Globals.ListenAddress);
 						return;
 
 					case ".r":
-						_WebServer.RefreshAssets();
+						Globals.WebServer.RefreshAssets();
 						return;
 
 					case ".readme":
@@ -671,7 +666,7 @@ namespace Spludlow.MameAO
 						return;
 
 					case ".what":
-						Process.Start(_ListenAddress + "api/what");
+						Process.Start(Globals.ListenAddress + "api/what");
 						return;
 
 					default:
@@ -787,25 +782,25 @@ namespace Spludlow.MameAO
 
 		public void Update(int startingPid)
 		{
-			string currentName = $"mame-ao-{Globals.AssemblyVersion}";
+			//string currentName = $"mame-ao-{Globals.AssemblyVersion}";
 
 			string updateDirectory = Path.Combine(Globals.RootDirectory, "_TEMP", "UPDATE");
 
 			if (startingPid <= 0)
 			{
-				string latestName = Path.GetFileNameWithoutExtension((string)_MameAoLatest.assets[0].name);
+				GitHubRepo repo = Globals.GitHubRepos["sam-ludlow/mame-ao"];
 
-				if (latestName == currentName)
+				if (repo.tag_name == Globals.AssemblyVersion)
 				{
-					Console.WriteLine($"MAME-AO is already up to date '{currentName}'.");
+					Console.WriteLine($"MAME-AO is already up to date '{Globals.AssemblyVersion}'.");
 					if (startingPid == 0)
 						return;
 				}
 
-				Console.WriteLine($"Updating MAME-AO '{currentName}' => '{latestName}'...");
+				Console.WriteLine($"Updating MAME-AO '{Globals.AssemblyVersion}' => '{repo.tag_name}'...");
 
-				string archiveUrl = (string)_MameAoLatest.assets[0].browser_download_url;
-				string archiveFilename = Path.Combine(Globals.RootDirectory, latestName + ".zip");
+				string archiveUrl = repo.Assets[repo.Assets.First().Key];
+				string archiveFilename = Path.Combine(Globals.RootDirectory, $"mame-ao-{repo.tag_name}.zip");
 
 				Tools.Download(archiveUrl, archiveFilename, 0, 5);
 
@@ -852,7 +847,7 @@ namespace Spludlow.MameAO
 			{
 				try
 				{
-					UpdateChild(currentName, updateDirectory, startingPid);
+					UpdateChild(updateDirectory, startingPid);
 				}
 				catch (Exception e)
 				{
@@ -861,9 +856,9 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public void UpdateChild(string currentName, string updateDirectory, int startingPid)
+		public void UpdateChild(string updateDirectory, int startingPid)
 		{
-			Console.WriteLine($"MAME-AO UPDATER {currentName}");
+			Console.WriteLine($"MAME-AO UPDATER {Globals.AssemblyVersion}");
 			Console.WriteLine($"Target Directory: {Globals.RootDirectory}, Update From Directory {updateDirectory}.");
 
 			Console.WriteLine("Waiting for starting process to exit...");

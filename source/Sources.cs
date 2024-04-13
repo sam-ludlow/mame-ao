@@ -154,13 +154,11 @@ vis
 vsmile_cd
 		";
 
-		private string _MetaDataDirectory;
-		private HttpClient _HttpClient;
+		private string MetaDataDirectory;
 
-		public Sources(string metaDataDirectory, HttpClient httpClient)
+		public Sources()
 		{
-			_MetaDataDirectory = metaDataDirectory;
-			_HttpClient = httpClient;
+			MetaDataDirectory = Path.Combine(Globals.RootDirectory, "_METADATA");
 
 			using (StringReader reader = new StringReader(TuffyTDogSoftwareItems))
 			{
@@ -253,7 +251,7 @@ vsmile_cd
 			if (File.Exists(metadataCacheFilename) == false || (DateTime.Now - File.GetLastWriteTime(metadataCacheFilename) > TimeSpan.FromHours(3)))
 			{
 				Console.Write($"Downloading {name} metadata JSON {metadataUrl} ...");
-				File.WriteAllText(metadataCacheFilename, Tools.PrettyJSON(Tools.Query(_HttpClient, metadataUrl)), Encoding.UTF8);
+				File.WriteAllText(metadataCacheFilename, Tools.PrettyJSON(Tools.Query(Globals.HttpClient, metadataUrl)), Encoding.UTF8);
 				Console.WriteLine("...done.");
 			}
 
@@ -266,7 +264,7 @@ vsmile_cd
 
 		private Dictionary<string, SourceFileInfo> AvailableFilesInMetadata(MameSourceSet sourceSet, string find)
 		{
-			string metadataFilename = Path.Combine(_MetaDataDirectory, $"{sourceSet.SetType}_{Path.GetFileName(sourceSet.MetadataUrl)}.json");
+			string metadataFilename = Path.Combine(MetaDataDirectory, $"{sourceSet.SetType}_{Path.GetFileName(sourceSet.MetadataUrl)}.json");
 
 			dynamic metadata = GetArchiveOrgMetaData(sourceSet.SetType.ToString(), sourceSet.MetadataUrl, metadataFilename);
 

@@ -272,7 +272,7 @@ namespace Spludlow.MameAO
 					result = Query(Globals.HttpClient, url);
 					Console.WriteLine("...done");
 
-					if (result.StartsWith("{") == true)
+					if (result.StartsWith("{") == true || result.StartsWith("[") == true)
 						result = PrettyJSON(result);
 				}
 				catch (TaskCanceledException e)
@@ -329,7 +329,7 @@ namespace Spludlow.MameAO
 			return Download(url, filename, progressSize, timeoutMinutes, null);
 		}
 
-		public static long Download(string url, string filename, long progressSize, int timeoutMinutes, MameAOProcessor.TaskInfo taskInfo)
+		public static long Download(string url, string filename, long progressSize, int timeoutMinutes, TaskInfo taskInfo)
 		{
 			long total = 0;
 			byte[] buffer = new byte[64 * 1024];

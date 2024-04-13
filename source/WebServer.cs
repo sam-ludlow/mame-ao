@@ -14,7 +14,6 @@ namespace Spludlow.MameAO
 {
 	public class WebServer
 	{
-		private MameAOProcessor _AO;
 
 		private string _UIHTML;
 
@@ -42,10 +41,8 @@ namespace Spludlow.MameAO
 			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 		");
 
-		public WebServer(MameAOProcessor ao)
+		public WebServer()
 		{
-			_AO = ao;
-
 			RefreshAssets();
 		}
 
@@ -63,7 +60,7 @@ namespace Spludlow.MameAO
 			}
 
 			HttpListener listener = new HttpListener();
-			listener.Prefixes.Add(_AO._ListenAddress);
+			listener.Prefixes.Add(Globals.ListenAddress);
 			listener.Start();
 
 			Task listenTask = new Task(() => {
@@ -177,7 +174,7 @@ namespace Spludlow.MameAO
 				});
 				Console.WriteLine();
 
-				bool started = _AO.RunLineTask(line);
+				bool started = Globals.AO.RunLineTask(line);
 
 				if (started == false)
 					throw new ApplicationException("I'm busy.");
@@ -197,7 +194,7 @@ namespace Spludlow.MameAO
 			});
 			Console.WriteLine();
 
-			bool started = _AO.RunLineTask(".up");
+			bool started = Globals.AO.RunLineTask(".up");
 
 			writer.WriteLine(started == true ?
 				"<html>Please wait, MAME-AO update has started.<br/><br/>Check the console to see what it's doing.<br/><br/>" +
@@ -398,20 +395,22 @@ namespace Spludlow.MameAO
 
 		public void _api_info(HttpListenerContext context, StreamWriter writer)
 		{
+			GitHubRepo repo = Globals.GitHubRepos["sam-ludlow/mame-ao"];
+
 			dynamic json = new JObject();
 
 			json.time = DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture);
 			json.version = Globals.AssemblyVersion;
-			json.mame_version = _AO._Version;
+			json.mame_version = Globals.MameVersion;
 			json.directory = Globals.RootDirectory;
 			json.rom_store_count = Globals.RomHashStore.Length;
 			json.disk_store_count = Globals.DiskHashStore.Length;
 			json.genre_version = Globals.Genre.Data != null ? Globals.Genre.Version : "";
 			json.linking_enabled = Globals.LinkingEnabled;
 
-			json.latest = _AO._MameAoLatest;
+			json.latest = repo.tag_name;
 
-			json.version_name_available = Path.GetFileNameWithoutExtension((string)_AO._MameAoLatest.assets[0].name);
+			json.version_name_available = $"mame-ao-{repo.tag_name}";
 			json.version_name_current = $"mame-ao-{Globals.AssemblyVersion}";
 
 			dynamic sources = new JArray();
@@ -446,13 +445,13 @@ namespace Spludlow.MameAO
 			dynamic json = new JObject();
 
 		
-			lock (_AO._TaskInfo)
+			lock (Globals.AO._TaskInfo)
 			{
-				json.busy = _AO._TaskInfo.Command != "";
-				json.command = _AO._TaskInfo.Command;
+				json.busy = Globals.AO._TaskInfo.Command != "";
+				json.command = Globals.AO._TaskInfo.Command;
 
-				json.bytesCurrent = _AO._TaskInfo.BytesCurrent;
-				json.bytesTotal = _AO._TaskInfo.BytesTotal;
+				json.bytesCurrent = Globals.AO._TaskInfo.BytesCurrent;
+				json.bytesTotal = Globals.AO._TaskInfo.BytesTotal;
 			}
 
 			writer.WriteLine(json.ToString(Formatting.Indented));
