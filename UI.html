@@ -494,7 +494,7 @@
 
 			Object.keys(_info).forEach((key) => {
 
-				if (key === 'latest' || key === 'sources')
+				if (key === 'latest' || key === 'sources' || key === 'items')
 					return;
 
 				infoData.push({ key: key, value: _info[key] });
@@ -553,6 +553,48 @@
 
 					case 'details':
 					case 'metadata':
+						cell.innerHTML = `<a href="${value}" target="_blank">${value}</a>`;
+						break;
+				}
+			});
+
+			canvas.appendChild(table);
+
+			// Items
+
+			div = document.createElement('div');
+			div.innerHTML = '<hr /><h2>Archive.org Items</h2>';
+			canvas.appendChild(div);
+
+			columnDefs = [
+				{ heading: 'Key', columnName: 'key' },
+				{ heading: 'Status', columnName: 'status' },
+				{ heading: 'Version', columnName: 'version' },
+				{ heading: 'Title', columnName: 'title' },
+				{ heading: 'File Count', columnName: 'file_count' },
+				{ heading: 'Last Updated', columnName: 'item_last_updated' },
+				{ heading: 'Details URL', columnName: 'url_details' },
+				{ heading: 'Metadata URL', columnName: 'url_metadata' },
+				{ heading: 'Download URL', columnName: 'url_download' },
+				{ heading: 'sub_directory', columnName: 'sub_directory' },
+			];
+
+			table = document.createElement('table');
+
+			buildTable(columnDefs, _info.items, table, (columnDef, result, resultIndex, row, cell) => {
+
+				const value = result[columnDef.columnName];
+
+				if (value === undefined)
+					return;
+
+				cell.innerHTML = value;
+
+				switch (columnDef.columnName) {
+
+					case 'url_details':
+					case 'url_metadata':
+					case 'url_download':
 						cell.innerHTML = `<a href="${value}" target="_blank">${value}</a>`;
 						break;
 				}

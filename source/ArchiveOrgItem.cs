@@ -26,10 +26,10 @@ namespace Spludlow.MameAO
 
 	public class ArchiveOrgItem
 	{
-		private string Key;
-		private string SubDirectory;
+		public string Key;
+		public string SubDirectory;
 
-		private Dictionary<string, ArchiveOrgFile> Files = null;
+		public Dictionary<string, ArchiveOrgFile> Files = null;
 
 		public string UrlDetails;
 		public string UrlMetadata;
@@ -37,6 +37,9 @@ namespace Spludlow.MameAO
 
 		public string Title;
 		public DateTime ItemLastUpdated;
+
+		public string Version = "";
+		public string Status = "";
 
 		private List<string> AcceptedExtentions = new List<string>(new string[] { ".zip", ".chd" });
 
@@ -54,6 +57,9 @@ namespace Spludlow.MameAO
 		{
 			if (Files == null)
 				Initialize();
+
+			if (name == null)
+				return null;
 
 			if (Files.ContainsKey(name) == false)
 				return null;
@@ -98,6 +104,8 @@ namespace Spludlow.MameAO
 					Files.Add(name, new ArchiveOrgFile(file));
 				}
 			}
+
+			Status = "ok";
 		}
 
 	}

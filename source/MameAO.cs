@@ -12,8 +12,6 @@ using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Threading;
 
-using Newtonsoft.Json;
-
 namespace Spludlow.MameAO
 {
 	public static class Globals
@@ -170,16 +168,24 @@ namespace Spludlow.MameAO
 			//
 			// Archive.Org Items
 			//
+			ArchiveOrgItem archiveOrgItem;
 
 			// Machine ROM
-			Globals.ArchiveOrgItems.Add("mame-merged", new ArchiveOrgItem("mame-merged", "mame-merged/"));
+			Globals.ArchiveOrgItems.Add("mame-merged", archiveOrgItem = new ArchiveOrgItem("mame-merged", "mame-merged/"));
+			archiveOrgItem.GetFile(null);
+			archiveOrgItem.Version = archiveOrgItem.Title.Substring(5, 5);
 
 			// Machine Disk
-			Globals.ArchiveOrgItems.Add("MAME_0.225_CHDs_merged", new ArchiveOrgItem("MAME_0.225_CHDs_merged", null));
+			Globals.ArchiveOrgItems.Add("MAME_0.225_CHDs_merged", archiveOrgItem = new ArchiveOrgItem("MAME_0.225_CHDs_merged", null));
+			archiveOrgItem.GetFile(null);
+			archiveOrgItem.Version = archiveOrgItem.Title.Substring(5, 5);
+
 			Globals.ArchiveOrgItems.Add("mame-chds-roms-extras-complete", new ArchiveOrgItem("mame-chds-roms-extras-complete", null));
 
 			// Software ROM
-			Globals.ArchiveOrgItems.Add("mame-sl", new ArchiveOrgItem("mame-sl", "mame-sl/"));
+			Globals.ArchiveOrgItems.Add("mame-sl", archiveOrgItem = new ArchiveOrgItem("mame-sl", "mame-sl/"));
+			archiveOrgItem.GetFile(null);
+			archiveOrgItem.Version = archiveOrgItem.Title.Substring(8, 5);
 
 			// Software DISK
 			string[] tuffyTDogSoftwareLists = new string[] { "3do_m2", "abc1600_hdd", "abc800_hdd", "amiga_hdd", "amiga_workbench", "archimedes_hdd", "bbc_hdd", "cd32", "cdi", "cdtv", "dc", "fmtowns_cd", "gtfore", "hp9k3xx_cdrom", "hp9k3xx_hdd", "hyperscan", "ibm5150_hdd", "ibm5170_cdrom", "ibm5170_hdd", "interpro", "jazz", "kpython2", "mac_cdrom", "mac_hdd", "megacd", "megacdj", "mtx_hdd", "neocd", "next_cdrom", "next_hdd", "nuon", "pc1512_hdd", "pc1640_hdd", "pc8801_cdrom", "pc98_cd", "pcecd", "pcfx", "pet_hdd", "pico", "pippin", "psx", "saturn", "segacd", "sgi_mips", "sgi_mips_hdd", "snes_vkun", "softbox", "v1050_hdd", "vis", "vsmile_cd" };
@@ -192,6 +198,9 @@ namespace Spludlow.MameAO
 
 			// Artwork & Samples
 			Globals.ArchiveOrgItems.Add("mame-support", new ArchiveOrgItem("mame-support", "Support/"));
+
+
+
 
 			//
 			// GitHub Repos

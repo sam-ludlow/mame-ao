@@ -437,6 +437,38 @@ namespace Spludlow.MameAO
 
 			json.sources = sources;
 
+			dynamic items = new JArray();
+
+			foreach (string key in Globals.ArchiveOrgItems.Keys)
+			{
+				ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[key];
+				dynamic item = new JObject();
+
+				item.key = sourceItem.Key;
+
+				item.status = sourceItem.Status;
+				item.version = sourceItem.Version;
+
+				item.sub_directory = sourceItem.SubDirectory;
+
+				item.url_details = sourceItem.UrlDetails;
+				item.url_metadata = sourceItem.UrlMetadata;
+				item.url_download = sourceItem.UrlDownload;
+
+				if (sourceItem.Files != null)
+				{
+					item.title = sourceItem.Title;
+					item.file_count = sourceItem.Files.Count;
+					item.item_last_updated = sourceItem.ItemLastUpdated.ToString("s");
+				}
+
+				Tools.CleanDynamic(item);
+
+				items.Add(item);
+			}
+
+			json.items = items;
+
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
