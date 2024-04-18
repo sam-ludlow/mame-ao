@@ -6,6 +6,16 @@ using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
 {
+
+	public enum ItemType
+	{
+		MachineRom,
+		MachineDisk,
+		SoftwareRom,
+		SoftwareDisk,
+		Support,
+	};
+
 	public class ArchiveOrgFile
 	{
 		private static readonly DateTime EpochDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
@@ -27,6 +37,7 @@ namespace Spludlow.MameAO
 	public class ArchiveOrgItem
 	{
 		public string Key;
+
 		public string SubDirectory;
 
 		public Dictionary<string, ArchiveOrgFile> Files = null;
@@ -38,15 +49,18 @@ namespace Spludlow.MameAO
 		public string Title;
 		public DateTime ItemLastUpdated;
 
+		public int[] TitleVersionSubString = null;
+
 		public string Version = "";
 		public string Status = "";
 
 		private List<string> AcceptedExtentions = new List<string>(new string[] { ".zip", ".chd" });
 
-		public ArchiveOrgItem(string key, string subDirectory)
+		public ArchiveOrgItem(string key, string subDirectory, int[] titleVersionSubString)
 		{
 			Key = key;
 			SubDirectory = subDirectory;
+			TitleVersionSubString = titleVersionSubString;
 
 			UrlDetails = $"https://archive.org/details/{Key}";
 			UrlMetadata = $"https://archive.org/metadata/{Key}";
@@ -67,9 +81,14 @@ namespace Spludlow.MameAO
 			return Files[name];
 		}
 
+		public string DownloadLink(ArchiveOrgFile file)
+		{
+			return $"{UrlDownload}/{file.name}";
+		}
+
 		private void Initialize()
 		{
-			Files = new Dictionary<string, ArchiveOrgFile>();
+			Files = new Dictionary<string, ArchiveOrgFile>();	//	don't retry ?
 
 			string cacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "archive.org");
 			Directory.CreateDirectory(cacheDirectory);
@@ -80,6 +99,7 @@ namespace Spludlow.MameAO
 
 			if (json == null || json == "{}")
 			{
+				Status = "bad";
 				Console.WriteLine($"WARNING archive.org item not available: {Key}");
 				return;
 			}
@@ -88,6 +108,9 @@ namespace Spludlow.MameAO
 
 			Title = (string)metadata.metadata.title;
 			ItemLastUpdated = Tools.FromEpochDate((double)metadata.item_last_updated);
+
+			if (TitleVersionSubString != null)
+				Version = Title.Substring(TitleVersionSubString[0], TitleVersionSubString[1]);
 
 			foreach (dynamic file in metadata.files)
 			{

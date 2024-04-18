@@ -13,7 +13,6 @@ using System.Drawing;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Xml.Linq;
 
 namespace Spludlow.MameAO
 {

@@ -115,6 +115,27 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 		}
 
+		public static string LatestLocal()
+		{
+			List<string> versions = new List<string>();
+
+			foreach (string versionDirectory in Directory.GetDirectories(Globals.RootDirectory))
+			{
+				string version = Path.GetFileName(versionDirectory);
+				string exeFilename = Path.Combine(versionDirectory, "mame.exe");
+
+				if (File.Exists(exeFilename) == true)
+					versions.Add(version);
+			}
+
+			if (versions.Count == 0)
+				return null;
+
+			versions.Sort();
+
+			return versions[versions.Count - 1];
+		}
+
 		public static DataTable ListSavedState(string rootDirectory, Database database)
 		{
 			DataTable table = new DataTable();

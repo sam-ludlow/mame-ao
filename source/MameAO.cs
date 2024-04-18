@@ -43,7 +43,7 @@ namespace Spludlow.MameAO
 
 		public static bool LinkingEnabled = false;
 
-		public static Dictionary<string, ArchiveOrgItem> ArchiveOrgItems = new Dictionary<string, ArchiveOrgItem>();
+		public static Dictionary<ItemType, ArchiveOrgItem[]> ArchiveOrgItems = new Dictionary<ItemType, ArchiveOrgItem[]>();
 		public static Dictionary<string, GitHubRepo> GitHubRepos = new Dictionary<string, GitHubRepo>();
 
 		public static HashStore RomHashStore;
@@ -168,39 +168,55 @@ namespace Spludlow.MameAO
 			//
 			// Archive.Org Items
 			//
-			ArchiveOrgItem archiveOrgItem;
 
 			// Machine ROM
-			Globals.ArchiveOrgItems.Add("mame-merged", archiveOrgItem = new ArchiveOrgItem("mame-merged", "mame-merged/"));
-			archiveOrgItem.GetFile(null);
-			archiveOrgItem.Version = archiveOrgItem.Title.Substring(5, 5);
+			Globals.ArchiveOrgItems.Add(ItemType.MachineRom, new ArchiveOrgItem[] {
+				new ArchiveOrgItem("mame-merged", "mame-merged/", new int[] { 5, 5 }),
+			});
 
-			// Machine Disk
-			Globals.ArchiveOrgItems.Add("MAME_0.225_CHDs_merged", archiveOrgItem = new ArchiveOrgItem("MAME_0.225_CHDs_merged", null));
-			archiveOrgItem.GetFile(null);
-			archiveOrgItem.Version = archiveOrgItem.Title.Substring(5, 5);
-
-			Globals.ArchiveOrgItems.Add("mame-chds-roms-extras-complete", new ArchiveOrgItem("mame-chds-roms-extras-complete", null));
+			// Machine DISK
+			Globals.ArchiveOrgItems.Add(ItemType.MachineDisk, new ArchiveOrgItem[] {
+				new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, new int[] { 5, 5 }),
+				new ArchiveOrgItem("mame-chds-roms-extras-complete", null, new int[] { 5, 5 }),
+			});
 
 			// Software ROM
-			Globals.ArchiveOrgItems.Add("mame-sl", archiveOrgItem = new ArchiveOrgItem("mame-sl", "mame-sl/"));
-			archiveOrgItem.GetFile(null);
-			archiveOrgItem.Version = archiveOrgItem.Title.Substring(8, 5);
+			Globals.ArchiveOrgItems.Add(ItemType.SoftwareRom, new ArchiveOrgItem[] {
+				new ArchiveOrgItem("mame-sl", "mame-sl/", new int[] { 8, 5 }),
+			});
 
 			// Software DISK
+			List<ArchiveOrgItem> items = new List<ArchiveOrgItem>();
 			string[] tuffyTDogSoftwareLists = new string[] { "3do_m2", "abc1600_hdd", "abc800_hdd", "amiga_hdd", "amiga_workbench", "archimedes_hdd", "bbc_hdd", "cd32", "cdi", "cdtv", "dc", "fmtowns_cd", "gtfore", "hp9k3xx_cdrom", "hp9k3xx_hdd", "hyperscan", "ibm5150_hdd", "ibm5170_cdrom", "ibm5170_hdd", "interpro", "jazz", "kpython2", "mac_cdrom", "mac_hdd", "megacd", "megacdj", "mtx_hdd", "neocd", "next_cdrom", "next_hdd", "nuon", "pc1512_hdd", "pc1640_hdd", "pc8801_cdrom", "pc98_cd", "pcecd", "pcfx", "pet_hdd", "pico", "pippin", "psx", "saturn", "segacd", "sgi_mips", "sgi_mips_hdd", "snes_vkun", "softbox", "v1050_hdd", "vis", "vsmile_cd" };
 			foreach (string softwareList in tuffyTDogSoftwareLists)
 			{
 				string key = $"mame-sl-chd-{softwareList}";
-				Globals.ArchiveOrgItems.Add(key, new ArchiveOrgItem(key, null));
+				items.Add(new ArchiveOrgItem(key, null, null));
 			}
-			Globals.ArchiveOrgItems.Add("mame-software-list-chds-2", new ArchiveOrgItem("mame-software-list-chds-2", null));
+			items.Add(new ArchiveOrgItem("mame-software-list-chds-2", null, null));
 
-			// Artwork & Samples
-			Globals.ArchiveOrgItems.Add("mame-support", new ArchiveOrgItem("mame-support", "Support/"));
+			Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, items.ToArray());
+
+			// Support (Artwork & Samples)
+			Globals.ArchiveOrgItems.Add(ItemType.Support, new ArchiveOrgItem[] {
+				new ArchiveOrgItem("mame-support", "Support/", null),
+			});
 
 
 
+			ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
+			item.GetFile(null);
+			Globals.MameVersion = item.Version;
+
+			if (Globals.MameVersion == null)
+				Globals.MameVersion = Mame.LatestLocal();
+
+			if (Globals.MameVersion == null)
+				throw new ApplicationException("Unable to determine MAME Version.");
+
+			Globals.MameVersion = Globals.MameVersion.Replace(".", "");
+
+			Console.WriteLine($"MameVersion: {Globals.MameVersion}");
 
 			//
 			// GitHub Repos
@@ -1091,7 +1107,8 @@ namespace Spludlow.MameAO
 
 		private int GetRomsMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			Sources.MameSourceSet soureSet = Globals.Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
+			//Sources.MameSourceSet soureSet = Globals.Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
+			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
 
 			//
 			// Related/Required machines (parent/bios/devices)
@@ -1141,15 +1158,9 @@ namespace Spludlow.MameAO
 				//
 				if (missingRoms.Count > 0)
 				{
-					if (soureSet.AvailableDownloadFileInfos.ContainsKey(requiredMachineName) == true)
-					{
-						string downloadMachineUrl = soureSet.DownloadUrl;
-						downloadMachineUrl = downloadMachineUrl.Replace("@MACHINE@", requiredMachineName);
-
-						long size = soureSet.AvailableDownloadFileInfos[requiredMachineName].size;
-
-						ImportRoms(downloadMachineUrl, $"machine rom: '{requiredMachineName}'", size, missingRoms.ToArray());
-					}
+					ArchiveOrgFile file = sourceItem.GetFile(requiredMachineName);
+					if (file != null)
+						ImportRoms(sourceItem.DownloadLink(file), $"machine rom: '{requiredMachineName}'", file.size, missingRoms.ToArray());
 				}
 			}
 
