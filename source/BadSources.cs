@@ -15,14 +15,14 @@ namespace Spludlow.MameAO
 				File.WriteAllText(_DataFilename, "", Encoding.UTF8);
 		}
 
-		public bool AlreadyDownloaded(Sources.SourceFileInfo sourceFileInfo)
+		public bool AlreadyDownloaded(ArchiveOrgFile sourceFileInfo)
 		{
 			string data = File.ReadAllText(_DataFilename, Encoding.UTF8);
 
 			return data.IndexOf(sourceFileInfo.sha1) != -1;
 		}
 
-		public void ReportSourceFile(Sources.SourceFileInfo sourceFileInfo, string extectedSHA1, string actualSHA1)
+		public void ReportSourceFile(ArchiveOrgFile sourceFileInfo, string extectedSHA1, string actualSHA1)
 		{
 			string line = $"{sourceFileInfo.sha1}\t{DateTime.Now.ToString("s")}\t{sourceFileInfo.size}\t{sourceFileInfo.mtime.ToString("s")}\t{extectedSHA1}\t{actualSHA1}\t{sourceFileInfo.name}{Environment.NewLine}";
 

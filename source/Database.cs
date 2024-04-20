@@ -46,8 +46,8 @@ namespace Spludlow.MameAO
 			},
 			new DataQueryProfile(){
 				Key = "computer-console-good",
-				Text = "Compters & Consoles Good",
-				Decription = "Compters & Consoles with software - status good - Parents only",
+				Text = "Computers & Consoles Good",
+				Decription = "Computers & Consoles with software - status good - Parents only",
 				CommandText =
 					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
@@ -57,8 +57,8 @@ namespace Spludlow.MameAO
 			},
 			new DataQueryProfile(){
 				Key = "computer-console-imperfect",
-				Text = "Compters & Consoles Imperfect",
-				Decription = "Compters & Consoles with software - status imperfect - Parents only",
+				Text = "Computers & Consoles Imperfect",
+				Decription = "Computers & Consoles with software - status imperfect - Parents only",
 				CommandText =
 					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
 					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +

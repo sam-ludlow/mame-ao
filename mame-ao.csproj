@@ -72,7 +72,6 @@
     <Compile Include="source\ReadXML.cs" />
     <Compile Include="source\Reports.cs" />
     <Compile Include="source\Samples.cs" />
-    <Compile Include="source\Sources.cs" />
     <Compile Include="source\Tools.cs" />
     <Compile Include="source\WebServer.cs" />
   </ItemGroup>

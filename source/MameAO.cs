@@ -52,7 +52,6 @@ namespace Spludlow.MameAO
 		public static MameAOProcessor AO;
 
 		public static Database Database;
-		public static Sources Sources;
 		public static Reports Reports;
 		public static MameChdMan MameChdMan;
 		public static BadSources BadSources;
@@ -171,18 +170,18 @@ namespace Spludlow.MameAO
 
 			// Machine ROM
 			Globals.ArchiveOrgItems.Add(ItemType.MachineRom, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("mame-merged", "mame-merged/", new int[] { 5, 5 }),
+				new ArchiveOrgItem("mame-merged", "mame-merged/", null, new int[] { 5, 5 }),
 			});
 
 			// Machine DISK
 			Globals.ArchiveOrgItems.Add(ItemType.MachineDisk, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, new int[] { 5, 5 }),
-				new ArchiveOrgItem("mame-chds-roms-extras-complete", null, new int[] { 5, 5 }),
+				new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, null, new int[] { 5, 5 }),
+				new ArchiveOrgItem("mame-chds-roms-extras-complete", null, null, new int[] { 5, 5 }),
 			});
 
 			// Software ROM
 			Globals.ArchiveOrgItems.Add(ItemType.SoftwareRom, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("mame-sl", "mame-sl/", new int[] { 8, 5 }),
+				new ArchiveOrgItem("mame-sl", "mame-sl/", null, new int[] { 8, 5 }),
 			});
 
 			// Software DISK
@@ -191,18 +190,20 @@ namespace Spludlow.MameAO
 			foreach (string softwareList in tuffyTDogSoftwareLists)
 			{
 				string key = $"mame-sl-chd-{softwareList}";
-				items.Add(new ArchiveOrgItem(key, null, null));
+				items.Add(new ArchiveOrgItem(key, null, softwareList, null));
 			}
-			items.Add(new ArchiveOrgItem("mame-software-list-chds-2", null, null));
+			items.Add(new ArchiveOrgItem("mame-software-list-chds-2", null, "*", null));
 
 			Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, items.ToArray());
 
 			// Support (Artwork & Samples)
 			Globals.ArchiveOrgItems.Add(ItemType.Support, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("mame-support", "Support/", null),
+				new ArchiveOrgItem("mame-support", "Support/", null, null),
 			});
 
-
+			//
+			// Determine MAME version
+			//
 
 			ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
 			item.GetFile(null);
@@ -215,6 +216,14 @@ namespace Spludlow.MameAO
 				throw new ApplicationException("Unable to determine MAME Version.");
 
 			Globals.MameVersion = Globals.MameVersion.Replace(".", "");
+
+			Globals.MameDirectory = Path.Combine(Globals.RootDirectory, Globals.MameVersion);
+
+			if (Directory.Exists(Globals.MameDirectory) == false)
+			{
+				Console.WriteLine($"!!! MAME Version Bump: {Globals.MameVersion}");
+				Directory.CreateDirectory(Globals.MameDirectory);
+			}
 
 			Console.WriteLine($"MameVersion: {Globals.MameVersion}");
 
@@ -236,50 +245,6 @@ namespace Spludlow.MameAO
 			Globals.GitHubRepos.Add("AntoPISA/MAME_SupportFiles", new GitHubRepo("AntoPISA", "MAME_SupportFiles"));
 			//	https://raw.githubusercontent.com/AntoPISA/MAME_SupportFiles/main/catver.ini/catver.ini
 
-
-			//
-			// Prepare sources
-			//
-
-			Globals.Sources = new Sources();
-
-			foreach (Sources.MameSetType setType in Enum.GetValues(typeof(Sources.MameSetType)))
-			{
-				Tools.ConsoleHeading(2, $"Prepare source: {setType}");
-
-				foreach (Sources.MameSourceSet sourceSet in Globals.Sources.GetSourceSets(setType))
-				{
-					try
-					{
-						Globals.Sources.LoadSourceSet(sourceSet, false);
-
-						if (setType == Sources.MameSetType.MachineRom)
-						{
-							Globals.MameVersion = sourceSet.Version;
-
-							Globals.MameDirectory = Path.Combine(Globals.RootDirectory, Globals.MameVersion);
-
-							if (Directory.Exists(Globals.MameDirectory) == false)
-							{
-								Console.WriteLine($"!!! MAME Version Bump: {Globals.MameVersion}");
-								Directory.CreateDirectory(Globals.MameDirectory);
-							}
-						}
-						else
-						{
-							if (setType != Sources.MameSetType.SoftwareDisk)    //	Source not kept up to date, like others (pot luck)
-							{
-								if (Globals.MameVersion != sourceSet.Version)
-									Console.WriteLine($"!!! {setType} on archive.org version mismatch, expected:{Globals.MameVersion} got:{sourceSet.Version}. You may have problems.");
-							}
-						}
-					}
-					catch (Exception ee)
-					{
-						Tools.ReportError(ee, $"Error in source, you will have problems downloading new things from {setType}.", false);
-					}
-				}
-			}
 
 			//
 			// Bits & Bobs
@@ -1107,8 +1072,7 @@ namespace Spludlow.MameAO
 
 		private int GetRomsMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			//Sources.MameSourceSet soureSet = Globals.Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
-			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
+			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineRom][0];	//	TODO: Support many
 
 			//
 			// Related/Required machines (parent/bios/devices)
@@ -1206,7 +1170,7 @@ namespace Spludlow.MameAO
 			return missingCount;
 		}
 
-		public static Sources.SourceFileInfo MachineDiskAvailableSourceFile(DataRow machineRow, DataRow diskRow, Sources.MameSourceSet soureSet, Database database)
+		public static ArchiveOrgFile MachineDiskAvailableSourceFile(DataRow machineRow, DataRow diskRow, ArchiveOrgItem sourceItem, Database database)
 		{
 			string machineName = Tools.DataRowValue(machineRow, "name");
 
@@ -1235,23 +1199,10 @@ namespace Spludlow.MameAO
 			{
 				string key = $"{availableMachineName}/{availableDiskName}";
 
-				if (soureSet.AvailableDownloadFileInfos.ContainsKey(key) == true)
-				{
-					Sources.SourceFileInfo fileInfo = soureSet.AvailableDownloadFileInfos[key];
+				ArchiveOrgFile file = sourceItem.GetFile(key);
 
-					if (fileInfo.url == null)   //	Do at init not here.
-					{
-						string diskNameEnc = Uri.EscapeDataString(availableDiskName);
-
-						string diskUrl = soureSet.DownloadUrl;
-						diskUrl = diskUrl.Replace("@MACHINE@", availableMachineName);
-						diskUrl = diskUrl.Replace("@DISK@", diskNameEnc);
-
-						fileInfo.url = diskUrl;
-					}
-
-					return fileInfo;
-				}
+				if (file != null)
+					return file;
 			}
 
 			return null;
@@ -1259,7 +1210,7 @@ namespace Spludlow.MameAO
 
 		private int GetDisksMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			Sources.MameSourceSet soureSet = Globals.Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
+			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineDisk][0]; //	TODO: Support many
 
 			DataRow machineRow = Globals.Database.GetMachine(machineName);
 			if (machineRow == null)
@@ -1306,7 +1257,7 @@ namespace Spludlow.MameAO
 					string diskName = Tools.DataRowValue(diskRow, "name");
 					string sha1 = Tools.DataRowValue(diskRow, "sha1");
 
-					Sources.SourceFileInfo sourceFile = MachineDiskAvailableSourceFile(machineRow, diskRow, soureSet, Globals.Database);
+					ArchiveOrgFile sourceFile = MachineDiskAvailableSourceFile(machineRow, diskRow, sourceItem, Globals.Database);
 
 					if (sourceFile == null)
 					{
@@ -1314,7 +1265,7 @@ namespace Spludlow.MameAO
 					}
 					else
 					{
-						ImportDisk(sourceFile.url, $"machine disk: '{sourceFile.name}'", sha1, sourceFile);
+						ImportDisk(sourceItem, sourceFile, $"machine disk: '{sourceFile.name}'");
 					}
 				}
 			}
@@ -1362,7 +1313,7 @@ namespace Spludlow.MameAO
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
 
-			Sources.MameSourceSet[] soureSets = Globals.Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk, softwareListName);
+			ArchiveOrgItem[] sourceItems = ArchiveOrgItem.GetItems(ItemType.SoftwareDisk, softwareListName);
 
 			DataRow[] disks = Globals.Database.GetSoftwareDisks(software);
 
@@ -1413,28 +1364,23 @@ namespace Spludlow.MameAO
 
 					bool imported = false;
 
-					for (int sourceIndex = 0; sourceIndex < soureSets.Length && imported == false; ++sourceIndex)
+					for (int sourceIndex = 0; sourceIndex < sourceItems.Length && imported == false; ++sourceIndex)
 					{
-						Sources.MameSourceSet sourceSet = soureSets[sourceIndex];
+						ArchiveOrgItem sourceItem = sourceItems[sourceIndex];
 
 						foreach (string downloadSoftwareName in downloadSoftwareNames)
 						{
 							string key = $"{softwareListName}/{downloadSoftwareName}/{diskName}";
 
-							if (sourceSet.ListName != null && sourceSet.ListName != "*")
+							if (sourceItem.Tag != null && sourceItem.Tag != "*")
 								key = $"{downloadSoftwareName}/{diskName}";
 
-							if (sourceSet.AvailableDownloadFileInfos.ContainsKey(key) == false)
+							ArchiveOrgFile file = sourceItem.GetFile(key);
+
+							if (file == null)
 								continue;
 
-							string nameEnc = Uri.EscapeDataString(diskName);
-
-							string url = sourceSet.DownloadUrl;
-							url = url.Replace("@LIST@", softwareListName);
-							url = url.Replace("@SOFTWARE@", downloadSoftwareName);
-							url = url.Replace("@DISK@", nameEnc);
-
-							imported = ImportDisk(url, $"software disk: '{key}'", sha1, sourceSet.AvailableDownloadFileInfos[key]);
+							imported = ImportDisk(sourceItem, file, sha1);
 						}
 					}
 
@@ -1483,7 +1429,7 @@ namespace Spludlow.MameAO
 
 		private int GetRomsSoftware(DataRow softwareList, DataRow software, List<string[]> romStoreFilenames)
 		{
-			Sources.MameSourceSet soureSet = Globals.Sources.GetSourceSets(Sources.MameSetType.SoftwareRom)[0];
+			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.SoftwareRom][0];	//	TODO: Support many
 
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
@@ -1498,7 +1444,9 @@ namespace Spludlow.MameAO
 				$"{softwareListName} / {softwareName}",
 			});
 
-			if (soureSet.AvailableDownloadFileInfos.ContainsKey(softwareListName) == false)
+			ArchiveOrgFile file = sourceItem.GetFile(softwareListName);
+
+			if (file == null)
 				throw new ApplicationException($"Software list not on archive.org {softwareListName}");
 
 			//
@@ -1535,11 +1483,11 @@ namespace Spludlow.MameAO
 				string listEnc = Uri.EscapeDataString(softwareListName);
 				string softEnc = Uri.EscapeDataString(requiredSoftwareName);
 
-				string downloadSoftwareUrl = soureSet.DownloadUrl;
+				string downloadSoftwareUrl = sourceItem.DownloadLink(file) + "/@LIST@%2f@SOFTWARE@.zip";
 				downloadSoftwareUrl = downloadSoftwareUrl.Replace("@LIST@", listEnc);
 				downloadSoftwareUrl = downloadSoftwareUrl.Replace("@SOFTWARE@", softEnc);
 
-				Dictionary<string, long> softwareSizes = GetSoftwareSizes(softwareListName, soureSet.HtmlSizesUrl, soureSet.Version);
+				Dictionary<string, long> softwareSizes = GetSoftwareSizes(softwareListName, sourceItem, file);
 
 				if (softwareSizes.ContainsKey(requiredSoftwareName) == false)
 					throw new ApplicationException($"Did GetSoftwareSize {softwareListName}, {requiredSoftwareName} ");
@@ -1584,9 +1532,9 @@ namespace Spludlow.MameAO
 			return missingCount;
 		}
 
-		private Dictionary<string, long> GetSoftwareSizes(string listName, string htmlSizesUrl, string version)
+		private Dictionary<string, long> GetSoftwareSizes(string listName, ArchiveOrgItem item, ArchiveOrgFile file)
 		{
-			string cacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "SoftwareSizes", version);
+			string cacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "SoftwareSizes", item.Version);
 
 			Directory.CreateDirectory(cacheDirectory);
 
@@ -1595,7 +1543,7 @@ namespace Spludlow.MameAO
 			string html;
 			if (File.Exists(filename) == false)
 			{
-				string url = htmlSizesUrl.Replace("@LIST@", listName);
+				string url = item.DownloadLink(file) + "/";
 				html = Tools.Query(Globals.HttpClient, url);
 				File.WriteAllText(filename, html, Encoding.UTF8);
 			}
@@ -1696,22 +1644,24 @@ namespace Spludlow.MameAO
 			return size;
 		}
 
-		private bool ImportDisk(string url, string name, string expectedSha1, Sources.SourceFileInfo sourceInfo)
+		private bool ImportDisk(ArchiveOrgItem sourceItem, ArchiveOrgFile sourceFile, string expectedSha1)
 		{
-			if (Globals.BadSources.AlreadyDownloaded(sourceInfo) == true)
+			string url = sourceItem.DownloadLink(sourceFile);
+
+			if (Globals.BadSources.AlreadyDownloaded(sourceFile) == true)
 			{
-				Console.WriteLine($"!!! Already Downloaded before and it didn't work (bad in source) chd-sha1:{expectedSha1} source-sha1: {sourceInfo.sha1}");
+				Console.WriteLine($"!!! Already Downloaded before and it didn't work (bad in source) chd-sha1:{expectedSha1} source-sha1: {sourceFile.sha1}");
 				return false;
 			}
 
-			string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(name) + ".chd");
+			string tempFilename = Path.Combine(_DownloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(sourceFile.name) + ".chd");
 
 			lock (_TaskInfo)
 			{
-				_TaskInfo.BytesTotal = sourceInfo.size;
+				_TaskInfo.BytesTotal = sourceFile.size;
 			}
 
-			Console.Write($"Downloading {name} size:{Tools.DataSize(sourceInfo.size)} url:{url} ...");
+			Console.Write($"Downloading {sourceFile.name} size:{Tools.DataSize(sourceFile.size)} url:{url} ...");
 			DateTime startTime = DateTime.Now;
 			long size = Tools.Download(url, tempFilename, _DownloadDotSize, 3 * 60, _TaskInfo);
 			TimeSpan took = DateTime.Now - startTime;
@@ -1720,15 +1670,15 @@ namespace Spludlow.MameAO
 			decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
 			Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
 
-			if (sourceInfo.size != size)
-				Console.WriteLine($"!!! Unexpected downloaded file size expect:{sourceInfo.size} actual:{size}");
+			if (sourceFile.size != size)
+				Console.WriteLine($"!!! Unexpected downloaded file size expect:{sourceFile.size} actual:{size}");
 
 			string sha1 = Globals.DiskHashStore.Hash(tempFilename);
 
 			if (sha1 != expectedSha1)
 			{
 				Console.WriteLine($"!!! Unexpected downloaded CHD SHA1. It's wrong in the source and will not work. expect:{expectedSha1} actual:{sha1}");
-				Globals.BadSources.ReportSourceFile(sourceInfo, expectedSha1, sha1);
+				Globals.BadSources.ReportSourceFile(sourceFile, expectedSha1, sha1);
 			}
 
 			if (Globals.Database._AllSHA1s.Contains(sha1) == false)
@@ -1739,7 +1689,7 @@ namespace Spludlow.MameAO
 
 			bool imported = Globals.DiskHashStore.Add(tempFilename, true, sha1);
 
-			Console.WriteLine($"Disk Store Import: {imported} {sha1} {name}");
+			Console.WriteLine($"Disk Store Import: {imported} {sha1} {sourceFile.name}");
 
 			return Globals.DiskHashStore.Exists(expectedSha1);
 		}

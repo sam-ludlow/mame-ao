@@ -519,47 +519,6 @@
 
 			canvas.appendChild(table);
 
-			// Sources
-
-			div = document.createElement('div');
-			div.innerHTML = '<hr /><h2>Archive.org Sources</h2>';
-			canvas.appendChild(div);
-
-			columnDefs = [
-				{ heading: 'Type', columnName: 'type' },
-				{ heading: 'Status', columnName: 'status' },
-				{ heading: 'SL', columnName: 'list_name' },
-				{ heading: 'Version', columnName: 'version' },
-				{ heading: 'Title', columnName: 'title' },
-				{ heading: 'File Count', columnName: 'file_count' },
-				{ heading: 'Details Link', columnName: 'details' },
-				{ heading: 'Metadata Link', columnName: 'metadata' },
-				{ heading: 'download template', columnName: 'download' },
-				{ heading: 'html sizes template', columnName: 'html_sizes' },
-			];
-
-			table = document.createElement('table');
-
-			buildTable(columnDefs, _info.sources, table, (columnDef, result, resultIndex, row, cell) => {
-
-				const value = result[columnDef.columnName];
-
-				if (value === undefined)
-					return;
-
-				cell.innerHTML = value;
-
-				switch (columnDef.columnName) {
-
-					case 'details':
-					case 'metadata':
-						cell.innerHTML = `<a href="${value}" target="_blank">${value}</a>`;
-						break;
-				}
-			});
-
-			canvas.appendChild(table);
-
 			// Items
 
 			div = document.createElement('div');
@@ -569,6 +528,7 @@
 			columnDefs = [
 				{ heading: 'Key', columnName: 'key' },
 				{ heading: 'Type', columnName: 'type' },
+				{ heading: 'Tag', columnName: 'tag' },
 				{ heading: 'Status', columnName: 'status' },
 				{ heading: 'Version', columnName: 'version' },
 				{ heading: 'Title', columnName: 'title' },
@@ -577,7 +537,7 @@
 				{ heading: 'Details URL', columnName: 'url_details' },
 				{ heading: 'Metadata URL', columnName: 'url_metadata' },
 				{ heading: 'Download URL', columnName: 'url_download' },
-				{ heading: 'sub_directory', columnName: 'sub_directory' },
+				{ heading: 'Sub Directory', columnName: 'sub_directory' },
 			];
 
 			table = document.createElement('table');

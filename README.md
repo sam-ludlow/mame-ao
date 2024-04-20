@@ -305,7 +305,7 @@ Note that many machines with software disks have preliminary status, meaning the
 
 If your looking for machines with working status you can see a list here https://mame.spludlow.co.uk/WorkingMachines/SoftwareListDisk.aspx
 
-See the sources in the source code to see what archive.org items MAME-AO is using https://github.com/sam-ludlow/mame-ao/blob/main/source/Sources.cs
+See the archive.org items being used by going to the about page when mame-ao is running http://localhost:12380/about
 
 You can run the source exists (SE) reports to see what is and isn't available.
 

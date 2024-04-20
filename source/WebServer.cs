@@ -413,30 +413,6 @@ namespace Spludlow.MameAO
 			json.version_name_available = $"mame-ao-{repo.tag_name}";
 			json.version_name_current = $"mame-ao-{Globals.AssemblyVersion}";
 
-			dynamic sources = new JArray();
-
-			foreach (Sources.MameSourceSet sourceSet in Globals.Sources.GetSourceSets())
-			{
-				dynamic source = new JObject();
-
-				source.type = sourceSet.SetType.ToString();
-				source.list_name = sourceSet.ListName;
-				source.details = sourceSet.DetailsUrl;
-				source.metadata = sourceSet.MetadataUrl;
-				source.download = sourceSet.DownloadUrl;
-				source.html_sizes = sourceSet.HtmlSizesUrl;
-				source.file_count = sourceSet.AvailableDownloadFileInfos.Count;
-				source.title = sourceSet.Title;
-				source.version = sourceSet.Version;
-				source.status = sourceSet.Status;
-
-				Tools.CleanDynamic(source);
-
-				sources.Add(source);
-			}
-
-			json.sources = sources;
-
 			dynamic items = new JArray();
 
 			foreach (ItemType itemType in Globals.ArchiveOrgItems.Keys)
@@ -452,6 +428,7 @@ namespace Spludlow.MameAO
 					item.version = sourceItem.Version;
 
 					item.sub_directory = sourceItem.SubDirectory;
+					item.tag = sourceItem.Tag;
 
 					item.url_details = sourceItem.UrlDetails;
 					item.url_metadata = sourceItem.UrlMetadata;
@@ -504,21 +481,19 @@ namespace Spludlow.MameAO
 			if (type == null)
 				throw new ApplicationException("type not passed");
 
-			Sources.MameSetType setType = (Sources.MameSetType)Enum.Parse(typeof(Sources.MameSetType), type);
+			ItemType setType = (ItemType)Enum.Parse(typeof(ItemType), type);
 
-			Sources.MameSourceSet[] sourceSets = Globals.Sources.GetSourceSets(setType);
-
+			ArchiveOrgItem[] sourceItems = Globals.ArchiveOrgItems[setType];
+			
 			JArray results = new JArray();
 
-			foreach (Sources.MameSourceSet sourceSet in sourceSets)
+			foreach (ArchiveOrgItem sourceItem in sourceItems)
 			{
 				dynamic source = new JObject();
 				
-				string listName = sourceSet.ListName;
-				if (listName != null)
-					source.list_name = sourceSet.ListName;
-				source.version = sourceSet.Version;
-				source.files = JArray.FromObject(sourceSet.AvailableDownloadFileInfos.Values);
+				source.tag = sourceItem.Tag;
+				source.version = sourceItem.Version;
+				source.files = JArray.FromObject(sourceItem.Files.Values);
 
 				results.Add(source);
 			}

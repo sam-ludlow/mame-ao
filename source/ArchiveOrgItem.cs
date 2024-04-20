@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-
+using System.Linq;
 using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
@@ -39,6 +39,7 @@ namespace Spludlow.MameAO
 		public string Key;
 
 		public string SubDirectory;
+		public string Tag;
 
 		public Dictionary<string, ArchiveOrgFile> Files = null;
 
@@ -56,10 +57,11 @@ namespace Spludlow.MameAO
 
 		private List<string> AcceptedExtentions = new List<string>(new string[] { ".zip", ".chd" });
 
-		public ArchiveOrgItem(string key, string subDirectory, int[] titleVersionSubString)
+		public ArchiveOrgItem(string key, string subDirectory, string tag, int[] titleVersionSubString)
 		{
 			Key = key;
 			SubDirectory = subDirectory;
+			Tag = tag;
 			TitleVersionSubString = titleVersionSubString;
 
 			UrlDetails = $"https://archive.org/details/{Key}";
@@ -67,18 +69,34 @@ namespace Spludlow.MameAO
 			UrlDownload = $"https://archive.org/download/{Key}";
 		}
 
-		public ArchiveOrgFile GetFile(string name)
+		public ArchiveOrgFile GetFile(string key)
 		{
 			if (Files == null)
 				Initialize();
 
-			if (name == null)
+			if (key == null)
 				return null;
 
-			if (Files.ContainsKey(name) == false)
+			if (Files.ContainsKey(key) == false)
 				return null;
 
-			return Files[name];
+			return Files[key];
+		}
+
+		public static ArchiveOrgItem[] GetItems(ItemType itemType, string tag)
+		{
+			List<ArchiveOrgItem> results = new List<ArchiveOrgItem>();
+
+			foreach (string tagQuery in new string[] { tag, "*" })
+			{
+				foreach (ArchiveOrgItem sourceItem in Globals.ArchiveOrgItems[itemType].Where(item => item.Tag == tagQuery))
+					results.Add(sourceItem);
+			}
+
+			if (results.Count == 0)
+				throw new ApplicationException($"Did not find any source sets: {itemType}");
+
+			return results.ToArray();
 		}
 
 		public string DownloadLink(ArchiveOrgFile file)

@@ -359,7 +359,7 @@ namespace Spludlow.MameAO
 
 		public void Report_SEMR(ReportContext context)
 		{
-			Sources.MameSourceSet soureSet = Globals.Sources.GetSourceSets(Sources.MameSetType.MachineRom)[0];
+			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
 
 			DataTable machineTable = Database.ExecuteFill(context.database._MachineConnection,
 				"SELECT machine_id, name, description, ao_rom_count FROM machine WHERE (ao_rom_count > 0 AND romof IS NULL) ORDER BY machine.name");
@@ -375,14 +375,14 @@ namespace Spludlow.MameAO
 
 				DataRow row = table.Rows.Add("", machineName, romCount);
 
-				if (soureSet.AvailableDownloadFileInfos.ContainsKey(machineName) == true)
-				{
-					Sources.SourceFileInfo sourceFile = soureSet.AvailableDownloadFileInfos[machineName];
+				ArchiveOrgFile file = sourceItem.GetFile(machineName);
 
-					row["Filename"] = sourceFile.name;
-					row["Size"] = sourceFile.size;
-					row["FileSHA1"] = sourceFile.sha1;
-					row["ModifiedTime"] = sourceFile.mtime;
+				if (file != null)
+				{
+					row["Filename"] = file.name;
+					row["Size"] = file.size;
+					row["FileSHA1"] = file.sha1;
+					row["ModifiedTime"] = file.mtime;
 				}
 				else
 				{
@@ -417,7 +417,7 @@ namespace Spludlow.MameAO
 
 		public void Report_SEMD(ReportContext context)
 		{
-			Sources.MameSourceSet soureSet = Globals.Sources.GetSourceSets(Sources.MameSetType.MachineDisk)[0];
+			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineDisk][0];	//	TODO: Support many
 
 			DataTable machineTable = Database.ExecuteFill(context.database._MachineConnection, "SELECT machine_id, name, description, romof FROM machine ORDER BY machine.name");
 			DataTable diskTable = Database.ExecuteFill(context.database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
@@ -442,7 +442,7 @@ namespace Spludlow.MameAO
 
 					DataRow row = table.Rows.Add("", machineName, romof, merge, machineDescription, diskName, sha1);
 
-					Sources.SourceFileInfo sourceFile = MameAOProcessor.MachineDiskAvailableSourceFile(machineRow, diskRow, soureSet, context.database);
+					ArchiveOrgFile sourceFile = MameAOProcessor.MachineDiskAvailableSourceFile(machineRow, diskRow, sourceItem, context.database);
 
 					if (sourceFile != null)
 					{
@@ -484,7 +484,7 @@ namespace Spludlow.MameAO
 
 		public void Report_SESR(ReportContext context)
 		{
-			Sources.MameSourceSet soureSet = Globals.Sources.GetSourceSets(Sources.MameSetType.SoftwareRom)[0];
+			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.SoftwareRom][0];
 
 			DataTable softwareListTable = Database.ExecuteFill(context.database._SoftwareConnection,
 				"SELECT softwarelist.name, softwarelist.description, Count(rom.rom_Id) AS rom_count " +
@@ -503,7 +503,7 @@ namespace Spludlow.MameAO
 
 				DataRow row = table.Rows.Add("", name, description, romCount);
 
-				Sources.SourceFileInfo sourceFile = soureSet.AvailableDownloadFileInfos[name];
+				ArchiveOrgFile sourceFile = sourceItem.GetFile(name);
 
 				if (sourceFile != null)
 				{
@@ -528,7 +528,9 @@ namespace Spludlow.MameAO
 
 		public void Report_SESD(ReportContext context)
 		{
-			Sources.MameSourceSet[] soureSets = Globals.Sources.GetSourceSets(Sources.MameSetType.SoftwareDisk);
+			ArchiveOrgItem[] sourceItems = Globals.ArchiveOrgItems[ItemType.SoftwareDisk];
+
+			//	TODO: Fix this report - too much output
 
 			DataTable softwareDiskTable = Database.ExecuteFill(context.database._SoftwareConnection,
 				"SELECT softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description, software.name AS software_name, software.description AS software_description, disk.name, disk.sha1, disk.status " +
@@ -549,26 +551,28 @@ namespace Spludlow.MameAO
 
 				DataRow row = table.Rows.Add("", "", softwarelist_name, software_name, name, sha1, status);
 
-				List<Sources.MameSourceSet> foundSourceSets = new List<Sources.MameSourceSet>();
-				List<Sources.SourceFileInfo> foundFileInfos = new List<Sources.SourceFileInfo>();
+				List<ArchiveOrgItem> foundSourceSets = new List<ArchiveOrgItem>();
+				List<ArchiveOrgFile> foundFileInfos = new List<ArchiveOrgFile>();
 
-				foreach (Sources.MameSourceSet sourceSet in soureSets)
+				foreach (ArchiveOrgItem item in sourceItems)
 				{
 					string key = $"{softwarelist_name}/{software_name}/{name}";
 
-					if (sourceSet.ListName != null && sourceSet.ListName != "*")
+					if (item.Tag != null && item.Tag != "*")
 						key = $"{software_name}/{name}";
 
-					if (sourceSet.AvailableDownloadFileInfos.ContainsKey(key) == true)
+					ArchiveOrgFile file = item.GetFile(key);
+
+					if (file != null)
 					{
-						foundSourceSets.Add(sourceSet);
-						foundFileInfos.Add(sourceSet.AvailableDownloadFileInfos[key]);
+						foundSourceSets.Add(item);
+						foundFileInfos.Add(file);
 					}
 				}
 
 				if (foundSourceSets.Count > 0)
 				{
-					row["Sources"] = String.Join(", ", foundSourceSets.Select(set => set.ListName).ToArray());
+					row["Sources"] = String.Join(", ", foundSourceSets.Select(set => set.Tag).ToArray());
 
 					row["Size"] = foundFileInfos[0].size;
 					row["ModifiedTime"] = foundFileInfos[0].mtime;
