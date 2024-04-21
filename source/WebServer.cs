@@ -395,7 +395,7 @@ namespace Spludlow.MameAO
 
 		public void _api_info(HttpListenerContext context, StreamWriter writer)
 		{
-			GitHubRepo repo = Globals.GitHubRepos["sam-ludlow/mame-ao"];
+			GitHubRepo mameAoRepo = Globals.GitHubRepos["mame-ao"];
 
 			dynamic json = new JObject();
 
@@ -408,10 +408,10 @@ namespace Spludlow.MameAO
 			json.genre_version = Globals.Genre.Data != null ? Globals.Genre.Version : "";
 			json.linking_enabled = Globals.LinkingEnabled;
 
-			json.latest = repo.tag_name;
+			json.latest = mameAoRepo.tag_name;
 
-			json.version_name_available = $"mame-ao-{repo.tag_name}";
-			json.version_name_current = $"mame-ao-{Globals.AssemblyVersion}";
+			json.version_name_available = mameAoRepo.tag_name;
+			json.version_name_current = Globals.AssemblyVersion;
 
 			dynamic items = new JArray();
 
@@ -448,6 +448,27 @@ namespace Spludlow.MameAO
 			}
 
 			json.items = items;
+
+			dynamic repos = new JArray();
+
+			foreach (string key in Globals.GitHubRepos.Keys)
+			{
+				GitHubRepo sourceRepo = Globals.GitHubRepos[key];
+
+				dynamic repo = new JObject();
+
+				repo.key = key;
+				repo.user_name = sourceRepo.UserName;
+				repo.repo_name = sourceRepo.RepoName;
+				repo.tag_name = sourceRepo.tag_name;
+				repo.published_at = sourceRepo.published_at;
+				repo.url_details = sourceRepo.UrlDetails;
+				repo.url_api = sourceRepo.UrlApi;
+
+				repos.Add(repo);
+			}
+
+			json.repos = repos;
 
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}

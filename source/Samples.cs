@@ -4,10 +4,6 @@ using System.Data;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
-using System.Net.Http;
-using System.Text;
-using System.Threading.Tasks;
-using System.Web.UI.WebControls;
 using System.Xml.Linq;
 
 namespace Spludlow.MameAO
@@ -17,64 +13,38 @@ namespace Spludlow.MameAO
 		public string Version = "";
 		public DataSet DataSet = null;
 
-		public readonly string SourceUrl = "https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/MAME_dat/MAME_Samples.dat";
-
-		private readonly string CacheDirectory;
 		private readonly string SamplesDirectory;
 
 		public Samples()
 		{
-			CacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "samples");
 			SamplesDirectory = Path.Combine(Globals.MameDirectory, "samples");
-
-			Directory.CreateDirectory(CacheDirectory);
 		}
 
 		public void Initialize()
 		{
+			GitHubRepo repo = Globals.GitHubRepos["MAME_Dats"];
+
+			string url = repo.UrlRaw + "/main/MAME_dat/MAME_Samples.dat";
+
 			Tools.ConsoleHeading(2, new string[] {
 				$"Machine Samples",
-				SourceUrl
+				url
 			});
 
-			Version = GetLocalVersion();
-
-			string cacheFilename = Path.Combine(CacheDirectory, Version + ".xml");
-
-			string xml = null;
-
-			if (Version == null || (DateTime.Now - File.GetLastWriteTime(cacheFilename) > TimeSpan.FromHours(3)))
-			{
-				xml = Tools.Query(Globals.HttpClient, SourceUrl);
-				Version = ParseXML(xml);
-				cacheFilename = Path.Combine(CacheDirectory, Version + ".xml");
-				File.WriteAllText(cacheFilename, xml, Encoding.UTF8);
-
-			}
+			string xml = repo.Fetch(url);
 
 			if (xml == null)
-			{
-				xml = File.ReadAllText(cacheFilename, Encoding.UTF8);
-				Version = ParseXML(xml);
-			}
+				return;
+
+			string version = ParseXML(xml);
+
+			Console.WriteLine($"Samples Version: {version}");
 
 			DataSet.Tables["machine"].PrimaryKey = new DataColumn[] { DataSet.Tables["machine"].Columns["name"] };
 
 			DataSet.Tables["rom"].PrimaryKey = new DataColumn[] { DataSet.Tables["rom"].Columns["machine_id"], DataSet.Tables["rom"].Columns["name"] };
 
 			Console.WriteLine($"Version:\t{Version}");
-		}
-
-		public string GetLocalVersion()
-		{
-			List<string> versions = new List<string>(Directory.GetFiles(CacheDirectory, "*.xml"));
-
-			versions.Sort();
-
-			if (versions.Count == 0)
-				return null;
-
-			return Path.GetFileNameWithoutExtension(versions[versions.Count - 1]);
 		}
 
 		private string ParseXML(string xml)

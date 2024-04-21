@@ -78,8 +78,6 @@ namespace Spludlow.MameAO
 
 		private readonly long _DownloadDotSize = 1024 * 1024;
 
-		private readonly string _BinariesDownloadUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
-
 		private IntPtr _ConsoleHandle;
 
 		private string WelcomeText = @"@VERSION
@@ -231,18 +229,18 @@ namespace Spludlow.MameAO
 			// GitHub Repos
 			//
 
-			Globals.GitHubRepos.Add("sam-ludlow/mame-ao", new GitHubRepo("sam-ludlow", "mame-ao"));
+			Globals.GitHubRepos.Add("mame-ao", new GitHubRepo("sam-ludlow", "mame-ao"));
 
-			Globals.GitHubRepos.Add("mamedev/mame", new GitHubRepo("mamedev", "mame"));
+			Globals.GitHubRepos.Add("mame", new GitHubRepo("mamedev", "mame"));
 
-			Globals.GitHubRepos.Add("AntoPISA/MAME_Dats", new GitHubRepo("AntoPISA", "MAME_Dats"));
+			Globals.GitHubRepos.Add("MAME_Dats", new GitHubRepo("AntoPISA", "MAME_Dats"));
 			//	https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/MAME_dat/MAME_Samples.dat
 			//	Hopfully will get Artwork soon?	<driver  requiresartwork="yes"/>
 
-			Globals.GitHubRepos.Add("AntoPISA/MAME_SnapTitles", new GitHubRepo("AntoPISA", "MAME_SnapTitles"));
+			Globals.GitHubRepos.Add("MAME_SnapTitles", new GitHubRepo("AntoPISA", "MAME_SnapTitles"));
 			//	https://raw.githubusercontent.com/AntoPISA/MAME_SnapTitles/main/snap/005.png
 
-			Globals.GitHubRepos.Add("AntoPISA/MAME_SupportFiles", new GitHubRepo("AntoPISA", "MAME_SupportFiles"));
+			Globals.GitHubRepos.Add("MAME_SupportFiles", new GitHubRepo("AntoPISA", "MAME_SupportFiles"));
 			//	https://raw.githubusercontent.com/AntoPISA/MAME_SupportFiles/main/catver.ini/catver.ini
 
 
@@ -260,7 +258,8 @@ namespace Spludlow.MameAO
 			// MAME Binaries
 			//
 
-			string binUrl = _BinariesDownloadUrl.Replace("@VERSION@", Globals.MameVersion);
+			string binUrl = Globals.GitHubRepos["mame"].UrlDetails + "/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
+			binUrl = binUrl.Replace("@VERSION@", Globals.MameVersion);
 
 			Tools.ConsoleHeading(2, new string[] {
 				"MAME",
@@ -380,7 +379,7 @@ namespace Spludlow.MameAO
 			// New version Check
 			//
 
-			string tag_name = Globals.GitHubRepos["sam-ludlow/mame-ao"].tag_name;
+			string tag_name = Globals.GitHubRepos["mame-ao"].tag_name;
 			if (Globals.AssemblyVersion != tag_name)
 				Tools.ConsoleHeading(1, new string[] {
 					"New MAME-AO version available",
@@ -772,13 +771,11 @@ namespace Spludlow.MameAO
 
 		public void Update(int startingPid)
 		{
-			//string currentName = $"mame-ao-{Globals.AssemblyVersion}";
-
 			string updateDirectory = Path.Combine(Globals.RootDirectory, "_TEMP", "UPDATE");
 
 			if (startingPid <= 0)
 			{
-				GitHubRepo repo = Globals.GitHubRepos["sam-ludlow/mame-ao"];
+				GitHubRepo repo = Globals.GitHubRepos["mame-ao"];
 
 				if (repo.tag_name == Globals.AssemblyVersion)
 				{

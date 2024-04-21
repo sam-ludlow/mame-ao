@@ -13,6 +13,7 @@ namespace Spludlow.MameAO
 
 		public string UrlDetails;
 		public string UrlApi;
+		public string UrlRaw;
 
 		private string UrlAPiBase = "https://api.github.com";
 
@@ -32,6 +33,7 @@ namespace Spludlow.MameAO
 
 			UrlDetails = $"https://github.com/{userName}/{repoName}";
 			UrlApi = $"{UrlAPiBase}/repos/{userName}/{repoName}";
+			UrlRaw = $"https://raw.githubusercontent.com/{userName}/{repoName}";
 
 			CacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "github.com");
 			Directory.CreateDirectory(CacheDirectory);
@@ -73,9 +75,16 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		private dynamic ApiFetch(string url)
+		public string Fetch(string url)
 		{
-			string cacheFilename = Path.Combine(CacheDirectory, $"{Tools.ValidFileName(url.Substring(UrlAPiBase.Length + 1))}.json");
+			string cacheFilename = Path.Combine(CacheDirectory, $"{Tools.ValidFileName(url.Substring(8))}");
+
+			return Tools.FetchTextCached(url, cacheFilename);
+		}
+
+		public dynamic ApiFetch(string url)
+		{
+			string cacheFilename = Path.Combine(CacheDirectory, $"{Tools.ValidFileName(url.Substring(8))}.json");
 
 			string json = Tools.FetchTextCached(url, cacheFilename);
 

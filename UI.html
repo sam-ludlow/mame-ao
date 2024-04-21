@@ -494,7 +494,7 @@
 
 			Object.keys(_info).forEach((key) => {
 
-				if (key === 'latest' || key === 'sources' || key === 'items')
+				if (key === 'latest' || key === 'sources' || key === 'items' || key === 'repos')
 					return;
 
 				infoData.push({ key: key, value: _info[key] });
@@ -515,6 +515,44 @@
 					return;
 
 				cell.innerHTML = value;
+			});
+
+			canvas.appendChild(table);
+
+			// Repos
+
+			div = document.createElement('div');
+			div.innerHTML = '<hr /><h2>GitHub.com Repos</h2>';
+			canvas.appendChild(div);
+
+			columnDefs = [
+				{ heading: 'Key', columnName: 'key' },
+				{ heading: 'user_name', columnName: 'user_name' },
+				{ heading: 'repo_name', columnName: 'repo_name' },
+				{ heading: 'tag_name', columnName: 'tag_name' },
+				{ heading: 'published_at', columnName: 'published_at' },
+				{ heading: 'url_details', columnName: 'url_details' },
+				{ heading: 'url_api', columnName: 'url_api' },
+			];
+
+			table = document.createElement('table');
+
+			buildTable(columnDefs, _info.repos, table, (columnDef, result, resultIndex, row, cell) => {
+
+				const value = result[columnDef.columnName];
+
+				if (value === undefined)
+					return;
+
+				cell.innerHTML = value;
+
+				switch (columnDef.columnName) {
+
+					case 'url_details':
+					case 'url_api':
+						cell.innerHTML = `<a href="${value}" target="_blank">${value}</a>`;
+						break;
+				}
 			});
 
 			canvas.appendChild(table);
