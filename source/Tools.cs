@@ -271,7 +271,9 @@ namespace Spludlow.MameAO
 					result = Query(Globals.HttpClient, url);
 					Console.WriteLine("...done");
 
-					if (result.StartsWith("{") == true || result.StartsWith("[") == true)
+					string extention = Path.GetExtension(filename).ToLower();
+
+					if (extention == ".json" && (result.StartsWith("{") == true || result.StartsWith("[") == true))
 						result = PrettyJSON(result);
 				}
 				catch (TaskCanceledException e)

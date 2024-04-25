@@ -13,11 +13,11 @@ namespace Spludlow.MameAO
 		public string Version = "";
 		public DataSet DataSet = null;
 
-		private readonly string SamplesDirectory;
+		private readonly string MameSamplesDirectory;
 
 		public Samples()
 		{
-			SamplesDirectory = Path.Combine(Globals.MameDirectory, "samples");
+			MameSamplesDirectory = Path.Combine(Globals.MameDirectory, "samples");
 		}
 
 		public void Initialize()
@@ -36,13 +36,16 @@ namespace Spludlow.MameAO
 			if (xml == null)
 				return;
 
-			string version = ParseXML(xml);
-
-			Console.WriteLine($"Samples Version: {version}");
+			Version = ParseXML(xml);
 
 			DataSet.Tables["machine"].PrimaryKey = new DataColumn[] { DataSet.Tables["machine"].Columns["name"] };
-
 			DataSet.Tables["rom"].PrimaryKey = new DataColumn[] { DataSet.Tables["rom"].Columns["machine_id"], DataSet.Tables["rom"].Columns["name"] };
+
+			foreach (DataRow row in DataSet.Tables["rom"].Rows)
+			{
+				if (row.IsNull("sha1") == false)
+					Globals.Database._AllSHA1s.Add((string)row["sha1"]);
+			}
 
 			Console.WriteLine($"Version:\t{Version}");
 		}
@@ -74,69 +77,73 @@ namespace Spludlow.MameAO
 			if (DataSet == null)
 				return;
 
-			DataRow[] sampleRows = Globals.Database.GetMachineSamples(machineRow);
+			string[] sampleNames = Globals.Database.GetMachineSamples(machineRow).Select(row => (string)row["name"]).ToArray();
 
-			if (sampleRows.Length == 0)
+			if (sampleNames.Length == 0)
 				return;
-
-			Tools.ConsoleHeading(2, new string[] {
-				$"Machine Samples ({sampleRows.Length})",
-			});
 
 			string machineName = (string)machineRow["name"];
 
-			DataRow machineSampleRow = DataSet.Tables["machine"].Rows.Find(machineName);
+			Tools.ConsoleHeading(2, new string[] {
+				$"Machine Samples: {machineName} ({sampleNames.Length})",
+			});
 
-			if (machineSampleRow == null)
+			string downloadMachineName = machineName;
+			if (machineRow.IsNull("cloneof") == false)
+				downloadMachineName = (string)machineRow["cloneof"];
+
+			DataRow sampleMachineRow = DataSet.Tables["machine"].Rows.Find(downloadMachineName);
+
+			if (sampleMachineRow == null)
 			{
 				Console.WriteLine($"!!! Sample machine not found: {machineName}");
 				return;
 			}
 
-			long machine_id = (long)machineSampleRow["machine_id"];
+			//
+			// Find required Samples
+			//
 
-			List<DataRow> machineSampleRows = new List<DataRow>();
+			long machine_id = (long)sampleMachineRow["machine_id"];
 
-			foreach (string sampleName in sampleRows.Select(row => (string)row["name"]))
+			List<DataRow> sampleRoms = new List<DataRow>();
+
+			foreach (string sampleName in sampleNames)
 			{
-				DataRow sampleRow = DataSet.Tables["rom"].Rows.Find(new object[] { machine_id, sampleName + ".wav" });
+				DataRow sampleRom = DataSet.Tables["rom"].Rows.Find(new object[] { machine_id, sampleName + ".wav" });
 
-				if (sampleRow == null)
+				if (sampleRom == null)
 				{
 					Console.WriteLine($"!!! Sample not found: {machineName}\t{sampleName}");
 					continue;
 				}
 
-				if (sampleRow.IsNull("name") || sampleRow.IsNull("sha1"))
+				if (sampleRom.IsNull("name") || sampleRom.IsNull("sha1"))
 					continue;
+				sampleRoms.Add(sampleRom);
 
-				machineSampleRows.Add(sampleRow);
+				Console.WriteLine($"Sample Required:\t{sampleRom["sha1"]}\t{sampleRom["name"]}");
 			}
 
-			// need bad sources !!! dont keep downloading if not up to date in archive.org
-
-
-			// !!! use source for this
-
 			//
-			// Check Store
+			// Import if required
 			//
-			bool download = false;
-			foreach (DataRow row in machineSampleRows)
+
+			bool inStore = true;
+			foreach (DataRow sampleRom in sampleRoms)
 			{
-				string sha1 = (string)row["sha1"];
-
+				string sha1 = (string)sampleRom["sha1"];
 				if (Globals.RomHashStore.Exists(sha1) == false)
-					download = true;
+					inStore = false;
 			}
 
-			//
-			// downlaod here
-			//
-
-			if (download == true)
+			if (inStore == false)
 			{
-				string url = $"https://archive.org/download/mame-support/Support/Samples/{machineName}.zip";
+				ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
+
+				ArchiveOrgFile file = item.GetFile($"Samples/{downloadMachineName}");
+
+				string url = item.DownloadLink(file);
 
 				using (TempDirectory tempDir = new TempDirectory())
 				{
@@ -147,9 +154,16 @@ namespace Spludlow.MameAO
 					Tools.ClearAttributes(tempDir.Path);
 
 					foreach (string wavFilename in Directory.GetFiles(tempDir.Path, "*.wav"))
-						Globals.RomHashStore.Add(wavFilename);
+					{
+						string fileSha1 = Globals.RomHashStore.Hash(wavFilename);
+						bool required = Globals.Database._AllSHA1s.Contains(fileSha1);
+						bool imported = false;
 
-					Tools.ClearAttributes(tempDir.Path);
+						if (required == true)
+							imported = Globals.RomHashStore.Add(wavFilename);
+
+						Console.WriteLine($"Sample Imported:\t{fileSha1}\t{required}\t{imported}");
+					}
 				}
 			}
 
@@ -159,12 +173,12 @@ namespace Spludlow.MameAO
 
 			List<string[]> wavStoreFilenames = new List<string[]>();
 
-			foreach (DataRow row in machineSampleRows)
+			foreach (DataRow row in sampleRoms)
 			{
 				string name = (string)row["name"];
 				string sha1 = (string)row["sha1"];
 
-				string wavFilename = Path.Combine(SamplesDirectory, machineName, name);
+				string wavFilename = Path.Combine(MameSamplesDirectory, machineName, name);
 
 				bool fileExists = File.Exists(wavFilename);
 				bool storeExists = Globals.RomHashStore.Exists(sha1);
@@ -174,7 +188,7 @@ namespace Spludlow.MameAO
 					wavStoreFilenames.Add(new string[] { wavFilename, Globals.RomHashStore.Filename(sha1) });
 				}
 
-				Console.WriteLine($"Place Sample:\t{fileExists}\t{storeExists}\t{sha1}\t{wavFilename}");
+				Console.WriteLine($"Place Sample:\t{sha1}\t{fileExists}\t{storeExists}\t{wavFilename}");
 			}
 
 			if (Globals.LinkingEnabled == true)
@@ -186,10 +200,6 @@ namespace Spludlow.MameAO
 				foreach (string[] wavStoreFilename in wavStoreFilenames)
 					File.Copy(wavStoreFilename[1], wavStoreFilename[0], true);
 			}
-
-
-
-
 		}
 	}
 }

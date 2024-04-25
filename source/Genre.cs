@@ -1,53 +1,41 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Net.Http;
 using System.IO;
-using System.IO.Compression;
 using System.Data;
+
 using System.Data.SQLite;
 
 namespace Spludlow.MameAO
 {
 	public class Genre
 	{
-		const string SourceUrl = "https://www.progettosnaps.net/catver/";
-
-		private readonly string RootDirectory;
-
 		public string Version = "";
 		public DataSet Data = null;
 
 		public Genre()
 		{
-			RootDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "Genre");
-			Directory.CreateDirectory(RootDirectory);
 		}
 
 		public void Initialize()
 		{
+			GitHubRepo repo = Globals.GitHubRepos["MAME_SupportFiles"];
+
+			string url = repo.UrlRaw + "/main/catver.ini/catver.ini";
+
 			Tools.ConsoleHeading(2, new string[] {
 				$"Machine Genres",
-				SourceUrl
+				url
 			});
 
-			try
-			{
-				RefreshRomote();
-			}
-			catch (Exception e)
-			{
-				Console.WriteLine($"!!! Warning unable to get genres from web, {e.Message}");
-			}
+			string iniData = repo.Fetch(url);
 
-			Version = GetLatestLocal();
-
-			if (Version == null)
+			if (iniData == null)
 			{
-				Console.WriteLine("!!! Warning Genres not available remote or local.");
+				Console.WriteLine("!!! Can not get genres .ini file.");
 				return;
 			}
 
-			string filename = Path.Combine(RootDirectory, Version, "catver.ini");
+			Version = ParseVersion(iniData);
 
 			//
 			// Parse .ini
@@ -60,7 +48,10 @@ namespace Spludlow.MameAO
 
 			try
 			{
-				machineGroupGenreTable = ParseIni(filename, groups, genres);
+				using (StringReader reader = new StringReader(iniData))
+				{
+					machineGroupGenreTable = ParseIni(reader, groups, genres);
+				}
 			}
 			catch (Exception e)
 			{
@@ -159,7 +150,26 @@ namespace Spludlow.MameAO
 			Console.WriteLine($"Version:\t{Version}");
 		}
 
-		public DataTable ParseIni(string filename, List<string> groups, List<string> genres)
+		public string ParseVersion(string data)
+		{
+			string find = "catver.ini";
+
+			int index = data.IndexOf(find);
+
+			if (index == -1)
+				return "";
+
+			data = data.Substring(index + find.Length);
+
+			index = data.IndexOf("/");
+
+			if (index == -1)
+				return "";
+
+			return data.Substring(0, index).Trim();
+		}
+
+		public DataTable ParseIni(StringReader reader, List<string> groups, List<string> genres)
 		{
 			DataTable table = Tools.MakeDataTable(
 				"machine	group	genre",
@@ -168,9 +178,10 @@ namespace Spludlow.MameAO
 
 			bool inData = false;
 
-			foreach (string rawLine in File.ReadAllLines(filename))
+			string line;
+			while ((line = reader.ReadLine()) != null)
 			{
-				string line = rawLine.Trim();
+				line = line.Trim();
 				if (line.Length == 0)
 					continue;
 
@@ -214,86 +225,6 @@ namespace Spludlow.MameAO
 			}
 
 			return table;
-		}
-
-		public string GetLatestZipLink()
-		{
-			string html = Tools.Query(Globals.HttpClient, SourceUrl);
-
-			int index = html.IndexOf("href=\"/download/?tipo=catver");
-
-			if (index == -1)
-				throw new ApplicationException("Did not find download link");
-
-			html = html.Substring(index + 6);
-
-			index = html.IndexOf("\"");
-
-			if (index == -1)
-				throw new ApplicationException("Did not find closing quote");
-
-			html = html.Substring(0, index);
-
-			return new Uri(new Uri(SourceUrl), html).AbsoluteUri;
-		}
-
-		public void RefreshRomote()
-		{
-			string zipUrl = GetLatestZipLink();
-
-			int index = zipUrl.LastIndexOf("_");
-
-			if (index == -1)
-				throw new ApplicationException("Did not find last underscore");
-
-			string version = zipUrl.Substring(index + 1);
-
-			index = version.LastIndexOf(".");
-
-			if (index == -1)
-				throw new ApplicationException("Did not find last dot");
-
-			version = version.Substring(0, index);
-
-			string versionDirectory = Path.Combine(RootDirectory, version);
-
-			if (Directory.Exists(versionDirectory) == false)
-			{
-				Directory.CreateDirectory(versionDirectory);
-
-				string zipFilename = Path.Combine(versionDirectory, version + ".zip");
-
-				Console.WriteLine($"New Genres {zipUrl} => {zipFilename}");
-
-				if (File.Exists(zipFilename) == false)
-					Tools.Download(zipUrl, zipFilename, 0, 3);
-
-				ZipFile.ExtractToDirectory(zipFilename, versionDirectory);
-			}
-
-			string filename = Path.Combine(versionDirectory, "catver.ini");
-
-			if (File.Exists(filename) == false)
-				throw new ApplicationException("ProgettoSnaps catver.ini not found: " + filename);
-
-		}
-
-		public string GetLatestLocal()
-		{
-			List<string> versions = new List<string>();
-
-			foreach (string directory in Directory.GetDirectories(RootDirectory))
-			{
-				if (File.Exists(Path.Combine(directory, "catver.ini")) == true)
-					versions.Add(Path.GetFileName(directory));
-			}
-
-			versions.Sort();
-
-			if (versions.Count == 0)
-				return null;
-
-			return versions[versions.Count - 1];
 		}
 
 		private Dictionary<string, string> GetMachineDriverStatuses()

@@ -24,7 +24,7 @@ namespace Spludlow.MameAO
 			HttpClient = new HttpClient();
 			HttpClient.DefaultRequestHeaders.Add("User-Agent", $"mame-ao/{Globals.AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)");
 
-			HttpClient.Timeout = TimeSpan.FromSeconds(180); // TimeSpan.FromSeconds(100);
+			HttpClient.Timeout = TimeSpan.FromSeconds(180);
 		}
 
 		public static string ListenAddress = "http://localhost:12380/";
@@ -32,7 +32,6 @@ namespace Spludlow.MameAO
 		public static string AssemblyVersion;
 
 		public static HttpClient HttpClient;
-
 
 		public static Dictionary<string, string> Arguments = new Dictionary<string, string>();
 
@@ -237,8 +236,8 @@ namespace Spludlow.MameAO
 			//	https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/MAME_dat/MAME_Samples.dat
 			//	Hopfully will get Artwork soon?	<driver  requiresartwork="yes"/>
 
-			Globals.GitHubRepos.Add("MAME_SnapTitles", new GitHubRepo("AntoPISA", "MAME_SnapTitles"));
-			//	https://raw.githubusercontent.com/AntoPISA/MAME_SnapTitles/main/snap/005.png
+			//Globals.GitHubRepos.Add("MAME_SnapTitles", new GitHubRepo("AntoPISA", "MAME_SnapTitles"));
+			////	https://raw.githubusercontent.com/AntoPISA/MAME_SnapTitles/main/snap/005.png
 
 			Globals.GitHubRepos.Add("MAME_SupportFiles", new GitHubRepo("AntoPISA", "MAME_SupportFiles"));
 			//	https://raw.githubusercontent.com/AntoPISA/MAME_SupportFiles/main/catver.ini/catver.ini
