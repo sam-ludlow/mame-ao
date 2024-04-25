@@ -77,26 +77,25 @@ namespace Spludlow.MameAO
 			if (DataSet == null)
 				return;
 
+			if (machineRow.IsNull("sampleof") == true)
+				return;
+
 			string[] sampleNames = Globals.Database.GetMachineSamples(machineRow).Select(row => (string)row["name"]).ToArray();
 
 			if (sampleNames.Length == 0)
 				return;
 
 			string machineName = (string)machineRow["name"];
+			string machineSampleOf = (string)machineRow["sampleof"];
 
 			Tools.ConsoleHeading(2, new string[] {
-				$"Machine Samples: {machineName} ({sampleNames.Length})",
+				$"Machine Samples: {machineName} : {machineSampleOf} ({sampleNames.Length})",
 			});
 
-			string downloadMachineName = machineName;
-			if (machineRow.IsNull("cloneof") == false)
-				downloadMachineName = (string)machineRow["cloneof"];
-
-			DataRow sampleMachineRow = DataSet.Tables["machine"].Rows.Find(downloadMachineName);
-
+			DataRow sampleMachineRow = DataSet.Tables["machine"].Rows.Find(machineSampleOf);
 			if (sampleMachineRow == null)
 			{
-				Console.WriteLine($"!!! Sample machine not found: {machineName}");
+				Console.WriteLine($"!!! Sample machine not found: {machineSampleOf}");
 				return;
 			}
 
@@ -141,7 +140,7 @@ namespace Spludlow.MameAO
 			{
 				ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
 
-				ArchiveOrgFile file = item.GetFile($"Samples/{downloadMachineName}");
+				ArchiveOrgFile file = item.GetFile($"Samples/{machineSampleOf}");
 
 				string url = item.DownloadLink(file);
 
