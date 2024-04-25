@@ -865,9 +865,8 @@ namespace Spludlow.MameAO
 			foreach (string sourceFilename in Directory.GetFiles(updateDirectory))
 			{
 				string targetFilename = Path.Combine(Globals.RootDirectory, Path.GetFileName(sourceFilename));
-				if (File.Exists(targetFilename) == true)
-					File.Delete(targetFilename);
-				File.Copy(sourceFilename, targetFilename);
+
+				File.Copy(sourceFilename, targetFilename, true);
 
 				Console.WriteLine(targetFilename);
 			}
@@ -1015,15 +1014,7 @@ namespace Spludlow.MameAO
 			else
 			{
 				foreach (string[] romStoreFilename in romStoreFilenames)
-				{
-					//	TODO: Prevent duplicates in here
-					if (File.Exists(romStoreFilename[0]) == true)
-					{
-						Console.WriteLine($"WARNING: Place file already exists {romStoreFilename[0]}");
-						File.Delete(romStoreFilename[0]);
-					}
-					File.Copy(romStoreFilename[1], romStoreFilename[0]);
-				}
+					File.Copy(romStoreFilename[1], romStoreFilename[0], true);
 			}
 
 			Console.WriteLine();
