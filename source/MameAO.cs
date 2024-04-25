@@ -107,6 +107,7 @@ namespace Spludlow.MameAO
 
 		public MameAOProcessor()
 		{
+			Globals.RootDirectory = Globals.Arguments["DIRECTORY"];
 		}
 
 		public void Run()
@@ -132,8 +133,6 @@ namespace Spludlow.MameAO
 
 		public void Initialize()
 		{
-			Globals.RootDirectory = Globals.Arguments["DIRECTORY"];
-
 			Console.Title = $"MAME-AO {Globals.AssemblyVersion}";
 
 			Console.Write(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
