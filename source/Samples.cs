@@ -170,8 +170,8 @@ namespace Spludlow.MameAO
 			// Place
 			//
 
-			string machineSamplesDirectory = Path.Combine(MameSamplesDirectory, machineName);
-			Directory.CreateDirectory(machineSamplesDirectory);
+			string machineWavDirectory = Path.Combine(MameSamplesDirectory, machineSampleOf);
+			Directory.CreateDirectory(machineWavDirectory);
 
 			List<string[]> wavStoreFilenames = new List<string[]>();
 
@@ -180,7 +180,7 @@ namespace Spludlow.MameAO
 				string name = (string)row["name"];
 				string sha1 = (string)row["sha1"];
 
-				string wavFilename = Path.Combine(machineSamplesDirectory, name);
+				string wavFilename = Path.Combine(machineWavDirectory, name);
 
 				bool fileExists = File.Exists(wavFilename);
 				bool storeExists = Globals.RomHashStore.Exists(sha1);
