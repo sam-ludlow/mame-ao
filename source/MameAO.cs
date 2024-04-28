@@ -50,6 +50,7 @@ namespace Spludlow.MameAO
 
 		public static MameAOProcessor AO;
 
+		public static Artwork Artwork;
 		public static Database Database;
 		public static Reports Reports;
 		public static MameChdMan MameChdMan;
@@ -372,6 +373,12 @@ namespace Spludlow.MameAO
 			//
 			Globals.Samples = new Samples();
 			Globals.Samples.Initialize();
+
+			//
+			// Artwork
+			//
+			Globals.Artwork = new Artwork();
+			Globals.Artwork.Initialize();
 
 			//
 			// New version Check
