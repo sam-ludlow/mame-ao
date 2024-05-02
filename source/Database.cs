@@ -281,6 +281,17 @@ namespace Spludlow.MameAO
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
+		public DataRow GetMachineDriver(DataRow machine)
+		{
+			long machine_id = (long)machine["machine_id"];
+			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM driver WHERE machine_id = {machine_id}");
+
+			if (table.Rows.Count == 0)
+				return null;
+
+			return table.Rows[0];
+		}
+
 		public DataRow[] GetSoftwareListsSoftware(DataRow softwarelist)
 		{
 			long softwarelist_id = (long)softwarelist["softwarelist_id"];

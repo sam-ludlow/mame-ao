@@ -1027,10 +1027,11 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 
 			//
-			// Samples
+			// Samples & Artwork
 			//
 
-			Globals.Samples.PlaceSamples(machine);
+			Globals.Samples.Place(machine);
+			Globals.Artwork.Place(machine);
 
 			//
 			// Info

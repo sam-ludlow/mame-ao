@@ -72,7 +72,7 @@ namespace Spludlow.MameAO
 			return (string)table.Rows[0]["version"];
 		}
 
-		public void PlaceSamples(DataRow machineRow)
+		public void Place(DataRow machineRow)
 		{
 			if (DataSet == null)
 				return;
@@ -141,6 +141,8 @@ namespace Spludlow.MameAO
 				ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
 
 				ArchiveOrgFile file = item.GetFile($"Samples/{machineSampleOf}");
+
+				// is null?
 
 				string url = item.DownloadLink(file);
 
