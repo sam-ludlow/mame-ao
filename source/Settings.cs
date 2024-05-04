@@ -31,10 +31,7 @@ namespace Spludlow.MameAO
 			if (AvailableOptions.ContainsKey(key) == false || AvailableOptions[key].Contains(value) == false)
 				throw new ApplicationException($"Bad setting key:{key} value:{value}");
 
-			if (Options.ContainsKey(key) == false)
-				Options.Add(key, value);
-			else
-				Options[key] = value;
+			Options[key] = value;
 
 			WriteDictionary();
 		}

@@ -309,7 +309,7 @@ Machine ROM is considered the version master, new MAME binaries will only be use
 
 All asset types have a single archive.org item with the exception of `Software Disks` these use multiple items on archive.org.
 
-See information on the GitHub Repos in use by MAME-AO by going to the About page. http://localhost:12380/about
+See information on the Archive.org Items in use by MAME-AO by going to the About page. http://localhost:12380/about
 
 ![MAME-AO About - Archive.org Items](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-about-archive-org-items.png)
 
