@@ -284,44 +284,36 @@ When you select a machine MAME-AO will download the files from archive.org if th
 SQLite databases are generated from the MAME XML output, 2 databases machine & software. This uses quiet a bit of CPU & RAM but once done is quick to load next time. If MAME-AO or MAME have version bumps the database will be re-created.
 
 ### GitHub.com Repos
+GitHub is used for downloading the MAME release binaries, self updating MAME-AO, an other datasets external to MAME:
 
-GitHub is used for downloading the MAME release binaries, self updating MAME-AO, an other datasets external to MAME.
+- Genres INI - https://raw.githubusercontent.com/AntoPISA/MAME_SupportFiles/main/catver.ini/catver.ini
+- Samples XML - https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/MAME_dat/MAME_Samples.dat
+- Artwork XML - https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/pS_Resources/pS_Artwork_Official.dat
 
-You can see information on the GitHub Repos in use by MAME-AO by going to the About page.
-
-http://localhost:12380/about
+See information on the GitHub Repos in use by MAME-AO by going to the About page. http://localhost:12380/about
 
 ![MAME-AO About - GitHub Repos](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-about-github-repos.png)
 
 ### Archive.org Items
+Archive.org is used for downloading MAME assets of these types:
 
-![MAME-AO About - Archive.org Items](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-about-archive-org-items.png)
-
-### Sources
-There are 4 types of source these each relate to an item on archive.org.
 - Machine ROM (version master)
 - Machine DISK
 - Software ROM
-- Software DISK (not complete or updated as often, uses multiple archive.org items, see below)
+- Software DISK (uses many archive.org items)
+- Support (Artwork & Samples)
 
-Machine ROM is considered the version master, new MAME binaries will only be used that match the version in this archive.org item.
+Archive.org metadata is downloaded when needed and cached, used to know what’s available and the file sizes.
 
-The version is determined from the archive.org item’s title. If a source’s archive.org item has a version mismatch you will see a warning at the Initializing preparing sources stage.
+Machine ROM is considered the version master, new MAME binaries will only be used that match the version in this archive.org item, determined from the title.
 
-Archive.org metadata for the items are downloaded and cached to know what’s available and the file size.
+All asset types have a single archive.org item with the exception of `Software Disks` these use multiple items on archive.org.
 
-### Sources - Software Disk
-The other 3 sources have very good archive.org items, they are complete, accurate, and get updated within a few days of MAME releases. They just use a single archive.org item each and work like a charm.
+See information on the GitHub Repos in use by MAME-AO by going to the About page. http://localhost:12380/about
 
-Software Disks are a little trickier there is not a single archive.org item that covers them all. So multiple archive.org items are used.
+![MAME-AO About - Archive.org Items](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-about-archive-org-items.png)
 
-Note that many machines with software disks have preliminary status, meaning they may not work well, although you may find certain software perfectly playable.
-
-If your looking for machines with working status you can see a list here https://mame.spludlow.co.uk/WorkingMachines/SoftwareListDisk.aspx
-
-See the archive.org items being used by going to the about page when mame-ao is running http://localhost:12380/about
-
-You can run the source exists (SE) reports to see what is and isn't available.
+You can run `Source Exists` reports to see if the items are missing anything.
 
 ## Credits
 
