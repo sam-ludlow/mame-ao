@@ -51,15 +51,17 @@ namespace Spludlow.MameAO
 		public static MameAOProcessor AO;
 
 		public static Artwork Artwork;
-		public static Database Database;
-		public static Reports Reports;
-		public static MameChdMan MameChdMan;
 		public static BadSources BadSources;
-		public static Favorites Favorites;
+		public static Database Database;
 		public static Export Export;
+		public static Favorites Favorites;
 		public static Genre Genre;
+		public static MameChdMan MameChdMan;
+		public static Reports Reports;
 		public static Samples Samples;
+		public static Settings Settings;
 		public static WebServer WebServer;
+
 	}
 
 	public class TaskInfo
@@ -140,6 +142,8 @@ namespace Spludlow.MameAO
 			Tools.ConsoleHeading(1, "Initializing");
 
 			Globals.AO = this;
+
+			Globals.Settings = new Settings();
 
 			//
 			// Symbolic Links check
@@ -661,6 +665,12 @@ namespace Spludlow.MameAO
 
 					case ".what":
 						Process.Start(Globals.ListenAddress + "api/what");
+						return;
+
+					case ".set":
+						if (parts.Length != 3)
+							throw new ApplicationException($"Usage: {parts[0]} <key> <value>");
+						Globals.Settings.Set(parts[1], parts[2]);
 						return;
 
 					default:

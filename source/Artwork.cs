@@ -135,7 +135,14 @@ namespace Spludlow.MameAO
 			if (inStore == false)
 			{
 				ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
-				ArchiveOrgFile file = item.GetFile("Artworks/Artworks");
+
+				string key = "Artworks/Artworks";
+				ArchiveOrgFile file = item.GetFile(key);
+				if (file == null)
+				{
+					Console.WriteLine($"!!! Artwork file not on archive.org: {key}");
+					return;
+				}
 
 				string url = $"{item.DownloadLink(file)}/{machineName}.zip";
 

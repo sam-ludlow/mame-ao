@@ -758,6 +758,23 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
+		public void _api_settings(HttpListenerContext context, StreamWriter writer)
+		{
+			dynamic available_options = new JObject();
+
+			foreach (string key in Globals.Settings.AvailableOptions.Keys)
+				available_options[key] = new JArray(Globals.Settings.AvailableOptions[key].ToArray());
+
+			dynamic options = new JObject();
+			foreach (string key in Globals.Settings.Options.Keys)
+				options[key] = Globals.Settings.Options[key];
+
+			dynamic json = new JObject();
+			json.available_options = available_options;
+			json.options = options;
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
 
 		private dynamic RowToJson(DataRow row)
 		{

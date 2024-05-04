@@ -140,9 +140,13 @@ namespace Spludlow.MameAO
 			{
 				ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
 
-				ArchiveOrgFile file = item.GetFile($"Samples/{machineSampleOf}");
-
-				// is null?
+				string key = $"Samples/{machineSampleOf}";
+				ArchiveOrgFile file = item.GetFile(key);
+				if (file == null)
+				{
+					Console.WriteLine($"!!! Sample file not on archive.org: {key}");
+					return;
+				}
 
 				string url = item.DownloadLink(file);
 
