@@ -283,6 +283,20 @@ When you select a machine MAME-AO will download the files from archive.org if th
 ### Data
 SQLite databases are generated from the MAME XML output, 2 databases machine & software. This uses quiet a bit of CPU & RAM but once done is quick to load next time. If MAME-AO or MAME have version bumps the database will be re-created.
 
+### GitHub.com Repos
+
+GitHub is used for downloading the MAME release binaries, self updating MAME-AO, an other datasets external to MAME.
+
+You can see information on the GitHub Repos in use by MAME-AO by going to the About page.
+
+http://localhost:12380/about
+
+![MAME-AO About - GitHub Repos](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-about-github-repos.png)
+
+### Archive.org Items
+
+![MAME-AO About - Archive.org Items](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-about-archive-org-items.png)
+
 ### Sources
 There are 4 types of source these each relate to an item on archive.org.
 - Machine ROM (version master)
