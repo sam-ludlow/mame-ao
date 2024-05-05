@@ -29,6 +29,8 @@ namespace Spludlow.MameAO
 
 		public static string ListenAddress = "http://localhost:12380/";
 
+		public static long DownloadDotSize = 1024 * 1024;
+
 		public static string AssemblyVersion;
 
 		public static HttpClient HttpClient;
@@ -78,7 +80,7 @@ namespace Spludlow.MameAO
 
 		private string _DownloadTempDirectory;
 
-		private readonly long _DownloadDotSize = 1024 * 1024;
+
 
 		private IntPtr _ConsoleHandle;
 
@@ -282,7 +284,7 @@ namespace Spludlow.MameAO
 			if (File.Exists(binCacheFilename) == false)
 			{
 				Console.Write($"Downloading MAME binaries {binUrl} ...");
-				Tools.Download(binUrl, binCacheFilename, _DownloadDotSize, 10);
+				Tools.Download(binUrl, binCacheFilename, Globals.DownloadDotSize, 10);
 				Console.WriteLine("...done.");
 			}
 
@@ -435,15 +437,12 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		private HashSet<string> _DontBringToFrontCommands = new HashSet<string>(new string[] { ".favm", ".favmx", ".favs", ".favsx" });
-
 		public bool RunLineTask(string line)
 		{
 			if (_RunTask != null && _RunTask.Status != TaskStatus.RanToCompletion)
 				return false;
 
-			if (line.Length == 0 || _DontBringToFrontCommands.Contains(line.Split(new char[] { ' ' })[0]) == false)
-				BringToFront();
+			BringToFront();
 
 			_RunTask = new Task(() => {
 				try
@@ -1613,7 +1612,7 @@ namespace Spludlow.MameAO
 
 				Console.Write($"Downloading {name} size:{Tools.DataSize(expectedSize)} url:{url} ...");
 				DateTime startTime = DateTime.Now;
-				size = Tools.Download(url, archiveFilename, _DownloadDotSize, 30);
+				size = Tools.Download(url, archiveFilename, Globals.DownloadDotSize, 30);
 				TimeSpan took = DateTime.Now - startTime;
 				Console.WriteLine("...done");
 
@@ -1667,7 +1666,7 @@ namespace Spludlow.MameAO
 
 			Console.Write($"Downloading {sourceFile.name} size:{Tools.DataSize(sourceFile.size)} url:{url} ...");
 			DateTime startTime = DateTime.Now;
-			long size = Tools.Download(url, tempFilename, _DownloadDotSize, 3 * 60, _TaskInfo);
+			long size = Tools.Download(url, tempFilename, Globals.DownloadDotSize, 3 * 60, _TaskInfo);
 			TimeSpan took = DateTime.Now - startTime;
 			Console.WriteLine("...done");
 

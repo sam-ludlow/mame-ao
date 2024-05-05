@@ -153,7 +153,10 @@ namespace Spludlow.MameAO
 				using (TempDirectory tempDir = new TempDirectory())
 				{
 					string zipFilename = Path.Combine(tempDir.Path, machineName + ".zip");
-					Tools.Download(url, zipFilename, 0, 10);
+
+					Console.Write($"Downloading {url}...");
+					Tools.Download(url, zipFilename, Globals.DownloadDotSize, 10);
+					Console.WriteLine("...done");
 
 					ZipFile.ExtractToDirectory(zipFilename, tempDir.Path);
 					Tools.ClearAttributes(tempDir.Path);

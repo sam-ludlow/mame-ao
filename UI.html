@@ -165,6 +165,11 @@
 					href: '/export',
 				},
 				{
+					text: 'Settings',
+					title: 'Settings - User Preferences',
+					href: '/settings',
+				},
+				{
 					text: 'About',
 					title: 'About & System Information',
 					href: '/about',
@@ -434,10 +439,6 @@
 					await viewReports();
 					break;
 
-				case '/about':
-					await about();
-					break;
-
 				case '/update':
 					await update();
 					break;
@@ -462,10 +463,51 @@
 					await genres();
 					break;
 
+				case '/settings':
+					await settings();
+					break;
+
+				case '/about':
+					await about();
+					break;
+
 				default:
 					break;
 			}
 
+		}
+
+		//
+		// Settings
+		//
+		const settings = async () => {
+
+			const canvas = getCanvas();
+
+			const data = await fetchJson('/api/settings');
+
+			let html = '<hr />';
+
+			Object.keys(data.available_options).forEach((key) => {
+				html += `<h2>${key}</h2><p>${data.option_descriptions[key]}</p>`
+				html += `<select id="settings_${key}" onchange="runCommand('.set ${key} ' + this.value)">`;
+
+				data.available_options[key].forEach((option) => {
+					html += `<option value="${option}">${option}</option>`;
+				});
+
+				html += '</select>';
+				html += '<hr />';
+			});
+
+
+			let div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+
+			Object.keys(data.available_options).forEach((key) => {
+				document.getElementById(`settings_${key}`).value = data.options[key];
+			});
 		}
 
 		//

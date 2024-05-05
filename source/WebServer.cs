@@ -156,28 +156,37 @@ namespace Spludlow.MameAO
 		{
 			string line = context.Request.QueryString["line"];
 
-			if (line == null)
+			if (line == null || line.Length == 0)
 				throw new ApplicationException("No line given.");
 
-			// Silent commands
+			string[] parts = line.Split(' ');
 
-			if (line.StartsWith(".fav") == true)
+			switch (parts[0])
 			{
-				Globals.Favorites.AddCommandLine(line);
-			}
-			else
-			{
-				Console.WriteLine();
-				Tools.ConsoleHeading(1, new string[] {
-					"Remote command recieved",
-					line,
-				});
-				Console.WriteLine();
+				case ".favm":
+				case ".favmx":
+				case ".favs":
+				case ".favsx":
+					Globals.Favorites.AddCommandLine(line);
+					break;
 
-				bool started = Globals.AO.RunLineTask(line);
+				case ".set":
+					Globals.Settings.Set(parts[1], parts[2]);
+					break;
 
-				if (started == false)
-					throw new ApplicationException("I'm busy.");
+				default:
+					Console.WriteLine();
+					Tools.ConsoleHeading(1, new string[] {
+						"Remote command recieved",
+						line,
+					});
+					Console.WriteLine();
+
+					bool started = Globals.AO.RunLineTask(line);
+
+					if (started == false)
+						throw new ApplicationException("I'm busy.");
+					break;
 			}
 
 			dynamic json = new JObject();
@@ -761,9 +770,12 @@ namespace Spludlow.MameAO
 		public void _api_settings(HttpListenerContext context, StreamWriter writer)
 		{
 			dynamic available_options = new JObject();
-
 			foreach (string key in Globals.Settings.AvailableOptions.Keys)
 				available_options[key] = new JArray(Globals.Settings.AvailableOptions[key].ToArray());
+
+			dynamic option_descriptions = new JObject();
+			foreach (string key in Globals.Settings.OptionDescriptions.Keys)
+				option_descriptions[key] = Globals.Settings.OptionDescriptions[key];
 
 			dynamic options = new JObject();
 			foreach (string key in Globals.Settings.Options.Keys)
@@ -771,6 +783,7 @@ namespace Spludlow.MameAO
 
 			dynamic json = new JObject();
 			json.available_options = available_options;
+			json.option_descriptions = option_descriptions;
 			json.options = options;
 
 			writer.WriteLine(json.ToString(Formatting.Indented));
