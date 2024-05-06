@@ -196,7 +196,6 @@ namespace Spludlow.MameAO
 				items.Add(new ArchiveOrgItem(key, null, softwareList, null));
 			}
 			items.Add(new ArchiveOrgItem("mame-software-list-chds-2", null, "*", null));
-
 			Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, items.ToArray());
 
 			// Support (Artwork & Samples)
@@ -239,15 +238,8 @@ namespace Spludlow.MameAO
 			Globals.GitHubRepos.Add("mame", new GitHubRepo("mamedev", "mame"));
 
 			Globals.GitHubRepos.Add("MAME_Dats", new GitHubRepo("AntoPISA", "MAME_Dats"));
-			//	https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/MAME_dat/MAME_Samples.dat
-			//	Hopfully will get Artwork soon?	<driver  requiresartwork="yes"/>
-
-			//Globals.GitHubRepos.Add("MAME_SnapTitles", new GitHubRepo("AntoPISA", "MAME_SnapTitles"));
-			////	https://raw.githubusercontent.com/AntoPISA/MAME_SnapTitles/main/snap/005.png
-
 			Globals.GitHubRepos.Add("MAME_SupportFiles", new GitHubRepo("AntoPISA", "MAME_SupportFiles"));
-			//	https://raw.githubusercontent.com/AntoPISA/MAME_SupportFiles/main/catver.ini/catver.ini
-
+			//Globals.GitHubRepos.Add("MAME_SnapTitles", new GitHubRepo("AntoPISA", "MAME_SnapTitles"));
 
 			//
 			// Bits & Bobs

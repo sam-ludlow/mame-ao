@@ -74,16 +74,24 @@ namespace Spludlow.MameAO
 
 		public void Place(DataRow machineRow)
 		{
-			if (Globals.Settings.Options["Artwork"] == "No")
-				return;
-
-			if (DataSet == null)
-				return;
-
 			List<string> machineNames = new List<string>();
 			machineNames.Add((string)machineRow["name"]);
 			if (machineRow.IsNull("cloneof") == false)
 				machineNames.Add((string)machineRow["cloneof"]);
+
+			if (Globals.Settings.Options["Artwork"] == "No")
+			{
+				foreach (string machineName in machineNames)
+				{
+					string directory = Path.Combine(MameArtworkDirectory, machineName);
+					if (Directory.Exists(directory) == true)
+						Directory.Delete(directory, true);
+				}
+				return;
+			}
+
+			if (DataSet == null)
+				return;
 
 			Tools.ConsoleHeading(2, new string[] {
 				$"Machine Artwork: {String.Join(", ", machineNames)}",

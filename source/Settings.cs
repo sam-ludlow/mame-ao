@@ -11,12 +11,11 @@ namespace Spludlow.MameAO
 
 		public Dictionary<string, List<string>> AvailableOptions = new Dictionary<string, List<string>>()
 		{
-			//{ "Artwork", new List<string>(new string[] { "No", "ArtworkPreview", "Artworks", "ArtworksAll", "ArtworksAlt", "ArtworksWideScreen" }) },
-			{ "Artwork", new List<string>(new string[] { "No", "Artworks" }) },
+			{ "Artwork", new List<string>(new string[] { "No", "Artworks", "ArtworksAlt", "ArtworksWideScreen" }) },
 		};
 
 		public Dictionary<string, string> OptionDescriptions = new Dictionary<string, string>() {
-			{ "Artwork", "Place Artwork Files. Note that switching this off will not clear existing placed artwork files." },
+			{ "Artwork", "Place Artwork Files. Note when set to \"No\" the machine artwork directories will be deleted." },
 		};
 
 		public Dictionary<string, string> Options = new Dictionary<string, string>();
