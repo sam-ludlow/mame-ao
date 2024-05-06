@@ -15,7 +15,7 @@ namespace Spludlow.MameAO
 		};
 
 		public Dictionary<string, string> OptionDescriptions = new Dictionary<string, string>() {
-			{ "Artwork", "Place Artwork Files. Note when set to \"No\" the machine artwork directories will be deleted." },
+			{ "Artwork", "Place Artwork Files. Note when set to \"No\" the machine artwork directories will be deleted. If changing artwork types run the machne with \"No\" first." },
 		};
 
 		public Dictionary<string, string> Options = new Dictionary<string, string>();

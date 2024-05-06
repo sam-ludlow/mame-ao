@@ -161,7 +161,7 @@ namespace Spludlow.MameAO
 					ZipFile.ExtractToDirectory(zipFilename, tempDir.Path);
 					Tools.ClearAttributes(tempDir.Path);
 
-					foreach (string wavFilename in Directory.GetFiles(tempDir.Path, "*.wav"))
+					foreach (string wavFilename in Directory.GetFiles(tempDir.Path, "*.wav", SearchOption.AllDirectories))
 					{
 						string fileSha1 = Globals.RomHashStore.Hash(wavFilename);
 						bool required = Globals.Database._AllSHA1s.Contains(fileSha1);
@@ -180,9 +180,8 @@ namespace Spludlow.MameAO
 			//
 
 			string machineWavDirectory = Path.Combine(MameSamplesDirectory, machineSampleOf);
-			Directory.CreateDirectory(machineWavDirectory);
 
-			List<string[]> wavStoreFilenames = new List<string[]>();
+			List<string[]> targetStoreFilenames = new List<string[]>();
 
 			foreach (DataRow row in sampleRoms)
 			{
@@ -195,22 +194,12 @@ namespace Spludlow.MameAO
 				bool storeExists = Globals.RomHashStore.Exists(sha1);
 
 				if (fileExists == false && storeExists == true)
-				{
-					wavStoreFilenames.Add(new string[] { wavFilename, Globals.RomHashStore.Filename(sha1) });
-				}
+					targetStoreFilenames.Add(new string[] { wavFilename, Globals.RomHashStore.Filename(sha1) });
 
 				Console.WriteLine($"Place Sample:\t{sha1}\t{fileExists}\t{storeExists}\t{wavFilename}");
 			}
 
-			if (Globals.LinkingEnabled == true)
-			{
-				Tools.LinkFiles(wavStoreFilenames.ToArray());
-			}
-			else
-			{
-				foreach (string[] wavStoreFilename in wavStoreFilenames)
-					File.Copy(wavStoreFilename[1], wavStoreFilename[0], true);
-			}
+			Tools.PlaceFiles(targetStoreFilenames.ToArray());
 		}
 	}
 }

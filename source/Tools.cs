@@ -377,10 +377,28 @@ namespace Spludlow.MameAO
 			return total;
 		}
 
+		public static void PlaceFiles(string[][] targetStoreFilenames)
+		{
+			HashSet<string> directories = new HashSet<string>();
+			foreach (string[] targetStoreFilename in targetStoreFilenames)
+				directories.Add(Path.GetDirectoryName(targetStoreFilename[0]));
+
+			foreach (string directory in directories)
+				Directory.CreateDirectory(directory);
+
+			if (Globals.LinkingEnabled == true)
+			{
+				LinkFiles(targetStoreFilenames);
+			}
+			else
+			{
+				foreach (string[] targetStoreFilename in targetStoreFilenames)
+					File.Copy(targetStoreFilename[1], targetStoreFilename[0], true);
+			}
+		}
+
 		public static void LinkFiles(string[][] linkTargetFilenames)
 		{
-			HashSet<string> linkDirectories = new HashSet<string>();
-
 			StringBuilder batch = new StringBuilder();
 
 			for (int index = 0; index < linkTargetFilenames.Length; ++index)
@@ -388,10 +406,7 @@ namespace Spludlow.MameAO
 				string link = linkTargetFilenames[index][0];
 				string target = linkTargetFilenames[index][1];
 
-				string linkDirectory = Path.GetDirectoryName(link);
-				linkDirectories.Add(linkDirectory);
-
-				//	Escape characters, may be more
+				//	Escape cmd special characters, may be more ?
 				link = link.Replace("%", "%%");
 
 				batch.Append("mklink ");
@@ -401,12 +416,6 @@ namespace Spludlow.MameAO
 				batch.Append(target);
 				batch.Append('\"');
 				batch.AppendLine();
-			}
-
-			foreach (string linkDirectory in linkDirectories)
-			{
-				if (Directory.Exists(linkDirectory) == false)
-					Directory.CreateDirectory(linkDirectory);
 			}
 
 			using (TempDirectory tempDir = new TempDirectory())
@@ -426,12 +435,9 @@ namespace Spludlow.MameAO
 				using (Process process = new Process())
 				{
 					process.StartInfo = startInfo;
-
 					process.Start();
-
 					process.StandardInput.WriteLine(input);
 					process.StandardInput.Close();
-
 					process.WaitForExit();
 				}
 			}

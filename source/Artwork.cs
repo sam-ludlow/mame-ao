@@ -8,55 +8,80 @@ using System.Xml.Linq;
 
 namespace Spludlow.MameAO
 {
-	public class Artwork
+	public class ArtworkData
 	{
 		public string Version = "";
 		public DataSet DataSet = null;
+	}
+	public enum ArtworkTypes
+	{
+		Artworks,
+		ArtworksAlt,
+		ArtworksWideScreen,
+	}
+
+	public class Artwork
+	{
+		public Dictionary<ArtworkTypes, string> ArchivePaths = new Dictionary<ArtworkTypes, string>()
+		{
+			{ ArtworkTypes.Artworks,			"/main/pS_Resources/pS_Artwork_Official.dat" },
+			{ ArtworkTypes.ArtworksAlt,         "/main/pS_Resources/pS_Artwork_Unofficial_Alternate.dat" },
+			{ ArtworkTypes.ArtworksWideScreen,  "/main/pS_Resources/pS_Artwork_WideScreen.dat" },
+		};
+
+		public Dictionary<ArtworkTypes, ArtworkData> ArtworkDatas = new Dictionary<ArtworkTypes, ArtworkData>();
 
 		private readonly string MameArtworkDirectory;
-
+		private GitHubRepo GitHubRepo;
 		public Artwork()
 		{
 			MameArtworkDirectory = Path.Combine(Globals.MameDirectory, "artwork");
+			GitHubRepo = Globals.GitHubRepos["MAME_Dats"];
 		}
 
-		public void Initialize()
+		public void Initialize(ArtworkTypes artworkType)
 		{
-			GitHubRepo repo = Globals.GitHubRepos["MAME_Dats"];
+			if (ArtworkDatas.ContainsKey(artworkType) == true)
+				return;
 
-			string url = repo.UrlRaw + "/main/pS_Resources/pS_Artwork_Official.dat";
+			string url = $"{GitHubRepo.UrlRaw}{ArchivePaths[artworkType]}";
 
 			Tools.ConsoleHeading(2, new string[] {
-				$"Machine Artwork",
+				$"Artwork Initialize: {artworkType}",
 				url
 			});
 
-			string xml = repo.Fetch(url);
+			ArtworkData artworkData = new ArtworkData();
+			artworkData.Version = "";
+			artworkData.DataSet = null;
+			ArtworkDatas.Add(artworkType, artworkData);
+
+			string xml = GitHubRepo.Fetch(url);
 
 			if (xml == null)
 				return;
 
-			Version = ParseXML(xml);
+			artworkData.DataSet = ParseXML(xml);
+			artworkData.Version = GetDataSetVersion(artworkData.DataSet);
 
-			DataSet.Tables["machine"].PrimaryKey = new DataColumn[] { DataSet.Tables["machine"].Columns["name"] };
-			DataSet.Tables["rom"].PrimaryKey = new DataColumn[] { DataSet.Tables["rom"].Columns["machine_id"], DataSet.Tables["rom"].Columns["name"] };
+			artworkData.DataSet.Tables["machine"].PrimaryKey = new DataColumn[] { artworkData.DataSet.Tables["machine"].Columns["name"] };
+			artworkData.DataSet.Tables["rom"].PrimaryKey = new DataColumn[] { artworkData.DataSet.Tables["rom"].Columns["machine_id"], artworkData.DataSet.Tables["rom"].Columns["name"] };
 
-			foreach (DataRow row in DataSet.Tables["rom"].Rows)
+			foreach (DataRow row in artworkData.DataSet.Tables["rom"].Rows)
 			{
 				if (row.IsNull("sha1") == false)
 					Globals.Database._AllSHA1s.Add((string)row["sha1"]);
 			}
 
-			Console.WriteLine($"Version:\t{Version}");
+			Console.WriteLine($"Version:\t{artworkData.Version}");
 		}
 
-		private string ParseXML(string xml)
+		private DataSet ParseXML(string xml)
 		{
+			DataSet dataSet = new DataSet();
 			XElement document = XElement.Parse(xml);
-			DataSet = new DataSet();
-			ReadXML.ImportXMLWork(document, DataSet, null, null);
-
-			return GetDataSetVersion(DataSet);
+			ReadXML.ImportXMLWork(document, dataSet, null, null);
+			return dataSet;
 		}
 
 		public string GetDataSetVersion(DataSet dataSet)
@@ -90,7 +115,13 @@ namespace Spludlow.MameAO
 				return;
 			}
 
-			if (DataSet == null)
+			ArtworkTypes artworkType = (ArtworkTypes) Enum.Parse(typeof(ArtworkTypes), Globals.Settings.Options["Artwork"]);
+
+			Initialize(artworkType);
+
+			ArtworkData data = ArtworkDatas[artworkType];
+
+			if (data.DataSet == null)
 				return;
 
 			Tools.ConsoleHeading(2, new string[] {
@@ -99,7 +130,7 @@ namespace Spludlow.MameAO
 
 			foreach (string machineName in machineNames)
 			{
-				DataRow machineArtworkRow = DataSet.Tables["machine"].Select($"name = '{machineName}'").SingleOrDefault();
+				DataRow machineArtworkRow = data.DataSet.Tables["machine"].Select($"name = '{machineName}'").SingleOrDefault();
 
 				if (machineArtworkRow == null)
 					continue;
@@ -108,12 +139,14 @@ namespace Spludlow.MameAO
 
 				List<DataRow> artworkRows = new List<DataRow>();
 
-				foreach (DataRow artworkRow in DataSet.Tables["rom"].Select($"machine_id = {machine_id}"))
+				foreach (DataRow artworkRow in data.DataSet.Tables["rom"].Select($"machine_id = {machine_id}"))
 				{
 					if (artworkRow.IsNull("name") == true || artworkRow.IsNull("sha1") == true)
 						continue;
 
 					artworkRows.Add(artworkRow);
+
+					artworkRow["name"] = Path.GetFileName((string)artworkRow["name"]);
 
 					Console.WriteLine($"Artwork Required:\t{artworkRow["sha1"]}\t{artworkRow["name"]}");
 				}
@@ -137,7 +170,7 @@ namespace Spludlow.MameAO
 				{
 					ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
 
-					string key = "Artworks/Artworks";
+					string key = $"{artworkType}/{artworkType}";
 					ArchiveOrgFile file = item.GetFile(key);
 					if (file == null)
 					{
@@ -158,7 +191,7 @@ namespace Spludlow.MameAO
 						ZipFile.ExtractToDirectory(zipFilename, tempDir.Path);
 						Tools.ClearAttributes(tempDir.Path);
 
-						foreach (string filename in Directory.GetFiles(tempDir.Path))
+						foreach (string filename in Directory.GetFiles(tempDir.Path, "*", SearchOption.AllDirectories))
 						{
 							string fileSha1 = Globals.RomHashStore.Hash(filename);
 							bool required = Globals.Database._AllSHA1s.Contains(fileSha1);
@@ -177,7 +210,6 @@ namespace Spludlow.MameAO
 				//
 
 				string targetDirectory = Path.Combine(MameArtworkDirectory, machineName);
-				Directory.CreateDirectory(targetDirectory);
 
 				List<string[]> targetStoreFilenames = new List<string[]>();
 
@@ -192,22 +224,12 @@ namespace Spludlow.MameAO
 					bool storeExists = Globals.RomHashStore.Exists(sha1);
 
 					if (fileExists == false && storeExists == true)
-					{
 						targetStoreFilenames.Add(new string[] { targetFilename, Globals.RomHashStore.Filename(sha1) });
-					}
 
 					Console.WriteLine($"Place Artwork:\t{sha1}\t{fileExists}\t{storeExists}\t{targetFilename}");
 				}
 
-				if (Globals.LinkingEnabled == true)
-				{
-					Tools.LinkFiles(targetStoreFilenames.ToArray());
-				}
-				else
-				{
-					foreach (string[] wavStoreFilename in targetStoreFilenames)
-						File.Copy(wavStoreFilename[1], wavStoreFilename[0], true);
-				}
+				Tools.PlaceFiles(targetStoreFilenames.ToArray());
 			}
 		}
 	}

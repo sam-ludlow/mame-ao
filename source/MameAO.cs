@@ -376,7 +376,6 @@ namespace Spludlow.MameAO
 			// Artwork
 			//
 			Globals.Artwork = new Artwork();
-			Globals.Artwork.Initialize();
 
 			//
 			// New version Check
@@ -1013,17 +1012,9 @@ namespace Spludlow.MameAO
 			}
 
 			//
-			// Place ROMs
+			// Place ROM & DISK
 			//
-			if (Globals.LinkingEnabled == true)
-			{
-				Tools.LinkFiles(romStoreFilenames.ToArray());
-			}
-			else
-			{
-				foreach (string[] romStoreFilename in romStoreFilenames)
-					File.Copy(romStoreFilename[1], romStoreFilename[0], true);
-			}
+			Tools.PlaceFiles(romStoreFilenames.ToArray());
 
 			Console.WriteLine();
 
