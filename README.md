@@ -284,11 +284,18 @@ When you select a machine MAME-AO will download the files from archive.org if th
 SQLite databases are generated from the MAME XML output, 2 databases machine & software. This uses quiet a bit of CPU & RAM but once done is quick to load next time. If MAME-AO or MAME have version bumps the database will be re-created.
 
 ### GitHub.com Repos
-GitHub is used for downloading the MAME release binaries, self updating MAME-AO, an other datasets external to MAME:
+GitHub is used for downloading the MAME release binaries, self updating MAME-AO, and other datasets external to MAME (not in the built in XML)
 
-- Genres INI - https://raw.githubusercontent.com/AntoPISA/MAME_SupportFiles/main/catver.ini/catver.ini
-- Samples XML - https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/MAME_dat/MAME_Samples.dat
-- Artwork XML - https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/pS_Resources/pS_Artwork_Official.dat
+#### Genres INI
+https://raw.githubusercontent.com/AntoPISA/MAME_SupportFiles/main/catver.ini/catver.ini
+
+#### Samples XML
+https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/MAME_dat/MAME_Samples.dat
+
+#### Artwork XML
+- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/pS_Resources/pS_Artwork_Official.dat
+- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/pS_Resources/pS_Artwork_Unofficial_Alternate.dat
+- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/pS_Resources/pS_Artwork_WideScreen.dat
 
 See information on the GitHub Repos in use by MAME-AO by going to the About page. http://localhost:12380/about
 
