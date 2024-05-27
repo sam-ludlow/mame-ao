@@ -76,6 +76,20 @@ namespace Spludlow.MameAO
 				Text = "Software Disk",
 				Decription = "Check that all software disks exist, multiple sources are checked if avaialable.",
 			},
+			new ReportType(){
+				Key = "machine-samples",
+				Group = "source-exists",
+				Code = "SEMS",
+				Text = "Machine Samples",
+				Decription = "Check that all machine samples exist.",
+			},
+			new ReportType(){
+				Key = "machine-artwork",
+				Group = "source-exists",
+				Code = "SEMA",
+				Text = "Machine Artwork",
+				Decription = "Check that all machine artwork exists.",
+			},
 
 			new ReportType(){
 				Key = "machine",
@@ -562,8 +576,6 @@ namespace Spludlow.MameAO
 		{
 			ArchiveOrgItem[] sourceItems = Globals.ArchiveOrgItems[ItemType.SoftwareDisk];
 
-			//	TODO: Fix this report - too much output
-
 			DataTable softwareDiskTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
 				"SELECT softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description, software.name AS software_name, software.description AS software_description, disk.name, disk.sha1, disk.status " +
 				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
@@ -637,6 +649,40 @@ namespace Spludlow.MameAO
 			dataSet.Tables.Add(viewTable);
 
 			this.SaveHtmlReport(dataSet, "Source Exists Software Disk");
+		}
+
+		public void Report_SEMS()
+		{
+			DataSet dataSet = new DataSet();
+
+			if (Globals.Samples.DataSet != null)
+			{
+				dataSet = Globals.Samples.DataSet;
+			}
+
+			this.SaveHtmlReport(dataSet, "Source Exists Machine Samples");
+		}
+
+		public void Report_SEMA()
+		{
+			DataSet dataSet = new DataSet();
+
+			foreach (ArtworkTypes type in Enum.GetValues(typeof(ArtworkTypes)))
+			{
+				Globals.Artwork.Initialize(type);
+
+				if (Globals.Artwork.ArtworkDatas[type].DataSet != null)
+				{
+					foreach (DataTable sourceTable in Globals.Artwork.ArtworkDatas[type].DataSet.Tables)
+					{
+						DataTable table = sourceTable.Copy();
+						table.TableName = $"{type}_{table.TableName}";
+						dataSet.Tables.Add(table);
+					}
+				}
+			}
+
+			this.SaveHtmlReport(dataSet, "Source Exists Machine Artwork");
 		}
 
 		public void Report_AVM()

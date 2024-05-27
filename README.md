@@ -35,18 +35,13 @@ TIP: Run command `.upany` to self update program, this will stop the microsoft d
 - You can access it at http://localhost:12380/.
 - Just click on image to start the machine. Select machine query profiles using the top menu.
 - If the machine has software it will be listed, you can change software list using the top menu, click what you want to run.
-- UI background colour will change to pink when mame-ao is working. You can click on the mame-ao console window to see what it's doing.
-- mame-ao 
+- UI background colour will change to orange when mame-ao is working. You can click on the mame-ao console window to see what it's doing.
 
 ## System requirements
 
 - Windows with .net framework 4.8
 - 32 bit / 64 bit (application is 32 bit keeps RAM usage down)
 - 2 Gb RAM free
-
-## Known issues
-
-- Not all Software list disks (SL CHD) are available in the archive.org items & may contains incorect files (sha1 don't match), [see software disk section](#sources---software-disk).
 
 ## Reporting issues
 
