@@ -13,13 +13,6 @@ namespace Spludlow.MameAO
 {
 	public class Reports
 	{
-		public class ReportContext
-		{
-			public Database database;
-			public HashStore romHashStore;
-			public HashStore diskHashStore;
-			public string versionDirectory;
-		}
 		public class ReportGroup
 		{
 			public string Key;
@@ -329,7 +322,7 @@ namespace Spludlow.MameAO
 			return items.ToArray();
 		}
 
-		public bool RunReport(string reportCode, ReportContext context)
+		public bool RunReport(string reportCode)
 		{
 			reportCode = reportCode.ToUpper();
 
@@ -341,7 +334,7 @@ namespace Spludlow.MameAO
 			try
 			{
 				Console.Write($"Running Report please wait {reportCode} ...");
-				method.Invoke(this, new object[] { context });
+				method.Invoke(this, null);
 				Console.WriteLine("...done.");
 			}
 			catch (Exception e)
@@ -356,12 +349,51 @@ namespace Spludlow.MameAO
 			return true;
 		}
 
+		public static DataSet PlaceReportTemplate(string heading)
+		{
+			DataSet dataSet = new DataSet();
 
-		public void Report_SEMR(ReportContext context)
+			dataSet.Tables.Add(Tools.MakeDataTable(
+				"Info",
+				"heading",
+				"String"
+			));
+
+			dataSet.Tables["Info"].Rows.Add(heading);
+
+			dataSet.Tables.Add(Tools.MakeDataTable(
+				"Require",
+				"sha1	require	name",
+				"String	Boolean	String"
+			));
+
+			dataSet.Tables.Add(Tools.MakeDataTable(
+				"Download",
+				"url",
+				"String"
+			));
+
+			dataSet.Tables.Add(Tools.MakeDataTable(
+				"Import",
+				"sha1	import	require	name",
+				"String	Boolean	Boolean	String"
+			));
+
+			dataSet.Tables.Add(Tools.MakeDataTable(
+				"Place",
+				"sha1	place	have	name",
+				"String	Boolean	Boolean	String"
+			));
+
+			return dataSet;
+		}
+
+
+		public void Report_SEMR()
 		{
 			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
 
-			DataTable machineTable = Database.ExecuteFill(context.database._MachineConnection,
+			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection,
 				"SELECT machine_id, name, description, ao_rom_count FROM machine WHERE (ao_rom_count > 0 AND romof IS NULL) ORDER BY machine.name");
 
 			DataTable table = Tools.MakeDataTable(
@@ -415,12 +447,12 @@ namespace Spludlow.MameAO
 			this.SaveHtmlReport(dataSet, "Source Exists Machine Rom");
 		}
 
-		public void Report_SEMD(ReportContext context)
+		public void Report_SEMD()
 		{
 			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineDisk][0];	//	TODO: Support many
 
-			DataTable machineTable = Database.ExecuteFill(context.database._MachineConnection, "SELECT machine_id, name, description, romof FROM machine ORDER BY machine.name");
-			DataTable diskTable = Database.ExecuteFill(context.database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name, description, romof FROM machine ORDER BY machine.name");
+			DataTable diskTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
 
 			DataTable table = Tools.MakeDataTable(
 				"Status	Machine	RomOf	Merge	Description	Name	SHA1	Filename	Size	FileSHA1	ModifiedTime",
@@ -442,7 +474,7 @@ namespace Spludlow.MameAO
 
 					DataRow row = table.Rows.Add("", machineName, romof, merge, machineDescription, diskName, sha1);
 
-					ArchiveOrgFile sourceFile = MameAOProcessor.MachineDiskAvailableSourceFile(machineRow, diskRow, sourceItem, context.database);
+					ArchiveOrgFile sourceFile = MameAOProcessor.MachineDiskAvailableSourceFile(machineRow, diskRow, sourceItem, Globals.Database);
 
 					if (sourceFile != null)
 					{
@@ -482,11 +514,11 @@ namespace Spludlow.MameAO
 			this.SaveHtmlReport(dataSet, "Source Exists Machine Disk");
 		}
 
-		public void Report_SESR(ReportContext context)
+		public void Report_SESR()
 		{
 			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.SoftwareRom][0];
 
-			DataTable softwareListTable = Database.ExecuteFill(context.database._SoftwareConnection,
+			DataTable softwareListTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
 				"SELECT softwarelist.name, softwarelist.description, Count(rom.rom_Id) AS rom_count " +
 				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id " +
 				"GROUP BY softwarelist.name, softwarelist.description ORDER BY softwarelist.name");
@@ -526,13 +558,13 @@ namespace Spludlow.MameAO
 			this.SaveHtmlReport(dataSet, "Source Exists Software Rom");
 		}
 
-		public void Report_SESD(ReportContext context)
+		public void Report_SESD()
 		{
 			ArchiveOrgItem[] sourceItems = Globals.ArchiveOrgItems[ItemType.SoftwareDisk];
 
 			//	TODO: Fix this report - too much output
 
-			DataTable softwareDiskTable = Database.ExecuteFill(context.database._SoftwareConnection,
+			DataTable softwareDiskTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
 				"SELECT softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description, software.name AS software_name, software.description AS software_description, disk.name, disk.sha1, disk.status " +
 				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
 				"WHERE (disk.sha1 IS NOT NULL) ORDER BY softwarelist.name, software.name, disk.name");
@@ -607,11 +639,11 @@ namespace Spludlow.MameAO
 			this.SaveHtmlReport(dataSet, "Source Exists Software Disk");
 		}
 
-		public void Report_AVM(ReportContext context)
+		public void Report_AVM()
 		{
-			DataTable machineTable = Database.ExecuteFill(context.database._MachineConnection, "SELECT machine_id, name, description, romof, cloneof FROM machine ORDER BY machine.name");
-			DataTable romTable = Database.ExecuteFill(context.database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
-			DataTable diskTable = Database.ExecuteFill(context.database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name, description, romof, cloneof FROM machine ORDER BY machine.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
+			DataTable diskTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
 
 			DataTable table = Tools.MakeDataTable(
 				"Status	Name	Description	Complete	RomCount	DiskCount	RomHave	DiskHave",
@@ -628,7 +660,7 @@ namespace Spludlow.MameAO
 				foreach (DataRow romRow in romRows)
 				{
 					string sha1 = (string)romRow["sha1"];
-					if (context.romHashStore.Exists(sha1) == true)
+					if (Globals.RomHashStore.Exists(sha1) == true)
 						++romHaveCount;
 				}
 
@@ -636,7 +668,7 @@ namespace Spludlow.MameAO
 				foreach (DataRow diskRow in diskRows)
 				{
 					string sha1 = (string)diskRow["sha1"];
-					if (context.diskHashStore.Exists(sha1) == true)
+					if (Globals.DiskHashStore.Exists(sha1) == true)
 						++diskHaveCount;
 				}
 
@@ -675,23 +707,23 @@ namespace Spludlow.MameAO
 			this.SaveHtmlReport(dataSet, "Avaliable Machine ROM and DISK");
 		}
 
-		public void Report_AVS(ReportContext context)
+		public void Report_AVS()
 		{
-			DataTable softwarelistTable = Database.ExecuteFill(context.database._SoftwareConnection,
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
 				"SELECT softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
 
-			DataTable softwareTable = Database.ExecuteFill(context.database._SoftwareConnection,
+			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
 				"SELECT softwarelist.name AS softwarelist_name, software.name, software.description FROM softwarelist " +
 				"INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id ORDER BY softwarelist.name, software.name");
 
-			DataTable romTable = Database.ExecuteFill(context.database._SoftwareConnection,
+			DataTable romTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
 				"SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, rom.sha1 " +
 				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) " +
 				"INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) " +
 				"INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id " +
 				"WHERE (rom.sha1 IS NOT NULL)");
 
-			DataTable diskTable = Database.ExecuteFill(context.database._SoftwareConnection,
+			DataTable diskTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
 				"SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, disk.sha1 " +
 				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) " +
 				"INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_Id = diskarea.part_Id) " +
@@ -721,7 +753,7 @@ namespace Spludlow.MameAO
 					foreach (DataRow romRow in romRows)
 					{
 						string sha1 = (string)romRow["sha1"];
-						if (context.romHashStore.Exists(sha1) == true)
+						if (Globals.RomHashStore.Exists(sha1) == true)
 							++romHaveCount;
 					}
 
@@ -729,7 +761,7 @@ namespace Spludlow.MameAO
 					foreach (DataRow diskRow in diskRows)
 					{
 						string sha1 = (string)diskRow["sha1"];
-						if (context.diskHashStore.Exists(sha1) == true)
+						if (Globals.DiskHashStore.Exists(sha1) == true)
 							++diskHaveCount;
 					}
 
@@ -766,12 +798,12 @@ namespace Spludlow.MameAO
 
 		}
 
-		public void Report_IMSLM(ReportContext context)
+		public void Report_IMSLM()
 		{
-			DataTable machineListsTable = Database.ExecuteFill(context.database._MachineConnection,
+			DataTable machineListsTable = Database.ExecuteFill(Globals.Database._MachineConnection,
 				"SELECT machine.name AS machine_name, machine.description, softwarelist.name AS softwarelist_name FROM machine INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id ORDER BY machine.name, softwarelist.name");
 
-			DataTable softwareListsTable = Database.ExecuteFill(context.database._SoftwareConnection,
+			DataTable softwareListsTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
 				"SELECT softwarelist.name AS softwarelist_name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
 
 			softwareListsTable.PrimaryKey = new DataColumn[] { softwareListsTable.Columns["softwarelist_name"] };
@@ -794,12 +826,12 @@ namespace Spludlow.MameAO
 			this.SaveHtmlReport(dataSet, "Machines Software Lists Missing");
 		}
 
-		public void Report_ISLWM(ReportContext context)
+		public void Report_ISLWM()
 		{
-			DataTable softwareListsTable = Database.ExecuteFill(context.database._SoftwareConnection,
+			DataTable softwareListsTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
 				"SELECT softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
 
-			DataTable machinesListsTable = Database.ExecuteFill(context.database._MachineConnection,
+			DataTable machinesListsTable = Database.ExecuteFill(Globals.Database._MachineConnection,
 				"SELECT softwarelist.name FROM softwarelist GROUP BY softwarelist.name ORDER BY softwarelist.name");
 
 			machinesListsTable.PrimaryKey = new DataColumn[] { machinesListsTable.Columns["name"] };
@@ -823,7 +855,7 @@ namespace Spludlow.MameAO
 
 			table = softwareListsTable.Clone();
 
-			foreach (string filename in Directory.GetFiles(Path.Combine(context.versionDirectory, "hash"), "*.xml"))
+			foreach (string filename in Directory.GetFiles(Path.Combine(Globals.MameDirectory, "hash"), "*.xml"))
 			{
 				string name = Path.GetFileNameWithoutExtension(filename);
 

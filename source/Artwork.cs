@@ -128,6 +128,12 @@ namespace Spludlow.MameAO
 				$"Machine Artwork: {String.Join(", ", machineNames)}",
 			});
 
+			DataSet report = Reports.PlaceReportTemplate($"machines:{String.Join(", ", machineNames)}");
+
+			//
+			// Require
+			//
+
 			foreach (string machineName in machineNames)
 			{
 				DataRow machineArtworkRow = data.DataSet.Tables["machine"].Select($"name = '{machineName}'").SingleOrDefault();
@@ -137,36 +143,33 @@ namespace Spludlow.MameAO
 
 				long machine_id = (long)machineArtworkRow["machine_id"];
 
-				List<DataRow> artworkRows = new List<DataRow>();
+				bool downloadRequired = false;
 
+				List<DataRow> artworkRows = new List<DataRow>();
 				foreach (DataRow artworkRow in data.DataSet.Tables["rom"].Select($"machine_id = {machine_id}"))
 				{
-					if (artworkRow.IsNull("name") == true || artworkRow.IsNull("sha1") == true)
+					if (artworkRow.IsNull("name") || artworkRow.IsNull("sha1"))
 						continue;
-
-					artworkRows.Add(artworkRow);
 
 					artworkRow["name"] = Path.GetFileName((string)artworkRow["name"]);
 
-					Console.WriteLine($"Artwork Required:\t{artworkRow["sha1"]}\t{artworkRow["name"]}");
+					artworkRows.Add(artworkRow);
+
+					string sha1 = (string)artworkRow["sha1"];
+					string name = (string)artworkRow["name"];
+					bool required = !Globals.RomHashStore.Exists(sha1);
+
+					if (required == true)
+						downloadRequired = true;
+
+					report.Tables["Require"].Rows.Add(sha1, required, name);
+					Console.WriteLine($"{sha1}\t{required}\t{name}");
 				}
 
 				if (artworkRows.Count == 0)
 					continue;
 
-				//
-				// Import if required
-				//
-
-				bool inStore = true;
-				foreach (DataRow artworkRow in artworkRows)
-				{
-					string sha1 = (string)artworkRow["sha1"];
-					if (Globals.RomHashStore.Exists(sha1) == false)
-						inStore = false;
-				}
-
-				if (inStore == false)
+				if (downloadRequired == true)
 				{
 					ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
 
@@ -184,6 +187,8 @@ namespace Spludlow.MameAO
 					{
 						string zipFilename = Path.Combine(tempDir.Path, machineName + ".zip");
 
+						report.Tables["Download"].Rows.Add(url);
+
 						Console.Write($"Downloading {url}...");
 						Tools.Download(url, zipFilename, Globals.DownloadDotSize, 10);
 						Console.WriteLine("...done");
@@ -193,14 +198,16 @@ namespace Spludlow.MameAO
 
 						foreach (string filename in Directory.GetFiles(tempDir.Path, "*", SearchOption.AllDirectories))
 						{
-							string fileSha1 = Globals.RomHashStore.Hash(filename);
-							bool required = Globals.Database._AllSHA1s.Contains(fileSha1);
+							string subPathName = filename.Substring(tempDir.Path.Length);
+							string sha1 = Globals.RomHashStore.Hash(filename);
+							bool required = Globals.Database._AllSHA1s.Contains(sha1);
 							bool imported = false;
 
 							if (required == true)
-								imported = Globals.RomHashStore.Add(filename, false, fileSha1);
+								imported = Globals.RomHashStore.Add(filename, false, sha1);
 
-							Console.WriteLine($"Artwork Imported:\t{fileSha1}\t{required}\t{imported}");
+							report.Tables["Import"].Rows.Add(sha1, imported, required, subPathName);
+							Console.WriteLine($"{sha1}\t{imported}\t{required}\t{subPathName}");
 						}
 					}
 				}
@@ -222,14 +229,19 @@ namespace Spludlow.MameAO
 
 					bool fileExists = File.Exists(targetFilename);
 					bool storeExists = Globals.RomHashStore.Exists(sha1);
+					bool place = fileExists == false && storeExists == true;
 
-					if (fileExists == false && storeExists == true)
+					if (place == true)
 						targetStoreFilenames.Add(new string[] { targetFilename, Globals.RomHashStore.Filename(sha1) });
 
-					Console.WriteLine($"Place Artwork:\t{sha1}\t{fileExists}\t{storeExists}\t{targetFilename}");
+					report.Tables["Place"].Rows.Add(sha1, place, storeExists, name);
+					Console.WriteLine($"{sha1}\t{place}\t{storeExists}\t{name}");
 				}
 
 				Tools.PlaceFiles(targetStoreFilenames.ToArray());
+
+				if (Globals.Settings.Options["PlaceReport"] == "Yes")
+					Globals.Reports.SaveHtmlReport(report, "Artwork Place Report - " + report.Tables["Info"].Rows[0]["heading"]);
 			}
 		}
 	}

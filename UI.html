@@ -404,13 +404,11 @@
 			//
 
 			if (_pathParts.includes('/machines') && _pathParts.length === 3) {
-
 				await machines();
 				return;
 			}
 
 			if (_pathParts.includes('/machines') && _pathParts.length === 5) {
-
 				await machine(machineData);
 				return;
 			}
@@ -425,56 +423,22 @@
 				return;
 			}
 
-			switch (_path) {
+			const routeFunction = {
+				'/saved':			saved,
+				'/reports/run':		runReports,
+				'/reports/view':	viewReports,
+				'/update':			update,
+				'/store':			storeOperations,
+				'/snaps':			collectSnaps,
+				'/import':			importFiles,
+				'/export':			exportFiles,
+				'/genres':			genres,
+				'/settings':		settings,
+				'/about':			about,
+			}[_path];
 
-				case '/saved':
-					await saved();
-					break;
-
-				case '/reports/run':
-					await runReports();
-					break;
-
-				case '/reports/view':
-					await viewReports();
-					break;
-
-				case '/update':
-					await update();
-					break;
-
-				case '/store':
-					await storeOperations();
-					break;
-
-				case '/snaps':
-					await collectSnaps();
-					break;
-
-				case '/import':
-					await importFiles();
-					break;
-
-				case '/export':
-					await exportFiles();
-					break;
-
-				case '/genres':
-					await genres();
-					break;
-
-				case '/settings':
-					await settings();
-					break;
-
-				case '/about':
-					await about();
-					break;
-
-				default:
-					break;
-			}
-
+			if (routeFunction !== undefined)
+				await routeFunction();
 		}
 
 		//

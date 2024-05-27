@@ -224,13 +224,18 @@ namespace Spludlow.MameAO
 
 		public static DataTable MakeDataTable(string columnNames, string columnTypes)
 		{
+			return MakeDataTable("untitled", columnNames, columnTypes);
+		}
+
+		public static DataTable MakeDataTable(string tableName, string columnNames, string columnTypes)
+		{
 			string[] names = columnNames.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
 			string[] types = columnTypes.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
 			if (names.Length != types.Length)
 				throw new ApplicationException("Make Data Table Bad definition.");
 
-			DataTable table = new DataTable();
+			DataTable table = new DataTable(tableName);
 
 			List<int> keyColumnIndexes = new List<int>();
 

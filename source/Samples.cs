@@ -99,14 +99,17 @@ namespace Spludlow.MameAO
 				return;
 			}
 
+			DataSet report = Reports.PlaceReportTemplate($"machine:{machineName}, sampleof:{machineSampleOf}");
+
 			//
-			// Find required Samples
+			// Required
 			//
 
 			long machine_id = (long)sampleMachineRow["machine_id"];
 
-			List<DataRow> sampleRoms = new List<DataRow>();
+			bool downloadRequired = false;
 
+			List<DataRow> sampleRoms = new List<DataRow>();
 			foreach (string sampleName in sampleNames)
 			{
 				DataRow sampleRom = DataSet.Tables["rom"].Rows.Find(new object[] { machine_id, sampleName + ".wav" });
@@ -119,24 +122,24 @@ namespace Spludlow.MameAO
 
 				if (sampleRom.IsNull("name") || sampleRom.IsNull("sha1"))
 					continue;
+
 				sampleRoms.Add(sampleRom);
 
-				Console.WriteLine($"Sample Required:\t{sampleRom["sha1"]}\t{sampleRom["name"]}");
-			}
-
-			//
-			// Import if required
-			//
-
-			bool inStore = true;
-			foreach (DataRow sampleRom in sampleRoms)
-			{
 				string sha1 = (string)sampleRom["sha1"];
-				if (Globals.RomHashStore.Exists(sha1) == false)
-					inStore = false;
+				string name = (string)sampleRom["name"];
+				bool required = !Globals.RomHashStore.Exists(sha1);
+
+				if (required == true)
+					downloadRequired = true;
+
+				report.Tables["Require"].Rows.Add(sha1, required, name);
+				Console.WriteLine($"{sha1}\t{required}\t{name}");
 			}
 
-			if (inStore == false)
+			if (sampleRoms.Count == 0)
+				return;
+
+			if (downloadRequired == true)
 			{
 				ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
 
@@ -154,6 +157,8 @@ namespace Spludlow.MameAO
 				{
 					string zipFilename = Path.Combine(tempDir.Path, machineName + ".zip");
 
+					report.Tables["Download"].Rows.Add(url);
+
 					Console.Write($"Downloading {url}...");
 					Tools.Download(url, zipFilename, Globals.DownloadDotSize, 10);
 					Console.WriteLine("...done");
@@ -163,14 +168,16 @@ namespace Spludlow.MameAO
 
 					foreach (string wavFilename in Directory.GetFiles(tempDir.Path, "*.wav", SearchOption.AllDirectories))
 					{
-						string fileSha1 = Globals.RomHashStore.Hash(wavFilename);
-						bool required = Globals.Database._AllSHA1s.Contains(fileSha1);
+						string subPathName = wavFilename.Substring(tempDir.Path.Length);
+						string sha1 = Globals.RomHashStore.Hash(wavFilename);
+						bool required = Globals.Database._AllSHA1s.Contains(sha1);
 						bool imported = false;
 
 						if (required == true)
 							imported = Globals.RomHashStore.Add(wavFilename);
 
-						Console.WriteLine($"Sample Imported:\t{fileSha1}\t{required}\t{imported}");
+						report.Tables["Import"].Rows.Add(sha1, imported, required, subPathName);
+						Console.WriteLine($"{sha1}\t{imported}\t{required}\t{subPathName}");
 					}
 				}
 			}
@@ -189,17 +196,22 @@ namespace Spludlow.MameAO
 				string sha1 = (string)row["sha1"];
 
 				string wavFilename = Path.Combine(machineWavDirectory, name);
-
+				
 				bool fileExists = File.Exists(wavFilename);
 				bool storeExists = Globals.RomHashStore.Exists(sha1);
+				bool place = fileExists == false && storeExists == true;
 
-				if (fileExists == false && storeExists == true)
+				if (place == true)
 					targetStoreFilenames.Add(new string[] { wavFilename, Globals.RomHashStore.Filename(sha1) });
 
-				Console.WriteLine($"Place Sample:\t{sha1}\t{fileExists}\t{storeExists}\t{wavFilename}");
+				report.Tables["Place"].Rows.Add(sha1, place, storeExists, name);
+				Console.WriteLine($"{sha1}\t{place}\t{storeExists}\t{name}");
 			}
 
 			Tools.PlaceFiles(targetStoreFilenames.ToArray());
+
+			if (Globals.Settings.Options["PlaceReport"] == "Yes")
+				Globals.Reports.SaveHtmlReport(report, "Samples Place Report - " + report.Tables["Info"].Rows[0]["heading"]);
 		}
 	}
 }

@@ -221,12 +221,6 @@ namespace Spludlow.MameAO
 
 			Globals.MameDirectory = Path.Combine(Globals.RootDirectory, Globals.MameVersion);
 
-			if (Directory.Exists(Globals.MameDirectory) == false)
-			{
-				Console.WriteLine($"!!! MAME Version Bump: {Globals.MameVersion}");
-				Directory.CreateDirectory(Globals.MameDirectory);
-			}
-
 			Console.WriteLine($"MameVersion: {Globals.MameVersion}");
 
 			//
@@ -239,17 +233,6 @@ namespace Spludlow.MameAO
 
 			Globals.GitHubRepos.Add("MAME_Dats", new GitHubRepo("AntoPISA", "MAME_Dats"));
 			Globals.GitHubRepos.Add("MAME_SupportFiles", new GitHubRepo("AntoPISA", "MAME_SupportFiles"));
-			//Globals.GitHubRepos.Add("MAME_SnapTitles", new GitHubRepo("AntoPISA", "MAME_SnapTitles"));
-
-			//
-			// Bits & Bobs
-			//
-
-			Globals.Reports = new Reports();
-			Globals.BadSources = new BadSources();
-			Globals.Favorites = new Favorites();
-
-			_ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
 
 			//
 			// MAME Binaries
@@ -269,7 +252,7 @@ namespace Spludlow.MameAO
 
 			if (Directory.Exists(Globals.MameDirectory) == false)
 			{
-				Console.WriteLine($"New MAME version: {Globals.MameVersion}");
+				Console.WriteLine($"!!! New MAME version: {Globals.MameVersion}");
 				Directory.CreateDirectory(Globals.MameDirectory);
 			}
 
@@ -354,28 +337,23 @@ namespace Spludlow.MameAO
 			GC.Collect();
 
 			//
-			// Export
+			// Bits & Bobs
 			//
 
+			_ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
+
+			Globals.Reports = new Reports();
+			Globals.BadSources = new BadSources();
+			Globals.Favorites = new Favorites();
 			Globals.Export = new Export();
 
-			//
-			// Genre
-			//
+			Globals.Artwork = new Artwork();
 
 			Globals.Genre = new Genre();
 			Globals.Genre.Initialize();
 
-			//
-			// Samples
-			//
 			Globals.Samples = new Samples();
 			Globals.Samples.Initialize();
-
-			//
-			// Artwork
-			//
-			Globals.Artwork = new Artwork();
 
 			//
 			// New version Check
@@ -592,15 +570,7 @@ namespace Spludlow.MameAO
 								String.Join(Environment.NewLine, Globals.Reports.ReportTypeText()) + Environment.NewLine
 								);
 
-						Reports.ReportContext reportContext = new Reports.ReportContext()
-						{
-							database = Globals.Database,
-							romHashStore = Globals.RomHashStore,
-							diskHashStore = Globals.DiskHashStore,
-							versionDirectory = Globals.MameDirectory,
-						};
-
-						if (Globals.Reports.RunReport(parts[1], reportContext) == false)
+						if (Globals.Reports.RunReport(parts[1]) == false)
 							throw new ApplicationException("Report Unknown type.");
 						return;
 
