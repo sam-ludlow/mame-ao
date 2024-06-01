@@ -731,26 +731,34 @@ namespace Spludlow.MameAO
 		{
 			DataSet dataSet = new DataSet();
 
-			foreach (ArtworkTypes type in Enum.GetValues(typeof(ArtworkTypes)))
-			{
-				Globals.Artwork.Initialize(type);
+			ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
 
-				if (Globals.Artwork.ArtworkDatas[type].DataSet != null)
+			foreach (ArtworkTypes artworkType in Enum.GetValues(typeof(ArtworkTypes)))
+			{
+				Globals.Artwork.Initialize(artworkType);
+
+				if (Globals.Artwork.ArtworkDatas[artworkType].DataSet != null)
 				{
-					foreach (DataTable sourceTable in Globals.Artwork.ArtworkDatas[type].DataSet.Tables)
+					foreach (DataTable sourceTable in Globals.Artwork.ArtworkDatas[artworkType].DataSet.Tables)
 					{
 						DataTable table = sourceTable.Copy();
-						table.TableName = $"{type}_{table.TableName}";
+						table.TableName = $"{artworkType}_{table.TableName}";
 						dataSet.Tables.Add(table);
 					}
 
-					//string key = $"{artworkType}/{artworkType}";
-					//ArchiveOrgFile file = item.GetFile(key);
-					//if (file == null)
-					//{
-					//	Console.WriteLine($"!!! Artwork file not on archive.org: {key}");
-					//	continue;
-					//}
+					string fileKey = $"{artworkType}/{artworkType}";
+					ArchiveOrgFile file = item.GetFile(fileKey);
+					if (file == null)
+					{
+						Console.WriteLine($"!!! Artwork file not on archive.org: {fileKey}");
+						continue;
+					}
+
+					Dictionary<string, long> zipSizes = item.GetZipContentsSizes(file, 0, 4);
+
+
+					// TODO
+
 				}
 			}
 

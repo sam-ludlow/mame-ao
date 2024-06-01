@@ -268,6 +268,8 @@ namespace Spludlow.MameAO
 		{
 			string result = null;
 
+			Directory.CreateDirectory(Path.GetDirectoryName(filename));
+
 			if (File.Exists(filename) == false || (DateTime.Now - File.GetLastWriteTime(filename) > TimeSpan.FromHours(3)))
 			{
 				try

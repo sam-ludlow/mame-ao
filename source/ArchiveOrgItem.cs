@@ -107,12 +107,9 @@ namespace Spludlow.MameAO
 
 		private void Initialize()
 		{
-			Files = new Dictionary<string, ArchiveOrgFile>();	//	don't retry ?
+			Files = new Dictionary<string, ArchiveOrgFile>();
 
-			string cacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "archive.org");
-			Directory.CreateDirectory(cacheDirectory);
-
-			string cacheFilename = Path.Combine(cacheDirectory, $"{Key}.json");
+			string cacheFilename = Path.Combine(Globals.RootDirectory, "_METADATA", "archive.org", $"{Key}.json");
 
 			string json = Tools.FetchTextCached(UrlMetadata, cacheFilename);
 
@@ -150,25 +147,18 @@ namespace Spludlow.MameAO
 			Status = "ok";
 		}
 
-		private Dictionary<string, long> GetZipContentsSizes(string listName, ArchiveOrgItem item, ArchiveOrgFile file)
+		public Dictionary<string, long> GetZipContentsSizes(ArchiveOrgFile file, int offset, int chopEnd)
 		{
-			//	TODO
-			string cacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "SoftwareSizes", item.Version);
+			string url = DownloadLink(file) + "/";
 
-			Directory.CreateDirectory(cacheDirectory);
+			string cacheFilename = Path.Combine(Globals.RootDirectory, "_METADATA", "archive.org", $"{Tools.ValidFileName(url.Substring(8))}");
 
-			string filename = Path.Combine(cacheDirectory, listName + ".htm");
+			string html = Tools.FetchTextCached(url, cacheFilename);
 
-			string html;
-			if (File.Exists(filename) == false)
+			if (html == null)
 			{
-				string url = item.DownloadLink(file) + "/";
-				html = Tools.Query(Globals.HttpClient, url);
-				File.WriteAllText(filename, html, Encoding.UTF8);
-			}
-			else
-			{
-				html = File.ReadAllText(filename, Encoding.UTF8);
+				Console.WriteLine($"!!! Can not get ZIP contents: {url}");
+				return null;
 			}
 
 			Dictionary<string, long> result = new Dictionary<string, long>();
@@ -195,17 +185,20 @@ namespace Spludlow.MameAO
 						++index;
 
 						if (part.StartsWith("a href=") == true)
-						{
-							name = part.Substring(index + listName.Length + 1);
-							name = name.Substring(0, name.Length - 4);
-						}
+							name = part.Substring(index);
 
 						if (part.StartsWith("td id=\"size\"") == true)
 							size = part.Substring(index);
 					}
 
 					if (name == null || size == null)
-						throw new ApplicationException($"Bad html line {listName} {line}");
+						throw new ApplicationException($"Bad html line {line}");
+
+					if (offset != 0)
+						name = name.Substring(offset);
+
+					if (chopEnd != 0)
+						name = name.Substring(0, name.Length - chopEnd);
 
 					result.Add(name, Int64.Parse(size));
 				}

@@ -1441,7 +1441,7 @@ namespace Spludlow.MameAO
 				downloadSoftwareUrl = downloadSoftwareUrl.Replace("@LIST@", listEnc);
 				downloadSoftwareUrl = downloadSoftwareUrl.Replace("@SOFTWARE@", softEnc);
 
-				Dictionary<string, long> softwareSizes = GetSoftwareSizes(softwareListName, sourceItem, file);
+				Dictionary<string, long> softwareSizes = sourceItem.GetZipContentsSizes(file, softwareListName.Length + 1, 4);
 
 				if (softwareSizes.ContainsKey(requiredSoftwareName) == false)
 					throw new ApplicationException($"Did GetSoftwareSize {softwareListName}, {requiredSoftwareName} ");
@@ -1484,69 +1484,6 @@ namespace Spludlow.MameAO
 			}
 
 			return missingCount;
-		}
-
-		private Dictionary<string, long> GetSoftwareSizes(string listName, ArchiveOrgItem item, ArchiveOrgFile file)
-		{
-			string cacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "SoftwareSizes", item.Version);
-
-			Directory.CreateDirectory(cacheDirectory);
-
-			string filename = Path.Combine(cacheDirectory, listName + ".htm");
-
-			string html;
-			if (File.Exists(filename) == false)
-			{
-				string url = item.DownloadLink(file) + "/";
-				html = Tools.Query(Globals.HttpClient, url);
-				File.WriteAllText(filename, html, Encoding.UTF8);
-			}
-			else
-			{
-				html = File.ReadAllText(filename, Encoding.UTF8);
-			}
-
-			Dictionary<string, long> result = new Dictionary<string, long>();
-
-			using (StringReader reader = new StringReader(html))
-			{
-				string line;
-				while ((line = reader.ReadLine()) != null)
-				{
-					line = line.Trim();
-					if (line.StartsWith("<tr><td><a href=\"//archive.org/download/") == false)
-						continue;
-
-					string[] parts = line.Split(new char[] { '<' });
-
-					string name = null;
-					string size = null;
-
-					foreach (string part in parts)
-					{
-						int index = part.LastIndexOf(">");
-						if (index == -1)
-							continue;
-						++index;
-
-						if (part.StartsWith("a href=") == true)
-						{
-							name = part.Substring(index + listName.Length + 1);
-							name = name.Substring(0, name.Length - 4);
-						}
-
-						if (part.StartsWith("td id=\"size\"") == true)
-							size = part.Substring(index);
-					}
-
-					if (name == null || size == null)
-						throw new ApplicationException($"Bad html line {listName} {line}");
-
-					result.Add(name, Int64.Parse(size));
-				}
-			}
-
-			return result;
 		}
 
 		private long ImportRoms(string url, string name, long expectedSize, string[] requiredSHA1s)
