@@ -22,6 +22,11 @@ namespace Spludlow.MameAO
 
 		public void Initialize()
 		{
+			if (DataSet != null)
+				return;
+
+			DataSet = new DataSet();
+
 			GitHubRepo repo = Globals.GitHubRepos["MAME_Dats"];
 
 			string url = repo.UrlRaw + "/main/MAME_dat/MAME_Samples.dat";
@@ -36,7 +41,10 @@ namespace Spludlow.MameAO
 			if (xml == null)
 				return;
 
-			Version = ParseXML(xml);
+			XElement document = XElement.Parse(xml);
+			ReadXML.ImportXMLWork(document, DataSet, null, null);
+
+			Version = GetDataSetVersion(DataSet);
 
 			DataSet.Tables["machine"].PrimaryKey = new DataColumn[] { DataSet.Tables["machine"].Columns["name"] };
 			DataSet.Tables["rom"].PrimaryKey = new DataColumn[] { DataSet.Tables["rom"].Columns["machine_id"], DataSet.Tables["rom"].Columns["name"] };
@@ -48,15 +56,6 @@ namespace Spludlow.MameAO
 			}
 
 			Console.WriteLine($"Version:\t{Version}");
-		}
-
-		private string ParseXML(string xml)
-		{
-			XElement document = XElement.Parse(xml);
-			DataSet = new DataSet();
-			ReadXML.ImportXMLWork(document, DataSet, null, null);
-
-			return GetDataSetVersion(DataSet);
 		}
 
 		public string GetDataSetVersion(DataSet dataSet)
@@ -74,7 +73,9 @@ namespace Spludlow.MameAO
 
 		public void Place(DataRow machineRow)
 		{
-			if (DataSet == null)
+			Initialize();
+
+			if (DataSet.Tables.Count == 0)
 				return;
 
 			if (machineRow.IsNull("sampleof") == true)

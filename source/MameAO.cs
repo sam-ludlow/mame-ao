@@ -348,12 +348,10 @@ namespace Spludlow.MameAO
 			Globals.Export = new Export();
 
 			Globals.Artwork = new Artwork();
+			Globals.Samples = new Samples();
 
 			Globals.Genre = new Genre();
 			Globals.Genre.Initialize();
-
-			Globals.Samples = new Samples();
-			Globals.Samples.Initialize();
 
 			//
 			// New version Check

@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Text;
 using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
@@ -147,6 +148,70 @@ namespace Spludlow.MameAO
 			}
 
 			Status = "ok";
+		}
+
+		private Dictionary<string, long> GetZipContentsSizes(string listName, ArchiveOrgItem item, ArchiveOrgFile file)
+		{
+			//	TODO
+			string cacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "SoftwareSizes", item.Version);
+
+			Directory.CreateDirectory(cacheDirectory);
+
+			string filename = Path.Combine(cacheDirectory, listName + ".htm");
+
+			string html;
+			if (File.Exists(filename) == false)
+			{
+				string url = item.DownloadLink(file) + "/";
+				html = Tools.Query(Globals.HttpClient, url);
+				File.WriteAllText(filename, html, Encoding.UTF8);
+			}
+			else
+			{
+				html = File.ReadAllText(filename, Encoding.UTF8);
+			}
+
+			Dictionary<string, long> result = new Dictionary<string, long>();
+
+			using (StringReader reader = new StringReader(html))
+			{
+				string line;
+				while ((line = reader.ReadLine()) != null)
+				{
+					line = line.Trim();
+					if (line.StartsWith("<tr><td><a href=\"//archive.org/download/") == false)
+						continue;
+
+					string[] parts = line.Split(new char[] { '<' });
+
+					string name = null;
+					string size = null;
+
+					foreach (string part in parts)
+					{
+						int index = part.LastIndexOf(">");
+						if (index == -1)
+							continue;
+						++index;
+
+						if (part.StartsWith("a href=") == true)
+						{
+							name = part.Substring(index + listName.Length + 1);
+							name = name.Substring(0, name.Length - 4);
+						}
+
+						if (part.StartsWith("td id=\"size\"") == true)
+							size = part.Substring(index);
+					}
+
+					if (name == null || size == null)
+						throw new ApplicationException($"Bad html line {listName} {line}");
+
+					result.Add(name, Int64.Parse(size));
+				}
+			}
+
+			return result;
 		}
 
 	}

@@ -653,11 +653,75 @@ namespace Spludlow.MameAO
 
 		public void Report_SEMS()
 		{
+			Globals.Samples.Initialize();
+
 			DataSet dataSet = new DataSet();
 
-			if (Globals.Samples.DataSet != null)
+			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection,
+				"SELECT machine.name, machine.description, machine.sampleof FROM machine WHERE (machine.sampleof IS NOT NULL)");
+
+			Dictionary<string, List<string>> sampleMachines = new Dictionary<string, List<string>>();
+
+			foreach (DataRow machineRow in machineTable.Rows)
 			{
-				dataSet = Globals.Samples.DataSet;
+				string name = (string)machineRow["name"];
+				string sampleof = (string)machineRow["sampleof"];
+
+				if (sampleMachines.ContainsKey(sampleof) == false)
+					sampleMachines.Add(sampleof, new List<string>());
+
+				sampleMachines[sampleof].Add(name);
+			}
+
+			DataTable sampleMachinesTable = Tools.MakeDataTable("SampleOf Machines",
+				"sampleof	machine_count	machines",
+				"String		Int32			String");
+			dataSet.Tables.Add(sampleMachinesTable);
+
+			foreach (string sampleof in sampleMachines.Keys)
+			{
+				List<string> machines = sampleMachines[sampleof];
+				machines.Sort();
+
+				sampleMachinesTable.Rows.Add(sampleof, machines.Count, String.Join(", ", machines.ToArray()));
+			}
+
+			if (Globals.Samples.DataSet.Tables.Count > 0)
+			{
+				DataTable samplesTable = Tools.MakeDataTable("SampleOf Samples",
+					"status		sampleof	name	size	sha1",
+					"String		String		String	String	String");
+				dataSet.Tables.Add(samplesTable);
+
+				DataTable sampleMachineTable = Globals.Samples.DataSet.Tables["machine"];
+				DataTable sampleRomTable = Globals.Samples.DataSet.Tables["rom"];
+
+				ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
+
+				foreach (string sampleof in sampleMachines.Keys)
+				{
+					DataRow sampleMachineRow = sampleMachineTable.Rows.Find(sampleof);
+
+					if (sampleMachineRow == null)
+					{
+						samplesTable.Rows.Add("DATA MISSING", sampleof);
+						continue;
+					}
+
+					string key = $"Samples/{sampleof}";
+					ArchiveOrgFile file = item.GetFile(key);
+					string status = file == null ? "ZIP MISSING" : "";
+
+					long machine_id = (long)sampleMachineRow["machine_id"];
+					foreach (DataRow sampleRomRow in sampleRomTable.Select($"machine_id = {machine_id}"))
+					{
+						string name = (string)sampleRomRow["name"];
+						string size = (string)sampleRomRow["size"];
+						string sha1 = (string)sampleRomRow["sha1"];
+
+						samplesTable.Rows.Add(status, sampleof, name, size, sha1);
+					}
+				}
 			}
 
 			this.SaveHtmlReport(dataSet, "Source Exists Machine Samples");
@@ -679,6 +743,14 @@ namespace Spludlow.MameAO
 						table.TableName = $"{type}_{table.TableName}";
 						dataSet.Tables.Add(table);
 					}
+
+					//string key = $"{artworkType}/{artworkType}";
+					//ArchiveOrgFile file = item.GetFile(key);
+					//if (file == null)
+					//{
+					//	Console.WriteLine($"!!! Artwork file not on archive.org: {key}");
+					//	continue;
+					//}
 				}
 			}
 
