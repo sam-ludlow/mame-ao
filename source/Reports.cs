@@ -739,30 +739,66 @@ namespace Spludlow.MameAO
 
 				if (Globals.Artwork.ArtworkDatas[artworkType].DataSet != null)
 				{
-					foreach (DataTable sourceTable in Globals.Artwork.ArtworkDatas[artworkType].DataSet.Tables)
-					{
-						DataTable table = sourceTable.Copy();
-						table.TableName = $"{artworkType}_{table.TableName}";
-						dataSet.Tables.Add(table);
-					}
+					DataTable artworkMachinesTable = Tools.MakeDataTable($"Artwork Machines: {artworkType}",
+						"Status		name	size",
+						"String		String	Int64");
+					dataSet.Tables.Add(artworkMachinesTable);
 
 					string fileKey = $"{artworkType}/{artworkType}";
 					ArchiveOrgFile file = item.GetFile(fileKey);
 					if (file == null)
 					{
-						Console.WriteLine($"!!! Artwork file not on archive.org: {fileKey}");
+						artworkMachinesTable.Rows.Add("MAIN ZIP MISSING", fileKey);
 						continue;
 					}
-
+					
 					Dictionary<string, long> zipSizes = item.GetZipContentsSizes(file, 0, 4);
 
+					foreach (DataRow artworkMachineRow in Globals.Artwork.ArtworkDatas[artworkType].DataSet.Tables["machine"].Rows)
+					{
+						string name = (string)artworkMachineRow["name"];
 
-					// TODO
-
+						if (zipSizes.ContainsKey(name) == true)
+							artworkMachinesTable.Rows.Add("", name, zipSizes[name]);
+						else
+							artworkMachinesTable.Rows.Add("ZIP MISSING", name, 0);
+					}
 				}
 			}
 
-			this.SaveHtmlReport(dataSet, "Source Exists Machine Artwork");
+			DataSet resultDataSet = new DataSet();
+
+			for (int pass = 0; pass < 2; ++pass)
+			{
+				foreach (DataTable table in dataSet.Tables)
+				{
+					DataView view;
+					DataTable viewTable;
+
+					if (pass == 0)
+					{
+						view = new DataView(table);
+						view.RowFilter = "Status <> ''";
+						viewTable = table.Clone();
+						foreach (DataRowView rowView in view)
+							viewTable.ImportRow(rowView.Row);
+						viewTable.TableName = $"{table.TableName} Bad Status";
+						resultDataSet.Tables.Add(viewTable);
+					}
+					else
+					{
+						view = new DataView(table);
+						view.RowFilter = "Status = ''";
+						viewTable = table.Clone();
+						foreach (DataRowView rowView in view)
+							viewTable.ImportRow(rowView.Row);
+						viewTable.TableName = table.TableName;
+						resultDataSet.Tables.Add(viewTable);
+					}
+				}
+			}
+
+			this.SaveHtmlReport(resultDataSet, "Source Exists Machine Artwork");
 		}
 
 		public void Report_AVM()
