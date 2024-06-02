@@ -212,7 +212,7 @@ namespace Spludlow.MameAO
 			Tools.PlaceFiles(targetStoreFilenames.ToArray());
 
 			if (Globals.Settings.Options["PlaceReport"] == "Yes")
-				Globals.Reports.SaveHtmlReport(report, "Samples Place Report - " + report.Tables["Info"].Rows[0]["heading"]);
+				Globals.Reports.SaveHtmlReport(report, "Place - Machnine Samples - " + report.Tables["Info"].Rows[0]["heading"]);
 		}
 	}
 }

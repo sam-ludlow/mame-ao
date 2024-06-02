@@ -1024,9 +1024,9 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 		}
 
-		private int GetRomsMachine(string machineName, List<string[]> romStoreFilenames)
+		private int GetRomsMachine(string machineName, List<string[]> targetStoreFilenames)
 		{
-			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineRom][0];	//	TODO: Support many
+			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
 
 			//
 			// Related/Required machines (parent/bios/devices)
@@ -1044,6 +1044,8 @@ namespace Spludlow.MameAO
 				$"required machines: {String.Join(", ", requiredMachines.ToArray())}",
 			});
 
+			DataSet report = Reports.PlaceReportTemplate($"machine:{machineName}, required:{String.Join(", ", requiredMachines.ToArray())}");
+
 			foreach (string requiredMachineName in requiredMachines)
 			{
 				DataRow requiredMachine = Globals.Database.GetMachine(requiredMachineName);
@@ -1051,39 +1053,36 @@ namespace Spludlow.MameAO
 					throw new ApplicationException("requiredMachine not found: " + requiredMachineName);
 
 				//
-				// See if ROMS are in the hash store
+				// Required
 				//
-				HashSet<string> missingRoms = new HashSet<string>();
+				bool downloadRequired = false;
 
 				foreach (DataRow romRow in Globals.Database.GetMachineRoms(requiredMachine))
 				{
-					string name = Tools.DataRowValue(romRow, "name");
-					string sha1 = Tools.DataRowValue(romRow, "sha1");
-
-					if (name == null || sha1 == null)
+					if (romRow.IsNull("name") || romRow.IsNull("sha1"))
 						continue;
 
-					bool inStore = Globals.RomHashStore.Exists(sha1);
+					string sha1 = (string)romRow["sha1"];
+					string name = (string)romRow["name"];
+					bool required = !Globals.RomHashStore.Exists(sha1);
 
-					Console.WriteLine($"Checking machine ROM: {inStore}\t{sha1}\t{requiredMachineName}\t{name}");
+					if (required == true)
+						downloadRequired = true;
 
-					if (inStore == false)
-						missingRoms.Add(sha1);
+					report.Tables["Require"].Rows.Add(sha1, required, name);
+					Console.WriteLine($"{sha1}\t{required}\t{name}");
 				}
 
-				//
-				// If not then download and import into hash store
-				//
-				if (missingRoms.Count > 0)
+				if (downloadRequired == true)
 				{
 					ArchiveOrgFile file = sourceItem.GetFile(requiredMachineName);
 					if (file != null)
-						ImportRoms(sourceItem.DownloadLink(file), $"machine rom: '{requiredMachineName}'", file.size, missingRoms.ToArray());
+						ImportFiles(sourceItem.DownloadLink(file), file.size, report);
 				}
 			}
 
 			//
-			// Check and place ROMs
+			// Place
 			//
 			int missingCount = 0;
 
@@ -1095,31 +1094,31 @@ namespace Spludlow.MameAO
 
 				foreach (DataRow romRow in Globals.Database.GetMachineRoms(requiredMachine))
 				{
-					string name = Tools.DataRowValue(romRow, "name");
-					string sha1 = Tools.DataRowValue(romRow, "sha1");
-
-					if (name == null || sha1 == null)
+					if (romRow.IsNull("name") || romRow.IsNull("sha1"))
 						continue;
 
-					string romFilename = Path.Combine(Globals.MameDirectory, "roms", requiredMachineName, name);
-					string romDirectory = Path.GetDirectoryName(romFilename);
-					if (Directory.Exists(romDirectory) == false)
-						Directory.CreateDirectory(romDirectory);
+					string sha1 = (string)romRow["sha1"];
+					string name = (string)romRow["name"];
 
-					bool have = Globals.RomHashStore.Exists(sha1);
+					string targetFilename = Path.Combine(Globals.MameDirectory, "roms", requiredMachineName, name);
 
-					if (have == true)
-					{
-						if (File.Exists(romFilename) == false)
-							romStoreFilenames.Add(new string[] { romFilename, Globals.RomHashStore.Filename(sha1) });
-					}
-					else
-					{
+					bool fileExists = File.Exists(targetFilename);
+					bool storeExists = Globals.RomHashStore.Exists(sha1);
+					bool place = fileExists == false && storeExists == true;
+
+					if (storeExists == false)
 						++missingCount;
-					}
-					Console.WriteLine($"Place machine ROM: {have}\t{sha1}\t{requiredMachineName}\t{name}");
+
+					if (place == true)
+						targetStoreFilenames.Add(new string[] { targetFilename, Globals.RomHashStore.Filename(sha1) });
+
+					report.Tables["Place"].Rows.Add(sha1, place, storeExists, name);
+					Console.WriteLine($"{sha1}\t{place}\t{storeExists}\t{name}");
 				}
 			}
+
+			if (Globals.Settings.Options["PlaceReport"] == "Yes")
+				Globals.Reports.SaveHtmlReport(report, "Place - Machine Rom - " + report.Tables["Info"].Rows[0]["heading"]);
 
 			return missingCount;
 		}
@@ -1164,7 +1163,7 @@ namespace Spludlow.MameAO
 
 		private int GetDisksMachine(string machineName, List<string[]> romStoreFilenames)
 		{
-			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineDisk][0]; //	TODO: Support many
+			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineDisk][0];
 
 			DataRow machineRow = Globals.Database.GetMachine(machineName);
 			if (machineRow == null)
@@ -1381,9 +1380,9 @@ namespace Spludlow.MameAO
 			return missing;
 		}
 
-		private int GetRomsSoftware(DataRow softwareList, DataRow software, List<string[]> romStoreFilenames)
+		private int GetRomsSoftware(DataRow softwareList, DataRow software, List<string[]> targetStoreFilenames)
 		{
-			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.SoftwareRom][0];	//	TODO: Support many
+			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.SoftwareRom][0];
 
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
@@ -1403,31 +1402,30 @@ namespace Spludlow.MameAO
 			if (file == null)
 				throw new ApplicationException($"Software list not on archive.org {softwareListName}");
 
-			//
-			// Check ROMs in store on SHA1
-			//
-			HashSet<string> missingRoms = new HashSet<string>();
+			DataSet report = Reports.PlaceReportTemplate($"softwareListName:{softwareListName}, softwareName:{softwareName}");
 
-			foreach (DataRow rom in roms)
+			//
+			// Required
+			//
+			bool downloadRequired = false;
+
+			foreach (DataRow romRow in roms)
 			{
-				string romName = Tools.DataRowValue(rom, "name");
-				string sha1 = Tools.DataRowValue(rom, "sha1");
-
-				if (romName == null || sha1 == null)
+				if (romRow.IsNull("name") || romRow.IsNull("sha1"))
 					continue;
 
-				bool inStore = Globals.RomHashStore.Exists(sha1);
+				string sha1 = (string)romRow["sha1"];
+				string name = (string)romRow["name"];
+				bool required = !Globals.RomHashStore.Exists(sha1);
 
-				Console.WriteLine($"Checking Software ROM: {inStore}\t{sha1}\t{softwareListName}\t{softwareName}\t{romName}");
+				if (required == true)
+					downloadRequired = true;
 
-				if (inStore == false)
-					missingRoms.Add(sha1);
+				report.Tables["Require"].Rows.Add(sha1, required, name);
+				Console.WriteLine($"{sha1}\t{required}\t{name}");
 			}
 
-			//
-			// Download ROMs and import to store
-			//
-			if (missingRoms.Count > 0)
+			if (downloadRequired == true)
 			{
 				string requiredSoftwareName = softwareName;
 				string parentSoftwareName = Tools.DataRowValue(software, "cloneof");
@@ -1437,51 +1435,49 @@ namespace Spludlow.MameAO
 				string listEnc = Uri.EscapeDataString(softwareListName);
 				string softEnc = Uri.EscapeDataString(requiredSoftwareName);
 
-				string downloadSoftwareUrl = sourceItem.DownloadLink(file) + "/@LIST@%2f@SOFTWARE@.zip";
-				downloadSoftwareUrl = downloadSoftwareUrl.Replace("@LIST@", listEnc);
-				downloadSoftwareUrl = downloadSoftwareUrl.Replace("@SOFTWARE@", softEnc);
+				string url = sourceItem.DownloadLink(file) + "/@LIST@%2f@SOFTWARE@.zip";
+				url = url.Replace("@LIST@", listEnc);
+				url = url.Replace("@SOFTWARE@", softEnc);
 
 				Dictionary<string, long> softwareSizes = sourceItem.GetZipContentsSizes(file, softwareListName.Length + 1, 4);
 
 				if (softwareSizes.ContainsKey(requiredSoftwareName) == false)
-					throw new ApplicationException($"Did GetSoftwareSize {softwareListName}, {requiredSoftwareName} ");
+					throw new ApplicationException($"Software Size not in ZIP {softwareListName}, {requiredSoftwareName} ");
 
-				long size = softwareSizes[requiredSoftwareName];
-
-				ImportRoms(downloadSoftwareUrl, $"software rom: '{softwareListName}/{requiredSoftwareName}'", size, missingRoms.ToArray());
+				ImportFiles(url, softwareSizes[requiredSoftwareName], report);
 			}
 
 			//
-			// Check and place ROMs
+			// Place
 			//
 
 			int missingCount = 0;
-			foreach (DataRow rom in roms)
+			foreach (DataRow romRow in roms)
 			{
-				string romName = Tools.DataRowValue(rom, "name");
-				string sha1 = Tools.DataRowValue(rom, "sha1");
-
-				if (romName == null || sha1 == null)
+				if (romRow.IsNull("name") || romRow.IsNull("sha1"))
 					continue;
 
-				string romFilename = Path.Combine(Globals.MameDirectory, "roms", softwareListName, softwareName, romName);
-				string romDirectory = Path.GetDirectoryName(romFilename);
-				if (Directory.Exists(romDirectory) == false)
-					Directory.CreateDirectory(romDirectory);
+				string sha1 = (string)romRow["sha1"];
+				string name = (string)romRow["name"];
 
-				bool have = Globals.RomHashStore.Exists(sha1);
+				string targetFilename = Path.Combine(Globals.MameDirectory, "roms", softwareListName, softwareName, name);
 
-				if (have == true)
-				{
-					if (File.Exists(romFilename) == false)
-						romStoreFilenames.Add(new string[] { romFilename, Globals.RomHashStore.Filename(sha1) });
-				}
-				else
-				{
+				bool fileExists = File.Exists(targetFilename);
+				bool storeExists = Globals.RomHashStore.Exists(sha1);
+				bool place = fileExists == false && storeExists == true;
+
+				if (storeExists == false)
 					++missingCount;
-				}
-				Console.WriteLine($"Place software ROM: {have}\t{sha1}\t{softwareListName}\t{softwareName}\t{romName}");
+
+				if (place == true)
+					targetStoreFilenames.Add(new string[] { targetFilename, Globals.RomHashStore.Filename(sha1) });
+
+				report.Tables["Place"].Rows.Add(sha1, place, storeExists, name);
+				Console.WriteLine($"{sha1}\t{place}\t{storeExists}\t{name}");
 			}
+
+			if (Globals.Settings.Options["PlaceReport"] == "Yes")
+				Globals.Reports.SaveHtmlReport(report, "Place - Software Rom - " + report.Tables["Info"].Rows[0]["heading"]);
 
 			return missingCount;
 		}
@@ -1533,6 +1529,50 @@ namespace Spludlow.MameAO
 				Console.WriteLine($"!!! Importing missing sha1 in source it won't work. {name} {sha1}");
 
 			return size;
+		}
+
+		private void ImportFiles(string url, long expectedSize, DataSet report)
+		{
+			using (TempDirectory tempDir = new TempDirectory())
+			{
+				string archiveFilename = Path.Combine(tempDir.Path, "archive.zip");
+				string extractDirectory = Path.Combine(tempDir.Path, "OUT");
+				Directory.CreateDirectory(extractDirectory);
+
+				report.Tables["Download"].Rows.Add(url);
+
+				Console.Write($"Downloading size:{Tools.DataSize(expectedSize)} url:{url} ...");
+				DateTime startTime = DateTime.Now;
+				long size = Tools.Download(url, archiveFilename, Globals.DownloadDotSize, 30);
+				TimeSpan took = DateTime.Now - startTime;
+				Console.WriteLine("...done");
+
+				decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
+				Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
+
+				if (size != expectedSize)
+					Console.WriteLine($"!!! Unexpected downloaded file size expect:{expectedSize} actual:{size}");
+
+				Console.Write($"Extracting {archiveFilename} ...");
+				ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
+				Console.WriteLine("...done");
+
+				Tools.ClearAttributes(tempDir.Path);
+
+				foreach (string filename in Directory.GetFiles(extractDirectory, "*", SearchOption.AllDirectories))
+				{
+					string subPathName = filename.Substring(extractDirectory.Length);
+					string sha1 = Globals.RomHashStore.Hash(filename);
+					bool required = Globals.Database._AllSHA1s.Contains(sha1);
+					bool imported = false;
+
+					if (required == true)
+						imported = Globals.RomHashStore.Add(filename);
+
+					report.Tables["Import"].Rows.Add(sha1, imported, required, subPathName);
+					Console.WriteLine($"{sha1}\t{imported}\t{required}\t{subPathName}");
+				}
+			}
 		}
 
 		private bool ImportDisk(ArchiveOrgItem sourceItem, ArchiveOrgFile sourceFile, string expectedSha1)
