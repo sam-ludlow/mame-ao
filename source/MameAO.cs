@@ -148,6 +148,15 @@ namespace Spludlow.MameAO
 			Globals.Settings = new Settings();
 
 			//
+			// Fixes
+			//
+
+			//	Fixed in 1.88 - this file can have duff data
+			string badSourcesFilename = Path.Combine(Globals.RootDirectory, "_BadSources.txt");
+			if (File.Exists(badSourcesFilename) == true && File.GetLastWriteTime(badSourcesFilename) < new DateTime(2024, 6, 12))
+				File.Delete(badSourcesFilename);
+
+			//
 			// Symbolic Links check
 			//
 
@@ -1218,7 +1227,7 @@ namespace Spludlow.MameAO
 					}
 					else
 					{
-						ImportDisk(sourceItem, sourceFile, $"machine disk: '{sourceFile.name}'");
+						ImportDisk(sourceItem, sourceFile, sha1);
 					}
 				}
 			}
