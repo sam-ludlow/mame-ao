@@ -488,7 +488,7 @@ namespace Spludlow.MameAO
 
 					DataRow row = table.Rows.Add("", machineName, romof, merge, machineDescription, diskName, sha1);
 
-					ArchiveOrgFile sourceFile = MameAOProcessor.MachineDiskAvailableSourceFile(machineRow, diskRow, sourceItem, Globals.Database);
+					ArchiveOrgFile sourceFile = Place.MachineDiskAvailableSourceFile(machineRow, diskRow, sourceItem);
 
 					if (sourceFile != null)
 					{

@@ -97,7 +97,7 @@ namespace Spludlow.MameAO
 			return (string)table.Rows[0]["version"];
 		}
 
-		public void Place(DataRow machineRow)
+		public void PlaceAssets(DataRow machineRow)
 		{
 			List<string> machineNames = new List<string>();
 			machineNames.Add((string)machineRow["name"]);
@@ -129,10 +129,6 @@ namespace Spludlow.MameAO
 			});
 
 			DataSet report = Reports.PlaceReportTemplate($"machines:{String.Join(", ", machineNames)}");
-
-			//
-			// Require
-			//
 
 			foreach (string machineName in machineNames)
 			{
@@ -183,62 +179,14 @@ namespace Spludlow.MameAO
 
 					string url = $"{item.DownloadLink(file)}/{machineName}.zip";
 
-					using (TempDirectory tempDir = new TempDirectory())
-					{
-						string zipFilename = Path.Combine(tempDir.Path, machineName + ".zip");
+					Dictionary<string, long> softwareSizes = item.GetZipContentsSizes(file, 0, 4);
 
-						report.Tables["Download"].Rows.Add(url);
-
-						Console.Write($"Downloading {url}...");
-						Tools.Download(url, zipFilename, Globals.DownloadDotSize, 10);
-						Console.WriteLine("...done");
-
-						ZipFile.ExtractToDirectory(zipFilename, tempDir.Path);
-						Tools.ClearAttributes(tempDir.Path);
-
-						foreach (string filename in Directory.GetFiles(tempDir.Path, "*", SearchOption.AllDirectories))
-						{
-							string subPathName = filename.Substring(tempDir.Path.Length);
-							string sha1 = Globals.RomHashStore.Hash(filename);
-							bool required = Globals.Database._AllSHA1s.Contains(sha1);
-							bool imported = false;
-
-							if (required == true)
-								imported = Globals.RomHashStore.Add(filename, false, sha1);
-
-							report.Tables["Import"].Rows.Add(sha1, imported, required, subPathName);
-							Console.WriteLine($"{sha1}\t{imported}\t{required}\t{subPathName}");
-						}
-					}
+					Place.DownloadImportFiles(url, softwareSizes[machineName]);
 				}
-
-				//
-				// Place
-				//
 
 				string targetDirectory = Path.Combine(MameArtworkDirectory, machineName);
 
-				List<string[]> targetStoreFilenames = new List<string[]>();
-
-				foreach (DataRow row in artworkRows)
-				{
-					string name = (string)row["name"];
-					string sha1 = (string)row["sha1"];
-
-					string targetFilename = Path.Combine(targetDirectory, name);
-
-					bool fileExists = File.Exists(targetFilename);
-					bool storeExists = Globals.RomHashStore.Exists(sha1);
-					bool place = fileExists == false && storeExists == true;
-
-					if (place == true)
-						targetStoreFilenames.Add(new string[] { targetFilename, Globals.RomHashStore.Filename(sha1) });
-
-					report.Tables["Place"].Rows.Add(sha1, place, storeExists, name);
-					Console.WriteLine($"{sha1}\t{place}\t{storeExists}\t{name}");
-				}
-
-				Tools.PlaceFiles(targetStoreFilenames.ToArray());
+				Place.PlaceAssetFiles(artworkRows.ToArray(), Globals.RomHashStore, targetDirectory, null);
 
 				if (Globals.Settings.Options["PlaceReport"] == "Yes")
 					Globals.Reports.SaveHtmlReport(report, "Place - Machine Artwork - " + report.Tables["Info"].Rows[0]["heading"]);

@@ -230,14 +230,14 @@ namespace Spludlow.MameAO
 		public DataRow[] GetMachineRoms(DataRow machine)
 		{
 			long machine_id = (long)machine["machine_id"];
-			DataTable table = Database.ExecuteFill(_MachineConnection, $"SELECT * FROM rom WHERE machine_id = {machine_id}");
+			DataTable table = Database.ExecuteFill(_MachineConnection, $"SELECT * FROM rom WHERE machine_id = {machine_id} AND [name] IS NOT NULL AND [sha1] IS NOT NULL");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
 		public DataRow[] GetMachineDisks(DataRow machine)
 		{
 			long machine_id = (long)machine["machine_id"];
-			DataTable table = Database.ExecuteFill(_MachineConnection, $"SELECT * FROM disk WHERE machine_id = {machine_id}");
+			DataTable table = Database.ExecuteFill(_MachineConnection, $"SELECT * FROM disk WHERE machine_id = {machine_id} AND [name] IS NOT NULL AND [sha1] IS NOT NULL");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
@@ -374,7 +374,7 @@ namespace Spludlow.MameAO
 			long software_id = (long)software["software_id"];
 			DataTable table = ExecuteFill(_SoftwareConnection,
 				"SELECT rom.* FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id " +
-				$"WHERE part.software_id = {software_id}");
+				$"WHERE part.software_id = {software_id} AND rom.[name] IS NOT NULL AND rom.[sha1] IS NOT NULL");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
@@ -383,7 +383,7 @@ namespace Spludlow.MameAO
 			long software_id = (long)software["software_id"];
 			DataTable table = ExecuteFill(_SoftwareConnection,
 				"SELECT disk.* FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
-				$"WHERE part.software_id = {software_id}");
+				$"WHERE part.software_id = {software_id} AND disk.[name] IS NOT NULL AND disk.[sha1] IS NOT NULL");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 

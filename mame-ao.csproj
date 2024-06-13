@@ -68,6 +68,7 @@
     <Compile Include="source\MameAO.cs" />
     <Compile Include="source\MameChdMan.cs" />
     <Compile Include="source\Operations.cs" />
+    <Compile Include="source\Place.cs" />
     <Compile Include="source\Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="source\ReadXML.cs" />

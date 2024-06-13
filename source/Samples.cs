@@ -71,7 +71,7 @@ namespace Spludlow.MameAO
 			return (string)table.Rows[0]["version"];
 		}
 
-		public void Place(DataRow machineRow)
+		public void PlaceAssets(DataRow machineRow)
 		{
 			Initialize();
 
@@ -101,10 +101,6 @@ namespace Spludlow.MameAO
 			}
 
 			DataSet report = Reports.PlaceReportTemplate($"machine:{machineName}, sampleof:{machineSampleOf}");
-
-			//
-			// Required
-			//
 
 			long machine_id = (long)sampleMachineRow["machine_id"];
 
@@ -154,62 +150,12 @@ namespace Spludlow.MameAO
 
 				string url = item.DownloadLink(file);
 
-				using (TempDirectory tempDir = new TempDirectory())
-				{
-					string zipFilename = Path.Combine(tempDir.Path, machineName + ".zip");
-
-					report.Tables["Download"].Rows.Add(url);
-
-					Console.Write($"Downloading {url}...");
-					Tools.Download(url, zipFilename, Globals.DownloadDotSize, 10);
-					Console.WriteLine("...done");
-
-					ZipFile.ExtractToDirectory(zipFilename, tempDir.Path);
-					Tools.ClearAttributes(tempDir.Path);
-
-					foreach (string wavFilename in Directory.GetFiles(tempDir.Path, "*.wav", SearchOption.AllDirectories))
-					{
-						string subPathName = wavFilename.Substring(tempDir.Path.Length);
-						string sha1 = Globals.RomHashStore.Hash(wavFilename);
-						bool required = Globals.Database._AllSHA1s.Contains(sha1);
-						bool imported = false;
-
-						if (required == true)
-							imported = Globals.RomHashStore.Add(wavFilename);
-
-						report.Tables["Import"].Rows.Add(sha1, imported, required, subPathName);
-						Console.WriteLine($"{sha1}\t{imported}\t{required}\t{subPathName}");
-					}
-				}
+				Place.DownloadImportFiles(url, file.size);
 			}
 
-			//
-			// Place
-			//
+			string targetDirectory = Path.Combine(MameSamplesDirectory, machineSampleOf);
 
-			string machineWavDirectory = Path.Combine(MameSamplesDirectory, machineSampleOf);
-
-			List<string[]> targetStoreFilenames = new List<string[]>();
-
-			foreach (DataRow row in sampleRoms)
-			{
-				string name = (string)row["name"];
-				string sha1 = (string)row["sha1"];
-
-				string wavFilename = Path.Combine(machineWavDirectory, name);
-				
-				bool fileExists = File.Exists(wavFilename);
-				bool storeExists = Globals.RomHashStore.Exists(sha1);
-				bool place = fileExists == false && storeExists == true;
-
-				if (place == true)
-					targetStoreFilenames.Add(new string[] { wavFilename, Globals.RomHashStore.Filename(sha1) });
-
-				report.Tables["Place"].Rows.Add(sha1, place, storeExists, name);
-				Console.WriteLine($"{sha1}\t{place}\t{storeExists}\t{name}");
-			}
-
-			Tools.PlaceFiles(targetStoreFilenames.ToArray());
+			Place.PlaceAssetFiles(sampleRoms.ToArray(), Globals.RomHashStore, targetDirectory, null);
 
 			if (Globals.Settings.Options["PlaceReport"] == "Yes")
 				Globals.Reports.SaveHtmlReport(report, "Place - Machnine Samples - " + report.Tables["Info"].Rows[0]["heading"]);
