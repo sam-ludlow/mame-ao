@@ -82,7 +82,7 @@ namespace Spludlow.MameAO
 
 		private IntPtr _ConsoleHandle;
 
-		private string WelcomeText = @"@VERSION
+		private readonly string WelcomeText = @"@VERSION
 '##::::'##::::'###::::'##::::'##:'########:::::::'###:::::'#######::
  ###::'###:::'## ##::: ###::'###: ##.....:::::::'## ##:::'##.... ##:
  ####'####::'##:. ##:: ####'####: ##:::::::::::'##:. ##:: ##:::: ##:
@@ -504,7 +504,7 @@ namespace Spludlow.MameAO
 
 						machine = parts[1].ToLower();
 						
-						ValidateFavorite(machine, null, null);
+						Favorites.ValidateFavorite(machine, null, null);
 
 						if (parts[0].EndsWith("x") == true)
 							Globals.Favorites.RemoveMachine(machine);
@@ -522,7 +522,7 @@ namespace Spludlow.MameAO
 						string list = parts[2].ToLower();
 						software = parts[3].ToLower();
 
-						ValidateFavorite(machine, list, software);
+						Favorites.ValidateFavorite(machine, list, software);
 
 						if (parts[0].EndsWith("x") == true)
 							Globals.Favorites.RemoveSoftware(machine, list, software);
@@ -680,41 +680,6 @@ namespace Spludlow.MameAO
 				Place.PlaceAssets(machine, software);
 				Mame.RunMame(binFilename, machine + " " + software + " " + arguments);
 			}
-		}
-
-		private void ValidateFavorite(string machine, string list, string software)
-		{
-			DataRow machineRow = Globals.Database.GetMachine(machine);
-			if (machineRow == null)
-				throw new ApplicationException($"Machine not found: {machine}.");
-
-			if (list == null)
-				return;
-
-			DataRow machineListRow = null;
-			foreach (DataRow row in Globals.Database.GetMachineSoftwareLists(machineRow))
-			{
-				if (list == (string)row["name"])
-					machineListRow = row;
-			}
-
-			if (machineListRow == null)
-				throw new ApplicationException($"Machine does not have that software list: {machine}, {list}");
-
-			DataRow softwareListRow = Globals.Database.GetSoftwareList(list);
-
-			if (softwareListRow == null)
-				throw new ApplicationException($"Software list not found: {list}");
-
-			DataRow softwareRow = null;
-			foreach (DataRow row in Globals.Database.GetSoftwareListsSoftware(softwareListRow))
-			{
-				if (software == (string)row["name"])
-					softwareRow = row;
-			}
-
-			if (softwareRow == null)
-				throw new ApplicationException($"Software not found in software list: {list}, {software}");
 		}
 
 		public void ListSavedState()

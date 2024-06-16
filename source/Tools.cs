@@ -176,12 +176,11 @@ namespace Spludlow.MameAO
 			return result.ToString();
 		}
 
-		private static List<char> _InvalidFileNameChars = new List<char>(Path.GetInvalidFileNameChars());
-
 		public static string ValidFileName(string name)
 		{
 			return ValidName(name, _InvalidFileNameChars, "_");
 		}
+		private static readonly List<char> _InvalidFileNameChars = new List<char>(Path.GetInvalidFileNameChars());
 
 		private static string ValidName(string name, List<char> invalidChars, string replaceBadWith)
 		{
@@ -384,26 +383,6 @@ namespace Spludlow.MameAO
 			return total;
 		}
 
-		public static void PlaceFiles(string[][] targetStoreFilenames)
-		{
-			HashSet<string> directories = new HashSet<string>();
-			foreach (string[] targetStoreFilename in targetStoreFilenames)
-				directories.Add(Path.GetDirectoryName(targetStoreFilename[0]));
-
-			foreach (string directory in directories)
-				Directory.CreateDirectory(directory);
-
-			if (Globals.LinkingEnabled == true)
-			{
-				LinkFiles(targetStoreFilenames);
-			}
-			else
-			{
-				foreach (string[] targetStoreFilename in targetStoreFilenames)
-					File.Copy(targetStoreFilename[1], targetStoreFilename[0], true);
-			}
-		}
-
 		public static void LinkFiles(string[][] linkTargetFilenames)
 		{
 			StringBuilder batch = new StringBuilder();
@@ -450,12 +429,11 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		private static readonly DateTime EpochDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
 		public static DateTime FromEpochDate(double epoch)
 		{
 			return EpochDateTime.AddSeconds(epoch);
 		}
+		private static readonly DateTime EpochDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
 		public static string DataSize(long sizeBytes)
 		{
@@ -539,8 +517,6 @@ namespace Spludlow.MameAO
 
 		public TempDirectory()
 		{
-			//			LockFilePath = @"\\?\" + System.IO.Path.GetTempFileName(); //	Long filename support
-
 			_LockFilePath = System.IO.Path.GetTempFileName();
 			_Path = _LockFilePath + ".dir";
 

@@ -123,6 +123,38 @@ namespace Spludlow.MameAO
 
 		};
 
+		private static readonly string _HtmlReportStyle = @"
+			body {
+				font-family: sans-serif;
+				font-size: small;
+				background-color: #c6eafb;
+			}
+			hr {
+				color: #00ADEF;
+				background-color: #00ADEF;
+				height: 6px;
+				border: none;
+				padding-left: 0px;
+			}
+			table {
+				border-collapse: collapse;
+			}
+			th, td {
+				padding: 2px;
+				text-align: left;
+			}
+			table, th, td {
+				border: 1px solid black;
+			}
+			th {
+				background-color: #00ADEF;
+				color: white;
+			}
+			tr:nth-child(even) {
+				background-color: #b6daeb;
+			}
+		";
+
 		private string _OutputDirectory;
 
 		public Reports()
@@ -150,37 +182,6 @@ namespace Spludlow.MameAO
 
 			return results.ToArray();
 		}
-
-		private static readonly string _HtmlReportStyle =
-			"body {" +
-			" font-family: sans-serif;" +
-			" font-size: small;" +
-			" background-color: #c6eafb;" +
-			"}" +
-			"hr {" +
-			" color: #00ADEF;" +
-			" background-color: #00ADEF;" +
-			" height: 6px;" +
-			" border: none;" +
-			" padding-left: 0px;" +
-			"}" +
-			"table {" +
-			" border-collapse: collapse;" +
-			"}" +
-			"th, td {" +
-			" padding: 2px;" +
-			" text-align: left;" +
-			"}" +
-			"table, th, td {" +
-			" border: 1px solid black;" +
-			"}" +
-			"th {" +
-			" background-color: #00ADEF;" +
-			" color: white;" +
-			"}" +
-			"tr:nth-child(even) {" +
-			" background-color: #b6daeb;" +
-			"}";
 
 		public void SaveHtmlReport(DataView[] views, string[] headings, string title)
 		{
@@ -363,45 +364,36 @@ namespace Spludlow.MameAO
 			return true;
 		}
 
-		public static DataSet PlaceReportTemplate(string heading)
+		public static DataSet PlaceReportTemplate()
 		{
 			DataSet dataSet = new DataSet();
 
 			dataSet.Tables.Add(Tools.MakeDataTable(
-				"Info",
-				"heading",
-				"String"
-			));
-
-			dataSet.Tables["Info"].Rows.Add(heading);
-
-			dataSet.Tables.Add(Tools.MakeDataTable(
 				"Require",
-				"sha1	require	name",
-				"String	Boolean	String"
+				"When		AssetType	Key1	Key2	sha1	require	name",
+				"DateTime	String		String	String	String	Boolean	String"
 			));
 
 			dataSet.Tables.Add(Tools.MakeDataTable(
 				"Download",
-				"url",
-				"String"
+				"When		AssetType	Key1	Key2	url		size",
+				"DateTime	String		String	String	String	Int64"
 			));
 
 			dataSet.Tables.Add(Tools.MakeDataTable(
 				"Import",
-				"sha1	import	require	name",
-				"String	Boolean	Boolean	String"
+				"When		AssetType	Key1	Key2	sha1	required	imported	name",
+				"DateTime	String		String	String	String	Boolean		Boolean		String"
 			));
 
 			dataSet.Tables.Add(Tools.MakeDataTable(
 				"Place",
-				"sha1	place	have	name",
-				"String	Boolean	Boolean	String"
+				"When		AssetType	Key1	Key2	sha1	place	have	name",
+				"DateTime	String		String	String	String	Boolean	Boolean	String"
 			));
 
 			return dataSet;
 		}
-
 
 		public void Report_SEMR()
 		{

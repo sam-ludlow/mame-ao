@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Xml.Linq;
 
@@ -99,8 +98,7 @@ namespace Spludlow.MameAO
 
 		public void PlaceAssets(DataRow machineRow)
 		{
-			List<string> machineNames = new List<string>();
-			machineNames.Add((string)machineRow["name"]);
+			List<string> machineNames = new List<string>(new string[] { (string)machineRow["name"] });
 			if (machineRow.IsNull("cloneof") == false)
 				machineNames.Add((string)machineRow["cloneof"]);
 
@@ -128,8 +126,6 @@ namespace Spludlow.MameAO
 				$"Machine Artwork: {String.Join(", ", machineNames)}",
 			});
 
-			DataSet report = Reports.PlaceReportTemplate($"machines:{String.Join(", ", machineNames)}");
-
 			foreach (string machineName in machineNames)
 			{
 				DataRow machineArtworkRow = data.DataSet.Tables["machine"].Select($"name = '{machineName}'").SingleOrDefault();
@@ -137,35 +133,13 @@ namespace Spludlow.MameAO
 				if (machineArtworkRow == null)
 					continue;
 
+				string[] info = new string[] { "artwork", machineName, "" };
+
 				long machine_id = (long)machineArtworkRow["machine_id"];
 
-				bool downloadRequired = false;
+				DataRow[] assetRows = data.DataSet.Tables["rom"].Select($"machine_id = {machine_id} AND name IS NOT NULL AND sha1 IS NOT NULL");
 
-				List<DataRow> artworkRows = new List<DataRow>();
-				foreach (DataRow artworkRow in data.DataSet.Tables["rom"].Select($"machine_id = {machine_id}"))
-				{
-					if (artworkRow.IsNull("name") || artworkRow.IsNull("sha1"))
-						continue;
-
-					artworkRow["name"] = Path.GetFileName((string)artworkRow["name"]);
-
-					artworkRows.Add(artworkRow);
-
-					string sha1 = (string)artworkRow["sha1"];
-					string name = (string)artworkRow["name"];
-					bool required = !Globals.RomHashStore.Exists(sha1);
-
-					if (required == true)
-						downloadRequired = true;
-
-					report.Tables["Require"].Rows.Add(sha1, required, name);
-					Console.WriteLine($"{sha1}\t{required}\t{name}");
-				}
-
-				if (artworkRows.Count == 0)
-					continue;
-
-				if (downloadRequired == true)
+				if (Place.AssetsRequired(Globals.RomHashStore, assetRows, info) == true)
 				{
 					ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
 
@@ -181,15 +155,12 @@ namespace Spludlow.MameAO
 
 					Dictionary<string, long> softwareSizes = item.GetZipContentsSizes(file, 0, 4);
 
-					Place.DownloadImportFiles(url, softwareSizes[machineName]);
+					Place.DownloadImportFiles(url, softwareSizes[machineName], info);
 				}
 
 				string targetDirectory = Path.Combine(MameArtworkDirectory, machineName);
 
-				Place.PlaceAssetFiles(artworkRows.ToArray(), Globals.RomHashStore, targetDirectory, null);
-
-				if (Globals.Settings.Options["PlaceReport"] == "Yes")
-					Globals.Reports.SaveHtmlReport(report, "Place - Machine Artwork - " + report.Tables["Info"].Rows[0]["heading"]);
+				Place.PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
 			}
 		}
 	}

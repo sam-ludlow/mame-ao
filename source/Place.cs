@@ -15,7 +15,7 @@ namespace Spludlow.MameAO
 
 			DataRow machine = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: {machineName}");
 
-			//Globals.PlaceReport = Reports.PlaceReportTemplate("Place Assets OLD HEADING");
+			Globals.PlaceReport = Reports.PlaceReportTemplate();
 
 			int missingCount = 0;
 
@@ -98,8 +98,8 @@ namespace Spludlow.MameAO
 			Globals.Samples.PlaceAssets(machine);
 			Globals.Artwork.PlaceAssets(machine);
 
-			//if (Globals.Settings.Options["PlaceReport"] == "Yes")
-			//	Globals.Reports.SaveHtmlReport(Globals.PlaceReport, $"Place Assets {machineName} {softwareName}".Trim());
+			if (Globals.Settings.Options["PlaceReport"] == "Yes")
+				Globals.Reports.SaveHtmlReport(Globals.PlaceReport, $"Place Assets {machineName} {softwareName}".Trim());
 
 			//
 			// Info
@@ -118,18 +118,12 @@ namespace Spludlow.MameAO
 			Console.WriteLine($"Year:           {Tools.DataRowValue(machine, "year")}");
 			Console.WriteLine($"Manufacturer:   {Tools.DataRowValue(machine, "manufacturer")}");
 			Console.WriteLine($"Status:         {Tools.DataRowValue(machine, "ao_driver_status")}");
-			Console.WriteLine($"isbios:         {Tools.DataRowValue(machine, "isbios")}");
-			Console.WriteLine($"isdevice:       {Tools.DataRowValue(machine, "isdevice")}");
-			Console.WriteLine($"ismechanical:   {Tools.DataRowValue(machine, "ismechanical")}");
-			Console.WriteLine($"runnable:       {Tools.DataRowValue(machine, "runnable")}");
 
 			foreach (DataRow feature in features)
-				Console.WriteLine($"Feature issue: {Tools.DataRowValue(feature, "type")} {Tools.DataRowValue(feature, "status")} {Tools.DataRowValue(feature, "overall")}");
+				Console.WriteLine($"Feature issue:  {Tools.DataRowValue(feature, "type")} {Tools.DataRowValue(feature, "status")} {Tools.DataRowValue(feature, "overall")}");
 
 			Console.WriteLine();
 		}
-
-
 
 		private static int PlaceMachineRoms(string mainMachineName)
 		{
@@ -137,22 +131,32 @@ namespace Spludlow.MameAO
 
 			ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
 
-			foreach (string machineName in FindAllMachines(mainMachineName))
+			for (int pass = 0; pass < 2; ++pass)
 			{
-				DataRow machineRow = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: ${machineName}");
-
-				DataRow[] assetRows = Globals.Database.GetMachineRoms(machineRow);
-
-				if (AssetsRequired(Globals.RomHashStore, assetRows) == true)
+				foreach (string machineName in FindAllMachines(mainMachineName))
 				{
-					ArchiveOrgFile file = item.GetFile(machineName);
-					if (file != null)
-						DownloadImportFiles(item.DownloadLink(file), file.size);
+					DataRow machineRow = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: ${machineName}");
+
+					DataRow[] assetRows = Globals.Database.GetMachineRoms(machineRow);
+
+					string[] info = new string[] { "machine rom", mainMachineName, machineName };
+
+					if (pass == 0)
+					{
+						if (AssetsRequired(Globals.RomHashStore, assetRows, info) == true)
+						{
+							ArchiveOrgFile file = item.GetFile(machineName);
+							if (file != null)
+								DownloadImportFiles(item.DownloadLink(file), file.size, info);
+						}
+					}
+					else
+					{
+						string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", machineName);
+
+						missingCount += PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
+					}
 				}
-
-				string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", machineName);
-
-				missingCount += PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null);
 			}
 
 			return missingCount;
@@ -166,26 +170,27 @@ namespace Spludlow.MameAO
 
 			DataRow[] assetRows = Globals.Database.GetMachineDisks(machineRow);
 
-			if (AssetsRequired(Globals.DiskHashStore, assetRows) == true)
+			string[] info = new string[] { "machine disk", machineName, "" };
+
+			if (AssetsRequired(Globals.DiskHashStore, assetRows, info) == true)
 			{
 				foreach (DataRow row in assetRows)
 				{
 					if ((bool)row["_required"] == false)
 						continue;
 
-					string name = (string)row["name"];
 					string sha1 = (string)row["sha1"];
 
 					ArchiveOrgFile file = MachineDiskAvailableSourceFile(machineRow, row, item);
 
 					if (file != null)
-						DownloadImportDisk(item, file, sha1);
+						DownloadImportDisk(item, file, sha1, info);
 				}
 			}
 
 			string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", machineName);
 
-			return PlaceAssetFiles(assetRows, Globals.DiskHashStore, targetDirectory, ".chd");
+			return PlaceAssetFiles(assetRows, Globals.DiskHashStore, targetDirectory, ".chd", info);
 		}
 
 		private static int PlaceSoftwareRoms(DataRow softwareList, DataRow software)
@@ -202,7 +207,9 @@ namespace Spludlow.MameAO
 
 			DataRow[] assetRows = Globals.Database.GetSoftwareRoms(software);
 
-			if (AssetsRequired(Globals.RomHashStore, assetRows) == true)
+			string[] info = new string[] { "software rom", softwareListName, softwareName };
+
+			if (AssetsRequired(Globals.RomHashStore, assetRows, info) == true)
 			{
 				string requiredSoftwareName = softwareName;
 				string parentSoftwareName = Tools.DataRowValue(software, "cloneof");
@@ -219,12 +226,12 @@ namespace Spludlow.MameAO
 				Dictionary<string, long> softwareSizes = item.GetZipContentsSizes(file, softwareListName.Length + 1, 4);
 
 				if (softwareSizes.ContainsKey(requiredSoftwareName) == true)
-					DownloadImportFiles(url, softwareSizes[requiredSoftwareName]);
+					DownloadImportFiles(url, softwareSizes[requiredSoftwareName], info);
 			}
 
 			string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", softwareListName, softwareName);
 
-			return PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null);
+			return PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
 		}
 
 		private static int PlaceSoftwareDisks(DataRow softwareList, DataRow software)
@@ -236,7 +243,9 @@ namespace Spludlow.MameAO
 
 			DataRow[] assetRows = Globals.Database.GetSoftwareDisks(software);
 
-			if (AssetsRequired(Globals.DiskHashStore, assetRows) == true)
+			string[] info = new string[] { "software disk", softwareListName, softwareName };
+
+			if (AssetsRequired(Globals.DiskHashStore, assetRows, info) == true)
 			{
 				List<string> downloadSoftwareNames = new List<string>(new string[] { softwareName });
 
@@ -261,7 +270,7 @@ namespace Spludlow.MameAO
 							ArchiveOrgFile file = item.GetFile(key);
 
 							if (file != null)
-								DownloadImportDisk(item, file, sha1);
+								DownloadImportDisk(item, file, sha1, info);
 						}
 					}
 				}
@@ -269,7 +278,7 @@ namespace Spludlow.MameAO
 
 			string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", softwareListName, softwareName);
 
-			return PlaceAssetFiles(assetRows, Globals.DiskHashStore, targetDirectory, ".chd");
+			return PlaceAssetFiles(assetRows, Globals.DiskHashStore, targetDirectory, ".chd", info);
 		}
 
 		public static ArchiveOrgFile MachineDiskAvailableSourceFile(DataRow machineRow, DataRow diskRow, ArchiveOrgItem sourceItem)
@@ -308,10 +317,12 @@ namespace Spludlow.MameAO
 			return null;
 		}
 
-		private static bool AssetsRequired(HashStore hashStore, DataRow[] assetRows)
+		public static bool AssetsRequired(HashStore hashStore, DataRow[] assetRows, string[] info)
 		{
-			if (assetRows.Length > 0)
+			if (assetRows.Length > 0 && assetRows[0].Table.Columns.Contains("_required") == false)
 				assetRows[0].Table.Columns.Add("_required", typeof(bool));
+
+			DateTime when = DateTime.Now;
 
 			bool downloadRequired = false;
 
@@ -328,12 +339,14 @@ namespace Spludlow.MameAO
 					downloadRequired = true;
 
 				Console.WriteLine($"{sha1}\t{required}\t{name}");
+
+				Globals.PlaceReport.Tables["Require"].Rows.Add(when, info[0], info[1], info[2], sha1, required, name);
 			}
 
 			return downloadRequired;
 		}
 
-		public static void DownloadImportFiles(string url, long expectedSize)
+		public static void DownloadImportFiles(string url, long expectedSize, string[] info)
 		{
 			using (TempDirectory tempDir = new TempDirectory())
 			{
@@ -352,6 +365,10 @@ namespace Spludlow.MameAO
 				if (size != expectedSize)
 					Console.WriteLine($"!!! Unexpected downloaded file size expect:{expectedSize} actual:{size}");
 
+				DateTime when = DateTime.Now;
+
+				Globals.PlaceReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, expectedSize);
+
 				Console.Write($"Extracting {archiveFilename} ...");
 				ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
 				Console.WriteLine("...done");
@@ -368,12 +385,14 @@ namespace Spludlow.MameAO
 					if (required == true)
 						imported = Globals.RomHashStore.Add(filename);
 
+					Globals.PlaceReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, subPathName);
+
 					Console.WriteLine($"{sha1}\t{imported}\t{required}\t{subPathName}");
 				}
 			}
 		}
 
-		private static void DownloadImportDisk(ArchiveOrgItem item, ArchiveOrgFile file, string expectedSha1)
+		private static void DownloadImportDisk(ArchiveOrgItem item, ArchiveOrgFile file, string expectedSha1, string[] info)
 		{
 			if (Globals.BadSources.AlreadyDownloaded(file) == true)
 			{
@@ -396,6 +415,10 @@ namespace Spludlow.MameAO
 			TimeSpan took = DateTime.Now - startTime;
 			Console.WriteLine("...done");
 
+			DateTime when = DateTime.Now;
+
+			Globals.PlaceReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, size);
+
 			decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
 			Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
 
@@ -416,14 +439,18 @@ namespace Spludlow.MameAO
 			if (required == true)
 				imported = Globals.DiskHashStore.Add(tempFilename, true, sha1);
 
+			Globals.PlaceReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, Path.GetFileName(tempFilename));
+
 			Console.WriteLine($"{sha1}\t{imported}\t{required}\t{file.name}");
 		}
 
-		public static int PlaceAssetFiles(DataRow[] assetRows, HashStore hashStore, string targetDirectory, string filenameAppend)
+		public static int PlaceAssetFiles(DataRow[] assetRows, HashStore hashStore, string targetDirectory, string filenameAppend, string[] info)
 		{
 			int missingCount = 0;
 
 			List<string[]> targetStoreFilenames = new List<string[]>();
+
+			DateTime when = DateTime.Now;
 
 			foreach (DataRow row in assetRows)
 			{
@@ -435,16 +462,18 @@ namespace Spludlow.MameAO
 					targetFilename += filenameAppend;
 
 				bool fileExists = File.Exists(targetFilename);
-				bool storeExists = hashStore.Exists(sha1);
-				bool place = fileExists == false && storeExists == true;
+				bool have = hashStore.Exists(sha1);
+				bool place = fileExists == false && have == true;
 
-				if (storeExists == false)
+				if (have == false)
 					++missingCount;
 
 				if (place == true)
 					targetStoreFilenames.Add(new string[] { targetFilename, hashStore.Filename(sha1) });
 
-				Console.WriteLine($"{sha1}\t{place}\t{storeExists}\t{name}");
+				Globals.PlaceReport.Tables["Place"].Rows.Add(when, info[0], info[1], info[2], sha1, place, have, name);
+
+				Console.WriteLine($"{sha1}\t{place}\t{have}\t{name}");
 			}
 
 			PlaceFiles(targetStoreFilenames.ToArray());
@@ -482,10 +511,7 @@ namespace Spludlow.MameAO
 			if (requiredMachines.Contains(machineName) == true)
 				return;
 
-			DataRow machineRow = Globals.Database.GetMachine(machineName);
-
-			if (machineRow == null)
-				throw new ApplicationException("FindAllMachines machine not found: " + machineName);
+			DataRow machineRow = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException("FindAllMachines machine not found: " + machineName);
 
 			if ((long)machineRow["ao_rom_count"] > 0)
 				requiredMachines.Add(machineName);

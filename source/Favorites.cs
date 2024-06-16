@@ -11,8 +11,8 @@ namespace Spludlow.MameAO
 {
 	public class Favorites
 	{
-		private string _MachinesFilename;
-		private string _SoftwareFilename;
+		private readonly string _MachinesFilename;
+		private readonly string _SoftwareFilename;
 
 		public Dictionary<string, HashSet<string>> _Machines;
 		public Dictionary<string, HashSet<string>> _Software;
@@ -226,6 +226,36 @@ namespace Spludlow.MameAO
 			}
 
 			return result.ToArray();
+		}
+
+		public static void ValidateFavorite(string machine, string list, string software)
+		{
+			DataRow machineRow = Globals.Database.GetMachine(machine) ?? throw new ApplicationException($"Machine not found: {machine}.");
+
+			if (list == null)
+				return;
+
+			DataRow machineListRow = null;
+			foreach (DataRow row in Globals.Database.GetMachineSoftwareLists(machineRow))
+			{
+				if (list == (string)row["name"])
+					machineListRow = row;
+			}
+
+			if (machineListRow == null)
+				throw new ApplicationException($"Machine does not have that software list: {machine}, {list}");
+
+			DataRow softwareListRow = Globals.Database.GetSoftwareList(list) ?? throw new ApplicationException($"Software list not found: {list}");
+
+			DataRow softwareRow = null;
+			foreach (DataRow row in Globals.Database.GetSoftwareListsSoftware(softwareListRow))
+			{
+				if (software == (string)row["name"])
+					softwareRow = row;
+			}
+
+			if (softwareRow == null)
+				throw new ApplicationException($"Software not found in software list: {list}, {software}");
 		}
 
 	}

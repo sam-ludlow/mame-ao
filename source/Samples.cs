@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
-using System.IO.Compression;
 using System.Linq;
 using System.Xml.Linq;
 
@@ -100,43 +99,25 @@ namespace Spludlow.MameAO
 				return;
 			}
 
-			DataSet report = Reports.PlaceReportTemplate($"machine:{machineName}, sampleof:{machineSampleOf}");
-
 			long machine_id = (long)sampleMachineRow["machine_id"];
-
-			bool downloadRequired = false;
 
 			List<DataRow> sampleRoms = new List<DataRow>();
 			foreach (string sampleName in sampleNames)
 			{
 				DataRow sampleRom = DataSet.Tables["rom"].Rows.Find(new object[] { machine_id, sampleName + ".wav" });
 
-				if (sampleRom == null)
-				{
-					Console.WriteLine($"!!! Sample not found: {machineName}\t{sampleName}");
-					continue;
-				}
-
-				if (sampleRom.IsNull("name") || sampleRom.IsNull("sha1"))
+				if (sampleRom == null || sampleRom.IsNull("name") || sampleRom.IsNull("sha1"))
 					continue;
 
 				sampleRoms.Add(sampleRom);
-
-				string sha1 = (string)sampleRom["sha1"];
-				string name = (string)sampleRom["name"];
-				bool required = !Globals.RomHashStore.Exists(sha1);
-
-				if (required == true)
-					downloadRequired = true;
-
-				report.Tables["Require"].Rows.Add(sha1, required, name);
-				Console.WriteLine($"{sha1}\t{required}\t{name}");
 			}
 
 			if (sampleRoms.Count == 0)
 				return;
 
-			if (downloadRequired == true)
+			string[] info = new string[] { "samples", machineName, machineSampleOf };
+
+			if (Place.AssetsRequired(Globals.RomHashStore, sampleRoms.ToArray(), info) == true)
 			{
 				ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.Support][0];
 
@@ -150,15 +131,12 @@ namespace Spludlow.MameAO
 
 				string url = item.DownloadLink(file);
 
-				Place.DownloadImportFiles(url, file.size);
+				Place.DownloadImportFiles(url, file.size, info);
 			}
 
 			string targetDirectory = Path.Combine(MameSamplesDirectory, machineSampleOf);
 
-			Place.PlaceAssetFiles(sampleRoms.ToArray(), Globals.RomHashStore, targetDirectory, null);
-
-			if (Globals.Settings.Options["PlaceReport"] == "Yes")
-				Globals.Reports.SaveHtmlReport(report, "Place - Machnine Samples - " + report.Tables["Info"].Rows[0]["heading"]);
+			Place.PlaceAssetFiles(sampleRoms.ToArray(), Globals.RomHashStore, targetDirectory, null, info);
 		}
 	}
 }
