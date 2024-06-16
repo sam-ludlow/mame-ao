@@ -6,7 +6,7 @@ namespace Spludlow.MameAO
 {
 	public class BadSources
 	{
-		private string _DataFilename;
+		private readonly string _DataFilename;
 		public BadSources()
 		{
 			_DataFilename = Path.Combine(Globals.RootDirectory, "_BadSources.txt");
@@ -24,7 +24,7 @@ namespace Spludlow.MameAO
 
 		public void ReportSourceFile(ArchiveOrgFile sourceFileInfo, string extectedSHA1, string actualSHA1)
 		{
-			string line = $"{sourceFileInfo.sha1}\t{DateTime.Now.ToString("s")}\t{sourceFileInfo.size}\t{sourceFileInfo.mtime.ToString("s")}\t{extectedSHA1}\t{actualSHA1}\t{sourceFileInfo.name}{Environment.NewLine}";
+			string line = $"{sourceFileInfo.sha1}\t{DateTime.Now:s}\t{sourceFileInfo.size}\t{sourceFileInfo.mtime:s}\t{extectedSHA1}\t{actualSHA1}\t{sourceFileInfo.name}{Environment.NewLine}";
 
 			File.AppendAllText(_DataFilename, line);
 		}

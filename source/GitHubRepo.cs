@@ -15,9 +15,9 @@ namespace Spludlow.MameAO
 		public string UrlApi;
 		public string UrlRaw;
 
-		private string UrlAPiBase = "https://api.github.com";
+		private readonly string UrlAPiBase = "https://api.github.com";
 
-		private string CacheDirectory;
+		private readonly string CacheDirectory;
 
 		private dynamic DataRepo = null;
 

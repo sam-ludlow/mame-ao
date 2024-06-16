@@ -7,7 +7,7 @@ namespace Spludlow.MameAO
 {
 	public class Settings
 	{
-		private string Filename;
+		private readonly string Filename;
 
 		public Dictionary<string, List<string>> AvailableOptions = new Dictionary<string, List<string>>()
 		{

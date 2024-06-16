@@ -193,8 +193,10 @@ namespace Spludlow.MameAO
 					table.Rows.Add(version, lastWriteTime);
 			}
 
-			DataView view = new DataView(table);
-			view.Sort = "version, sta_time";
+			DataView view = new DataView(table)
+			{
+				Sort = "version, sta_time"
+			};
 
 			DataTable sortTable = table.Clone();
 			foreach (DataRowView rowView in view)

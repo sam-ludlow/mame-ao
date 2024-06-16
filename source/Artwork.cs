@@ -31,7 +31,7 @@ namespace Spludlow.MameAO
 		public Dictionary<ArtworkTypes, ArtworkData> ArtworkDatas = new Dictionary<ArtworkTypes, ArtworkData>();
 
 		private readonly string MameArtworkDirectory;
-		private GitHubRepo GitHubRepo;
+		private readonly GitHubRepo GitHubRepo;
 		public Artwork()
 		{
 			MameArtworkDirectory = Path.Combine(Globals.MameDirectory, "artwork");
@@ -50,9 +50,11 @@ namespace Spludlow.MameAO
 				url
 			});
 
-			ArtworkData artworkData = new ArtworkData();
-			artworkData.Version = "";
-			artworkData.DataSet = null;
+			ArtworkData artworkData = new ArtworkData
+			{
+				Version = "",
+				DataSet = null
+			};
 			ArtworkDatas.Add(artworkType, artworkData);
 
 			string xml = GitHubRepo.Fetch(url);

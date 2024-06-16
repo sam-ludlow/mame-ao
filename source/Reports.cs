@@ -155,7 +155,7 @@ namespace Spludlow.MameAO
 			}
 		";
 
-		private string _OutputDirectory;
+		private readonly string _OutputDirectory;
 
 		public Reports()
 		{
@@ -433,16 +433,20 @@ namespace Spludlow.MameAO
 			DataView view;
 			DataTable viewTable;
 
-			view = new DataView(table);
-			view.RowFilter = "Status = 'MISSING'";
+			view = new DataView(table)
+			{
+				RowFilter = "Status = 'MISSING'"
+			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
 			viewTable.TableName = "Missing in Source";
 			dataSet.Tables.Add(viewTable);
 
-			view = new DataView(table);
-			view.RowFilter = "Status = ''";
+			view = new DataView(table)
+			{
+				RowFilter = "Status = ''"
+			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -501,16 +505,20 @@ namespace Spludlow.MameAO
 			DataView view;
 			DataTable viewTable;
 
-			view = new DataView(table);
-			view.RowFilter = "Status = 'MISSING'";
+			view = new DataView(table)
+			{
+				RowFilter = "Status = 'MISSING'"
+			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
 			viewTable.TableName = "Missing in Source";
 			dataSet.Tables.Add(viewTable);
 
-			view = new DataView(table);
-			view.RowFilter = "Status = ''";
+			view = new DataView(table)
+			{
+				RowFilter = "Status = ''"
+			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -624,16 +632,20 @@ namespace Spludlow.MameAO
 			DataView view;
 			DataTable viewTable;
 
-			view = new DataView(table);
-			view.RowFilter = "Status = 'MISSING'";
+			view = new DataView(table)
+			{
+				RowFilter = "Status = 'MISSING'"
+			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
 			viewTable.TableName = "Missing in Source";
 			dataSet.Tables.Add(viewTable);
 
-			view = new DataView(table);
-			view.RowFilter = "Status = ''";
+			view = new DataView(table)
+			{
+				RowFilter = "Status = ''"
+			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -769,8 +781,10 @@ namespace Spludlow.MameAO
 
 					if (pass == 0)
 					{
-						view = new DataView(table);
-						view.RowFilter = "Status <> ''";
+						view = new DataView(table)
+						{
+							RowFilter = "Status <> ''"
+						};
 						viewTable = table.Clone();
 						foreach (DataRowView rowView in view)
 							viewTable.ImportRow(rowView.Row);
@@ -779,8 +793,10 @@ namespace Spludlow.MameAO
 					}
 					else
 					{
-						view = new DataView(table);
-						view.RowFilter = "Status = ''";
+						view = new DataView(table)
+						{
+							RowFilter = "Status = ''"
+						};
 						viewTable = table.Clone();
 						foreach (DataRowView rowView in view)
 							viewTable.ImportRow(rowView.Row);
@@ -842,16 +858,20 @@ namespace Spludlow.MameAO
 			DataView view;
 			DataTable viewTable;
 
-			view = new DataView(table);
-			view.RowFilter = "DiskCount > 0 AND Complete = 1";
+			view = new DataView(table)
+			{
+				RowFilter = "DiskCount > 0 AND Complete = 1"
+			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
 			viewTable.TableName = "With DISK";
 			dataSet.Tables.Add(viewTable);
 
-			view = new DataView(table);
-			view.RowFilter = "DiskCount = 0 AND Complete = 1";
+			view = new DataView(table)
+			{
+				RowFilter = "DiskCount = 0 AND Complete = 1"
+			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
@@ -932,16 +952,20 @@ namespace Spludlow.MameAO
 			DataView view;
 			DataTable viewTable;
 
-			view = new DataView(table);
-			view.RowFilter = "DiskCount > 0";
+			view = new DataView(table)
+			{
+				RowFilter = "DiskCount > 0"
+			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);
 			viewTable.TableName = "DISK Software";
 			dataSet.Tables.Add(viewTable);
 
-			view = new DataView(table);
-			view.RowFilter = "DiskCount = 0";
+			view = new DataView(table)
+			{
+				RowFilter = "DiskCount = 0"
+			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
 				viewTable.ImportRow(rowView.Row);

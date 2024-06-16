@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Spludlow.MameAO
 {
@@ -22,7 +21,7 @@ namespace Spludlow.MameAO
 			MameAOProcessor proc = new MameAOProcessor();
 
 			if (Globals.Arguments.ContainsKey("OPERATION") == true)
-				return Operations.ProcessOperation(Globals.Arguments, proc);
+				return Operations.ProcessOperation(Globals.Arguments);
 
 			if (Globals.Arguments.ContainsKey("UPDATE") == true)
 			{

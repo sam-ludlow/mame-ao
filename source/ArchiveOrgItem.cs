@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Text;
 using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
@@ -56,7 +55,7 @@ namespace Spludlow.MameAO
 		public string Version = "";
 		public string Status = "";
 
-		private List<string> AcceptedExtentions = new List<string>(new string[] { ".zip", ".chd" });
+		private readonly List<string> AcceptedExtentions = new List<string>(new string[] { ".zip", ".chd" });
 
 		public ArchiveOrgItem(string key, string subDirectory, string tag, int[] titleVersionSubString)
 		{

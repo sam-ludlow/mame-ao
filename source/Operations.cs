@@ -19,7 +19,7 @@ namespace Spludlow.MameAO
 	public class Operations
 	{
 
-		public static int ProcessOperation(Dictionary<string, string> parameters, MameAOProcessor proc)
+		public static int ProcessOperation(Dictionary<string, string> parameters)
 		{
 			int exitCode;
 
@@ -207,8 +207,10 @@ namespace Spludlow.MameAO
 			XmlDocument xmlDocument = new XmlDocument();
 			xmlDocument.Load(inputXmlFilename);
 
-			JsonSerializerSettings serializerSettings = new JsonSerializerSettings();
-			serializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
+			JsonSerializerSettings serializerSettings = new JsonSerializerSettings
+			{
+				Formatting = Newtonsoft.Json.Formatting.Indented
+			};
 
 			using (StreamWriter streamWriter = new StreamWriter(outputJsonFilename, false, new UTF8Encoding(false)))
 			{
@@ -404,7 +406,7 @@ namespace Spludlow.MameAO
 			return 0;
 		}
 
-		private static XmlReaderSettings _XmlReaderSettings = new XmlReaderSettings() {
+		private static readonly XmlReaderSettings _XmlReaderSettings = new XmlReaderSettings() {
 			DtdProcessing = DtdProcessing.Parse,
 			IgnoreComments = false,
 			IgnoreWhitespace = true,
@@ -529,8 +531,7 @@ namespace Spludlow.MameAO
 				{
 					while (reader.NodeType == XmlNodeType.Element && reader.Name == "machine")
 					{
-						XElement element = XElement.ReadFrom(reader) as XElement;
-						if (element != null)
+						if (XElement.ReadFrom(reader) is XElement element)
 						{
 							string key = element.Attribute("name").Value;
 
@@ -582,8 +583,7 @@ namespace Spludlow.MameAO
 				{
 					while (reader.NodeType == XmlNodeType.Element && reader.Name == "softwarelist")
 					{
-						XElement listElement = XElement.ReadFrom(reader) as XElement;
-						if (listElement != null)
+						if (XElement.ReadFrom(reader) is XElement listElement)
 						{
 							string softwarelist_name = listElement.Attribute("name").Value;
 
@@ -1399,8 +1399,10 @@ namespace Spludlow.MameAO
 
 		public static string XML2JSON(XElement element)
 		{
-			JsonSerializerSettings serializerSettings = new JsonSerializerSettings();
-			serializerSettings.Formatting = Newtonsoft.Json.Formatting.Indented;
+			JsonSerializerSettings serializerSettings = new JsonSerializerSettings
+			{
+				Formatting = Newtonsoft.Json.Formatting.Indented
+			};
 
 			using (StringWriter writer  = new StringWriter())
 			{
