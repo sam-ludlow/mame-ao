@@ -376,8 +376,8 @@ namespace Spludlow.MameAO
 
 			dataSet.Tables.Add(Tools.MakeDataTable(
 				"Download",
-				"When		AssetType	Key1	Key2	url		size",
-				"DateTime	String		String	String	String	Int64"
+				"When		AssetType	Key1	Key2	url		size	seconds",
+				"DateTime	String		String	String	String	Int64	Int64"
 			));
 
 			dataSet.Tables.Add(Tools.MakeDataTable(
@@ -392,7 +392,29 @@ namespace Spludlow.MameAO
 				"DateTime	String		String	String	String	Boolean	Boolean	String"
 			));
 
+			foreach (DataTable table in dataSet.Tables)
+				table.RowChanged += ReportTable_RowChanged;
+
 			return dataSet;
+		}
+		private static void ReportTable_RowChanged(object sender, DataRowChangeEventArgs e)
+		{
+			if (e.Action != DataRowAction.Add)
+				return;
+
+			StringBuilder text = new StringBuilder();
+
+			text.Append($"{e.Row.Table}:");
+
+			foreach (DataColumn column in e.Row.Table.Columns)
+			{
+				text.Append("\t");
+
+				if (e.Row.IsNull(column) == false)
+					text.Append(Convert.ToString(e.Row[column]));
+			}
+
+			Console.WriteLine(text.ToString());
 		}
 
 		public void Report_SEMR()

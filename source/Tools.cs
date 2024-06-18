@@ -274,7 +274,7 @@ namespace Spludlow.MameAO
 				try
 				{
 					Console.Write($"Downloading {url} ...");
-					result = Query(Globals.HttpClient, url);
+					result = Query(url);
 					Console.WriteLine("...done");
 
 					string extention = Path.GetExtension(filename).ToLower();
@@ -305,13 +305,13 @@ namespace Spludlow.MameAO
 			return result;
 		}
 
-		public static string Query(HttpClient client, string url)
+		public static string Query(string url)
 		{
 			try
 			{
 				using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url))
 				{
-					Task<HttpResponseMessage> requestTask = client.SendAsync(requestMessage);
+					Task<HttpResponseMessage> requestTask = Globals.HttpClient.SendAsync(requestMessage);
 					requestTask.Wait();
 					HttpResponseMessage responseMessage = requestTask.Result;
 
@@ -331,20 +331,23 @@ namespace Spludlow.MameAO
 		}
 
 
-		public static long Download(string url, string filename, long progressSize, int timeoutMinutes)
+		public static long Download(string url, string filename)
 		{
-			return Download(url, filename, progressSize, timeoutMinutes, null);
+			return Download(url, filename, 0);
 		}
 
-		public static long Download(string url, string filename, long progressSize, int timeoutMinutes, TaskInfo taskInfo)
+		public static long Download(string url, string filename, long expectedSize)
 		{
+			if (expectedSize > 0)
+				lock (Globals.AO._TaskInfo)
+					Globals.AO._TaskInfo.BytesTotal = expectedSize;
+
 			long total = 0;
 			byte[] buffer = new byte[64 * 1024];
 
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 			request.Method = "GET";
-
-			request.Timeout = timeoutMinutes * (60 * 1000);
+			request.Timeout = Globals.AssetDownloadTimeoutMilliseconds;
 
 			long progress = 0;
 
@@ -360,21 +363,16 @@ namespace Spludlow.MameAO
 							total += bytesRead;
 							targetStream.Write(buffer, 0, bytesRead);
 
-							if (progressSize > 0)
+							progress += bytesRead;
+							if (progress >= Globals.DownloadDotSize)
 							{
-								progress += bytesRead;
-								if (progress >= progressSize)
-								{
-									Console.Write(".");
-									progress = 0;
-								}
+								Console.Write(".");
+								progress = 0;
 							}
 
-							if (taskInfo != null)
-							{
-								lock (taskInfo)
-									taskInfo.BytesCurrent = total;
-							}
+							if (expectedSize > 0)
+								lock (Globals.AO._TaskInfo)
+									Globals.AO._TaskInfo.BytesCurrent = total;
 						}
 					}
 				}

@@ -27,6 +27,8 @@ namespace Spludlow.MameAO
 			HttpClient.Timeout = TimeSpan.FromSeconds(180);
 		}
 
+		public static readonly int AssetDownloadTimeoutMilliseconds = 6 * 60 * 60 * 1000;
+
 		public static string ListenAddress = "http://localhost:12380/";
 
 		public static long DownloadDotSize = 1024 * 1024;
@@ -266,7 +268,7 @@ namespace Spludlow.MameAO
 			if (File.Exists(binCacheFilename) == false)
 			{
 				Console.Write($"Downloading MAME binaries {binUrl} ...");
-				Tools.Download(binUrl, binCacheFilename, Globals.DownloadDotSize, 10);
+				Tools.Download(binUrl, binCacheFilename);
 				Console.WriteLine("...done.");
 			}
 
@@ -733,7 +735,7 @@ namespace Spludlow.MameAO
 				string archiveUrl = repo.Assets[repo.Assets.First().Key];
 				string archiveFilename = Path.Combine(Globals.RootDirectory, $"mame-ao-{repo.tag_name}.zip");
 
-				Tools.Download(archiveUrl, archiveFilename, 0, 5);
+				Tools.Download(archiveUrl, archiveFilename);
 
 				if (Directory.Exists(updateDirectory) == true)
 				{

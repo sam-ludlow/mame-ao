@@ -31,7 +31,7 @@ namespace Spludlow.MameAO
 			string url = repo.UrlRaw + "/main/MAME_dat/MAME_Samples.dat";
 
 			Tools.ConsoleHeading(2, new string[] {
-				$"Machine Samples",
+				$"Samples Initialize",
 				url
 			});
 
@@ -87,10 +87,6 @@ namespace Spludlow.MameAO
 
 			string machineName = (string)machineRow["name"];
 			string machineSampleOf = (string)machineRow["sampleof"];
-
-			Tools.ConsoleHeading(2, new string[] {
-				$"Machine Samples: {machineName} : {machineSampleOf} ({sampleNames.Length})",
-			});
 
 			DataRow sampleMachineRow = DataSet.Tables["machine"].Rows.Find(machineSampleOf);
 			if (sampleMachineRow == null)

@@ -338,8 +338,6 @@ namespace Spludlow.MameAO
 				if (required == true)
 					downloadRequired = true;
 
-				Console.WriteLine($"{sha1}\t{required}\t{name}");
-
 				Globals.PlaceReport.Tables["Require"].Rows.Add(when, info[0], info[1], info[2], sha1, required, name);
 			}
 
@@ -356,7 +354,7 @@ namespace Spludlow.MameAO
 
 				Console.Write($"Downloading size:{Tools.DataSize(expectedSize)} url:{url} ...");
 				DateTime startTime = DateTime.Now;
-				long size = Tools.Download(url, archiveFilename, Globals.DownloadDotSize, 30);
+				long size = Tools.Download(url, archiveFilename, expectedSize);
 				TimeSpan took = DateTime.Now - startTime;
 				Console.WriteLine("...done");
 
@@ -367,7 +365,7 @@ namespace Spludlow.MameAO
 
 				DateTime when = DateTime.Now;
 
-				Globals.PlaceReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, expectedSize);
+				Globals.PlaceReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, expectedSize, (long)took.TotalSeconds);
 
 				Console.Write($"Extracting {archiveFilename} ...");
 				ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
@@ -386,8 +384,6 @@ namespace Spludlow.MameAO
 						imported = Globals.RomHashStore.Add(filename);
 
 					Globals.PlaceReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, subPathName);
-
-					Console.WriteLine($"{sha1}\t{imported}\t{required}\t{subPathName}");
 				}
 			}
 		}
@@ -411,13 +407,13 @@ namespace Spludlow.MameAO
 			string url = item.DownloadLink(file);
 			Console.Write($"Downloading {file.name} size:{Tools.DataSize(file.size)} url:{url} ...");
 			DateTime startTime = DateTime.Now;
-			long size = Tools.Download(url, tempFilename, Globals.DownloadDotSize, 3 * 60, Globals.AO._TaskInfo);
+			long size = Tools.Download(url, tempFilename, file.size);
 			TimeSpan took = DateTime.Now - startTime;
 			Console.WriteLine("...done");
 
 			DateTime when = DateTime.Now;
 
-			Globals.PlaceReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, size);
+			Globals.PlaceReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, size, (long)took.TotalSeconds);
 
 			decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
 			Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
@@ -440,8 +436,6 @@ namespace Spludlow.MameAO
 				imported = Globals.DiskHashStore.Add(tempFilename, true, sha1);
 
 			Globals.PlaceReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, Path.GetFileName(tempFilename));
-
-			Console.WriteLine($"{sha1}\t{imported}\t{required}\t{file.name}");
 		}
 
 		public static int PlaceAssetFiles(DataRow[] assetRows, HashStore hashStore, string targetDirectory, string filenameAppend, string[] info)
@@ -472,8 +466,6 @@ namespace Spludlow.MameAO
 					targetStoreFilenames.Add(new string[] { targetFilename, hashStore.Filename(sha1) });
 
 				Globals.PlaceReport.Tables["Place"].Rows.Add(when, info[0], info[1], info[2], sha1, place, have, name);
-
-				Console.WriteLine($"{sha1}\t{place}\t{have}\t{name}");
 			}
 
 			PlaceFiles(targetStoreFilenames.ToArray());

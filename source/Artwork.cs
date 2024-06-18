@@ -124,10 +124,6 @@ namespace Spludlow.MameAO
 			if (data.DataSet == null)
 				return;
 
-			Tools.ConsoleHeading(2, new string[] {
-				$"Machine Artwork: {String.Join(", ", machineNames)}",
-			});
-
 			foreach (string machineName in machineNames)
 			{
 				DataRow machineArtworkRow = data.DataSet.Tables["machine"].Select($"name = '{machineName}'").SingleOrDefault();

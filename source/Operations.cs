@@ -30,7 +30,7 @@ namespace Spludlow.MameAO
 				case "GET_MAME":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
 
-					exitCode = GetMame(parameters["DIRECTORY"], parameters["VERSION"], Globals.HttpClient);
+					exitCode = GetMame(parameters["DIRECTORY"], parameters["VERSION"]);
 					break;
 
 				case "MAKE_XML":
@@ -118,11 +118,11 @@ namespace Spludlow.MameAO
 		//
 		// MAME
 		//
-		public static int GetMame(string directory, string version, HttpClient httpClient)
+		public static int GetMame(string directory, string version)
 		{
 			int newVersion = 0;
 
-			string mameLatestJson = Tools.Query(httpClient, "https://api.github.com/repos/mamedev/mame/releases/latest");
+			string mameLatestJson = Tools.Query("https://api.github.com/repos/mamedev/mame/releases/latest");
 			mameLatestJson = Tools.PrettyJSON(mameLatestJson);
 
 			dynamic mameLatest = JsonConvert.DeserializeObject<dynamic>(mameLatestJson);
@@ -146,7 +146,7 @@ namespace Spludlow.MameAO
 
 				string binariesFilename = Path.Combine(versionDirectory, Path.GetFileName(binariesUrl));
 
-				Tools.Download(binariesUrl, binariesFilename, 0, 15);
+				Tools.Download(binariesUrl, binariesFilename);
 
 				Mame.RunSelfExtract(binariesFilename);
 			}
