@@ -22,7 +22,7 @@ namespace Spludlow.MameAO
 
 		private readonly string SOFTWARE_IMAGE_URL = "https://mame.spludlow.co.uk/snap/software/@softwarelist/@software.jpg";
 
-		private byte[] _FavIcon = Convert.FromBase64String(@"
+		private readonly byte[] _FavIcon = Convert.FromBase64String(@"
 			AAABAAEAEBAAAAAAGABoAwAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAMAAAAAAAAAAAAAAAAA
 			AAAAAAD0tgDzuQDzsgD2xgD99NT++OP++OX++OX/+OPA67QA6t3j6KL/9tr++OP9+OX9+OX0vQD0
 			vgD99dj///T/75P/6m7/6mv/6Wz/4ne+3G4A7Obg2EL/3F7/3Vv/32v84nnysAD99+P/9MThrQCV
@@ -264,9 +264,7 @@ namespace Spludlow.MameAO
 			if (search.Length == 0)
 				search = null;
 
-			string profile = context.Request.QueryString["profile"];
-			if (profile == null)
-				throw new ApplicationException("profile not passed");
+			string profile = context.Request.QueryString["profile"] ?? throw new ApplicationException("profile not passed");
 
 			Database.DataQueryProfile dataQueryProfile = Globals.Database.GetDataQueryProfile(profile);
 
@@ -487,13 +485,13 @@ namespace Spludlow.MameAO
 			dynamic json = new JObject();
 
 		
-			lock (Globals.AO._TaskInfo)
+			lock (Globals.WorkerTaskInfo)
 			{
-				json.busy = Globals.AO._TaskInfo.Command != "";
-				json.command = Globals.AO._TaskInfo.Command;
+				json.busy = Globals.WorkerTaskInfo.Command != "";
+				json.command = Globals.WorkerTaskInfo.Command;
 
-				json.bytesCurrent = Globals.AO._TaskInfo.BytesCurrent;
-				json.bytesTotal = Globals.AO._TaskInfo.BytesTotal;
+				json.bytesCurrent = Globals.WorkerTaskInfo.BytesCurrent;
+				json.bytesTotal = Globals.WorkerTaskInfo.BytesTotal;
 			}
 
 			writer.WriteLine(json.ToString(Formatting.Indented));

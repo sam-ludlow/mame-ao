@@ -9,11 +9,19 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
+using System.Net;
 
 namespace Spludlow.MameAO
 {
 	public static class Globals
 	{
+		public class TaskInfo
+		{
+			public string Command = "";
+			public long BytesCurrent = 0;
+			public long BytesTotal = 0;
+		}
+
 		static Globals()
 		{
 			Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
@@ -66,21 +74,13 @@ namespace Spludlow.MameAO
 		public static Settings Settings;
 		public static WebServer WebServer;
 
-	}
-
-	public class TaskInfo
-	{
-		public string Command = "";
-		public long BytesCurrent = 0;
-		public long BytesTotal = 0;
+		public static Task WorkerTask = null;
+		public static TaskInfo WorkerTaskInfo = new TaskInfo();
 	}
 
 	public class MameAOProcessor
 	{
-		private Task _RunTask = null;
-		public TaskInfo _TaskInfo = new TaskInfo();
-
-		private IntPtr _ConsoleHandle;
+		private IntPtr ConsoleHandle;
 
 		private readonly string WelcomeText = @"@VERSION
 '##::::'##::::'###::::'##::::'##:'########:::::::'###:::::'#######::
@@ -128,10 +128,10 @@ namespace Spludlow.MameAO
 
 		public void BringToFront()
 		{
-			if (_ConsoleHandle == IntPtr.Zero)
+			if (ConsoleHandle == IntPtr.Zero)
 				Console.WriteLine("!!! Wanring can't get handle on Console Window.");
 			else
-				SetForegroundWindow(_ConsoleHandle);
+				SetForegroundWindow(ConsoleHandle);
 		}
 
 		public void Initialize()
@@ -346,7 +346,7 @@ namespace Spludlow.MameAO
 			// Bits & Bobs
 			//
 
-			_ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
+			ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
 
 			Globals.Reports = new Reports();
 			Globals.BadSources = new BadSources();
@@ -379,7 +379,16 @@ namespace Spludlow.MameAO
 		public void Shell()
 		{
 			Globals.WebServer = new WebServer();
-			Globals.WebServer.StartListener();
+
+			try
+			{
+				Globals.WebServer.StartListener();
+			}
+			catch (HttpListenerException)
+			{
+				Tools.ConsoleHeading(1, new string[] { "MAME-AO is already running", "this is not permitted" });
+				throw;
+			}
 
 			Tools.ConsoleHeading(1, new string[] {
 				"Remote Listener ready for commands",
@@ -404,7 +413,7 @@ namespace Spludlow.MameAO
 					continue;
 
 				if (RunLineTask(line) == true)
-					_RunTask.Wait();
+					Globals.WorkerTask.Wait();
 				else
 					Console.WriteLine("BUSY!");
 			}
@@ -412,12 +421,12 @@ namespace Spludlow.MameAO
 
 		public bool RunLineTask(string line)
 		{
-			if (_RunTask != null && _RunTask.Status != TaskStatus.RanToCompletion)
+			if (Globals.WorkerTask != null && Globals.WorkerTask.Status != TaskStatus.RanToCompletion)
 				return false;
 
 			BringToFront();
 
-			_RunTask = new Task(() => {
+			Globals.WorkerTask = new Task(() => {
 				try
 				{
 					RunLine(line);
@@ -434,23 +443,23 @@ namespace Spludlow.MameAO
 				}
 				finally
 				{
-					lock (_TaskInfo)
+					lock (Globals.WorkerTaskInfo)
 					{
-						_TaskInfo.Command = "";
-						_TaskInfo.BytesCurrent = 0;
-						_TaskInfo.BytesTotal = 0;
+						Globals.WorkerTaskInfo.Command = "";
+						Globals.WorkerTaskInfo.BytesCurrent = 0;
+						Globals.WorkerTaskInfo.BytesTotal = 0;
 					}
 				}
 			});
 
-			lock (_TaskInfo)
+			lock (Globals.WorkerTaskInfo)
 			{
-				_TaskInfo.Command = line;
-				_TaskInfo.BytesCurrent = 0;
-				_TaskInfo.BytesTotal = 0;
+				Globals.WorkerTaskInfo.Command = line;
+				Globals.WorkerTaskInfo.BytesCurrent = 0;
+				Globals.WorkerTaskInfo.BytesTotal = 0;
 			}
 
-			_RunTask.Start();
+			Globals.WorkerTask.Start();
 
 			return true;
 		}

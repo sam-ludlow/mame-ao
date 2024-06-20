@@ -339,8 +339,8 @@ namespace Spludlow.MameAO
 		public static long Download(string url, string filename, long expectedSize)
 		{
 			if (expectedSize > 0)
-				lock (Globals.AO._TaskInfo)
-					Globals.AO._TaskInfo.BytesTotal = expectedSize;
+				lock (Globals.WorkerTaskInfo)
+					Globals.WorkerTaskInfo.BytesTotal = expectedSize;
 
 			long total = 0;
 			byte[] buffer = new byte[64 * 1024];
@@ -371,8 +371,8 @@ namespace Spludlow.MameAO
 							}
 
 							if (expectedSize > 0)
-								lock (Globals.AO._TaskInfo)
-									Globals.AO._TaskInfo.BytesCurrent = total;
+								lock (Globals.WorkerTaskInfo)
+									Globals.WorkerTaskInfo.BytesCurrent = total;
 						}
 					}
 				}

@@ -399,9 +399,9 @@ namespace Spludlow.MameAO
 			string downloadTempDirectory = Path.Combine(Globals.RootDirectory, "_TEMP");
 			string tempFilename = Path.Combine(downloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(file.name) + ".chd");
 
-			lock (Globals.AO._TaskInfo)
+			lock (Globals.WorkerTaskInfo)
 			{
-				Globals.AO._TaskInfo.BytesTotal = file.size;
+				Globals.WorkerTaskInfo.BytesTotal = file.size;
 			}
 
 			string url = item.DownloadLink(file);

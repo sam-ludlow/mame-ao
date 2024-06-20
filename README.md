@@ -1,5 +1,4 @@
 # mame-ao
-
 Run MAME easily, just download this and run.
 
 Automatically downloads all MAME binaries (from github.com) and ROMs (from archive.org) on the fly.
@@ -11,7 +10,6 @@ You can also use the command line just enter machine / software short name.
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-ui.png)
 
 ## Installation & Usage
-
 - create an empty directory e.g. "C:\MameAO"
 - download latest release ZIP from https://github.com/sam-ludlow/mame-ao/releases/latest
 - put ZIP in empty directory and extract
@@ -23,32 +21,30 @@ You can also use the command line just enter machine / software short name.
 TIP: Run command `.upany` to self update program, this will stop the microsoft defender notice.
 
 ## Important notes
-
 - The first time you run it will take a while and use a lot of CPU & RAM.
 - Extracting the XML from MAME and converting to SQLite takes some doing.
 - Please be patient, subsequent runs will not.
 - Version bumps in MAME or MAME-AO will trigger database re-creation.
 
 ## UI
+After mame-ao has fully started the web UI will apear in the default browser. You can access it at http://localhost:12380/.
 
-- After mame-ao has fully started the web UI will apear in the default browser.
-- You can access it at http://localhost:12380/.
-- Just click on image to start the machine. Select machine query profiles using the top menu.
-- If the machine has software it will be listed, you can change software list using the top menu, click what you want to run.
-- UI background colour will change to orange when mame-ao is working. You can click on the mame-ao console window to see what it's doing.
+Just click on an image to start the machine. Select machine query profiles using the top menu.
+
+If the machine has software it will be listed, you can change software list using the top menu, click what you want to run.
+
+UI background colour will change to orange when mame-ao is working. You can click on the mame-ao console window to see what it's doing.
 
 ## System requirements
-
 - Windows with .net framework 4.8
 - 32 bit / 64 bit (application is 32 bit keeps RAM usage down)
 - 2 Gb RAM free
+- 2 Gb DISK free (absolute minimum)
 
 ## Reporting issues
-
 https://github.com/sam-ludlow/mame-ao/issues
 
 ## Symbolic Links - Save disk space
-
 When MAME-AO downloads assets it keeps them in a "hash store", this makes keeping account of them very simple, you don’t have to keep grooming a bunch of ZIP files.
 
 Obviously for MAME to run the ROMs have to be in the right place with the right name, so they need duplicating from the store. The best way to do this is use symbolic links, these use virtually zero disk space and point to the actual file in the store, otherwise you have to copy the files wasting diskspace.
@@ -61,11 +57,9 @@ To be able to create symbolic links you have to grant permission.
 - You will need to re-start for settings to take effect.
 
 ## MAME Quick usage help
-
 Here are some quick MAME usage notes. For more detail see the official docs. https://docs.mamedev.org/usingmame/usingmame.html
 
-### Keyboard controls
-
+### MAME Keyboard controls
 NOTE: Machines that emulate keyboards will take over, use `Scroll Lock` to toggle between standard MAME controls and full keyboard.
 
 You should use a joystick but you will need a few keyboard commands. Full keyboard docs here https://docs.mamedev.org/usingmame/defaultkeys.html
@@ -97,7 +91,6 @@ NOTE: When saving state you have to then press another key or button to name the
 - Keyboard UI controls OR full keyboard : `Scroll Lock`
 
 ### MAME UI
-
 When starting MAME without a machine you will get the MAME UI.
 
 Use the mouse or `Cursor keys` and `Enter` to navigate.
@@ -107,6 +100,13 @@ Use `Tab` to move between windows.
 The `available` filter (top left) is very handy when running previous MAME versions, use the mouse or `Tab` to get to the filters.
 
 NOTE: Selecting machines that have software will then take you to the software lists, you can use the same `available` filter trick.
+
+## Settings - User Preferences
+Settings - User Preferences
+
+You can configure optional settings from the UI page http://localhost:12380/settings
+
+![MAME-AO Settings](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-settings.png)
 
 ## Shell / Console
 From the shell you normally just enter machine name and maybe software name.
@@ -129,13 +129,17 @@ There are also commands available they all start with a dot `.`
 - `.r` - Reload `UI.html` usfull when developing the UI.
 
 ## Saved State and previous MAME versions
+Saved state often does not work between MAME versions. If you have started something with saved state you should continue to run the same MAME version.
 
-- Saved state often does not work between MAME versions. If you have started something with saved state you should continue to run the same MAME version.
-- MAME-AO leaves previous MAME versions isolated in their own directory. You can easily list all saved stated across all previous and current MAME versions with the command `.list`.
-- You can start a particular version of MAME with the command `.VVVV` where V is the version e.g. `.0252` or pass arguments e.g. `.0252 mrdo -window`.
-- NOTE: MAME-AO only allows placing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
-- You can list saved state in the UI. The link will start the chosen MAME version without any machine, select machine & software in the MAME UI, use the available filter (top left).
-- Sometimes a regression in MAME will break a machine in the current version, so if a machine doesn't work after updating MAME you can run a previous version.
+MAME-AO leaves previous MAME versions isolated in their own directory. You can easily list all saved stated across all previous and current MAME versions with the command `.list`.
+
+You can start a particular version of MAME with the command `.VVVV` where V is the version e.g. `.0252` or pass arguments e.g. `.0252 mrdo -window`.
+
+NOTE: MAME-AO only allows placing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
+
+You can list saved state in the UI. The link will start the chosen MAME version without any machine, select machine & software in the MAME UI, use the available filter (top left).
+
+Sometimes a regression in MAME will break a machine in the current version, so if a machine doesn't work after updating MAME you can run a previous version.
 
 ## Import
 MAME-AO is all about downloading files on the fly and not bothering the user with the details.
@@ -188,6 +192,10 @@ You can check the hash store is in good order using the following commands:
 - `.valid rom` - Validate the ROM Hash Store, each file will be SHA1 hashed and compared to the filename.
 - `.valid disk` - Validate the DISK Hash Store, each file will have the SHA1 checked with chdman.exe and compared to the filename.
 - `.valid diskv` - Validate the DISK Hash Store, each file will have the SHA1 verified with chdman.exe and compared to the filename. WARNING: This can take a while, each CHD will have its SHA1 calculated to verify it is correct.
+
+If any issues are found a report will be produced, if all good then no report. Any problem files in the report should be manually deleted.
+
+You shouldn't really need to do this, only if you are unsure about integrity like after a power cut or recovering from a bad disk.
 
 ## Snapshots
 Within MAME you can hit `F12` to take a snapshot of the screen, dumped out at the machine's native resolution.
@@ -322,17 +330,25 @@ You can run `Source Exists` reports to see if the items are missing anything.
 ### MAME
 Emulator software
 https://www.mamedev.org/
+https://github.com/mamedev/mame
 
 ### Archive.org
-ROM & DISK download
+Asset download
 https://archive.org/
 
-### Progetto Snaps
-UI Images
+### Antonio Paradossi
+Images
 https://www.progettosnaps.net/snapshots/
+https://github.com/AntoPISA/MAME_SnapTitles
 
-UI Genres
+Artwork & Samples
+https://www.progettosnaps.net/artworks/
+https://www.progettosnaps.net/samples/
+https://github.com/AntoPISA/MAME_Dats
+
+Genre Data
 https://www.progettosnaps.net/catver/
+https://github.com/AntoPISA/MAME_SupportFiles
 
 ### Newtonsoft
 JSON Library
