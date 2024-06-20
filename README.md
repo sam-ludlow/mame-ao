@@ -102,8 +102,6 @@ The `available` filter (top left) is very handy when running previous MAME versi
 NOTE: Selecting machines that have software will then take you to the software lists, you can use the same `available` filter trick.
 
 ## Settings - User Preferences
-Settings - User Preferences
-
 You can configure optional settings from the UI page http://localhost:12380/settings
 
 ![MAME-AO Settings](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-settings.png)

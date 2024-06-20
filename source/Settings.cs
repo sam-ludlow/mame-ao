@@ -13,11 +13,13 @@ namespace Spludlow.MameAO
 		{
 			{ "Artwork", new List<string>(new string[] { "No", "Artworks", "ArtworksAlt", "ArtworksWideScreen" }) },
 			{ "PlaceReport", new List<string>(new string[] { "No", "Yes" }) },
+			{ "MameVersion", new List<string>( new string[] { "ArchiveOrg", "GitHub" } ) },
 		};
 
 		public Dictionary<string, string> OptionDescriptions = new Dictionary<string, string>() {
 			{ "Artwork", "Place Artwork Files. Note when set to \"No\" the machine artwork directories will be deleted. If changing artwork types run the machne with \"No\" first." },
 			{ "PlaceReport", "Report on placing files (rom, disk, samples, artwork)." },
+			{ "MameVersion", "Use the MAME version with Assets available on Archive.Org (recommended), or use the latest on GitHub (WARNING you will need to import the latest assets yourself)." },
 		};
 
 		public Dictionary<string, string> Options = new Dictionary<string, string>();
