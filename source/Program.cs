@@ -25,7 +25,7 @@ namespace Spludlow.MameAO
 
 			if (Globals.Arguments.ContainsKey("UPDATE") == true)
 			{
-				proc.Update(Int32.Parse(Globals.Arguments["UPDATE"]));
+				SelfUpdate.Update(Int32.Parse(Globals.Arguments["UPDATE"]));
 				return 0;
 			}
 

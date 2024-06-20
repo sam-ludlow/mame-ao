@@ -5,12 +5,10 @@ using System.Text;
 using System.Net.Http;
 using System.IO;
 using System.Data;
-using System.IO.Compression;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
-using System.Threading;
 
 namespace Spludlow.MameAO
 {
@@ -24,10 +22,10 @@ namespace Spludlow.MameAO
 			HttpClient = new HttpClient();
 			HttpClient.DefaultRequestHeaders.Add("User-Agent", $"mame-ao/{Globals.AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)");
 
-			HttpClient.Timeout = TimeSpan.FromSeconds(180);
+			HttpClient.Timeout = TimeSpan.FromSeconds(180);		// metdata 3 minutes
 		}
 
-		public static readonly int AssetDownloadTimeoutMilliseconds = 6 * 60 * 60 * 1000;
+		public static readonly int AssetDownloadTimeoutMilliseconds = 6 * 60 * 60 * 1000;	// assets 6 hours
 
 		public static string ListenAddress = "http://localhost:12380/";
 
@@ -488,15 +486,15 @@ namespace Spludlow.MameAO
 
 						arguments = String.Join(" ", parts.Skip(1));
 
-						ImportDirectory(arguments);
+						Import.ImportDirectory(arguments);
 						return;
 
 					case ".up":
-						Update(0);
+						SelfUpdate.Update(0);
 						return;
 
-					case ".upany":  //	for testing update works
-						Update(-1);
+					case ".upany":
+						SelfUpdate.Update(-1);
 						return;
 
 					case ".favm":
@@ -714,207 +712,5 @@ namespace Spludlow.MameAO
 			}
 			Console.WriteLine();
 		}
-
-		public void Update(int startingPid)
-		{
-			string updateDirectory = Path.Combine(Globals.RootDirectory, "_TEMP", "UPDATE");
-
-			if (startingPid <= 0)
-			{
-				GitHubRepo repo = Globals.GitHubRepos["mame-ao"];
-
-				if (repo.tag_name == Globals.AssemblyVersion)
-				{
-					Console.WriteLine($"MAME-AO is already up to date '{Globals.AssemblyVersion}'.");
-					if (startingPid == 0)
-						return;
-				}
-
-				Console.WriteLine($"Updating MAME-AO '{Globals.AssemblyVersion}' => '{repo.tag_name}'...");
-
-				string archiveUrl = repo.Assets[repo.Assets.First().Key];
-				string archiveFilename = Path.Combine(Globals.RootDirectory, $"mame-ao-{repo.tag_name}.zip");
-
-				Tools.Download(archiveUrl, archiveFilename);
-
-				if (Directory.Exists(updateDirectory) == true)
-				{
-					try
-					{
-						Directory.Delete(updateDirectory, true);
-					}
-					catch (UnauthorizedAccessException e)
-					{
-						throw new ApplicationException("Looks like an update is currently running, please kill all mame-ao processes and try again, " + e.Message, e);
-					}
-				}
-
-				ZipFile.ExtractToDirectory(archiveFilename, updateDirectory);
-
-				int pid = Process.GetCurrentProcess().Id;
-
-				ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(updateDirectory, "mame-ao.exe"))
-				{
-					WorkingDirectory = Globals.RootDirectory,
-					Arguments = $"UPDATE={pid} DIRECTORY=\"{Globals.RootDirectory}\"",
-					UseShellExecute = true,
-				};
-
-				Console.Write("Starting update process...");
-
-				using (Process process = new Process())
-				{
-					process.StartInfo = startInfo;
-					process.Start();
-
-					if (process.HasExited == true)
-						throw new ApplicationException($"Update process exited imediatly after starting {process.ExitCode}.");
-				}
-
-				Console.WriteLine("...done");
-				Console.WriteLine("Exiting this process...");
-				Thread.Sleep(1000);
-				Environment.Exit(0);
-			}
-			else
-			{
-				try
-				{
-					UpdateChild(updateDirectory, startingPid);
-				}
-				catch (Exception e)
-				{
-					Tools.ReportError(e, "UPDATE FATAL ERROR", true);
-				}
-			}
-		}
-
-		public void UpdateChild(string updateDirectory, int startingPid)
-		{
-			Console.WriteLine($"MAME-AO UPDATER {Globals.AssemblyVersion}");
-			Console.WriteLine($"Target Directory: {Globals.RootDirectory}, Update From Directory {updateDirectory}.");
-
-			Console.WriteLine("Waiting for starting process to exit...");
-			using (Process startingProcess = Process.GetProcessById(startingPid))
-			{
-				startingProcess.WaitForExit();
-			}
-			Console.WriteLine("...done");
-
-			try
-			{
-				File.Delete(Path.Combine(Globals.RootDirectory, "mame-ao.exe"));
-			}
-			catch (UnauthorizedAccessException e)
-			{
-				throw new ApplicationException("Looks like the starting process is currently running, please kill all mame-ao processes and try again, " + e.Message, e);
-			}
-
-			foreach (string sourceFilename in Directory.GetFiles(updateDirectory))
-			{
-				string targetFilename = Path.Combine(Globals.RootDirectory, Path.GetFileName(sourceFilename));
-
-				File.Copy(sourceFilename, targetFilename, true);
-
-				Console.WriteLine(targetFilename);
-			}
-
-			ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(Globals.RootDirectory, "mame-ao.exe"))
-			{
-				WorkingDirectory = Globals.RootDirectory,
-				UseShellExecute = true,
-			};
-
-			Console.Write("Starting updated mame-ao process...");
-			Thread.Sleep(1000);
-
-			using (Process process = new Process())
-			{
-				process.StartInfo = startInfo;
-				process.Start();
-
-				if (process.HasExited == true)
-					throw new ApplicationException($"New mame-ao process exited imediatly after starting {process.ExitCode}.");
-			}
-
-			Console.WriteLine("...done");
-			Console.WriteLine("Exiting this process...");
-			Thread.Sleep(1000);
-			Environment.Exit(0);
-		}
-
-		public void ImportDirectory(string importDirectory)
-		{
-			if (Directory.Exists(importDirectory) == false)
-				throw new ApplicationException($"Import directory does not exist: {importDirectory}");
-
-			Tools.ConsoleHeading(1, new string[] {
-				"Import from Directory",
-				importDirectory,
-			});
-
-			DataTable reportTable = Tools.MakeDataTable(
-				"Filename	Type	SHA1	Action",
-				"String		String	String	String"
-			);
-
-			ImportDirectory(importDirectory, Globals.Database._AllSHA1s, reportTable);
-
-			Globals.Reports.SaveHtmlReport(reportTable, "Import Directory");
-		}
-		public void ImportDirectory(string importDirectory, HashSet<string> allSHA1s, DataTable reportTable)
-		{
-			foreach (string filename in Directory.GetFiles(importDirectory, "*", SearchOption.AllDirectories))
-			{
-				Console.WriteLine(filename);
-
-				string name = filename.Substring(importDirectory.Length + 1);
-
-				string extention = Path.GetExtension(filename).ToLower();
-
-				string sha1;
-				string status;
-
-				switch (extention)
-				{
-					case ".zip":
-						sha1 = "";
-						status = "";
-
-						using (TempDirectory tempDir = new TempDirectory())
-						{
-							ZipFile.ExtractToDirectory(filename, tempDir.Path);
-
-							Tools.ClearAttributes(tempDir.Path);
-
-							reportTable.Rows.Add(name, "ARCHIVE", sha1, status);
-
-							ImportDirectory(tempDir.Path, allSHA1s, reportTable);
-						}
-						break;
-
-					case ".chd":
-						sha1 = Globals.DiskHashStore.Hash(filename);
-						if (allSHA1s.Contains(sha1) == true)
-							status = Globals.DiskHashStore.Add(filename, false, sha1) ? "" : "Have";
-						else
-							status = "Unknown";
-
-						reportTable.Rows.Add(name, "DISK", sha1, status);
-						break;
-
-					default:
-						sha1 = Globals.RomHashStore.Hash(filename);
-						if (allSHA1s.Contains(sha1) == true)
-							status = Globals.RomHashStore.Add(filename, false, sha1) ? "" : "Have";
-						else
-							status = "Unknown";
-
-						reportTable.Rows.Add(name, "ROM", sha1, status);
-						break;
-				}
-			}
-		}
-
 	}
 }

@@ -238,8 +238,10 @@ namespace Spludlow.MameAO
 				html.AppendLine(MakeHtmlTable(table, "width:100%;"));
 			}
 
+			string footerInfo = $"MAME-AO {Globals.AssemblyVersion} - MAME {Globals.MameVersion} - {name}";
+
 			html.AppendLine("<hr />");
-			html.AppendLine("<p style=\"width:100%;\">" + name + "<span style=\"float:right\"><a href=\"https://github.com/sam-ludlow/mame-ao\">Spludlow MAME-AO</a></span></p>");
+			html.AppendLine($"<p style=\"width:100%;\">{footerInfo}<span style=\"float:right\"><a href=\"https://github.com/sam-ludlow/mame-ao\">Spludlow MAME-AO</a></span></p>");
 			html.AppendLine("</html>");
 
 			string filename = Path.Combine(_OutputDirectory, name + ".htm");

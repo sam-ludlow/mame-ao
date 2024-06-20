@@ -64,6 +64,7 @@
     <Compile Include="source\Genre.cs" />
     <Compile Include="source\GitHubRepo.cs" />
     <Compile Include="source\HashStore.cs" />
+    <Compile Include="source\Import.cs" />
     <Compile Include="source\Mame.cs" />
     <Compile Include="source\MameAO.cs" />
     <Compile Include="source\MameChdMan.cs" />
@@ -74,6 +75,7 @@
     <Compile Include="source\ReadXML.cs" />
     <Compile Include="source\Reports.cs" />
     <Compile Include="source\Samples.cs" />
+    <Compile Include="source\SelfUpdate.cs" />
     <Compile Include="source\Settings.cs" />
     <Compile Include="source\Tools.cs" />
     <Compile Include="source\WebServer.cs" />
