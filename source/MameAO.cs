@@ -211,26 +211,6 @@ namespace Spludlow.MameAO
 			});
 
 			//
-			// Determine MAME version
-			//
-
-			ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
-			item.GetFile(null);
-			Globals.MameVersion = item.Version;
-
-			if (Globals.MameVersion == null)
-				Globals.MameVersion = Mame.LatestLocal();
-
-			if (Globals.MameVersion == null)
-				throw new ApplicationException("Unable to determine MAME Version.");
-
-			Globals.MameVersion = Globals.MameVersion.Replace(".", "");
-
-			Globals.MameDirectory = Path.Combine(Globals.RootDirectory, Globals.MameVersion);
-
-			Console.WriteLine($"MameVersion: {Globals.MameVersion}");
-
-			//
 			// GitHub Repos
 			//
 
@@ -240,6 +220,32 @@ namespace Spludlow.MameAO
 
 			Globals.GitHubRepos.Add("MAME_Dats", new GitHubRepo("AntoPISA", "MAME_Dats"));
 			Globals.GitHubRepos.Add("MAME_SupportFiles", new GitHubRepo("AntoPISA", "MAME_SupportFiles"));
+
+			//
+			// Determine MAME version
+			//
+
+			if (Globals.Settings.Options["MameVersion"] == "ArchiveOrg")
+			{
+				ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
+				item.GetFile(null);
+				Globals.MameVersion = item.Version;
+			}
+			else
+			{
+				Globals.MameVersion = Globals.GitHubRepos["mame"].tag_name.Substring(4);
+			}
+
+			if (Globals.MameVersion == null)
+				Globals.MameVersion = Mame.LatestLocal();
+
+			if (Globals.MameVersion == null)
+				throw new ApplicationException("Unable to determine MAME Version.");
+
+			Globals.MameVersion = Globals.MameVersion.Replace(".", "");
+			Globals.MameDirectory = Path.Combine(Globals.RootDirectory, Globals.MameVersion);
+
+			Console.WriteLine($"MameVersion: {Globals.MameVersion}");
 
 			//
 			// MAME Binaries
