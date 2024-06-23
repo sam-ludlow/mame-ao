@@ -263,11 +263,11 @@ namespace Spludlow.MameAO
 			return table;
 		}
 
-		public static string FetchTextCached(string url, string filename)
+		public static string FetchTextCached(string url)
 		{
+			string filename = Path.Combine(Globals.CacheDirectory, Tools.ValidFileName(url.Substring(8)));
+		
 			string result = null;
-
-			Directory.CreateDirectory(Path.GetDirectoryName(filename));
 
 			if (File.Exists(filename) == false || (DateTime.Now - File.GetLastWriteTime(filename) > TimeSpan.FromHours(3)))
 			{

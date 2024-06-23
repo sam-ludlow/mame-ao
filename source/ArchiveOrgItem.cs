@@ -108,9 +108,7 @@ namespace Spludlow.MameAO
 		{
 			Files = new Dictionary<string, ArchiveOrgFile>();
 
-			string cacheFilename = Path.Combine(Globals.RootDirectory, "_METADATA", "archive.org", $"{Key}.json");
-
-			string json = Tools.FetchTextCached(UrlMetadata, cacheFilename);
+			string json = Tools.FetchTextCached(UrlMetadata);
 
 			if (json == null || json == "{}")
 			{
@@ -150,9 +148,7 @@ namespace Spludlow.MameAO
 		{
 			string url = DownloadLink(file) + "/";
 
-			string cacheFilename = Path.Combine(Globals.RootDirectory, "_METADATA", "archive.org", $"{Tools.ValidFileName(url.Substring(8))}");
-
-			string html = Tools.FetchTextCached(url, cacheFilename);
+			string html = Tools.FetchTextCached(url);
 
 			if (html == null)
 			{

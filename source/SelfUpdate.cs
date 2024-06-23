@@ -11,7 +11,7 @@ namespace Spludlow.MameAO
 	{
 		public static void Update(int startingPid)
 		{
-			string updateDirectory = Path.Combine(Globals.RootDirectory, "_TEMP", "UPDATE");
+			string updateDirectory = Path.Combine(Globals.TempDirectory, "UPDATE");
 
 			if (startingPid <= 0)
 			{

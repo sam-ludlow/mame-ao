@@ -46,6 +46,10 @@ namespace Spludlow.MameAO
 		public static Dictionary<string, string> Arguments = new Dictionary<string, string>();
 
 		public static string RootDirectory;
+		public static string TempDirectory;
+		public static string CacheDirectory;
+		public static string ReportDirectory;
+
 		public static string MameDirectory;
 
 		public static string MameVersion;
@@ -111,6 +115,16 @@ namespace Spludlow.MameAO
 		public MameAOProcessor()
 		{
 			Globals.RootDirectory = Globals.Arguments["DIRECTORY"];
+			Directory.CreateDirectory(Globals.RootDirectory);
+
+			Globals.TempDirectory = Path.Combine(Globals.RootDirectory, "_TEMP");
+			Directory.CreateDirectory(Globals.TempDirectory);
+
+			Globals.CacheDirectory = Path.Combine(Globals.TempDirectory, "CACHE");
+			Directory.CreateDirectory(Globals.CacheDirectory);
+
+			Globals.ReportDirectory = Path.Combine(Globals.RootDirectory, "_REPORTS");
+			Directory.CreateDirectory(Globals.ReportDirectory);
 		}
 
 		public void Run()
@@ -153,6 +167,11 @@ namespace Spludlow.MameAO
 			string badSourcesFilename = Path.Combine(Globals.RootDirectory, "_BadSources.txt");
 			if (File.Exists(badSourcesFilename) == true && File.GetLastWriteTime(badSourcesFilename) < new DateTime(2024, 7, 1))
 				File.Delete(badSourcesFilename);
+
+			// Moved in 1.90
+			string oldDirectory = Path.Combine(Globals.RootDirectory, "_METADATA");
+			if (Directory.Exists(oldDirectory) == true)
+				Directory.Delete(oldDirectory, true);
 
 			//
 			// Symbolic Links check
@@ -300,9 +319,6 @@ namespace Spludlow.MameAO
 			directory = Path.Combine(Globals.RootDirectory, "_STORE_DISK");
 			Directory.CreateDirectory(directory);
 			Globals.DiskHashStore = new HashStore(directory, Globals.MameChdMan.Hash);
-
-			directory = Path.Combine(Globals.RootDirectory, "_TEMP");
-			Directory.CreateDirectory(directory);
 
 			//
 			// Database

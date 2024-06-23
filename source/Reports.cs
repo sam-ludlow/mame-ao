@@ -155,12 +155,8 @@ namespace Spludlow.MameAO
 			}
 		";
 
-		private readonly string _OutputDirectory;
-
 		public Reports()
 		{
-			_OutputDirectory = Path.Combine(Globals.RootDirectory, "_REPORTS");
-			Directory.CreateDirectory(_OutputDirectory);
 		}
 
 		public string[] ReportTypeText()
@@ -244,7 +240,7 @@ namespace Spludlow.MameAO
 			html.AppendLine($"<p style=\"width:100%;\">{footerInfo}<span style=\"float:right\"><a href=\"https://github.com/sam-ludlow/mame-ao\">Spludlow MAME-AO</a></span></p>");
 			html.AppendLine("</html>");
 
-			string filename = Path.Combine(_OutputDirectory, name + ".htm");
+			string filename = Path.Combine(Globals.ReportDirectory, name + ".htm");
 
 			File.WriteAllText(filename, html.ToString(), Encoding.UTF8);
 
@@ -315,7 +311,7 @@ namespace Spludlow.MameAO
 
 		public string GetHtml(string reportName)
 		{
-			string filename = Path.Combine(_OutputDirectory, reportName + ".htm");
+			string filename = Path.Combine(Globals.ReportDirectory, reportName + ".htm");
 
 			if (File.Exists(filename) == false)
 				throw new ApplicationException($"Report does no exist: {reportName}");
@@ -327,9 +323,9 @@ namespace Spludlow.MameAO
 		{
 			List<string> items = new List<string>();
 			
-			if (Directory.Exists(_OutputDirectory) == true)
+			if (Directory.Exists(Globals.ReportDirectory) == true)
 			{
-				foreach (string filename in Directory.GetFiles(_OutputDirectory))
+				foreach (string filename in Directory.GetFiles(Globals.ReportDirectory))
 					items.Add(Path.GetFileNameWithoutExtension(filename));
 
 				items.Sort();

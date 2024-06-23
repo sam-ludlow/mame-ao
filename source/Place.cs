@@ -396,8 +396,7 @@ namespace Spludlow.MameAO
 				return;
 			}
 
-			string downloadTempDirectory = Path.Combine(Globals.RootDirectory, "_TEMP");
-			string tempFilename = Path.Combine(downloadTempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(file.name) + ".chd");
+			string tempFilename = Path.Combine(Globals.TempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(file.name) + ".chd");
 
 			lock (Globals.WorkerTaskInfo)
 			{

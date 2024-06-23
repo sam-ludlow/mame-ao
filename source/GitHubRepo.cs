@@ -2,7 +2,6 @@
 using Newtonsoft.Json.Linq;
 using System;
 using System.Collections.Generic;
-using System.IO;
 
 namespace Spludlow.MameAO
 {
@@ -16,8 +15,6 @@ namespace Spludlow.MameAO
 		public string UrlRaw;
 
 		private readonly string UrlAPiBase = "https://api.github.com";
-
-		private readonly string CacheDirectory;
 
 		private dynamic DataRepo = null;
 
@@ -34,9 +31,6 @@ namespace Spludlow.MameAO
 			UrlDetails = $"https://github.com/{userName}/{repoName}";
 			UrlApi = $"{UrlAPiBase}/repos/{userName}/{repoName}";
 			UrlRaw = $"https://raw.githubusercontent.com/{userName}/{repoName}";
-
-			CacheDirectory = Path.Combine(Globals.RootDirectory, "_METADATA", "github.com");
-			Directory.CreateDirectory(CacheDirectory);
 
 			Initialize();
 		}
@@ -77,16 +71,12 @@ namespace Spludlow.MameAO
 
 		public string Fetch(string url)
 		{
-			string cacheFilename = Path.Combine(CacheDirectory, $"{Tools.ValidFileName(url.Substring(8))}");
-
-			return Tools.FetchTextCached(url, cacheFilename);
+			return Tools.FetchTextCached(url);
 		}
 
 		public dynamic ApiFetch(string url)
 		{
-			string cacheFilename = Path.Combine(CacheDirectory, $"{Tools.ValidFileName(url.Substring(8))}.json");
-
-			string json = Tools.FetchTextCached(url, cacheFilename);
+			string json = Tools.FetchTextCached(url);
 
 			if (json == null)
 				return null;
