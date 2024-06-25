@@ -7,11 +7,7 @@ namespace Spludlow.MameAO
 {
 	public class Export
 	{
-		public Export()
-		{
-		}
-
-		public void MachineRoms(string targetDirectory)
+		public static void MachineRoms(string targetDirectory)
 		{
 			Tools.ConsoleHeading(1, new string[] { "Export Machine ROM", targetDirectory });
 
@@ -80,13 +76,13 @@ namespace Spludlow.MameAO
 						continue;
 					}
 
-					string archiveDirectory = tempDir.Path + @"\" + machine_name;
+					string archiveDirectory = Path.Combine(tempDir.Path, machine_name);
 					Directory.CreateDirectory(archiveDirectory);
 
 					foreach (string name in nameHashes.Keys)
 					{
 						string storeFilename = Globals.RomHashStore.Filename(nameHashes[name]);
-						string romFilename = archiveDirectory + @"\" + name;
+						string romFilename = Path.Combine(archiveDirectory, name);
 						File.Copy(storeFilename, romFilename);
 					}
 
@@ -101,7 +97,7 @@ namespace Spludlow.MameAO
 			Globals.Reports.SaveHtmlReport(reportTable, "Export Machine ROM");
 		}
 
-		public void MachineDisks(string targetDirectory)
+		public static void MachineDisks(string targetDirectory)
 		{
 			Tools.ConsoleHeading(1, new string[] { "Export Machine DISK", targetDirectory });
 
@@ -159,7 +155,7 @@ namespace Spludlow.MameAO
 			Globals.Reports.SaveHtmlReport(reportTable, "Export Machine DISK");
 		}
 
-		public void SoftwareRoms(string targetDirectory)
+		public static void SoftwareRoms(string targetDirectory)
 		{
 			Tools.ConsoleHeading(1, new string[] { "Export Software ROM", targetDirectory });
 
@@ -230,13 +226,13 @@ namespace Spludlow.MameAO
 						if (Directory.Exists(directory) == false)
 							Directory.CreateDirectory(directory);
 
-						string archiveDirectory = tempDir.Path + @"\" + software_name;
+						string archiveDirectory = Path.Combine(tempDir.Path, software_name);
 						Directory.CreateDirectory(archiveDirectory);
 
 						foreach (string name in nameHashes.Keys)
 						{
 							string storeFilename = Globals.RomHashStore.Filename(nameHashes[name]);
-							string romFilename = archiveDirectory + @"\" + name;
+							string romFilename = Path.Combine(archiveDirectory, name);
 							File.Copy(storeFilename, romFilename);
 						}
 
@@ -252,7 +248,7 @@ namespace Spludlow.MameAO
 			Globals.Reports.SaveHtmlReport(reportTable, "Export Software ROM");
 		}
 
-		public void SoftwareDisks(string targetDirectory)
+		public static void SoftwareDisks(string targetDirectory)
 		{
 			Tools.ConsoleHeading(1, new string[] { "Export Software DISK", targetDirectory });
 

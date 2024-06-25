@@ -69,7 +69,6 @@ namespace Spludlow.MameAO
 		public static Artwork Artwork;
 		public static BadSources BadSources;
 		public static Database Database;
-		public static Export Export;
 		public static Favorites Favorites;
 		public static Genre Genre;
 		public static MameChdMan MameChdMan;
@@ -373,7 +372,6 @@ namespace Spludlow.MameAO
 			Globals.Reports = new Reports();
 			Globals.BadSources = new BadSources();
 			Globals.Favorites = new Favorites();
-			Globals.Export = new Export();
 
 			Globals.Artwork = new Artwork();
 			Globals.Samples = new Samples();
@@ -574,23 +572,23 @@ namespace Spludlow.MameAO
 						switch (parts[1].ToUpper())
 						{
 							case "MR":
-								Globals.Export.MachineRoms(arguments);
+								Export.MachineRoms(arguments);
 								break;
 							case "MD":
-								Globals.Export.MachineDisks(arguments);
+								Export.MachineDisks(arguments);
 								break;
 							case "SR":
-								Globals.Export.SoftwareRoms(arguments);
+								Export.SoftwareRoms(arguments);
 								break;
 							case "SD":
-								Globals.Export.SoftwareDisks(arguments);
+								Export.SoftwareDisks(arguments);
 								break;
 
 							case "*":
-								Globals.Export.MachineRoms(arguments);
-								Globals.Export.MachineDisks(arguments);
-								Globals.Export.SoftwareRoms(arguments);
-								Globals.Export.SoftwareDisks(arguments);
+								Export.MachineRoms(arguments);
+								Export.MachineDisks(arguments);
+								Export.SoftwareRoms(arguments);
+								Export.SoftwareDisks(arguments);
 								break;
 
 							default:
