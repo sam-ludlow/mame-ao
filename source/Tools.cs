@@ -10,6 +10,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.ComponentModel;
 using System.Drawing;
+using System.Text.RegularExpressions;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -93,6 +94,11 @@ namespace Spludlow.MameAO
 				Console.ReadKey();
 				Environment.Exit(1);
 			}
+		}
+
+		public static string CleanWhiteSpace(string text)
+		{
+			return Regex.Replace(text, @"\s+", " ").Trim();
 		}
 
 		public static void CleanDynamic(dynamic data)

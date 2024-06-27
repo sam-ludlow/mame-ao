@@ -15,7 +15,7 @@ namespace Spludlow.MameAO
 
 			DataRow machine = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: {machineName}");
 
-			Globals.PlaceReport = Reports.PlaceReportTemplate();
+			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
 			int missingCount = 0;
 
@@ -99,7 +99,7 @@ namespace Spludlow.MameAO
 			Globals.Artwork.PlaceAssets(machine);
 
 			if (Globals.Settings.Options["PlaceReport"] == "Yes")
-				Globals.Reports.SaveHtmlReport(Globals.PlaceReport, $"Place Assets {machineName} {softwareName}".Trim());
+				Globals.Reports.SaveHtmlReport(Globals.WorkerTaskReport, $"Place Assets {machineName} {softwareName}".Trim());
 
 			//
 			// Info
@@ -338,7 +338,7 @@ namespace Spludlow.MameAO
 				if (required == true)
 					downloadRequired = true;
 
-				Globals.PlaceReport.Tables["Require"].Rows.Add(when, info[0], info[1], info[2], sha1, required, name);
+				Globals.WorkerTaskReport.Tables["Require"].Rows.Add(when, info[0], info[1], info[2], sha1, required, name);
 			}
 
 			return downloadRequired;
@@ -365,7 +365,7 @@ namespace Spludlow.MameAO
 
 				DateTime when = DateTime.Now;
 
-				Globals.PlaceReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, expectedSize, (long)took.TotalSeconds);
+				Globals.WorkerTaskReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, expectedSize, (long)took.TotalSeconds);
 
 				Console.Write($"Extracting {archiveFilename} ...");
 				ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
@@ -383,7 +383,7 @@ namespace Spludlow.MameAO
 					if (required == true)
 						imported = Globals.RomHashStore.Add(filename);
 
-					Globals.PlaceReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, subPathName);
+					Globals.WorkerTaskReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, subPathName);
 				}
 			}
 		}
@@ -412,7 +412,7 @@ namespace Spludlow.MameAO
 
 			DateTime when = DateTime.Now;
 
-			Globals.PlaceReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, size, (long)took.TotalSeconds);
+			Globals.WorkerTaskReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, size, (long)took.TotalSeconds);
 
 			decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
 			Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
@@ -434,7 +434,7 @@ namespace Spludlow.MameAO
 			if (required == true)
 				imported = Globals.DiskHashStore.Add(tempFilename, true, sha1);
 
-			Globals.PlaceReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, Path.GetFileName(tempFilename));
+			Globals.WorkerTaskReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, Path.GetFileName(tempFilename));
 		}
 
 		public static int PlaceAssetFiles(DataRow[] assetRows, HashStore hashStore, string targetDirectory, string filenameAppend, string[] info)
@@ -464,7 +464,7 @@ namespace Spludlow.MameAO
 				if (place == true)
 					targetStoreFilenames.Add(new string[] { targetFilename, hashStore.Filename(sha1) });
 
-				Globals.PlaceReport.Tables["Place"].Rows.Add(when, info[0], info[1], info[2], sha1, place, have, name);
+				Globals.WorkerTaskReport.Tables["Place"].Rows.Add(when, info[0], info[1], info[2], sha1, place, have, name);
 			}
 
 			PlaceFiles(targetStoreFilenames.ToArray());
