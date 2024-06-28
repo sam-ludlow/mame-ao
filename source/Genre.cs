@@ -10,6 +10,7 @@ namespace Spludlow.MameAO
 	public class Genre
 	{
 		public string Version = "";
+		public string SHA1 = "";
 		public DataSet Data = null;
 
 		public Genre()
@@ -36,6 +37,7 @@ namespace Spludlow.MameAO
 			}
 
 			Version = ParseVersion(iniData);
+			SHA1 = Tools.SHA1HexText(iniData);
 
 			//
 			// Parse .ini
@@ -254,7 +256,7 @@ namespace Spludlow.MameAO
 
 			string databaseVersion = (string)infoTable.Rows[0]["genre_version"];
 
-			if (Version == databaseVersion)
+			if (SHA1 == databaseVersion)
 				return;
 
 			Console.Write("Update Machines database with genre IDs ...");
@@ -308,7 +310,7 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			Database.ExecuteNonQuery(Globals.Database._MachineConnection, $"UPDATE ao_info SET genre_version = '{Version}' WHERE ao_info_id = 1");
+			Database.ExecuteNonQuery(Globals.Database._MachineConnection, $"UPDATE ao_info SET genre_version = '{SHA1}' WHERE ao_info_id = 1");
 
 			Console.WriteLine("...done");
 

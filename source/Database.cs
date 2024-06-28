@@ -792,5 +792,53 @@ namespace Spludlow.MameAO
 			return result.ToArray();
 		}
 
+		public static void ConsoleQuery(string database, string commandText)
+		{
+			SQLiteConnection connection = database == "m" ? Globals.Database._MachineConnection : Globals.Database._SoftwareConnection;
+
+			try
+			{
+				DataTable table = ExecuteFill(connection, commandText);
+
+				StringBuilder text = new StringBuilder();
+
+				foreach (DataColumn column in table.Columns)
+				{
+					if (column.Ordinal > 0)
+						text.Append('\t');
+					text.Append(column.ColumnName);
+				}
+				Console.WriteLine(text.ToString());
+
+				text.Length = 0;
+				foreach (DataColumn column in table.Columns)
+				{
+					if (column.Ordinal > 0)
+						text.Append('\t');
+					text.Append(new String('=', column.ColumnName.Length));
+				}
+				Console.WriteLine(text.ToString());
+
+				foreach (DataRow row in table.Rows)
+				{
+					text.Length = 0;
+					foreach (DataColumn column in table.Columns)
+					{
+						if (column.Ordinal > 0)
+							text.Append('\t');
+						if (row.IsNull(column) == false)
+							text.Append(Convert.ToString(row[column]));
+					}
+					Console.WriteLine(text.ToString());
+				}
+			}
+			catch (SQLiteException e)
+			{
+				Console.WriteLine(e.Message);
+			}
+
+			Console.WriteLine();
+		}
+
 	}
 }

@@ -676,6 +676,14 @@ namespace Spludlow.MameAO
 						Globals.Settings.Set(parts[1], parts[2]);
 						return;
 
+					case ".dbm":
+					case ".dbs":
+						if (parts.Length == 1)
+							throw new ApplicationException($"Usage: {parts[0]} <command text>");
+
+						Database.ConsoleQuery(parts[0].Substring(3), String.Join(" ", parts.Skip(1)));
+						return;
+
 					default:
 						binFilename = Path.Combine(Globals.RootDirectory, machine.Substring(1), "mame.exe");
 

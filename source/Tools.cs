@@ -206,13 +206,28 @@ namespace Spludlow.MameAO
 		public static string SHA1HexFile(string filename)
 		{
 			using (FileStream stream = File.OpenRead(filename))
+				return SHA1Hex(stream);
+		}
+
+		public static string SHA1HexText(string text)
+		{
+			using (MemoryStream stream = new MemoryStream())
 			{
-				byte[] hash = _SHA1Managed.ComputeHash(stream);
-				StringBuilder hex = new StringBuilder();
-				foreach (byte b in hash)
-					hex.Append(b.ToString("x2"));
-				return hex.ToString();
+				using (StreamWriter writer = new StreamWriter(stream, Encoding.UTF8, 4096, true))
+					writer.Write(text);
+
+				stream.Position = 0;
+				return SHA1Hex(stream);
 			}
+		}
+
+		public static string SHA1Hex(Stream stream)
+		{
+			byte[] hash = _SHA1Managed.ComputeHash(stream);
+			StringBuilder hex = new StringBuilder();
+			foreach (byte b in hash)
+				hex.Append(b.ToString("x2"));
+			return hex.ToString();
 		}
 
 		public static void ClearAttributes(string directory)
