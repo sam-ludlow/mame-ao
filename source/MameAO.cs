@@ -455,11 +455,11 @@ namespace Spludlow.MameAO
 			Globals.WorkerTask = new Task(() => {
 				try
 				{
-					DateTime startTime = DateTime.UtcNow;
+					//DateTime startTime = DateTime.UtcNow;
 
 					RunLine(line);
 
-					SaveHistory(line, startTime);
+					//SaveHistory(line, startTime);
 				}
 				catch (ApplicationException e)
 				{

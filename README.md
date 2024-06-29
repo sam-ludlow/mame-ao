@@ -125,6 +125,8 @@ There are also commands available they all start with a dot `.`
 - `.what` - View current MAME whatsnew.txt in default browser.
 - `.ui` - Launch the UI in default browser.
 - `.r` - Reload `UI.html` usfull when developing the UI.
+- `.dbm` - Machine database SQL query
+- `.dbs` - Software database SQL query
 
 ## Saved State and previous MAME versions
 Saved state often does not work between MAME versions. If you have started something with saved state you should continue to run the same MAME version.
