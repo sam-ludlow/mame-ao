@@ -138,14 +138,9 @@ namespace Spludlow.MameAO
 
 		public static DataTable ListSavedState(string rootDirectory, Database database)
 		{
-			DataTable table = new DataTable();
-			table.Columns.Add("version", typeof(string));
-			table.Columns.Add("binary_time", typeof(DateTime));
-			table.Columns.Add("sta_name", typeof(string));
-			table.Columns.Add("sta_time", typeof(DateTime));
-			table.Columns.Add("sta_machine", typeof(string));
-			table.Columns.Add("sta_description", typeof(string));
-
+			DataTable table = Tools.MakeDataTable(
+				"version	binary_time	sta_name	sta_time	sta_machine	sta_description",
+				"String		DateTime	String		DateTime	String		String");
 
 			foreach (string mameDirectory in Directory.GetDirectories(rootDirectory))
 			{

@@ -79,8 +79,8 @@ NOTE: Other players continue along, coin: `5`, `6`, `7`, `8` start: `1`, `2`, `3
 
 - Service Mode: `F2`
 
+- Save Saved State: `F6`
 - Load Saved State: `F7`
-- Save Saved State: `Left Shift` + `F7`
 
 NOTE: When saving state you have to then press another key or button to name the save, so you can have many.
 
