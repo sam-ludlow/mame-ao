@@ -242,16 +242,7 @@ namespace Spludlow.MameAO
 			// Determine MAME version
 			//
 
-			if (Globals.Settings.Options["MameVersion"] == "ArchiveOrg")
-			{
-				ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
-				item.GetFile(null);
-				Globals.MameVersion = item.Version;
-			}
-			else
-			{
-				Globals.MameVersion = Globals.GitHubRepos["mame"].tag_name.Substring(4);
-			}
+			Globals.MameVersion = Globals.GitHubRepos["mame"].tag_name.Substring(4);
 
 			if (Globals.MameVersion == null)
 				Globals.MameVersion = Mame.LatestLocal();
