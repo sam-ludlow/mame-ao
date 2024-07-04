@@ -432,7 +432,6 @@ namespace Spludlow.MameAO
 					item.type = itemType.ToString();
 
 					item.status = sourceItem.Status;
-					item.version = sourceItem.Version;
 
 					item.sub_directory = sourceItem.SubDirectory;
 					item.tag = sourceItem.Tag;
@@ -520,7 +519,6 @@ namespace Spludlow.MameAO
 				dynamic source = new JObject();
 				
 				source.tag = sourceItem.Tag;
-				source.version = sourceItem.Version;
 				source.files = JArray.FromObject(sourceItem.Files.Values);
 
 				results.Add(source);

@@ -197,18 +197,17 @@ namespace Spludlow.MameAO
 
 			// Machine ROM
 			Globals.ArchiveOrgItems.Add(ItemType.MachineRom, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("mame-merged", "mame-merged/", null, new int[] { 5, 5 }),
+				new ArchiveOrgItem("mame-merged", "mame-merged/", null),
 			});
 
 			// Machine DISK
 			Globals.ArchiveOrgItems.Add(ItemType.MachineDisk, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, null, new int[] { 5, 5 }),
-				new ArchiveOrgItem("mame-chds-roms-extras-complete", null, null, new int[] { 5, 5 }),
+				new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, null),
 			});
 
 			// Software ROM
 			Globals.ArchiveOrgItems.Add(ItemType.SoftwareRom, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("mame-sl", "mame-sl/", null, new int[] { 8, 5 }),
+				new ArchiveOrgItem("mame-sl", "mame-sl/", null),
 			});
 
 			// Software DISK
@@ -217,14 +216,14 @@ namespace Spludlow.MameAO
 			foreach (string softwareList in tuffyTDogSoftwareLists)
 			{
 				string key = $"mame-sl-chd-{softwareList}";
-				items.Add(new ArchiveOrgItem(key, null, softwareList, null));
+				items.Add(new ArchiveOrgItem(key, null, softwareList));
 			}
-			items.Add(new ArchiveOrgItem("mame-software-list-chds-2", null, "*", null));
+			items.Add(new ArchiveOrgItem("mame-software-list-chds-2", null, "*"));
 			Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, items.ToArray());
 
 			// Support (Artwork & Samples)
 			Globals.ArchiveOrgItems.Add(ItemType.Support, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("mame-support", "Support/", null, null),
+				new ArchiveOrgItem("mame-support", "Support/", null),
 			});
 
 			//

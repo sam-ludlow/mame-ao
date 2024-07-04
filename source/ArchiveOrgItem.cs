@@ -50,19 +50,15 @@ namespace Spludlow.MameAO
 		public string Title;
 		public DateTime ItemLastUpdated;
 
-		public int[] TitleVersionSubString = null;
-
-		public string Version = "";
 		public string Status = "";
 
 		private readonly List<string> AcceptedExtentions = new List<string>(new string[] { ".zip", ".chd" });
 
-		public ArchiveOrgItem(string key, string subDirectory, string tag, int[] titleVersionSubString)
+		public ArchiveOrgItem(string key, string subDirectory, string tag)
 		{
 			Key = key;
 			SubDirectory = subDirectory;
 			Tag = tag;
-			TitleVersionSubString = titleVersionSubString;
 
 			UrlDetails = $"https://archive.org/details/{Key}";
 			UrlMetadata = $"https://archive.org/metadata/{Key}";
@@ -121,9 +117,6 @@ namespace Spludlow.MameAO
 
 			Title = (string)metadata.metadata.title;
 			ItemLastUpdated = Tools.FromEpochDate((double)metadata.item_last_updated);
-
-			if (TitleVersionSubString != null)
-				Version = Title.Substring(TitleVersionSubString[0], TitleVersionSubString[1]);
 
 			foreach (dynamic file in metadata.files)
 			{
