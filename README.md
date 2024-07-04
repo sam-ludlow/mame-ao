@@ -307,15 +307,13 @@ See information on the GitHub Repos in use by MAME-AO by going to the About page
 ### Archive.org Items
 Archive.org is used for downloading MAME assets of these types:
 
-- Machine ROM (version master)
+- Machine ROM
 - Machine DISK
 - Software ROM
 - Software DISK (uses many archive.org items)
 - Support (Artwork & Samples)
 
 Archive.org metadata is downloaded when needed and cached, used to know what’s available and the file sizes.
-
-Machine ROM is considered the version master, new MAME binaries will only be used that match the version in this archive.org item, determined from the title.
 
 All asset types have a single archive.org item with the exception of `Software Disks` these use multiple items on archive.org.
 
@@ -329,35 +327,48 @@ You can run `Source Exists` reports to see if the items are missing anything.
 
 ### MAME
 Emulator software
+
 https://www.mamedev.org/
+
 https://github.com/mamedev/mame
 
 ### Archive.org
 Asset download
+
 https://archive.org/
 
 ### Antonio Paradossi
 Images
+
 https://www.progettosnaps.net/snapshots/
+
 https://github.com/AntoPISA/MAME_SnapTitles
 
 Artwork & Samples
+
 https://www.progettosnaps.net/artworks/
+
 https://www.progettosnaps.net/samples/
+
 https://github.com/AntoPISA/MAME_Dats
 
 Genre Data
+
 https://www.progettosnaps.net/catver/
+
 https://github.com/AntoPISA/MAME_SupportFiles
 
 ### Newtonsoft
 JSON Library
+
 https://www.newtonsoft.com/json
 
 ### SQLite
 SQL Database
+
 https://www.sqlite.org/
 
 ### Spludlow MAME
 Image hosting
+
 https://mame.spludlow.co.uk/
