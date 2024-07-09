@@ -51,9 +51,9 @@ Obviously for MAME to run the ROMs have to be in the right place with the right 
 
 To be able to create symbolic links you have to grant permission.
 
-- Run "secpol" (Local Security Policy) as Administrator. Do a Windows search for "secpol" click "Run as administrator".
-- Go to "Local Policies\User Rights Assignment\Create symbolic links"
-- Add the required user or group. Enter your username, click the "Check Names" button to check it is correct.
+- Run `secpol` (Local Security Policy) as Administrator. Do a Windows search for `secpol` click `Run as administrator`.
+- Go to `Local Policies\User Rights Assignment\Create symbolic links`
+- Add the required user or group. Enter your username, click the `Check Names` button to check it is correct.
 - You will need to re-start for settings to take effect.
 
 ## MAME Quick usage help
@@ -279,7 +279,7 @@ Create HTML payloads for machine, softwarelist, and software.
 ### Overall
 Assets (ROMs & CHDs) are downloaded to a "Hash Store". Uncompressed individual files are stored with a filename that is the SHA1 of the file. This is completely separate to the MAME rom directories. ZIP files are not used at all.
 
-Each MAME version is kept completely isolated, when a new version of MAME is used a fresh MAME directory is created. Previous versions are left in place, you can go back to them anytime, let’s say you have some saved state (these often don’t work with different MAME versions).
+Each MAME version is kept completely isolated, when a new version of MAME is used a fresh MAME directory is created. Previous versions are left in place, you can go back to them anytime, let’s say you have some saved state.
 
 When you select a machine MAME-AO will download the files from archive.org if they are not already in the Hash Store. When in the Hash Store the files are copied (or preferably linked if enabled) to the correct place in the MAME rom directory.
 
@@ -333,7 +333,7 @@ https://www.mamedev.org/
 https://github.com/mamedev/mame
 
 ### Archive.org
-Asset download
+Asset preservation
 
 https://archive.org/
 
