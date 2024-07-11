@@ -60,7 +60,7 @@ TIP: Run `whoami` in Windows command prompt (Windows search `cmd`) to determine 
 ### Note on network shares with symbolic links
 If you are using network shares for example to grab files from the MAME-AO computer to use elsewhere you must perform this step on the client computer (Not the MAME-AO computer providing the file share).
 
-Run as Administrator: `fsutil behavior set symlinkEvaluation R2R:1`
+Run as Administrator: `fsutil behavior set symlinkEvaluation R2L:1`
 
 TIP: You can check the current settings with `fsutil behavior query symlinkEvaluation`
 
