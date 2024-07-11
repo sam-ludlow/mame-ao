@@ -251,8 +251,7 @@ namespace Spludlow.MameAO
 
 			Globals.MameVersion = Globals.MameVersion.Replace(".", "");
 			Globals.MameDirectory = Path.Combine(Globals.RootDirectory, Globals.MameVersion);
-
-			Console.WriteLine($"MameVersion: {Globals.MameVersion}");
+			Directory.CreateDirectory(Globals.MameDirectory);
 
 			//
 			// MAME Binaries
@@ -262,7 +261,7 @@ namespace Spludlow.MameAO
 			binUrl = binUrl.Replace("@VERSION@", Globals.MameVersion);
 
 			Tools.ConsoleHeading(2, new string[] {
-				"MAME",
+				$"MAME {Globals.MameVersion}",
 				binUrl,
 			});
 
@@ -270,21 +269,15 @@ namespace Spludlow.MameAO
 
 			string binFilename = Path.Combine(Globals.MameDirectory, "mame.exe");
 
-			if (Directory.Exists(Globals.MameDirectory) == false)
-			{
-				Console.WriteLine($"!!! New MAME version: {Globals.MameVersion}");
-				Directory.CreateDirectory(Globals.MameDirectory);
-			}
-
-			if (File.Exists(binCacheFilename) == false)
-			{
-				Console.Write($"Downloading MAME binaries {binUrl} ...");
-				Tools.Download(binUrl, binCacheFilename);
-				Console.WriteLine("...done.");
-			}
-
 			if (File.Exists(binFilename) == false)
 			{
+				if (File.Exists(binCacheFilename) == false)
+				{
+					Console.Write($"Downloading MAME binaries {binUrl} ...");
+					Tools.Download(binUrl, binCacheFilename);
+					Console.WriteLine("...done.");
+				}
+
 				Console.Write($"Extracting MAME binaries {binFilename} ...");
 				Mame.RunSelfExtract(binCacheFilename);
 				Console.WriteLine("...done.");
