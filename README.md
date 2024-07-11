@@ -57,15 +57,6 @@ MAME needs the ROMs in the right place, so they need duplicating from the store.
 
 TIP: Run `whoami` in Windows command prompt (Windows search `cmd`) to determine your exact user name.
 
-### Note on network shares with symbolic links
-If you are using network shares for example to grab files from the MAME-AO computer to use elsewhere you must perform this step on the client computer (Not the MAME-AO computer providing the file share).
-
-Run as Administrator: `fsutil behavior set symlinkEvaluation R2L:1`
-
-TIP: You can check the current settings with `fsutil behavior query symlinkEvaluation`
-
-No reboot required.
-
 ## MAME Quick usage help
 Here are some quick MAME usage notes. For more detail see the official docs. https://docs.mamedev.org/usingmame/usingmame.html
 
