@@ -189,7 +189,7 @@ namespace Spludlow.MameAO
 			File.Delete(targetFilename);
 
 			if (Globals.LinkingEnabled == false)
-				Console.WriteLine("!!! You can save a lot of disk space by enabling symbolic links, see the README.");
+				Tools.ConsoleHeading(3, "!!! You can save a lot of disk space by enabling symbolic links, see the README.");
 
 			//
 			// Archive.Org Items

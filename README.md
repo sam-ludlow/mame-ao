@@ -47,14 +47,15 @@ https://github.com/sam-ludlow/mame-ao/issues
 ## Symbolic Links - Save disk space
 When MAME-AO downloads assets it keeps them in a "hash store", this makes keeping account of them very simple, you don’t have to keep grooming a bunch of ZIP files.
 
-Obviously for MAME to run the ROMs have to be in the right place with the right name, so they need duplicating from the store. The best way to do this is use symbolic links, these use virtually zero disk space and point to the actual file in the store, otherwise you have to copy the files wasting diskspace.
+MAME needs the ROMs in the right place, so they need duplicating from the store. The best way to do this is use symbolic links, these use virtually zero disk space and point to the actual file in the store, otherwise MAME-AO will copy the files wasting diskspace.
 
-To be able to create symbolic links you have to grant permission.
-
+### Enabling symbolic links in Windows
 - Run `secpol` (Local Security Policy) as Administrator. Do a Windows search for `secpol` click `Run as administrator`.
 - Go to `Local Policies\User Rights Assignment\Create symbolic links`
 - Add the required user or group. Enter your username, click the `Check Names` button to check it is correct.
 - You will need to re-start for settings to take effect.
+
+TIP: Run `whoami` in Windows command prompt (Windows search `cmd`) to determine your exact user name.
 
 ## MAME Quick usage help
 Here are some quick MAME usage notes. For more detail see the official docs. https://docs.mamedev.org/usingmame/usingmame.html
