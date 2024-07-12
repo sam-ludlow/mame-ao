@@ -33,9 +33,12 @@ namespace Spludlow.MameAO
 
 		public static void ExtractXML(string binFilename, string outputFilename, string arguments)
 		{
+			string tempFilename = outputFilename + ".tmp";
+			File.Delete(tempFilename);
+
 			string directory = Path.GetDirectoryName(binFilename);
 
-			using (StreamWriter writer = new StreamWriter(outputFilename, false, Encoding.UTF8))
+			using (StreamWriter writer = new StreamWriter(tempFilename, false, Encoding.UTF8))
 			{
 				ProcessStartInfo startInfo = new ProcessStartInfo(binFilename)
 				{
@@ -64,6 +67,8 @@ namespace Spludlow.MameAO
 						throw new ApplicationException("ExtractXML Bad exit code");
 				}
 			}
+
+			File.Move(tempFilename, outputFilename);
 		}
 		public static void RunMame(string binFilename, string arguments)
 		{
