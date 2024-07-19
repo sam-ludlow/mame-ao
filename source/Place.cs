@@ -258,8 +258,13 @@ namespace Spludlow.MameAO
 					string name = (string)row["name"];
 					string sha1 = (string)row["sha1"];
 
+					bool found = false;
+
 					foreach (ArchiveOrgItem item in items)
 					{
+						if (found == true)
+							break;
+
 						foreach (string downloadSoftwareName in downloadSoftwareNames)
 						{
 							string key = $"{softwareListName}/{downloadSoftwareName}/{name}";
@@ -270,7 +275,7 @@ namespace Spludlow.MameAO
 							ArchiveOrgFile file = item.GetFile(key);
 
 							if (file != null)
-								DownloadImportDisk(item, file, sha1, info);
+								found = DownloadImportDisk(item, file, sha1, info);
 						}
 					}
 				}
@@ -388,12 +393,12 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		private static void DownloadImportDisk(ArchiveOrgItem item, ArchiveOrgFile file, string expectedSha1, string[] info)
+		private static bool DownloadImportDisk(ArchiveOrgItem item, ArchiveOrgFile file, string expectedSha1, string[] info)
 		{
 			if (Globals.BadSources.AlreadyDownloaded(file) == true)
 			{
 				Console.WriteLine($"!!! Already Downloaded before and it didn't work (bad in source) chd-sha1:{expectedSha1} source-sha1: {file.sha1}");
-				return;
+				return false;
 			}
 
 			string tempFilename = Path.Combine(Globals.TempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(file.name) + ".chd");
@@ -435,6 +440,8 @@ namespace Spludlow.MameAO
 				imported = Globals.DiskHashStore.Add(tempFilename, true, sha1);
 
 			Globals.WorkerTaskReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, Path.GetFileName(tempFilename));
+
+			return true;
 		}
 
 		public static int PlaceAssetFiles(DataRow[] assetRows, HashStore hashStore, string targetDirectory, string filenameAppend, string[] info)

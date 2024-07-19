@@ -1054,6 +1054,9 @@
 
 			results.appendChild(table);
 
+			if (machinesData.results.length === 0)
+				results.insertAdjacentHTML('beforeend', `<p><b>No results - try looking in <a href="/machines/everything?search=${_parameters.search}">Everything</a></b></p>`);
+
 			const inputText = document.getElementById('inputText');
 			inputText.focus();
 		}
