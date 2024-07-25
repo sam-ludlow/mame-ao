@@ -1,11 +1,5 @@
 # mame-ao
-Run MAME easily, just download this and run.
-
-Automatically downloads all MAME binaries (from github.com) and ROMs (from archive.org) on the fly.
-
-Built in web UI just click image and wait.
-
-You can also use the command line just enter machine / software short name.
+Easiest way to use MAME. Automatic download and setup of all files from github.com & archive.org on the fly.
 
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-ui.png)
 
@@ -14,26 +8,12 @@ You can also use the command line just enter machine / software short name.
 - download latest release ZIP from https://github.com/sam-ludlow/mame-ao/releases/latest
 - put ZIP in empty directory and extract
 - double click "mame-ao.exe"
-- wait for the MAME Shell to start
-- use the Web UI it will pop up
-- or use command line, enter a machine name and press enter e.g. `mrdo`
+- wait for the MAME-AO to start
+- click image to start machine
 
-TIP: Run command `.upany` to self update program, this will stop the microsoft defender notice.
+TIP: Run command `.upany` aftear initial setup, this will stop the Microsoft Defender notice.
 
-## Important notes
-- The first time you run it will take a while and use a lot of CPU & RAM.
-- Extracting the XML from MAME and converting to SQLite takes some doing.
-- Please be patient, subsequent runs will not.
-- Version bumps in MAME or MAME-AO will trigger database re-creation.
-
-## UI
-After mame-ao has fully started the web UI will apear in the default browser. You can access it at http://localhost:12380/.
-
-Just click on an image to start the machine. Select machine query profiles using the top menu.
-
-If the machine has software it will be listed, you can change software list using the top menu, click what you want to run.
-
-UI background colour will change to orange when mame-ao is working. You can click on the mame-ao console window to see what it's doing.
+NOTE: First time it has to extract MAME's data, this will take a moment, next time it will start quickly, although version bumps in MAME or MAME-AO will trigger another data initialization.
 
 ## System requirements
 - Windows with .net framework 4.8
@@ -58,7 +38,7 @@ MAME needs the ROMs in the right place, so they need duplicating from the store.
 TIP: Run `whoami` in Windows command prompt (Windows search `cmd`) to determine your exact user name.
 
 ## MAME Quick usage help
-Here are some quick MAME usage notes. For more detail see the official docs. https://docs.mamedev.org/usingmame/usingmame.html
+For more detail see the official docs. https://docs.mamedev.org/usingmame/usingmame.html
 
 ### MAME Keyboard controls
 NOTE: Machines that emulate keyboards will take over, use `Scroll Lock` to toggle between standard MAME controls and full keyboard.
@@ -83,7 +63,7 @@ NOTE: Other players continue along, coin: `5`, `6`, `7`, `8` start: `1`, `2`, `3
 - Save Saved State: `F6`
 - Load Saved State: `F7`
 
-NOTE: When saving state you have to then press another key or button to name the save, so you can have many.
+NOTE: When saving state you have to then press another key or button to name the save, so you can have several.
 
 - Snap Screen: `F12`
 
@@ -98,21 +78,21 @@ Use the mouse or `Cursor keys` and `Enter` to navigate.
 
 Use `Tab` to move between windows.
 
-The `available` filter (top left) is very handy when running previous MAME versions, use the mouse or `Tab` to get to the filters.
+The `available` filter (top left) is handy when running previous MAME versions, use the mouse or `Tab` to get into the filters.
 
-NOTE: Selecting machines that have software will then take you to the software lists, you can use the same `available` filter trick.
+NOTE: Selecting machines with software will then take you to the software list, you can use the same `available` filter trick.
 
 ## Settings - User Preferences
 You can configure optional settings from the UI page http://localhost:12380/settings
 
 ![MAME-AO Settings](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-settings.png)
 
-## Shell / Console
-From the shell you normally just enter machine name and maybe software name.
+## MAME-AO Shell
+From the shell you can enter the machine name and maybe a software name.
 
 There are also commands available they all start with a dot `.`
 - `.`	- Run current MAME without a machine (start MAME UI) you can also pass arguments to MAME
-- `.0255` - Run a previous version of MAME, you can still pass the machine and software but MAME-AO will not place assets in previous versions, you are better off not passing the machine and use the MAME UI with the available filter.
+- `.0123` - Run a previous version of MAME, you can still pass the machine and software but MAME-AO will not place assets in previous versions, you are better off not passing the machine and use the MAME UI with the available filter.
 - `.readme` - Show the mame-ao README on github.com
 - `.list` - Show all saved state across all MAME versions, previous MAME versions will also be listed even without saved state.
 - `.up` - Self update MAME-AO to the latest on GitHub
@@ -130,24 +110,24 @@ There are also commands available they all start with a dot `.`
 - `.dbs` - Software database SQL query
 
 ## Saved State and previous MAME versions
-Saved state often does not work between MAME versions. If you have started something with saved state you should continue to run the same MAME version.
+Saved state somtimes does not work between MAME versions. If you have started something with saved state you may as well use the same MAME version.
 
-MAME-AO leaves previous MAME versions isolated in their own directory. You can easily list all saved stated across all previous and current MAME versions with the command `.list`.
+MAME-AO leaves MAME versions isolated in their own directory. You can list all saved state from previous and current MAME versions in the UI or with the command `.list`.
 
 You can start a particular version of MAME with the command `.VVVV` where V is the version e.g. `.0252` or pass arguments e.g. `.0252 mrdo -window`.
 
-NOTE: MAME-AO only allows placing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
+MAME-AO only allows placing of assets in current MAME version. Any machine you ran before in previous MAME versions will already have all assets in place.
 
-You can list saved state in the UI. The link will start the chosen MAME version without any machine, select machine & software in the MAME UI, use the available filter (top left).
+When starting previous MAME versions use the available filter in the MAME UI.
 
 Sometimes a regression in MAME will break a machine in the current version, so if a machine doesn't work after updating MAME you can run a previous version.
 
 ## Import
-MAME-AO is all about downloading files on the fly and not bothering the user with the details.
+MAME-AO is all about downloading not bothering the user with details.
 
-If you have already downloaded ROM & CHD files you can feed them to MAME-AO into its "hash store" with the import function. MAME-AO will still place them as normal.
+If you have downloaded files elsewhere you can feed them into MAME-AO with the import function. MAME-AO will still place them as normal.
 
-This makes sense for large files, or files that are not available on archive.org (in the sources used). You can download them on the side using whatever method you prefer.
+This might make sense for large files, or for files not available on archive.org. You can download them on the side using whatever method you prefer.
 
 Use the following command to perform an import
 
@@ -164,7 +144,7 @@ Important notes on import
 - Only .ZIP archives will be extracted, other archive formats (.7z, .rar, ...) will be considered ROMs and not work. If you have these extract them manually to the import directory.
 
 ## Export
-If you want to use the downloaded assets (ROMs & DISKs) anywhere other than MAME-AO you probably aren't that happy with the way it stores files. Hash stores, no ZIPs, uncompressed ROMs or symbolic links, oh dear what am I supposed to do with those?
+If you want to use MAME-AO's assets (ROMs & DISKs) anywhere else you probably aren't that happy with the way it stores files. Hash stores, no ZIPs, uncompressed ROMs or symbolic links, oh dear what am I supposed to do with those?
 
 Well that's what the export command is for use it like so:
 
@@ -185,8 +165,6 @@ Machine ROMs will be in split-set format (separate parent ZIP & child diff ZIPs)
 
 Machine DISKs that exist in a parent machine will not be exported, as the file would be duplicated.
 
-A HTML report will be created containing details of the export.
-
 ## Validate Store
 You can check the hash store is in good order using the following commands:
 
@@ -194,14 +172,14 @@ You can check the hash store is in good order using the following commands:
 - `.valid disk` - Validate the DISK Hash Store, each file will have the SHA1 checked with chdman.exe and compared to the filename.
 - `.valid diskv` - Validate the DISK Hash Store, each file will have the SHA1 verified with chdman.exe and compared to the filename. WARNING: This can take a while, each CHD will have its SHA1 calculated to verify it is correct.
 
-If any issues are found a report will be produced, if all good then no report. Any problem files in the report should be manually deleted.
+If any issues are found a report will be produced, if all good then no report. Problem files in the report should be manually deleted.
 
-You shouldn't really need to do this, only if you are unsure about integrity like after a power cut or recovering from a bad disk.
+You shouldn't need to do this, only if you are unsure about integrity, maybe after a power cut or recovering from a bad disk.
 
 ## Snapshots
-Within MAME you can hit `F12` to take a snapshot of the screen, dumped out at the machine's native resolution.
+Within MAME you can hit `F12` to take a snapshot of the screen these are saved within the MAME `snap` directory.
 
-You can use the snap feature to collect the snaps within the MAME directory and move them to a specified directory. Files are named like so:
+You can use the snap feature to collect all current MAME snaps moving them to a specified directory. Files are named like so:
 
 `[mame machine].[mame version].[time stamp].[mame filename].png`
 
@@ -210,15 +188,15 @@ You can run from the UI or use the command:
 `.snap <target directory>`
 
 ## Reports
-Some MAME-AO functions will produce HTML reports, so you can see what it's been doing
+Some MAME-AO functions will produce HTML reports, so you can see what it's been doing.
 
-There are several informational reports that you can run from the UI or with the command `.report <type>`
+You can enable in settings for reporting on all downloaded and placed files.
+
+There are several reports that you can run from the UI or with the command `.report <type>`
 
 Use the `.report` command without any arguments to list available reports.
 
-When the report has finished running it will pop up in the browser.
-
-You can list previous created reports in the UI or have a look in the `_REPORTS` directory.
+When reports have finished they will pop up in the browser, they are also saved in the `_REPORTS` directory.
 
 ## SVG
 Convert bitmaps (from snapshots) into Scalable Vector Graphics format.
