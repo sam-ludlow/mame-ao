@@ -87,6 +87,7 @@ namespace Spludlow.MameAO
 				Arguments = arguments,
 				UseShellExecute = false,
 				RedirectStandardOutput = true,
+				RedirectStandardError = true,
 				StandardOutputEncoding = Encoding.UTF8,
 			};
 
@@ -108,6 +109,7 @@ namespace Spludlow.MameAO
 
 				process.Start();
 				process.BeginOutputReadLine();
+				process.BeginErrorReadLine();
 				process.WaitForExit();
 
 				Console.WriteLine();

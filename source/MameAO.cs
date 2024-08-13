@@ -78,6 +78,8 @@ namespace Spludlow.MameAO
 		public static Task WorkerTask = null;
 		public static TaskInfo WorkerTaskInfo = new TaskInfo();
 		public static DataSet WorkerTaskReport;
+
+		public static PhoneHome PhoneHome;
 	}
 
 	public class MameAOProcessor
@@ -421,13 +423,6 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		private static void SaveHistory(string line, DateTime startTime)
-		{
-			DateTime endTime = DateTime.UtcNow;
-			string filename = Path.Combine(Globals.TempDirectory, "_history.txt");
-			File.AppendAllText(filename, $"{startTime:s}\t{endTime:s}\t{Tools.CleanWhiteSpace(line)}{Environment.NewLine}");
-		}
-
 		public bool RunLineTask(string line)
 		{
 			if (Globals.WorkerTask != null && Globals.WorkerTask.Status != TaskStatus.RanToCompletion)
@@ -438,20 +433,24 @@ namespace Spludlow.MameAO
 			Globals.WorkerTask = new Task(() => {
 				try
 				{
-					//DateTime startTime = DateTime.UtcNow;
+					Globals.PhoneHome = new PhoneHome(line);
 
 					RunLine(line);
 
-					//SaveHistory(line, startTime);
+					Globals.PhoneHome.Success();
 				}
 				catch (ApplicationException e)
 				{
+					Globals.PhoneHome.Error(e);
+
 					Console.WriteLine();
 					Console.WriteLine("!!! ERROR: " + e.Message);
 					Console.WriteLine();
 				}
 				catch (Exception e)
 				{
+					Globals.PhoneHome.Error(e);
+
 					Tools.ReportError(e, "WORKER ERROR", false);
 				}
 				finally
@@ -708,6 +707,7 @@ namespace Spludlow.MameAO
 			else
 			{
 				Place.PlaceAssets(machine, software);
+				Globals.PhoneHome.Ready();
 				Mame.RunMame(binFilename, machine + " " + software + " " + arguments);
 			}
 		}
