@@ -152,6 +152,34 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
+		public void _api_end_points(HttpListenerContext context, StreamWriter writer)
+		{
+			JArray results = new JArray();
+
+			foreach (MethodInfo method in this.GetType().GetMethods())
+			{
+				if (method.Name.StartsWith("_api_") == false)
+					continue;
+
+				dynamic result = new JObject();
+
+				result.name = method.Name.Substring(5);
+				result.location = Globals.ListenAddress + "api/" + result.name;
+
+				results.Add(result);
+
+			}
+
+			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = results.Count;
+			json.count = results.Count;
+			json.results = results;
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
 		public void _api_command(HttpListenerContext context, StreamWriter writer)
 		{
 			string line = context.Request.QueryString["line"];

@@ -605,6 +605,37 @@
 			});
 
 			canvas.appendChild(table);
+
+			// End Points
+
+			const data = await fetchJson('/api/end_points');
+
+			div = document.createElement('div');
+			div.innerHTML = '<hr /><h2>Endpoint Locations</h2>';
+			canvas.appendChild(div);
+
+			columnDefs = [
+				{ heading: 'Name', columnName: 'name' },
+				{ heading: 'Location', columnName: 'location' },
+			];
+
+			table = document.createElement('table');
+
+			buildTable(columnDefs, data.results, table, (columnDef, result, resultIndex, row, cell) => {
+
+				const value = result[columnDef.columnName];
+
+				cell.innerHTML = value;
+
+				switch (columnDef.columnName) {
+
+					case 'location':
+						cell.innerHTML = `<a href="${value}" target="_blank">${value}</a>`;
+						break;
+				}
+			});
+
+			canvas.appendChild(table);
 		}
 
 		//
