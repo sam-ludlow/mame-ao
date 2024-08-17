@@ -97,20 +97,26 @@ namespace Spludlow.MameAO
 
 				process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
 				{
-					if (e.Data != null)
-						Console.WriteLine($"MAME output:{e.Data}");
+					if (e.Data == null)
+						return;
+					Console.WriteLine($"MAME output:{e.Data}");
+					Globals.PhoneHome.MameOutputLine(e.Data);
 				});
 
 				process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) =>
 				{
-					if (e.Data != null)
-						Console.WriteLine($"MAME error:{e.Data}");
+					if (e.Data == null)
+						return;
+					Console.WriteLine($"MAME error:{e.Data}");
+					Globals.PhoneHome.MameErrorLine(e.Data);
 				});
 
 				process.Start();
 				process.BeginOutputReadLine();
 				process.BeginErrorReadLine();
 				process.WaitForExit();
+
+				Globals.PhoneHome.MameExitCode(process.ExitCode);
 
 				Console.WriteLine();
 				if (process.ExitCode == 0)

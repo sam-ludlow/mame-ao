@@ -13,11 +13,13 @@ namespace Spludlow.MameAO
 		{
 			{ "Artwork", new List<string>(new string[] { "No", "Artworks", "ArtworksAlt", "ArtworksWideScreen" }) },
 			{ "PlaceReport", new List<string>(new string[] { "No", "Yes" }) },
+			{ "PhoneHome", new List<string>(new string[] { "Yes", "YesVerbose", "No" }) },
 		};
 
 		public Dictionary<string, string> OptionDescriptions = new Dictionary<string, string>() {
 			{ "Artwork", "Place Artwork Files. Note when set to \"No\" the machine artwork directories will be deleted. If changing artwork types run the machne with \"No\" first." },
 			{ "PlaceReport", "Report on placing files (rom, disk, samples, artwork)." },
+			{ "PhoneHome", "Help the project by submitting usage data. Switch to \"No\" if you do not want. To see exaclty what's being sent switch to \"YesVerbose\"." },
 		};
 
 		public Dictionary<string, string> Options = new Dictionary<string, string>();

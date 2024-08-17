@@ -1,13 +1,10 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
-using System.Linq;
+﻿using System;
 using System.Net.Http;
-using System.Security.Policy;
 using System.Text;
 using System.Threading.Tasks;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -19,6 +16,10 @@ namespace Spludlow.MameAO
 
 		private string Line;
 		private Exception Exception;
+
+		private StringBuilder _MameOutput = new StringBuilder();
+		private StringBuilder _MameError = new StringBuilder();
+		private int? _MameExitCode = null;
 
 		public PhoneHome(string line)
 		{
@@ -42,31 +43,64 @@ namespace Spludlow.MameAO
 			Submit();
 		}
 
+		public void MameOutputLine(string line)
+		{
+			_MameOutput.AppendLine(line);
+		}
+
+		public void MameErrorLine(string line)
+		{
+			_MameError.AppendLine(line);
+		}
+		public void MameExitCode(int code)
+		{
+			_MameExitCode = code;
+		}
+
 		private void Submit()
 		{
+			if (Globals.Settings.Options["PhoneHome"] == "No" || _MameExitCode == null)
+				return;
+
 			EndTime = DateTime.Now;
+
+			bool verbose = Globals.Settings.Options["PhoneHome"] == "YesVerbose";
 
 			Task task = new Task(() => {
 				try
 				{
 					dynamic json = new JObject();
 
+					json.message_id = Guid.NewGuid().ToString();
+
 					json.start_time = StartTime;
-
-					if (ReadyTime != null)
-						json.ready_time = ReadyTime;
-
+					json.ready_time = ReadyTime;
 					json.end_time = EndTime;
-
 					json.line = Line;
+					json.mame_exit_code = _MameExitCode;
 
 					if (Exception != null)
 						json.exception = Exception.ToString();
 
+					if (_MameOutput.Length > 0)
+						json.mame_output = _MameOutput.ToString();
+					if (_MameError.Length > 0)
+						json.mame_error = _MameError.ToString();
+
+					Tools.CleanDynamic(json);
+
+					string body = json.ToString(Formatting.Indented);
+
+					if (verbose == true)
+					{
+						Console.WriteLine();
+						Tools.ConsoleHeading(2, "Phone Home");
+						Console.WriteLine(body);
+					}
 
 					using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, "https://mame.spludlow.co.uk/mame-ao-phone-home.aspx"))
 					{
-						requestMessage.Content = new StringContent(json.ToString(Formatting.Indented));
+						requestMessage.Content = new StringContent(body);
 
 						Task<HttpResponseMessage> requestTask = Globals.HttpClient.SendAsync(requestMessage);
 						requestTask.Wait();
@@ -74,12 +108,15 @@ namespace Spludlow.MameAO
 
 						responseMessage.EnsureSuccessStatusCode();
 					}
-
 				}
 				catch (Exception e)
 				{
-					Console.WriteLine($"!!! Phone Home Error: {e.Message}");
-					Console.WriteLine(e.ToString());
+					if (verbose == true)
+					{
+						Console.WriteLine();
+						Tools.ConsoleHeading(2, new string[] { "!!! Phone Home Error", e.Message });
+						Console.WriteLine(e.ToString());
+					}
 				}
 			});
 
