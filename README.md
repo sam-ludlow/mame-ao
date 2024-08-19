@@ -207,6 +207,16 @@ You can run from the UI or use the command, single file or all files in a direct
 
 `.svg <filename or directory>`
 
+# Phone Home
+MAME-AO will send MAME usage data up to the mother ship.
+
+By default, data is sent, if you do not want that you can switch it off.
+
+Options available on the UI settings page
+- `Yes` Send data
+- `Yes Verbose` Send data and show payload in console.
+- `No` Do not send data.
+
 ## MAME Data Operations
 MAME-AO has the capability to perform various MAME Data operations by passing command line options when starting the program, it will exit immediately when finished.
 
