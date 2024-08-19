@@ -767,6 +767,11 @@
 						cell.innerHTML = `<a onclick="runCommand('.${result.version}')" href="javascript:void(0);">${result.version}</a>`;
 						break;
 
+					case 'sta_machine':
+						if (result.sta_machine !== undefined)
+							cell.innerHTML = `<a onclick="runCommand('.${result.version} ${result.sta_machine}')" href="javascript:void(0);">${result.sta_machine}</a>`;
+						break;
+
 					default:
 						if (result[columnDef.columnName] !== undefined)
 							cell.innerHTML = result[columnDef.columnName];
