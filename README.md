@@ -207,7 +207,7 @@ You can run from the UI or use the command, single file or all files in a direct
 
 `.svg <filename or directory>`
 
-# Phone Home
+## Phone Home
 MAME-AO will send MAME usage data up to the mother ship.
 
 By default, data is sent, if you do not want that you can switch it off.
