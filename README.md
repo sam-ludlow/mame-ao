@@ -3,6 +3,14 @@ Easiest way to use MAME. Automatic download and setup of all files from github.c
 
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-ui.png)
 
+## !!! IMPORTANT NOTICE Archive.org items now require login
+
+MAME-AO is currently broken I am fixing it now.
+
+You will need an archive.org account to use MAME-AO from now on. You should create one ready https://archive.org/account/signup
+
+Instructions will be provided here when the login update is released soon.
+
 ## Installation & Usage
 - create an empty directory e.g. "C:\MameAO"
 - download latest release ZIP from https://github.com/sam-ludlow/mame-ao/releases/latest

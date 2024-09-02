@@ -282,9 +282,6 @@ namespace Spludlow.MameAO
 			if (qs != null)
 				limit = Int32.Parse(qs);
 
-			if (limit > 1000)
-				throw new ApplicationException("Limit is limited to 1000");
-
 			string search = "";
 			qs = context.Request.QueryString["search"];
 			if (qs != null)
@@ -385,9 +382,6 @@ namespace Spludlow.MameAO
 			qs = context.Request.QueryString["limit"];
 			if (qs != null)
 				limit = Int32.Parse(qs);
-
-			if (limit > 1000)
-				throw new ApplicationException("Limit is limited to 1000");
 
 			string search = "";
 			qs = context.Request.QueryString["search"];
