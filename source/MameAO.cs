@@ -42,6 +42,7 @@ namespace Spludlow.MameAO
 		public static string AssemblyVersion;
 
 		public static HttpClient HttpClient;
+		public static string AuthCookie = null;
 
 		public static Dictionary<string, string> Arguments = new Dictionary<string, string>();
 
@@ -192,6 +193,12 @@ namespace Spludlow.MameAO
 
 			if (Globals.LinkingEnabled == false)
 				Tools.ConsoleHeading(3, "!!! You can save a lot of disk space by enabling symbolic links, see the README.");
+
+			//
+			//	Archive.Org Credentials
+			//
+
+			Globals.AuthCookie = ArchiveOrgAuth.GetCookie();
 
 			//
 			// Archive.Org Items

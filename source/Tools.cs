@@ -370,6 +370,9 @@ namespace Spludlow.MameAO
 			request.Method = "GET";
 			request.Timeout = Globals.AssetDownloadTimeoutMilliseconds;
 
+			if (url.StartsWith("https://archive.org/") == true)
+				request.Headers.Add("Cookie", Globals.AuthCookie);
+
 			long progress = 0;
 
 			using (WebResponse response = request.GetResponse())

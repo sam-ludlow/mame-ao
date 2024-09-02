@@ -2,6 +2,9 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Threading.Tasks;
+
 using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
@@ -15,6 +18,133 @@ namespace Spludlow.MameAO
 		SoftwareDisk,
 		Support,
 	};
+
+	public class ArchiveOrgAuth
+	{
+		private static HttpClient HttpClient;
+		static ArchiveOrgAuth()
+		{
+			HttpClient = new HttpClient();
+			HttpClient.DefaultRequestHeaders.Add("User-Agent", $"mame-ao/{Globals.AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)");
+		}
+		public static string GetCookie()
+		{
+			string cacheFilename = Path.Combine(Globals.CacheDirectory, "archive.org-auth-cookie.txt");
+
+			if (File.Exists(cacheFilename) == false || (DateTime.Now - File.GetLastWriteTime(cacheFilename) > TimeSpan.FromDays(90)))
+			{
+				string username;
+				string password;
+
+				Console.WriteLine();
+				Tools.ConsoleHeading(2, new string[] {
+					"Please enter your archive.org credentials.",
+					"You can create an account here https://archive.org/account/signup",
+					"Your username & password are not stored just the auth cookie which is kept here",
+					cacheFilename
+				});
+
+				Console.WriteLine("Enter your Archive.org username:");
+				username = Console.ReadLine();
+
+				Console.WriteLine("Enter your Archive.org password:");
+				password = Console.ReadLine();
+
+				File.WriteAllText(cacheFilename, GetAuthCookie(username, password));
+			}
+
+			return File.ReadAllText(cacheFilename);
+		}
+
+		private static string GetAuthCookie(string username, string password)
+		{
+			string initCookie = GetInitCookie();
+
+			List<string> cookies = new List<string>();
+
+			using (var requestMessage = new HttpRequestMessage(HttpMethod.Post, "https://archive.org/account/login"))
+			{
+				using (var content = new MultipartFormDataContent())
+				{
+					content.Add(new StringContent(username), "username");
+					content.Add(new StringContent(password), "password");
+					content.Add(new StringContent("true"), "remember");
+					content.Add(new StringContent("https://archive.org/"), "referer");
+					content.Add(new StringContent("true"), "login");
+					content.Add(new StringContent("true"), "submit_by_js");
+
+					requestMessage.Headers.Add("Cookie", initCookie);
+
+					requestMessage.Content = content;
+
+					Task<HttpResponseMessage> requestTask = HttpClient.SendAsync(requestMessage);
+
+					requestTask.Wait();
+					HttpResponseMessage responseMessage = requestTask.Result;
+
+					responseMessage.EnsureSuccessStatusCode();
+
+					Task<string> responseMessageTask = responseMessage.Content.ReadAsStringAsync();
+					responseMessageTask.Wait();
+
+					string responseBody = responseMessageTask.Result;
+
+					foreach (string cookie in responseMessage.Headers.GetValues("Set-Cookie"))
+					{
+						string[] parts = cookie.Split(';');
+						string[] pair = parts[0].Split('=');
+						if (pair.Length == 2)
+							cookies.Add($"{pair[0].Trim()}={pair[1].Trim()}");
+					}
+				}
+			}
+
+			return String.Join("; ", cookies.ToArray());
+		}
+
+		private static string GetInitCookie()
+		{
+			List<string> cookies = new List<string>();
+
+			using (Task<HttpResponseMessage> requestTask = HttpClient.GetAsync("https://archive.org/account/login"))
+			{
+				requestTask.Wait();
+
+				HttpResponseMessage responseMessage = requestTask.Result;
+				responseMessage.EnsureSuccessStatusCode();
+
+				foreach (string cookie in responseMessage.Headers.GetValues("Set-Cookie"))
+				{
+					string[] parts = cookie.Split(new char[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+
+					string cookieName = null;
+					string cookieValue = null;
+					string cookieMaxAge = null;
+
+					foreach (string part in parts)
+					{
+						string[] pair = part.Split('=');
+						string name = pair[0].Trim();
+						string value = pair.Length > 1 ? pair[1].Trim() : null;
+
+						if (cookieName == null)
+						{
+							cookieName = name;
+							cookieValue = value;
+						}
+
+						if (name == "Max-Age")
+							cookieMaxAge = value;
+					}
+
+					if (cookieMaxAge != null && cookieMaxAge != "0")
+						cookies.Add($"{cookieName}={cookieValue}");
+				}
+			}
+
+			return String.Join("; ", cookies.ToArray());
+		}
+	}
 
 	public class ArchiveOrgFile
 	{
