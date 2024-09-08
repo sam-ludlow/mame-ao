@@ -1042,10 +1042,6 @@
 						cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Machine.aspx?name=${result.name}" target="_blank">${result.name}</a>`;
 						break;
 
-					case 'description':
-						cell.innerHTML = `<a href="https://data.spludlow.co.uk/mame/machine/${result.name}" target="_blank">${result.description}</a>`;
-						break;
-
 					case 'cloneof':
 						cell.innerHTML = `<a href="/machines/everything?search=${value}">${value}</a>`;
 						row.className = (resultIndex % 2) ? 'clone-odd' : 'clone-even';
@@ -1149,10 +1145,6 @@
 
 					case 'name':
 						cell.innerHTML = `<a href="https://mame.spludlow.co.uk/Software.aspx?list=${result.softwarelist_name}&soft=${result.name}" target="_blank">${result.name}</a>`;
-						break;
-
-					case 'description':
-						cell.innerHTML = `<a href="https://data.spludlow.co.uk/mame/software/${result.softwarelist_name}/${result.name}" target="_blank">${result.description}</a>`;
 						break;
 
 					case 'favorite':

@@ -225,6 +225,9 @@ namespace Spludlow.MameAO
 
 				Dictionary<string, long> softwareSizes = item.GetZipContentsSizes(file, softwareListName.Length + 1, 4);
 
+				if (softwareSizes == null)
+					throw new ApplicationException($"Can't get software sizes for Software ROM in list: {softwareListName}");
+
 				if (softwareSizes.ContainsKey(requiredSoftwareName) == true)
 					DownloadImportFiles(url, softwareSizes[requiredSoftwareName], info);
 			}

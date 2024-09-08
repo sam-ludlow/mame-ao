@@ -27,9 +27,8 @@ namespace Spludlow.MameAO
 			Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
 			AssemblyVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}";
 
-			HttpClient = new HttpClient();
+			HttpClient = new HttpClient(new HttpClientHandler { UseCookies = false });
 			HttpClient.DefaultRequestHeaders.Add("User-Agent", $"mame-ao/{Globals.AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)");
-
 			HttpClient.Timeout = TimeSpan.FromSeconds(180);		// metdata 3 minutes
 		}
 
@@ -173,6 +172,11 @@ namespace Spludlow.MameAO
 			string oldDirectory = Path.Combine(Globals.RootDirectory, "_METADATA");
 			if (Directory.Exists(oldDirectory) == true)
 				Directory.Delete(oldDirectory, true);
+
+			// Needs an extra cookie in 1.96
+			string apend = "; donation=x";
+			if (File.Exists(ArchiveOrgAuth.CacheFilename) == true && File.ReadAllText(ArchiveOrgAuth.CacheFilename).EndsWith(apend) == false)
+				File.AppendAllText(ArchiveOrgAuth.CacheFilename, apend);
 
 			//
 			// Symbolic Links check

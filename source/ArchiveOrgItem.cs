@@ -21,17 +21,19 @@ namespace Spludlow.MameAO
 
 	public class ArchiveOrgAuth
 	{
+		public static string CacheFilename;
 		private static HttpClient HttpClient;
 		static ArchiveOrgAuth()
 		{
+			CacheFilename = Path.Combine(Globals.CacheDirectory, "archive.org-auth-cookie.txt");
+
 			HttpClient = new HttpClient();
 			HttpClient.DefaultRequestHeaders.Add("User-Agent", $"mame-ao/{Globals.AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)");
 		}
+
 		public static string GetCookie()
 		{
-			string cacheFilename = Path.Combine(Globals.CacheDirectory, "archive.org-auth-cookie.txt");
-
-			if (File.Exists(cacheFilename) == false || (DateTime.Now - File.GetLastWriteTime(cacheFilename) > TimeSpan.FromDays(90)))
+			if (File.Exists(CacheFilename) == false || (DateTime.Now - File.GetLastWriteTime(CacheFilename) > TimeSpan.FromDays(90)))
 			{
 				string username;
 				string password;
@@ -41,7 +43,7 @@ namespace Spludlow.MameAO
 					"Please enter your archive.org credentials.",
 					"You can create an account here https://archive.org/account/signup",
 					"Your username & password are not stored just the auth cookie which is kept here",
-					cacheFilename
+					CacheFilename
 				});
 
 				Console.WriteLine("Enter your Archive.org username:");
@@ -50,10 +52,10 @@ namespace Spludlow.MameAO
 				Console.WriteLine("Enter your Archive.org password:");
 				password = Console.ReadLine();
 
-				File.WriteAllText(cacheFilename, GetAuthCookie(username, password));
+				File.WriteAllText(CacheFilename, GetAuthCookie(username, password));
 			}
 
-			return File.ReadAllText(cacheFilename);
+			return File.ReadAllText(CacheFilename);
 		}
 
 		private static string GetAuthCookie(string username, string password)
@@ -73,7 +75,7 @@ namespace Spludlow.MameAO
 					content.Add(new StringContent("true"), "login");
 					content.Add(new StringContent("true"), "submit_by_js");
 
-					requestMessage.Headers.Add("Cookie", initCookie);
+					//requestMessage.Headers.Add("Cookie", initCookie);	//	This can;t be working ??? but without GetInitCookie() it don;t work
 
 					requestMessage.Content = content;
 
@@ -98,6 +100,8 @@ namespace Spludlow.MameAO
 					}
 				}
 			}
+
+			cookies.Add("donation=x");
 
 			return String.Join("; ", cookies.ToArray());
 		}

@@ -332,6 +332,9 @@ namespace Spludlow.MameAO
 			{
 				using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url))
 				{
+					if (url.StartsWith("https://archive.org/") == true)
+						requestMessage.Headers.Add("Cookie", Globals.AuthCookie);
+
 					Task<HttpResponseMessage> requestTask = Globals.HttpClient.SendAsync(requestMessage);
 					requestTask.Wait();
 					HttpResponseMessage responseMessage = requestTask.Result;
