@@ -30,14 +30,7 @@ namespace Spludlow.MameAO
 		{
 			CacheFilename = Path.Combine(Globals.CacheDirectory, "archive.org-auth-cookie.txt");
 
-			CookieContainer = new CookieContainer();
-
-			var handler = new HttpClientHandler()
-			{
-				CookieContainer = CookieContainer
-			};
-			
-			HttpClient = new HttpClient(handler);
+			HttpClient = new HttpClient();
 			HttpClient.DefaultRequestHeaders.Add("User-Agent", $"mame-ao/{Globals.AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)");
 		}
 
@@ -96,11 +89,17 @@ namespace Spludlow.MameAO
 
 		private static string GetAuthCookie(string username, string password)
 		{
-			GetInitCookie();
+			string url = "https://archive.org/account/login";
+
+			using (Task<HttpResponseMessage> requestTask = HttpClient.GetAsync(url))
+			{
+				requestTask.Wait();
+				requestTask.Result.EnsureSuccessStatusCode();
+			}
 
 			List<string> cookies = new List<string>();
 
-			using (var requestMessage = new HttpRequestMessage(HttpMethod.Post, "https://archive.org/account/login"))
+			using (var requestMessage = new HttpRequestMessage(HttpMethod.Post, url))
 			{
 				using (var content = new MultipartFormDataContent())
 				{
@@ -113,24 +112,20 @@ namespace Spludlow.MameAO
 
 					requestMessage.Content = content;
 
-					Task<HttpResponseMessage> requestTask = HttpClient.SendAsync(requestMessage);
-
-					requestTask.Wait();
-					HttpResponseMessage responseMessage = requestTask.Result;
-
-					responseMessage.EnsureSuccessStatusCode();
-
-					Task<string> responseMessageTask = responseMessage.Content.ReadAsStringAsync();
-					responseMessageTask.Wait();
-
-					string responseBody = responseMessageTask.Result;
-
-					foreach (string cookie in responseMessage.Headers.GetValues("Set-Cookie"))
+					using (Task<HttpResponseMessage> requestTask = HttpClient.SendAsync(requestMessage))
 					{
-						string[] parts = cookie.Split(';');
-						string[] pair = parts[0].Split('=');
-						if (pair.Length == 2)
-							cookies.Add($"{pair[0].Trim()}={pair[1].Trim()}");
+						requestTask.Wait();
+						HttpResponseMessage responseMessage = requestTask.Result;
+
+						responseMessage.EnsureSuccessStatusCode();
+
+						foreach (string cookie in responseMessage.Headers.GetValues("Set-Cookie"))
+						{
+							string[] parts = cookie.Split(';');
+							string[] pair = parts[0].Split('=');
+							if (pair.Length == 2)
+								cookies.Add($"{pair[0].Trim()}={pair[1].Trim()}");
+						}
 					}
 				}
 			}
@@ -140,18 +135,6 @@ namespace Spludlow.MameAO
 			return String.Join("; ", cookies.ToArray());
 		}
 
-		private static void GetInitCookie()
-		{
-			List<string> cookies = new List<string>();
-
-			using (Task<HttpResponseMessage> requestTask = HttpClient.GetAsync("https://archive.org/account/login"))
-			{
-				requestTask.Wait();
-
-				HttpResponseMessage responseMessage = requestTask.Result;
-				responseMessage.EnsureSuccessStatusCode();
-			}
-		}
 	}
 
 	public class ArchiveOrgFile
