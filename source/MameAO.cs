@@ -225,12 +225,16 @@ namespace Spludlow.MameAO
 
 			// Software DISK
 			List<ArchiveOrgItem> items = new List<ArchiveOrgItem>();
-			string[] tuffyTDogSoftwareLists = new string[] { "3do_m2", "abc1600_hdd", "abc800_hdd", "amiga_hdd", "amiga_workbench", "archimedes_hdd", "bbc_hdd", "cd32", "cdi", "cdtv", "dc", "fmtowns_cd", "gtfore", "hp9k3xx_cdrom", "hp9k3xx_hdd", "hyperscan", "ibm5150_hdd", "ibm5170_cdrom", "ibm5170_hdd", "interpro", "jazz", "kpython2", "mac_cdrom", "mac_hdd", "megacd", "megacdj", "mtx_hdd", "neocd", "next_cdrom", "next_hdd", "nuon", "pc1512_hdd", "pc1640_hdd", "pc8801_cdrom", "pc98_cd", "pcecd", "pcfx", "pet_hdd", "pico", "pippin", "psx", "saturn", "segacd", "sgi_mips", "sgi_mips_hdd", "snes_vkun", "softbox", "v1050_hdd", "vis", "vsmile_cd" };
-			foreach (string softwareList in tuffyTDogSoftwareLists)
-			{
-				string key = $"mame-sl-chd-{softwareList}";
-				items.Add(new ArchiveOrgItem(key, null, softwareList));
-			}
+
+			// Oh Dear these SL CHD archive.org items are gone.
+
+			//string[] tuffyTDogSoftwareLists = new string[] { "3do_m2", "abc1600_hdd", "abc800_hdd", "amiga_hdd", "amiga_workbench", "archimedes_hdd", "bbc_hdd", "cd32", "cdi", "cdtv", "dc", "fmtowns_cd", "gtfore", "hp9k3xx_cdrom", "hp9k3xx_hdd", "hyperscan", "ibm5150_hdd", "ibm5170_cdrom", "ibm5170_hdd", "interpro", "jazz", "kpython2", "mac_cdrom", "mac_hdd", "megacd", "megacdj", "mtx_hdd", "neocd", "next_cdrom", "next_hdd", "nuon", "pc1512_hdd", "pc1640_hdd", "pc8801_cdrom", "pc98_cd", "pcecd", "pcfx", "pet_hdd", "pico", "pippin", "psx", "saturn", "segacd", "sgi_mips", "sgi_mips_hdd", "snes_vkun", "softbox", "v1050_hdd", "vis", "vsmile_cd" };
+			//foreach (string softwareList in tuffyTDogSoftwareLists)
+			//{
+			//	string key = $"mame-sl-chd-{softwareList}";
+			//	items.Add(new ArchiveOrgItem(key, null, softwareList));
+			//}
+
 			items.Add(new ArchiveOrgItem("mame-software-list-chds-2", null, "*"));
 			Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, items.ToArray());
 
