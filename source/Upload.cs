@@ -10,81 +10,84 @@ namespace Spludlow.MameAO
 {
 	public class Upload
 	{
-		public static void HashMachineDatabase()
+		public static void Machine()
 		{
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
+			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name, cloneof, description FROM machine ORDER BY machine.name");
 			DataTable romTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
 
-			DataRow[] parentMachineRows = machineTable.Select("cloneof IS NULL");
-			foreach (DataRow parentMachineRow in parentMachineRows)
+			DataTable report = Tools.MakeDataTable("Machine manifests",
+				"name	sha1",
+				"String	String");
+
+			foreach (DataRow parentMachineRow in machineTable.Select("cloneof IS NULL"))
 			{
-				HashSet<string> zipHashes = new HashSet<string>();
-
 				string parent_machine_name = (string)parentMachineRow["name"];
-				int parent_machine_id = (int)parentMachineRow["machine_id"];
-				Dictionary<string, string> parentNameHashes = GetRomNameHashes(parent_machine_id, romTable, zipHashes);
 
-				if (parentNameHashes.Count == 0)
-					continue;
+				// test
+				//if (parent_machine_name.StartsWith("b") == true)
+				//	break;
 
-				//string archiveFilename = targetDirectory + @"\" + parent_machine_name + ".zip";
+				Dictionary<string, string> nameHashes = new Dictionary<string, string>();
 
-				//string archiveDirectory = tempDir.Path + @"\" + parent_machine_name;
-				//Directory.CreateDirectory(archiveDirectory);
+				GetRomNameHashes(nameHashes, parentMachineRow, romTable);
 
-				//CopyRomFiles(archiveDirectory, parentNameHashes);
-
-				DataRow[] childMachineRows = machineTable.Select("cloneof = '" + parent_machine_name + "'");
-				foreach (DataRow childMachineRow in childMachineRows)
+				foreach (DataRow childMachineRow in machineTable.Select($"cloneof = '{parent_machine_name}'"))
 				{
 					string child_machine_name = (string)childMachineRow["name"];
-					int child_machine_Id = (int)childMachineRow["machine_Id"];
-					Dictionary<string, string> childNameHashes = GetRomNameHashes(child_machine_Id, romTable, zipHashes);
 
-					if (childNameHashes.Count == 0)
-						continue;
-
-					//string childDirectory = tempDir.Path + @"\" + parent_machine_name + @"\" + child_machine_name;
-					//Directory.CreateDirectory(childDirectory);
-
-					//CopyRomFiles(childDirectory, childNameHashes);
+					GetRomNameHashes(nameHashes, childMachineRow, romTable);
 				}
 
-				//Spludlow.Archive.Create(archiveFilename, archiveDirectory + @"\*", false);
-
-				//Directory.Delete(archiveDirectory, true);
-			}
-
-		}
-
-		private static Dictionary<string, string> GetRomNameHashes(int machine_id, DataTable romTable, HashSet<string> zipHashes)
-		{
-			Dictionary<string, string> nameHashes = new Dictionary<string, string>();
-
-			foreach (DataRow romRow in romTable.Select("machine_id = " + machine_id))
-			{
-				if (romRow.IsNull("sha1") == true)
+				if (nameHashes.Count == 0)
 					continue;
 
+				StringBuilder manifest = new StringBuilder();
+
+				foreach (string name in nameHashes.Keys.OrderBy(i => i))
+				{
+					manifest.Append(name);
+					manifest.Append("\t");
+					manifest.Append(nameHashes[name]);
+					manifest.Append("\r\n");
+				}
+
+				string manifestText = manifest.ToString();
+
+				string sha1 = Tools.SHA1HexText(manifestText, Encoding.ASCII);
+
+				report.Rows.Add(parent_machine_name, sha1);
+
+				//File.WriteAllText(Path.Combine(@"D:\TMP", parent_machine_name + ".txt"), manifestText, Encoding.ASCII);
+			}
+
+			Globals.Reports.SaveHtmlReport(report, "Machine manifests");
+		}
+
+		private static Dictionary<string, string> GetRomNameHashes(Dictionary<string, string> nameHashes, DataRow machineRow, DataTable romTable)
+		{
+			long machine_id = (long)machineRow["machine_id"];
+			string machine_name = (string)machineRow["name"];
+			bool isParent = machineRow.IsNull("cloneof");
+
+			foreach (DataRow romRow in romTable.Select($"machine_id = {machine_id}"))
+			{
 				if (romRow.IsNull("merge") == false)
 					continue;
 
-				string sha1 = ((string)romRow["sha1"]).ToUpper();
-				string rom_name = (string)romRow["name"];
+				string sha1 = (string)romRow["sha1"];
+				string name = (string)romRow["name"];
 
-				if (nameHashes.ContainsKey(rom_name) == true)
+				if (isParent == false)
+					name = $"{machine_name}/{name}";
+
+				if (nameHashes.ContainsKey(name) == true)
 				{
-					if (nameHashes[rom_name] != sha1)
-						throw new ApplicationException("ROM name sha1 mismatch, machine_id:" + machine_id + "," + rom_name);
+					if (nameHashes[name] != sha1)
+						throw new ApplicationException($"ROM name sha1 mismatch, machine_id:{machine_id}, rom name:{name}.");
 					continue;
 				}
 
-				if (zipHashes.Contains(sha1) == true)
-					continue;
-
-				zipHashes.Add(sha1);
-
-				nameHashes.Add(rom_name, sha1);
+				nameHashes.Add(name, sha1);
 			}
 
 			return nameHashes;

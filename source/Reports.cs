@@ -248,7 +248,10 @@ namespace Spludlow.MameAO
 			Console.WriteLine($"HTML Report saved \"{title}\" : {filename}");
 			Console.WriteLine();
 
-			Process.Start($"http://localhost:12380/api/report?name={Path.GetFileNameWithoutExtension(filename)}");
+			if (Globals.WebServer != null)
+				Process.Start($"http://localhost:12380/api/report?name={Path.GetFileNameWithoutExtension(filename)}");
+			else
+				Process.Start(filename);
 		}
 
 		public static string MakeHtmlTable(DataTable table, string tableStyle)

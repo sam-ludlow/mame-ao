@@ -73,7 +73,7 @@ namespace Spludlow.MameAO
 		public static Reports Reports;
 		public static Samples Samples;
 		public static Settings Settings;
-		public static WebServer WebServer;
+		public static WebServer WebServer = null;
 
 		public static Task WorkerTask = null;
 		public static TaskInfo WorkerTaskInfo = new TaskInfo();
@@ -132,7 +132,20 @@ namespace Spludlow.MameAO
 			try
 			{
 				Initialize();
-				Shell();
+
+				if (Globals.Arguments.ContainsKey("OPERATION_UPLOAD") == true)
+				{
+					switch (Globals.Arguments["OPERATION_UPLOAD"])
+					{
+						case "MACHINE":
+							Upload.Machine();
+							break;
+					}
+				}
+				else
+				{
+					Shell();
+				}
 			}
 			catch (Exception e)
 			{

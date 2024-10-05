@@ -211,9 +211,14 @@ namespace Spludlow.MameAO
 
 		public static string SHA1HexText(string text)
 		{
+			return SHA1HexText(text, Encoding.UTF8);
+		}
+
+		public static string SHA1HexText(string text, Encoding encoding)
+		{
 			using (MemoryStream stream = new MemoryStream())
 			{
-				using (StreamWriter writer = new StreamWriter(stream, Encoding.UTF8, 4096, true))
+				using (StreamWriter writer = new StreamWriter(stream, encoding, 4096, true))
 					writer.Write(text);
 
 				stream.Position = 0;
