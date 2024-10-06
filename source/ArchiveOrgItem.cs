@@ -171,6 +171,8 @@ namespace Spludlow.MameAO
 
 		public string Status = "";
 
+		public bool DontCache = false;
+
 		private readonly List<string> AcceptedExtentions = new List<string>(new string[] { ".zip", ".chd" });
 
 		public ArchiveOrgItem(string key, string subDirectory, string tag)
@@ -223,7 +225,7 @@ namespace Spludlow.MameAO
 		{
 			Files = new Dictionary<string, ArchiveOrgFile>();
 
-			string json = Tools.FetchTextCached(UrlMetadata);
+			string json = DontCache == true ? Tools.Query(UrlMetadata) : Tools.FetchTextCached(UrlMetadata);
 
 			if (json == null || json == "{}")
 			{
@@ -242,7 +244,7 @@ namespace Spludlow.MameAO
 				string name = (string)file.name;
 				string extention = Path.GetExtension(name);
 
-				if ((SubDirectory == null || name.StartsWith(SubDirectory) == true) && AcceptedExtentions.Contains(extention) == true)
+				if ((SubDirectory == null || name.StartsWith(SubDirectory) == true) && (AcceptedExtentions.Contains(extention) == true || name == "_manifest-sha1.txt"))
 				{
 					if (SubDirectory != null)
 						name = name.Substring(SubDirectory.Length);
@@ -260,7 +262,7 @@ namespace Spludlow.MameAO
 		{
 			string url = DownloadLink(file) + "/";
 
-			string html = Tools.FetchTextCached(url);
+			string html = DontCache == true ? Tools.Query(url) : Tools.FetchTextCached(url);
 
 			if (html == null)
 			{
