@@ -5,6 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.IO.Compression;
 
 namespace Spludlow.MameAO
 {
@@ -19,45 +20,94 @@ namespace Spludlow.MameAO
 				"name	sha1",
 				"String	String");
 
-			foreach (DataRow parentMachineRow in machineTable.Select("cloneof IS NULL"))
+			string targetDirectory = @"D:\TMP";
+
+			DateTime modifiedDate = new DateTime(1996, 12, 24, 23, 32, 0, DateTimeKind.Utc);
+
+			using (TempDirectory tempDir = new TempDirectory())
 			{
-				string parent_machine_name = (string)parentMachineRow["name"];
-
-				// test
-				//if (parent_machine_name.StartsWith("b") == true)
-				//	break;
-
-				Dictionary<string, string> nameHashes = new Dictionary<string, string>();
-
-				GetRomNameHashes(nameHashes, parentMachineRow, romTable);
-
-				foreach (DataRow childMachineRow in machineTable.Select($"cloneof = '{parent_machine_name}'"))
+				foreach (DataRow parentMachineRow in machineTable.Select("cloneof IS NULL"))
 				{
-					string child_machine_name = (string)childMachineRow["name"];
+					string parent_machine_name = (string)parentMachineRow["name"];
 
-					GetRomNameHashes(nameHashes, childMachineRow, romTable);
+					// test
+					//if (parent_machine_name.StartsWith("b") == true)
+					//	break;
+
+					Dictionary<string, string> nameHashes = new Dictionary<string, string>();
+
+					GetRomNameHashes(nameHashes, parentMachineRow, romTable);
+
+					foreach (DataRow childMachineRow in machineTable.Select($"cloneof = '{parent_machine_name}'"))
+					{
+						string child_machine_name = (string)childMachineRow["name"];
+
+						GetRomNameHashes(nameHashes, childMachineRow, romTable);
+					}
+
+					if (nameHashes.Count == 0)
+						continue;
+
+					bool missing = false;
+					foreach (string name in nameHashes.Keys)
+					{
+						if (Globals.RomHashStore.Exists(nameHashes[name]) == false)
+						{
+							missing = true;
+							break;
+						}
+					}
+					if (missing == true)
+						continue;
+
+					StringBuilder manifest = new StringBuilder();
+
+					foreach (string name in nameHashes.Keys.OrderBy(i => i))
+					{
+						manifest.Append(name);
+						manifest.Append("\t");
+						manifest.Append(nameHashes[name]);
+						manifest.Append("\r\n");
+					}
+
+					string manifestText = manifest.ToString();
+
+					string manifestSha1 = Tools.SHA1HexText(manifestText, Encoding.ASCII);
+
+					report.Rows.Add(parent_machine_name, manifestSha1);
+
+					File.WriteAllText(Path.Combine(targetDirectory, parent_machine_name + ".txt"), manifestText, Encoding.ASCII);
+
+					string tempDirectory = Path.Combine(tempDir.Path, parent_machine_name);
+
+					using (StringReader reader = new StringReader(manifestText))
+					{
+						string line;
+						while ((line = reader.ReadLine()) != null)
+						{
+							string[] parts = line.Split('\t');
+							List<string> names = new List<string>(parts[0].Split('/'));
+							string sha1 = parts[1];
+
+							names.Insert(0, tempDirectory);
+
+							string tempFilename = Path.Combine(names.ToArray());
+
+							Directory.CreateDirectory(Path.GetDirectoryName(tempFilename));
+
+							File.Copy(Globals.RomHashStore.Filename(sha1), tempFilename);
+						}
+
+						foreach (string tempFilename in Directory.GetFiles(tempDirectory, "*", SearchOption.AllDirectories))
+							File.SetLastWriteTimeUtc(tempFilename, modifiedDate);
+
+						string targetFilename = Path.Combine(targetDirectory, parent_machine_name + ".zip");
+
+						ZipFile.CreateFromDirectory(tempDirectory, targetFilename);
+					}
+
+					Directory.Delete(tempDirectory, true);
 				}
-
-				if (nameHashes.Count == 0)
-					continue;
-
-				StringBuilder manifest = new StringBuilder();
-
-				foreach (string name in nameHashes.Keys.OrderBy(i => i))
-				{
-					manifest.Append(name);
-					manifest.Append("\t");
-					manifest.Append(nameHashes[name]);
-					manifest.Append("\r\n");
-				}
-
-				string manifestText = manifest.ToString();
-
-				string sha1 = Tools.SHA1HexText(manifestText, Encoding.ASCII);
-
-				report.Rows.Add(parent_machine_name, sha1);
-
-				//File.WriteAllText(Path.Combine(@"D:\TMP", parent_machine_name + ".txt"), manifestText, Encoding.ASCII);
 			}
 
 			Globals.Reports.SaveHtmlReport(report, "Machine manifests");
