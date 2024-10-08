@@ -15,7 +15,9 @@ namespace Spludlow.MameAO
 
 		private static string ApiAuth;
 
-		private static string ItemName = "spludlow-test-0002";
+		private static readonly string MANIFEST_NAME = "_manifest-sha1.txt";
+		private static readonly string MANIFEST_KEY = Path.GetFileNameWithoutExtension(MANIFEST_NAME);
+
 		static Upload()
 		{
 			string authFilename = Path.Combine(Globals.RootDirectory, "_api-auth.txt");
@@ -26,9 +28,12 @@ namespace Spludlow.MameAO
 			ApiAuth = File.ReadAllText(authFilename);
 		}
 
-		public static void Machine()
+
+		//	    "conflict": 1728405085, in root metat data - don;t do anything
+
+		public static void MachineRom(string itemName, bool perform)
 		{
-			ArchiveOrgItem item = new ArchiveOrgItem(ItemName, null, null);
+			ArchiveOrgItem item = new ArchiveOrgItem(itemName, null, null);
 			item.DontCache = true;
 			item.GetFile(null);
 
@@ -38,12 +43,12 @@ namespace Spludlow.MameAO
 			machineTable.PrimaryKey = new DataColumn[] { machineTable.Columns["name"] };
 
 			DataTable report = Tools.MakeDataTable("Parent Machine ZIP Files",
-				"status	name	description	sha1",
-				"String	String	String		String");
+				"status	action	name	description	sha1",
+				"String	String	String	String		String");
 
 			Dictionary<string, string> fileManifestSHA1s = new Dictionary<string, string>();
 
-			ArchiveOrgFile manifestFile = item.GetFile("_manifest-sha1");
+			ArchiveOrgFile manifestFile = item.GetFile(MANIFEST_KEY);
 			if (manifestFile != null)
 			{
 				using (StringReader reader = new StringReader(Tools.Query(item.DownloadLink(manifestFile))))
@@ -74,17 +79,15 @@ namespace Spludlow.MameAO
 				string manifest = CreateRomManifest(nameHashes);
 				string manifestSha1 = Tools.SHA1HexText(manifest, Encoding.ASCII);
 
-				DataRow reportRow = report.Rows.Add("", name, description, manifestSha1);
+				DataRow reportRow = report.Rows.Add("", "", name, description, manifestSha1);
 
 				bool noHave = false;
 				foreach (string key in nameHashes.Keys)
-				{
 					if (Globals.RomHashStore.Exists(nameHashes[key]) == false)
 					{
 						noHave = true;
 						break;
 					}
-				}
 
 				if (noHave == true)
 				{
@@ -110,7 +113,7 @@ namespace Spludlow.MameAO
 
 				if (manifestSha1 != remoteManifestSha1)
 				{
-					reportRow["Status"] = "UPDATE";
+					reportRow["Status"] = "REPLACE";
 					continue;
 				}
 
@@ -119,80 +122,75 @@ namespace Spludlow.MameAO
 
 			foreach (string name in item.Files.Keys)
 			{
-				if (name != "_manifest-sha1" && parentNames.Contains(name) == false)
-					report.Rows.Add("DELETE", name);
+				if (name != MANIFEST_KEY && parentNames.Contains(name) == false)
+					report.Rows.Add("DELETE", "", name);
 			}
 
-			foreach (string action in new string[] { "CREATE", "UPDATE" })
+			if (perform == true)
 			{
-				foreach (DataRow reportRow in report.Select($"Status = '{action}'"))
+				try
 				{
-					string machneName = (string)reportRow["name"];
-					DataRow machineRow = machineTable.Rows.Find(machneName);
+					foreach (string action in new string[] { "CREATE", "UPDATE" })
+					{
+						foreach (DataRow reportRow in report.Select($"Status = '{action}'"))
+						{
+							string machneName = (string)reportRow["name"];
+							DataRow machineRow = machineTable.Rows.Find(machneName);
 
-					Dictionary<string, string> nameHashes = GetRomNameHashes(machineRow, machineTable, romTable);
+							Dictionary<string, string> nameHashes = GetRomNameHashes(machineRow, machineTable, romTable);
 
+							using (TempDirectory tempDir = new TempDirectory())
+							{
+								string targetFilename = Path.Combine(tempDir.Path, machneName + ".zip");
+								string tempDirectory = Path.Combine(tempDir.Path, machneName);
+
+								CreateRomArchive(nameHashes, Globals.RomHashStore, tempDirectory, targetFilename);
+
+								string fileSha1 = Tools.SHA1HexFile(targetFilename);
+
+								string manifest = CreateRomManifest(nameHashes);
+								string manifestSha1 = Tools.SHA1HexText(manifest, Encoding.ASCII);
+
+								UploadFile(itemName, targetFilename);
+
+								if (fileManifestSHA1s.ContainsKey(fileSha1) == false)
+									fileManifestSHA1s.Add(fileSha1, manifestSha1);
+								else
+									if (fileManifestSHA1s[fileSha1] != manifestSha1)
+									throw new ApplicationException($"Manifest SHA1 Missmatch fileSha1:{fileSha1}.");
+							}
+
+							reportRow["action"] = "PUT";
+						}
+					}
+
+					foreach (string action in new string[] { "DELETE", "MISSING" })
+					{
+						foreach (DataRow reportRow in report.Select($"Status = '{action}'"))
+						{
+							string machneName = (string)reportRow["name"];
+							DeleteFile(itemName, $"{machneName}.zip");
+
+							reportRow["action"] = "DELETE";
+						}
+					}
+				}
+				finally
+				{
 					using (TempDirectory tempDir = new TempDirectory())
 					{
-						string archiveFilename = Path.Combine(tempDir.Path, machneName + ".zip");
-						string tempDirectory = Path.Combine(tempDir.Path, machneName);
+						string filename = Path.Combine(tempDir.Path, MANIFEST_NAME);
 
-						foreach (string name in nameHashes.Keys)
-						{
-							List<string> pathParts = new List<string>(name.Split('/'));
-							pathParts.Insert(0, tempDirectory);
-							string tempFilename = Path.Combine(pathParts.ToArray());
+						using (StreamWriter writer = new StreamWriter(filename, false))
+							foreach (string key in fileManifestSHA1s.Keys)
+								writer.WriteLine($"{key}\t{fileManifestSHA1s[key]}");
 
-							Directory.CreateDirectory(Path.GetDirectoryName(tempFilename));
-
-							File.Copy(Globals.RomHashStore.Filename(nameHashes[name]), tempFilename);
-						}
-
-						foreach (string tempFilename in Directory.GetFiles(tempDirectory, "*", SearchOption.AllDirectories))
-							File.SetLastWriteTimeUtc(tempFilename, MagicModifiedDate);
-
-						ZipFile.CreateFromDirectory(tempDirectory, archiveFilename);
-
-						string fileSha1 = Tools.SHA1HexFile(archiveFilename);
-
-						string manifest = CreateRomManifest(nameHashes);
-						string manifestSha1 = Tools.SHA1HexText(manifest, Encoding.ASCII);
-
-						UploadFile(ItemName, archiveFilename);
-
-						if (fileManifestSHA1s.ContainsKey(fileSha1) == false)
-							fileManifestSHA1s.Add(fileSha1, manifestSha1);
-						else
-							if (fileManifestSHA1s[fileSha1] != manifestSha1)
-								throw new ApplicationException($"Manifest SHA1 Missmatch fileSha1:{fileSha1}.");
+						UploadFile(itemName, filename);
 					}
 				}
 			}
 
-			foreach (string action in new string[] { "DELETE", "MISSING" })
-			{
-				foreach (DataRow reportRow in report.Select($"Status = '{action}'"))
-				{
-					string machneName = (string)reportRow["name"];
-
-					DeleteFile(ItemName, $"{machneName}.zip");
-				}
-			}
-
-			using (TempDirectory tempDir = new TempDirectory())
-			{
-				string filename = Path.Combine(tempDir.Path, "_manifest-sha1.txt");
-
-				using (StreamWriter writer = new StreamWriter(filename, false))
-					foreach (string key in fileManifestSHA1s.Keys)
-						writer.WriteLine($"{key}\t{fileManifestSHA1s[key]}");
-
-				UploadFile(ItemName, filename);
-			}
-
-
-
-			string[] headings = new string[] { "CREATE", "UPDATE", "DELETE", "MISSING", "OK", "NOHAVE" };
+			string[] headings = new string[] { "CREATE", "REPLACE", "DELETE", "MISSING", "OK", "NOHAVE" };
 
 			List<DataView> views = new List<DataView>();
 			foreach (string heading in headings)
@@ -202,13 +200,8 @@ namespace Spludlow.MameAO
 		}
 
 
-		public static void MachineCreate()
+		public static void MachineRomExport(string targetDirectory)
 		{
-			//string man = InspectRomManifest(@"C:\Users\Sam\Downloads\cpc464.zip");
-			//string hash = Tools.SHA1HexText(man, Encoding.ASCII);
-			//throw new ApplicationException(hash);
-
-
 			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name, cloneof, description FROM machine ORDER BY machine.name");
 			DataTable romTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
 
@@ -216,9 +209,7 @@ namespace Spludlow.MameAO
 				"name	sha1",
 				"String	String");
 
-			string targetDirectory = @"D:\TMP";
-
-			string hashLookupFilename = Path.Combine(targetDirectory, "_manifest-sha1.txt");
+			string hashLookupFilename = Path.Combine(targetDirectory, MANIFEST_NAME);
 
 			Dictionary<string, string> fileManifestSHA1s = new Dictionary<string, string>();
 
@@ -227,26 +218,21 @@ namespace Spludlow.MameAO
 				foreach (DataRow parentMachineRow in machineTable.Select("cloneof IS NULL"))
 				{
 					string parent_machine_name = (string)parentMachineRow["name"];
-					Console.WriteLine(parent_machine_name);
-
-					// test
-					//if (parent_machine_name.StartsWith("b") == true)
-					//	break;
 
 					Dictionary<string, string> nameHashes = GetRomNameHashes(parentMachineRow, machineTable, romTable);
 
 					if (nameHashes.Count == 0)
 						continue;
 
+					Console.WriteLine(parent_machine_name);
+
 					bool missing = false;
 					foreach (string name in nameHashes.Keys)
-					{
 						if (Globals.RomHashStore.Exists(nameHashes[name]) == false)
 						{
 							missing = true;
 							break;
 						}
-					}
 					if (missing == true)
 						continue;
 
@@ -255,34 +241,12 @@ namespace Spludlow.MameAO
 
 					report.Rows.Add(parent_machine_name, manifestSha1);
 
-					//File.WriteAllText(Path.Combine(targetDirectory, parent_machine_name + ".txt"), manifest, Encoding.ASCII);
-
 					string tempDirectory = Path.Combine(tempDir.Path, parent_machine_name);
-
-					using (StringReader reader = new StringReader(manifest))
-					{
-						string line;
-						while ((line = reader.ReadLine()) != null)
-						{
-							string[] parts = line.Split('\t');
-							List<string> names = new List<string>(parts[0].Split('/'));
-							string sha1 = parts[1];
-
-							names.Insert(0, tempDirectory);
-
-							string tempFilename = Path.Combine(names.ToArray());
-							Directory.CreateDirectory(Path.GetDirectoryName(tempFilename));
-							File.Copy(Globals.RomHashStore.Filename(sha1), tempFilename);
-						}
-					}
-
-					foreach (string tempFilename in Directory.GetFiles(tempDirectory, "*", SearchOption.AllDirectories))
-						File.SetLastWriteTimeUtc(tempFilename, MagicModifiedDate);
-
 					string targetFilename = Path.Combine(targetDirectory, parent_machine_name + ".zip");
 
-					ZipFile.CreateFromDirectory(tempDirectory, targetFilename);
-					Directory.Delete(tempDirectory, true);
+					CreateRomArchive(nameHashes, Globals.RomHashStore, tempDirectory, targetFilename);
+
+					File.WriteAllText(Path.Combine(targetDirectory, parent_machine_name + ".txt"), manifest, Encoding.ASCII);
 
 					string fileSha1 = Tools.SHA1HexFile(targetFilename);
 
@@ -305,6 +269,38 @@ namespace Spludlow.MameAO
 					writer.WriteLine($"{key}\t{fileManifestSHA1s[key]}");
 
 			Globals.Reports.SaveHtmlReport(report, "Machine manifests");
+		}
+
+		public static void CreateRomArchive(Dictionary<string, string> nameHashes, HashStore hashStore, string tempDirectory, string targetFilename)
+		{
+			HashSet<string> directories = new HashSet<string>();
+
+			for (int pass = 0; pass < 2; ++pass)
+			{
+				foreach (string name in nameHashes.Keys)
+				{
+					List<string> pathParts = new List<string>(name.Split('/'));
+					pathParts.Insert(0, tempDirectory);
+					string tempFilename = Path.Combine(pathParts.ToArray());
+
+					if (pass == 0)
+					{
+						string directory = Path.GetDirectoryName(tempFilename);
+						if (directories.Add(directory) == true)
+							Directory.CreateDirectory(directory);
+					}
+					else
+					{
+						File.Copy(hashStore.Filename(nameHashes[name]), tempFilename);
+					}
+				}
+			}
+
+			foreach (string tempFilename in Directory.GetFiles(tempDirectory, "*", SearchOption.AllDirectories))
+				File.SetLastWriteTimeUtc(tempFilename, MagicModifiedDate);
+
+			ZipFile.CreateFromDirectory(tempDirectory, targetFilename);
+			Directory.Delete(tempDirectory, true);
 		}
 
 		public static Dictionary<string, string> GetRomNameHashes(DataRow parentMachineRow, DataTable machineTable, DataTable romTable)

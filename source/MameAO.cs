@@ -138,7 +138,8 @@ namespace Spludlow.MameAO
 					switch (Globals.Arguments["OPERATION_UPLOAD"])
 					{
 						case "MACHINE":
-							Upload.Machine();
+							Upload.MachineRom("spludlow-test-0002", true);
+							//Upload.MachineRomExport(@"D:\TMP");
 							break;
 					}
 				}
@@ -692,6 +693,12 @@ namespace Spludlow.MameAO
 							throw new ApplicationException($"Usage: {parts[0]} <command text>");
 
 						Database.ConsoleQuery(parts[0].Substring(3), String.Join(" ", parts.Skip(1)));
+						return;
+
+					case ".upload":
+						if (parts.Length != 3)
+							throw new ApplicationException($"Usage: {parts[0]} <item name> <perform>");
+						Upload.MachineRom(parts[1], Boolean.Parse(parts[2]));
 						return;
 
 					default:
