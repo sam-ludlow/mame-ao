@@ -7,6 +7,8 @@ using System.Text;
 using System.IO.Compression;
 using System.Net;
 
+using Newtonsoft.Json;
+
 namespace Spludlow.MameAO
 {
 	public class Upload
@@ -28,14 +30,15 @@ namespace Spludlow.MameAO
 			ApiAuth = File.ReadAllText(authFilename);
 		}
 
-
-		//	    "conflict": 1728405085, in root metat data - don;t do anything
-
-		public static void MachineRom(string itemName, bool perform)
+		public static void MachineRom(string itemName, int batchSize)
 		{
 			ArchiveOrgItem item = new ArchiveOrgItem(itemName, null, null);
 			item.DontCache = true;
 			item.GetFile(null);
+
+			dynamic metadata = JsonConvert.DeserializeObject<dynamic>(Tools.Query(item.UrlMetadata));
+			if (metadata.conflict != null)
+				throw new ApplicationException("Archive.org item status is 'conflict' try again later.");
 
 			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name, cloneof, description FROM machine ORDER BY machine.name");
 			DataTable romTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
@@ -126,10 +129,20 @@ namespace Spludlow.MameAO
 					report.Rows.Add("DELETE", "", name);
 			}
 
-			if (perform == true)
+			string[] headings = new string[] { "CREATE", "REPLACE", "DELETE", "MISSING", "OK", "NOHAVE" };
+
+			List<DataView> views = new List<DataView>();
+			foreach (string heading in headings)
+				views.Add(new DataView(report, $"Status = '{heading}'", null, DataViewRowState.CurrentRows));
+
+			Globals.Reports.SaveHtmlReport(views.ToArray(), headings, report.TableName);
+
+			if (batchSize > 0)
 			{
 				try
 				{
+					int count = 0;
+
 					foreach (string action in new string[] { "CREATE", "UPDATE" })
 					{
 						foreach (DataRow reportRow in report.Select($"Status = '{action}'"))
@@ -161,6 +174,9 @@ namespace Spludlow.MameAO
 							}
 
 							reportRow["action"] = "PUT";
+
+							if (++count >= batchSize)
+								break;
 						}
 					}
 
@@ -187,16 +203,10 @@ namespace Spludlow.MameAO
 
 						UploadFile(itemName, filename);
 					}
+
+					Globals.Reports.SaveHtmlReport(views.ToArray(), headings, report.TableName + " - Actions");
 				}
 			}
-
-			string[] headings = new string[] { "CREATE", "REPLACE", "DELETE", "MISSING", "OK", "NOHAVE" };
-
-			List<DataView> views = new List<DataView>();
-			foreach (string heading in headings)
-				views.Add(new DataView(report, $"Status = '{heading}'", null, DataViewRowState.CurrentRows));
-
-			Globals.Reports.SaveHtmlReport(views.ToArray(), headings, report.TableName);
 		}
 
 
@@ -269,6 +279,52 @@ namespace Spludlow.MameAO
 					writer.WriteLine($"{key}\t{fileManifestSHA1s[key]}");
 
 			Globals.Reports.SaveHtmlReport(report, "Machine manifests");
+		}
+
+		public static void SoftwareDisk(string itemName, int batchSize, string softwareListName)
+		{
+			string targetDirectory = @"D:\TMP";
+
+			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
+				"SELECT softwarelist.name AS softwarelist_name, software.name, software.cloneof, software.description, software.software_id " +
+				"FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id " +
+				$"WHERE (softwarelist.name = '{softwareListName}') ORDER BY softwarelist.name, software.name");
+
+			DataTable diskTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
+				"SELECT part.software_id, disk.name, disk.sha1 " +
+				"FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
+				"WHERE (disk.sha1 IS NOT NULL)");
+
+			DataTable report = Tools.MakeDataTable("Software Disk Export",
+				"name	cloneof	description	rom_name	sha1	in_parent	have",
+				"String	String	String		String		String	Boolean		Boolean");
+
+			HashSet<string> hashes = new HashSet<string>();
+
+			for (int pass = 0; pass < 2; ++pass)
+			{
+				foreach (DataRow softwareRow in softwareTable.Select(pass == 0 ? "cloneof IS NULL" : "cloneof IS NOT NULL"))
+				{
+					long software_id = (long)softwareRow["software_id"];
+					string software_name = (string)softwareRow["name"];
+					string cloneof = pass == 0 ? "" : (string)softwareRow["cloneof"];
+					string description = (string)softwareRow["description"];
+
+					foreach (DataRow diskRow in diskTable.Select($"software_id = {software_id}"))
+					{
+						string name = (string)diskRow["name"];
+						string sha1 = (string)diskRow["sha1"];
+
+						bool inParent = hashes.Add(sha1) == false;
+						bool have = Globals.DiskHashStore.Exists(sha1);
+
+						report.Rows.Add(software_name, cloneof, description, name, sha1, inParent, have);
+					}
+
+				}
+			}
+
+			Globals.Reports.SaveHtmlReport(report, report.TableName);
 		}
 
 		public static void CreateRomArchive(Dictionary<string, string> nameHashes, HashStore hashStore, string tempDirectory, string targetFilename)
@@ -386,32 +442,57 @@ namespace Spludlow.MameAO
 			return manifest.ToString();
 		}
 
-
-
 		public static string UploadFile(string itemName, string filename)
 		{
 			string url = $"https://s3.us.archive.org/{Uri.EscapeUriString(itemName)}/{Uri.EscapeUriString(Path.GetFileName(filename))}";
 
-			byte[] data = File.ReadAllBytes(filename);
+			FileInfo fileInfo = new FileInfo(filename);
+
+			lock (Globals.WorkerTaskInfo)
+				Globals.WorkerTaskInfo.BytesTotal = fileInfo.Length;
+
+			long total = 0;
+			byte[] buffer = new byte[64 * 1024];
 
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 			request.Method = "PUT";
 			request.Timeout = 3 * 60 * 60 * 1000;
 			
 			request.ContentType = "application/octet-stream";
-			request.ContentLength = data.Length;
+			request.ContentLength = fileInfo.Length;
 
 			request.Headers.Add("authorization", ApiAuth);
 
-			request.Headers.Add("x-archive-size-hint", data.Length.ToString());
+			request.Headers.Add("x-archive-size-hint", fileInfo.Length.ToString());
 			request.Headers.Add("x-archive-queue-derive", "0");
 
-			Console.Write($"Upload '{filename}' => '{url}' ...");
+			Console.Write($"Uploading size:{Tools.DataSize(fileInfo.Length)} {url} ...");
 
-			using (Stream requestStream = request.GetRequestStream())
+			using (Stream targetStream = request.GetRequestStream())
 			{
-				requestStream.Write(data, 0, data.Length);
+				using (FileStream sourceStream = new FileStream(filename, FileMode.Open))
+				{
+					int bytesRead;
+					long progress = 0;
+					while ((bytesRead = sourceStream.Read(buffer, 0, buffer.Length)) > 0)
+					{
+						total += bytesRead;
+						targetStream.Write(buffer, 0, bytesRead);
+
+						progress += bytesRead;
+						if (progress >= Globals.DownloadDotSize)
+						{
+							Console.Write(".");
+							progress = 0;
+						}
+
+						lock (Globals.WorkerTaskInfo)
+							Globals.WorkerTaskInfo.BytesCurrent = total;
+					}
+				}
 			}
+
+			Console.WriteLine("...done.");
 
 			using (WebResponse response = request.GetResponse())
 			{
@@ -424,8 +505,6 @@ namespace Spludlow.MameAO
 
 				using (Stream responseStream = response.GetResponseStream())
 				{
-					Console.WriteLine("...done.");
-
 					using (StreamReader reader = new StreamReader(responseStream))
 						return reader.ReadToEnd();
 				}
@@ -461,8 +540,6 @@ namespace Spludlow.MameAO
 				}
 			}
 		}
-
-
 
 	}
 }

@@ -211,18 +211,16 @@ namespace Spludlow.MameAO
 		{
 			string name = DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(title);
 
-			title = "MAME-AO - " + title;
-
 			StringBuilder html = new StringBuilder();
 
 			html.AppendLine("<!DOCTYPE html>");
 			html.AppendLine("<html lang=\"en\">");
 			html.AppendLine("<head>");
 			html.AppendLine("<meta http-equiv=\"Content-Type\" content=\"text/html; charset=utf-8\"/>");
-			html.AppendLine("<title>" + title + "</title>");
+			html.AppendLine($"<title>{title}</title>");
 			html.AppendLine("<style type=\"text/css\">" + _HtmlReportStyle + "</style>");
 			html.AppendLine("</head>");
-			html.AppendLine("<h1>" + title + "</h1>");
+			html.AppendLine($"<h1>{title}</h1>");
 
 			for (int index = 0; index < dataSet.Tables.Count; ++index)
 			{
@@ -230,7 +228,7 @@ namespace Spludlow.MameAO
 
 				html.AppendLine("<hr />");
 				if (table.TableName.StartsWith("Table") == false)
-					html.AppendLine("<h2>" + table.TableName + "</h2>");
+					html.AppendLine($"<h2>{table.TableName} ({table.Rows.Count})</h2>");
 				html.AppendLine(MakeHtmlTable(table, "width:100%;"));
 			}
 

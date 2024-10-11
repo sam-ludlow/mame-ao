@@ -18,9 +18,6 @@ namespace Spludlow.MameAO
 			if (Globals.Arguments.ContainsKey("DIRECTORY") == false)
 				Globals.Arguments.Add("DIRECTORY", Environment.CurrentDirectory);
 
-			// test
-			//Globals.Arguments.Add("OPERATION_UPLOAD", "MACHINE");
-
 			MameAOProcessor proc = new MameAOProcessor();
 
 			if (Globals.Arguments.ContainsKey("OPERATION") == true)

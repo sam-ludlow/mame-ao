@@ -133,20 +133,7 @@ namespace Spludlow.MameAO
 			{
 				Initialize();
 
-				if (Globals.Arguments.ContainsKey("OPERATION_UPLOAD") == true)
-				{
-					switch (Globals.Arguments["OPERATION_UPLOAD"])
-					{
-						case "MACHINE":
-							Upload.MachineRom("spludlow-test-0002", true);
-							//Upload.MachineRomExport(@"D:\TMP");
-							break;
-					}
-				}
-				else
-				{
-					Shell();
-				}
+				Shell();
 			}
 			catch (Exception e)
 			{
@@ -696,9 +683,26 @@ namespace Spludlow.MameAO
 						return;
 
 					case ".upload":
-						if (parts.Length != 3)
-							throw new ApplicationException($"Usage: {parts[0]} <item name> <perform>");
-						Upload.MachineRom(parts[1], Boolean.Parse(parts[2]));
+						if (parts.Length != 5)
+							throw new ApplicationException($"Usage: {parts[0]} <type> <archive.org item name> <batch size> <asset name>");
+
+						switch (parts[1].ToUpper())
+						{
+							case "MR":
+								Upload.MachineRom(parts[2], Int32.Parse(parts[3]));
+								break;
+							case "MD":
+								break;
+							case "SR":
+								break;
+							case "SD":
+								Upload.SoftwareDisk(parts[2], Int32.Parse(parts[3]), parts[4]);
+								break;
+
+							default:
+								throw new ApplicationException("Upload Unknown type not (MR, MD, SR, SD).");
+
+						}
 						return;
 
 					default:
