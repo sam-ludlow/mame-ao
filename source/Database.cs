@@ -696,17 +696,17 @@ namespace Spludlow.MameAO
 
 		public static DataTable ExecuteFill(SQLiteConnection connection, string commandText)
 		{
-			DataSet dataSet = new DataSet();
+			DataTable table = new DataTable();
 			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, connection))
-				adapter.Fill(dataSet);
-			return dataSet.Tables[0];
+				adapter.Fill(table);
+			return table;
 		}
 		public static DataTable ExecuteFill(SQLiteCommand command)
 		{
-			DataSet dataSet = new DataSet();
+			DataTable table = new DataTable();
 			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
-				adapter.Fill(dataSet);
-			return dataSet.Tables[0];
+				adapter.Fill(table);
+			return table;
 		}
 
 		//
@@ -753,10 +753,10 @@ namespace Spludlow.MameAO
 		}
 		public static DataTable ExecuteFill(SqlConnection connection, string commandText)
 		{
-			DataSet dataSet = new DataSet();
+			DataTable table = new DataTable();
 			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connection))
-				adapter.Fill(dataSet);
-			return dataSet.Tables[0];
+				adapter.Fill(table);
+			return table;
 		}
 
 		public static void BulkInsert(SqlConnection connection, DataTable table)

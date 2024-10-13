@@ -8,6 +8,7 @@ using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
 using System.Net;
+using System.Web.UI.WebControls;
 
 namespace Spludlow.MameAO
 {
@@ -104,6 +105,13 @@ namespace Spludlow.MameAO
 				Code = "AVS",
 				Text = "Software",
 				Decription = "List Software that is available to run.",
+			},
+			new ReportType(){
+				Key = "software-disk-list",
+				Group = "available",
+				Code = "AVSDL",
+				Text = "Software Disk by List",
+				Decription = "Software Disk by List, view completeness of each disk software list.",
 			},
 
 			new ReportType(){
@@ -995,6 +1003,82 @@ namespace Spludlow.MameAO
 
 			this.SaveHtmlReport(dataSet, "Avaliable Software ROM and DISK");
 
+		}
+
+		public void Report_AVSDL()
+		{
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
+				"SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description, COUNT(disk.disk_id) AS disk_count " +
+				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
+				"WHERE (disk.sha1 IS NOT NULL) " +
+				"GROUP BY softwarelist.softwarelist_id, softwarelist.name, softwarelist.description " +
+				"ORDER BY softwarelist.name");
+
+			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
+				"SELECT software.software_id, software.softwarelist_id, software.name, software.cloneof, software.description, COUNT(disk.disk_id) AS disk_count " +
+				"FROM ((software INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
+				"WHERE (disk.sha1 IS NOT NULL) " +
+				"GROUP BY software.software_id, software.softwarelist_id, software.name, software.cloneof, software.description " +
+				"ORDER BY software.softwarelist_id, software.name");
+
+			DataTable diskTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
+				"SELECT software.software_id, software.softwarelist_id, disk.name, disk.sha1 " +
+				"FROM ((software INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
+				"WHERE (disk.sha1 IS NOT NULL) " +
+				"ORDER BY software.software_id, software.softwarelist_id, disk.name");
+
+			DataTable resultTable = Tools.MakeDataTable("Software Lists",
+				"SoftwareList	Description	DiskCount	DiskHave	DiskNeed	DiskDup	HaveBytes	HaveSize	Complete	ProjectedBytes	ProjectedSize	Machines",
+				"String			String		Int32		Int32		Int32		Int32	Int64		String		Decimal		Int64			String			String");
+
+
+			foreach (DataRow softwareListRow in softwarelistTable.Rows)
+			{
+				long softwarelist_id = (long)softwareListRow["softwarelist_id"];
+				string softwarelist_name = (string)softwareListRow["name"];
+				string softwarelist_description = (string)softwareListRow["description"];
+
+				DataRow[] diskRows = diskTable.Select($"softwarelist_id = {softwarelist_id}");
+
+				HashSet<string> diskHashes = new HashSet<string>(diskRows.Select(i => (string)i["sha1"]));
+
+				int diskCount = diskHashes.Count;
+
+				int foundCount = 0;
+				int missingCount = 0;
+				int dupCount = diskRows.Length - diskCount;
+				long foundBytes = 0;
+
+				foreach (string sha1 in diskHashes)
+				{
+					if (Globals.DiskHashStore.Exists(sha1) == true)
+					{
+						foundBytes += new FileInfo(Globals.DiskHashStore.Filename(sha1)).Length;
+						++foundCount;
+					}
+					else
+					{
+						++missingCount;
+					}
+				}
+
+				decimal complete = foundCount / diskCount;
+
+				long projectedBytes = 0;
+				if (foundBytes > 0)
+					projectedBytes = (long)(foundBytes / foundCount * (decimal)diskCount);
+
+				string machines = null;
+
+				//	Math.Round(complete * 100, 3)
+
+				resultTable.Rows.Add(softwarelist_name, softwarelist_description, diskCount, foundCount, missingCount, dupCount, foundBytes, Tools.DataSize(foundBytes), complete, projectedBytes, Tools.DataSize(projectedBytes), machines);
+
+
+			}
+
+
+			this.SaveHtmlReport(resultTable, "Software Disk by List");
 		}
 
 		public void Report_IMSLM()

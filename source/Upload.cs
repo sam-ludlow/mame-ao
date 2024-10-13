@@ -466,6 +466,8 @@ namespace Spludlow.MameAO
 			request.Headers.Add("x-archive-size-hint", fileInfo.Length.ToString());
 			request.Headers.Add("x-archive-queue-derive", "0");
 
+			request.AllowWriteStreamBuffering = true;	//	TEST BOTH
+
 			Console.Write($"Uploading size:{Tools.DataSize(fileInfo.Length)} {url} ...");
 
 			using (Stream targetStream = request.GetRequestStream())
