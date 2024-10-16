@@ -1027,10 +1027,22 @@ namespace Spludlow.MameAO
 				"WHERE (disk.sha1 IS NOT NULL) " +
 				"ORDER BY software.software_id, software.softwarelist_id, disk.name");
 
+			DataTable listMachineTable = Database.ExecuteFill(Globals.Database._MachineConnection,
+				"SELECT softwarelist.name, machine.name FROM machine INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id ORDER BY softwarelist.name, machine.name");
+
 			DataTable resultTable = Tools.MakeDataTable("Software Lists",
 				"SoftwareList	Description	DiskCount	DiskHave	DiskNeed	DiskDup	HaveBytes	HaveSize	Complete	ProjectedBytes	ProjectedSize	Machines",
 				"String			String		Int32		Int32		Int32		Int32	Int64		String		Decimal		Int64			String			String");
 
+			Dictionary<string, List<string>> softwareListMachines = new Dictionary<string, List<string>>();
+			foreach (DataRow row in listMachineTable.Rows)
+			{
+				string softwarelist = (string)row[0];
+				string machine = (string)row[1];
+				if (softwareListMachines.ContainsKey(softwarelist) == false)
+					softwareListMachines.Add(softwarelist, new List<string>());
+				softwareListMachines[softwarelist].Add(machine);
+			}
 
 			foreach (DataRow softwareListRow in softwarelistTable.Rows)
 			{
@@ -1062,19 +1074,15 @@ namespace Spludlow.MameAO
 					}
 				}
 
-				decimal complete = foundCount / diskCount;
+				decimal complete = (decimal)foundCount / diskCount * 100.0M;
 
 				long projectedBytes = 0;
 				if (foundBytes > 0)
-					projectedBytes = (long)(foundBytes / foundCount * (decimal)diskCount);
+					projectedBytes = (long)((decimal)foundBytes / (decimal)foundCount * (decimal)diskCount);
 
-				string machines = null;
+				string machines = String.Join(", ", softwareListMachines[softwarelist_name]);
 
-				//	Math.Round(complete * 100, 3)
-
-				resultTable.Rows.Add(softwarelist_name, softwarelist_description, diskCount, foundCount, missingCount, dupCount, foundBytes, Tools.DataSize(foundBytes), complete, projectedBytes, Tools.DataSize(projectedBytes), machines);
-
-
+				resultTable.Rows.Add(softwarelist_name, softwarelist_description, diskCount, foundCount, missingCount, dupCount, foundBytes, Tools.DataSize(foundBytes), Math.Round(complete, 3), projectedBytes, Tools.DataSize(projectedBytes), machines);
 			}
 
 
