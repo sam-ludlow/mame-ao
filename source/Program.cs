@@ -30,7 +30,7 @@ namespace Spludlow.MameAO
 				return 0;
 			}
 
-			proc.Run();
+			proc.RunAsync();
 
 			return 0;
 		}

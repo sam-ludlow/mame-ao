@@ -11,6 +11,10 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Threading;
+using System.Xml;
+using HtmlAgilityPack;
+using MonoTorrent.Client;
+using MonoTorrent;
 
 namespace Spludlow.MameAO
 {
@@ -115,11 +119,41 @@ namespace Spludlow.MameAO
 			Globals.RootDirectory = Globals.Arguments["DIRECTORY"];
 		}
 
-		public void Run()
+        private static async Task<string> CallUrl(string fullUrl)
+        {
+            HttpClient client = new HttpClient();
+            var response = await client.GetStringAsync(fullUrl);
+            return response;
+        }
+
+        public async Task RunAsync()
 		{
 			try
 			{
-				Initialize();
+                string url = "https://pleasuredome.github.io/pleasuredome/mame/";
+                var response = CallUrl(url).Result;
+                HtmlDocument htmlDoc = new HtmlDocument();
+                htmlDoc.LoadHtml(response);
+
+                // Find all magnet links
+                IEnumerable<HtmlNode> linkNodes = htmlDoc.DocumentNode.SelectNodes("//a[@href]");
+                List<string> magnetLinks = new List<string>();
+
+                // Filter out and print the magnet links
+                foreach (HtmlNode linkNode in linkNodes)
+                {
+                    string hrefValue = linkNode.GetAttributeValue("href", string.Empty);
+                    if (hrefValue.StartsWith("magnet:"))
+                    {
+                        Console.WriteLine(hrefValue);
+                        magnetLinks.Add(hrefValue);
+                    }
+                }
+
+
+                await DownloadMagnets(magnetLinks);
+
+                Initialize();
 				Shell();
 			}
 			catch (Exception e)
@@ -128,7 +162,47 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public void BringToFront()
+        static async Task DownloadMagnets(List<string> magnetLinks)
+        {
+            // Create a new Random instance
+            Random rng = new Random();
+
+            // Shuffle the list
+            int n = magnetLinks.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = rng.Next(n + 1);
+                string value = magnetLinks[k];
+                magnetLinks[k] = magnetLinks[n];
+                magnetLinks[n] = value;
+            }
+
+            // Path to save the downloaded files
+            string downloadPath = "C:\\Downloads";
+
+            // Create a new engine with the default settings
+            //EngineSettings engineSettings = new EngineSettings();
+
+            //var engine = new ClientEngine(engineSettings);
+            string[] a = magnetLinks.ToArray().Take(1).ToArray();
+            await ClientSample.MainClass.RunMainTask(a);
+
+            //// Download torrents from magnet links
+            //foreach (string magnetLink in magnetLinks)
+            //{
+            //    Uri uri = new Uri(magnetLink);
+            //    MagnetLink m = MagnetLink.FromUri(uri);
+            //}
+
+            // Keep the application running until all torrents are downloaded
+            //while (engine.Torrents.(t => t.State != TorrentState.Stopped))
+            //{
+            //             await Task.Delay(1000);
+            //         }
+        }
+
+        public void BringToFront()
 		{
 			if (_ConsoleHandle == IntPtr.Zero)
 				Console.WriteLine("!!! Wanring can't get handle on Console Window.");
