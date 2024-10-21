@@ -23,7 +23,7 @@ namespace ClientSample
             Listener = new Top10Listener(10);
         }
 
-        public async Task DownloadAsync(CancellationToken token)
+        public async Task DownloadAsync(CancellationToken token, string[] Magnets)
         {
             // Torrents will be downloaded to this directory
             var downloadsPath = Path.Combine(Environment.CurrentDirectory, "Downloads");
@@ -40,31 +40,33 @@ namespace ClientSample
                 Directory.CreateDirectory(torrentsPath);
 
             // For each file in the torrents path that is a .torrent file, load it into the engine.
-            foreach (string file in Directory.GetFiles(torrentsPath))
+            // foreach (string file in Directory.GetFiles(torrentsPath))
+            foreach (string file in Magnets)
             {
-                if (file.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))
+                //if (file.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))
+                //{
+                try
                 {
-                    try
+                    // EngineSettings.AutoSaveLoadFastResume is enabled, so any cached fast resume
+                    // data will be implicitly loaded. If fast resume data is found, the 'hash check'
+                    // phase of starting a torrent can be skipped.
+                    // 
+                    // TorrentSettingsBuilder can be used to modify the settings for this
+                    // torrent.
+                    var settingsBuilder = new TorrentSettingsBuilder
                     {
-                        // EngineSettings.AutoSaveLoadFastResume is enabled, so any cached fast resume
-                        // data will be implicitly loaded. If fast resume data is found, the 'hash check'
-                        // phase of starting a torrent can be skipped.
-                        // 
-                        // TorrentSettingsBuilder can be used to modify the settings for this
-                        // torrent.
-                        var settingsBuilder = new TorrentSettingsBuilder
-                        {
-                            MaximumConnections = 60,
-                        };
-                        var manager = await Engine.AddAsync(file, downloadsPath, settingsBuilder.ToSettings());
-                        Console.WriteLine(manager.InfoHashes.V1OrV2.ToHex());
-                    }
-                    catch (Exception e)
-                    {
-                        Console.Write("Couldn't decode {0}: ", file);
-                        Console.WriteLine(e.Message);
-                    }
+                        MaximumConnections = 60,
+                    };
+                    MagnetLink.TryParse(file, out MagnetLink link);
+                    var manager = await Engine.AddAsync(link, downloadsPath, settingsBuilder.ToSettings());
+                    Console.WriteLine(manager.InfoHashes.V1OrV2.ToHex());
                 }
+                catch (Exception e)
+                {
+                    Console.Write("Couldn't decode {0}: ", file);
+                    Console.WriteLine(e.Message);
+                }
+                //}
             }
 
             // If we loaded no torrents, just exist. The user can put files in the torrents directory and start
@@ -80,32 +82,38 @@ namespace ClientSample
             // in the torrent manager and start the engine.
             foreach (TorrentManager manager in Engine.Torrents)
             {
-                manager.PeersFound += (o, e) => {
+                manager.PeersFound += (o, e) =>
+                {
                     Listener.WriteLine(string.Format($"{e.GetType().Name}: {e.NewPeers} peers for {e.TorrentManager.Name}"));
                 };
-                manager.PeerConnected += (o, e) => {
+                manager.PeerConnected += (o, e) =>
+                {
                     lock (Listener)
                         Listener.WriteLine($"Connection succeeded: {e.Peer.Uri}");
                 };
-                manager.ConnectionAttemptFailed += (o, e) => {
+                manager.ConnectionAttemptFailed += (o, e) =>
+                {
                     lock (Listener)
                         Listener.WriteLine(
                             $"Connection failed: {e.Peer.ConnectionUri} - {e.Reason}");
                 };
                 // Every time a piece is hashed, this is fired.
-                manager.PieceHashed += delegate (object o, PieceHashedEventArgs e) {
+                manager.PieceHashed += delegate (object o, PieceHashedEventArgs e)
+                {
                     lock (Listener)
                         Listener.WriteLine($"Piece Hashed: {e.PieceIndex} - {(e.HashPassed ? "Pass" : "Fail")}");
                 };
 
                 // Every time the state changes (Stopped -> Seeding -> Downloading -> Hashing) this is fired
-                manager.TorrentStateChanged += delegate (object o, TorrentStateChangedEventArgs e) {
+                manager.TorrentStateChanged += delegate (object o, TorrentStateChangedEventArgs e)
+                {
                     lock (Listener)
                         Listener.WriteLine($"OldState: {e.OldState} NewState: {e.NewState}");
                 };
 
                 // Every time the tracker's state changes, this is fired
-                manager.TrackerManager.AnnounceComplete += (sender, e) => {
+                manager.TrackerManager.AnnounceComplete += (sender, e) =>
+                {
                     Listener.WriteLine($"{e.Successful}: {e.Tracker}");
                 };
 

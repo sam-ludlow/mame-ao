@@ -145,7 +145,7 @@ namespace Spludlow.MameAO
                     string hrefValue = linkNode.GetAttributeValue("href", string.Empty);
                     if (hrefValue.StartsWith("magnet:"))
                     {
-                        Console.WriteLine(hrefValue);
+                        //Console.WriteLine(hrefValue);
                         magnetLinks.Add(hrefValue);
                     }
                 }
@@ -185,7 +185,7 @@ namespace Spludlow.MameAO
             //EngineSettings engineSettings = new EngineSettings();
 
             //var engine = new ClientEngine(engineSettings);
-            string[] a = magnetLinks.ToArray().Take(1).ToArray();
+            string[] a = magnetLinks.ToArray().Take(10).ToArray();
             await ClientSample.MainClass.RunMainTask(a);
 
             //// Download torrents from magnet links

@@ -75,21 +75,22 @@ namespace ClientSample
             //{
             //    task = new MagnetLinkStreaming(engine).DownloadAsync(link, token);
             //}
-            if (args.Length == 1 && MagnetLink.TryParse(args[0], out MagnetLink link))
-            {
-                task = new MagnetLinkStreaming(engine).DownloadAsync(link, token);
-            }
-            else
-            {
-                task = new StandardDownloader(engine).DownloadAsync(token);
-            }
+            //if (/*args.Length == 1 && */MagnetLink.TryParse(args[0], out MagnetLink link))
+            //{
+                task = new StandardDownloader(engine).DownloadAsync(token,args);
+            //}
+            //else
+            //{
+            //    task = new StandardDownloader(engine).DownloadAsync(token);
+            //}
 
             if (engine.Settings.AllowPortForwarding)
                 Console.WriteLine("uPnP or NAT-PMP port mappings will be created for any ports needed by MonoTorrent");
 
             try
             {
-                await task;
+                //await task;
+                task.Wait();
             }
             catch (OperationCanceledException)
             {
