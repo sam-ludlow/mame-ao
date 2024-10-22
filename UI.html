@@ -4,6 +4,12 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width">
 
+	<!-- Tailwind CDN -->
+	<script src="https://cdn.tailwindcss.com"></script>
+	<!-- Additional config by Layouts.dev -->
+	<script src="https://cdn.layouts.dev"></script>
+	<!-- Shadcn -->
+	<link rel="stylesheet" href="https://app.layouts.dev/static/css/main.b078759b.css" />
 	<style type="text/css">
 		body {
 			font-family: sans-serif;
@@ -27,10 +33,6 @@
 		th, td {
 			padding: 2px;
 			text-align: left;
-		}
-
-		table, th, td {
-			border: 1px solid black;
 		}
 
 		th {
@@ -1033,9 +1035,9 @@
 				switch (columnDef.columnName) {
 					case 'ao_image':
 						if (result.ao_softwarelist_count > 0)
-							cell.innerHTML = `<a id="${result.name}" href="${_baseUrl}/machines/${profileKey}/${result.name}"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
+							cell.innerHTML = `<a id="${result.name}" href="${_baseUrl}/machines/${profileKey}/${result.name}"><div><img src="${result.ao_image}" loading="lazy" class="object-cover size-128 rounded-lg"/></div></a>`.replace('https','http').replace('jpg','png').replace('mame.spludlow.co.uk/snap/machine','adb.arcadeitalia.net/media/mame.current/ingames');
 						else
-							cell.innerHTML = `<a id="${result.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
+							cell.innerHTML = `<a id="${result.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><div><img src="${result.ao_image}" loading="lazy" class="object-cover size-128 rounded-lg"/></div></a>`.replace('https','http').replace('jpg','png').replace('mame.spludlow.co.uk/snap/machine','adb.arcadeitalia.net/media/mame.current/ingames');
 						break;
 
 					case 'name':
@@ -1071,8 +1073,8 @@
 
 			let html = '';
 
-			html += `<input id="inputText" type="text" value="${_parameters.search}" style="width:480px;" />`;
-			html += '<button type="submit" onclick="searchButton(); return false;">Search</button>';
+			html += `<input id="inputText" type="text" value="${_parameters.search}" style="width:480px;" class="inline-flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" placeholder="Enter your search term"/>`;
+			html += '<button  class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 typeface-body-md gap-2" type="submit" onclick="searchButton(); return false;"><svg xmlns="http://www.w3.org/2000/svg" stroke-linejoin="round" stroke-linecap="round" stroke-width="2" stroke="currentColor" fill="none" viewBox="0 0 24 24" height="24" width="24" class="size-3"><circle xmlns="http://www.w3.org/2000/svg" r="8" cy="11" cx="11"></circle><path xmlns="http://www.w3.org/2000/svg" d="m21 21-4.3-4.3"></path></svg>Search</button>';
 			html += '<hr />';
 			html += `<nav>${navHtml}</nav>`;
 			html += '<div id="results"></div>';
@@ -1140,7 +1142,7 @@
 
 				switch (columnDef.columnName) {
 					case 'ao_image':
-						cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${machineData.name} ${result.name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
+						cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${machineData.name} ${result.name}')" href="javascript:void(0);"><div><img src="${result.ao_image}" loading="lazy" class="object-cover size-128 rounded-lg"/></div></a>`.replace('https','http').replace('jpg','png').replace('mame.spludlow.co.uk/snap/machine','adb.arcadeitalia.net/media/mame.current/ingames');
 						break;
 
 					case 'name':
@@ -1163,8 +1165,8 @@
 
 			let html = '';
 
-			html += `<input id="inputText" type="text" value="${_parameters.search}" style="width:480px;" />`;
-			html += '<button type="submit" onclick="searchButton(); return false;">Search</button>';
+			html += `<input id="inputText" type="text" value="${_parameters.search}" style="width:480px;" class="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50" placeholder="Enter your search term" />`;
+			html += '<button   class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 border border-input bg-background hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 typeface-body-md gap-2" type="submit" onclick="searchButton(); return false;"><svg xmlns="http://www.w3.org/2000/svg" stroke-linejoin="round" stroke-linecap="round" stroke-width="2" stroke="currentColor" fill="none" viewBox="0 0 24 24" height="24" width="24" class="size-3"><circle xmlns="http://www.w3.org/2000/svg" r="8" cy="11" cx="11"></circle><path xmlns="http://www.w3.org/2000/svg" d="m21 21-4.3-4.3"></path></svg>Search</button>';
 			html += '<hr />';
 			html += `<nav>${navHtml}</nav>`;
 			html += '<div id="results"></div>';
@@ -1214,9 +1216,15 @@
 			const totalPages = Math.ceil(data.total / data.limit);
 			const currentPage = (data.offset / data.limit) + 1;
 
-			return `<a href="${_path}?offset=${_parameters.offset - limit}&search=${encodeURIComponent(_parameters.search)}">PREV</a>` +
+			return `<a  class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 typeface-body-md gap-1 pl-2.5" aria-label="Go to previous page"  href="${_path}?offset=${_parameters.offset - limit}&search=${encodeURIComponent(_parameters.search)}">&lt;
+	<span>
+Previous
+</span></a>` +
 				'&nbsp; - &nbsp;' +
-				`<a href="${_path}?offset=${_parameters.offset + limit}&search=${encodeURIComponent(_parameters.search)}">NEXT</a>` +
+				`<a  class="inline-flex items-center justify-center whitespace-nowrap rounded-md text-sm font-medium ring-offset-background transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:pointer-events-none disabled:opacity-50 hover:bg-accent hover:text-accent-foreground h-10 px-4 py-2 typeface-body-md gap-1 pr-2.5" aria-label="Go to next page"  href="${_path}?offset=${_parameters.offset + limit}&search=${encodeURIComponent(_parameters.search)}"><span>
+Next
+</span>
+	&gt;</a>` +
 				'&nbsp; - &nbsp;' +
 				`page: ${currentPage} / ${totalPages} - total: ${data.total} - viewing: ${data.count}`;
 		}
@@ -1449,7 +1457,7 @@
 <body>
 
 	<div>
-		<a style="float:left;" href="/"><img src="https://mame.spludlow.co.uk/snap/mame-ao-logo.png" /></a>
+		<a style="float:left;" href="/"><img src="https://mame.spludlow.co.uk/snap/mame-ao-logo.png" class="object-cover size-28 rounded-lg"/></a>
 		<h1 id="heading"></h1>
 	</div>
 
