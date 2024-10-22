@@ -16,7 +16,9 @@ jobs:
       uses: actions/setup-dotnet@v1  
       with:  
         dotnet-version: '5.0'  
+    - name: Setup MSBuild  
+      uses: microsoft/setup-msbuild@v1  
     - name: Restore dependencies  
-      run: nuget restore  
+      run: nuget restore mame-ao.sln 
     - name: Build  
       run: msbuild.exe mame-ao.sln /p:platform="Any CPU" /p:configuration="Release" /p:PackageOutputPath=.\dist
