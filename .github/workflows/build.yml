@@ -21,9 +21,7 @@ jobs:
     - name: Restore dependencies  
       run: nuget restore mame-ao.sln 
     - name: Build  
-      run: |
-        msbuild.exe mame-ao.sln /p:platform="Any CPU" /p:configuration="Release" /p:PackageOutputPath=.\dist
-        zip -r $GITHUB_WORKSPACE/mame-ao.zip $GITHUB_WORKSPACE/mame-ao.exe
+      run: msbuild.exe mame-ao.sln /p:platform="Any CPU" /p:configuration="Release" /p:PackageOutputPath=.\dist
 
     - name: Create Release
       id: create_release
@@ -43,5 +41,5 @@ jobs:
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ${{ github.workspace }}/mame-ao.zip
-        asset_name: mame-ao.zip
-        asset_content_type: application/zip
+        asset_name: mame-ao.exe
+        asset_content_type: application/exe
