@@ -1,10 +1,12 @@
 name: .NET Framework  
 
-on:  
-  push:  
-    branches: [main]  
-  pull_request:  
-    branches: [main]  
+
+on:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - 'v*' # Push events to matching v*, i.e. v1.0, v20.15.10
+
 
 jobs:  
   build:  
@@ -42,4 +44,4 @@ jobs:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
         asset_path: ${{ github.workspace }}/mame-ao.zip
         asset_name: mame-ao.exe
-        asset_content_type: application/exe
+        asset_content_type: application/octet-stream
