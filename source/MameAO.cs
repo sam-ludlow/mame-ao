@@ -15,6 +15,7 @@ using System.Xml;
 using HtmlAgilityPack;
 using MonoTorrent.Client;
 using MonoTorrent;
+using System.Web;
 
 namespace Spludlow.MameAO
 {
@@ -166,20 +167,21 @@ namespace Spludlow.MameAO
         {
 
             //Create a new Random instance
-            Random rng = new Random();
+            //Random rng = new Random();
 
-            //Shuffle the list
-            int n = magnetLinks.Count;
-            while (n > 1)
+            List<string> excludedWords = new List<string> { "Update", "(non-merged)", "(split)", "Rollback" };
+            var decodedLinks = magnetLinks.Select(HttpUtility.UrlDecode).ToList();
+
+            var filteredLinks = decodedLinks.Where(link =>
+                excludedWords.All(word => !link.Contains(word))
+            ).ToList();
+
+            // Print the filtered links
+            foreach (var link in filteredLinks)
             {
-                n--;
-                int k = rng.Next(n + 1);
-                string value = magnetLinks[k];
-                magnetLinks[k] = magnetLinks[n];
-                magnetLinks[n] = value;
+                Console.WriteLine(link);
             }
-
-            string[] MagnetLinks = magnetLinks.ToArray().ToArray();
+            string[] MagnetLinks = filteredLinks.Take(100).ToArray();
             await ClientSample.MainClass.RunMainTask(MagnetLinks);
         }
 

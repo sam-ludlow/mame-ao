@@ -75,12 +75,16 @@ namespace ClientSample
                             await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);
                             n2++;
                         }
+                        else
+                        {
+                            Console.WriteLine($" ");
+                        }
                     }
-                    Console.WriteLine($"Count 1{n1} {n2}");
+                    Console.WriteLine($"Count {n1} {n2}");
                     if (n1 == n2)
                     {
                         Console.WriteLine($"No files found");
-                        return;
+                        //return;
                     }
 
                     Console.WriteLine(manager.InfoHashes.V1OrV2.ToHex());
