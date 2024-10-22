@@ -211,7 +211,7 @@ namespace Spludlow.MameAO
 
 			// Machine ROM
 			Globals.ArchiveOrgItems.Add(ItemType.MachineRom, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("mame251", "mame251/", null),
+				new ArchiveOrgItem("mame251", "", null),
 			});
 
 			// Machine DISK
