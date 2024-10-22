@@ -188,7 +188,7 @@ namespace Spludlow.MameAO
         public void BringToFront()
         {
             if (_ConsoleHandle == IntPtr.Zero)
-                Console.WriteLine("!!! Wanring can't get handle on Console Window.");
+                Console.WriteLine("!!! Warning can't get handle on Console Window.");
             else
                 SetForegroundWindow(_ConsoleHandle);
         }
