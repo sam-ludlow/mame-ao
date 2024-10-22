@@ -77,6 +77,12 @@ namespace ClientSample
                         }
                     }
                     Console.WriteLine($"Count 1{n1} {n2}");
+                    if (n1 == n2)
+                    {
+                        Console.WriteLine($"No files found");
+                        return;
+                    }
+
                     Console.WriteLine(manager.InfoHashes.V1OrV2.ToHex());
                 }
                 catch (Exception e)
