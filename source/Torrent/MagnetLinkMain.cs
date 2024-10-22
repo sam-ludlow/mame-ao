@@ -30,8 +30,8 @@ namespace ClientSample
 
         static async Task MainAsync(string[] args, CancellationToken token)
         {
+            var StartsWith = "amiga";
             const int httpListeningPort = 55125;
-            // Give an example of how settings can be modified for the engine.
             var settingBuilder = new EngineSettingsBuilder
             {
                 // Allow the engine to automatically forward ports using upnp/nat-pmp (if a compatible router is available)
@@ -69,28 +69,15 @@ namespace ClientSample
                 HttpStreamingPrefix = $"http://127.0.0.1:{httpListeningPort}/"
             };
             using var engine = new ClientEngine(settingBuilder.ToSettings());
-
-            Task task;
-            //if (args.Length == 1 && args[0] == "--vlc")
-            //{
-            //    task = new MagnetLinkStreaming(engine).DownloadAsync(link, token);
-            //}
-            //if (/*args.Length == 1 && */MagnetLink.TryParse(args[0], out MagnetLink link))
-            //{
-                task = new StandardDownloader(engine).DownloadAsync(token,args);
-            //}
-            //else
-            //{
-            //    task = new StandardDownloader(engine).DownloadAsync(token);
-            //}
+            Task task = new StandardDownloader(engine).DownloadAsync(token, StartsWith, args);
 
             if (engine.Settings.AllowPortForwarding)
                 Console.WriteLine("uPnP or NAT-PMP port mappings will be created for any ports needed by MonoTorrent");
 
             try
             {
-                //await task;
-                task.Wait();
+                await task;
+                //task.Wait();
             }
             catch (OperationCanceledException)
             {

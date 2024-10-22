@@ -23,7 +23,7 @@ namespace ClientSample
             Listener = new Top10Listener(10);
         }
 
-        public async Task DownloadAsync(CancellationToken token, string[] Magnets)
+        public async Task DownloadAsync(CancellationToken token, string StartsWith, string[] Magnets)
         {
             // Torrents will be downloaded to this directory
             var downloadsPath = Path.Combine(Environment.CurrentDirectory, "Downloads");
@@ -59,6 +59,23 @@ namespace ClientSample
                     };
                     MagnetLink.TryParse(file, out MagnetLink link);
                     var manager = await Engine.AddAsync(link, downloadsPath, settingsBuilder.ToSettings());
+
+                    Torrent torrent = manager.Torrent;
+                    var n1 = manager.Files.Count;
+                    var n2 = 0;
+
+                    foreach (var files in manager.Files)
+                    {
+                        Console.Write($"{files.Path}");
+
+                        if (!files.Path.StartsWith(StartsWith))
+                        {
+                            Console.WriteLine($" X");
+                            await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);
+                            n2++;
+                        }
+                    }
+                    Console.WriteLine($"Count 1{n1} {n2}");
                     Console.WriteLine(manager.InfoHashes.V1OrV2.ToHex());
                 }
                 catch (Exception e)
