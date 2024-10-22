@@ -30,7 +30,7 @@ namespace ClientSample
 
         static async Task MainAsync(string[] args, CancellationToken token)
         {
-            var StartsWith = "amiga";
+            List<string> StartsWith = new List<string> { "amiga", "psx", "c" };
             const int httpListeningPort = 55125;
             var settingBuilder = new EngineSettingsBuilder
             {

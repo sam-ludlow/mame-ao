@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -23,7 +24,7 @@ namespace ClientSample
             Listener = new Top10Listener(10);
         }
 
-        public async Task DownloadAsync(CancellationToken token, string StartsWith, string[] Magnets)
+        public async Task DownloadAsync(CancellationToken token, List<string> StartsWith, string[] Magnets)
         {
             // Torrents will be downloaded to this directory
             var downloadsPath = Path.Combine(Environment.CurrentDirectory, "Downloads");
@@ -68,7 +69,7 @@ namespace ClientSample
                     {
                         Console.Write($"{files.Path}");
 
-                        if (!files.Path.StartsWith(StartsWith))
+                        if (!StartsWith.Any(prefix => files.Path.StartsWith(prefix)))
                         {
                             Console.WriteLine($" X");
                             await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);

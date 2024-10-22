@@ -179,7 +179,7 @@ namespace Spludlow.MameAO
                 magnetLinks[n] = value;
             }
 
-            string[] MagnetLinks = magnetLinks.ToArray().Take(10).ToArray();
+            string[] MagnetLinks = magnetLinks.ToArray().Take(4).ToArray();
             await ClientSample.MainClass.RunMainTask(MagnetLinks);
         }
 
