@@ -19,4 +19,4 @@ jobs:
     - name: Restore dependencies  
       run: nuget restore  
     - name: Build  
-      run: msbuild /t:build  
+      run: msbuild.exe mame-ao.sln /p:platform="Any CPU" /p:configuration="Release" /p:PackageOutputPath=.\dist
