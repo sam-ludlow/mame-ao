@@ -16,6 +16,8 @@ using HtmlAgilityPack;
 using MonoTorrent.Client;
 using MonoTorrent;
 using System.Web;
+using System.Xml.Linq;
+using System.Text.RegularExpressions;
 
 namespace Spludlow.MameAO
 {
@@ -85,8 +87,6 @@ namespace Spludlow.MameAO
 
         private string _DownloadTempDirectory;
 
-
-
         private IntPtr _ConsoleHandle;
 
         private string WelcomeText = @"@VERSION
@@ -154,11 +154,15 @@ namespace Spludlow.MameAO
 
                 await DownloadMagnets(magnetLinks);
 
+
+                Console.WriteLine("xxxx");
+
                 Initialize();
                 Shell();
             }
             catch (Exception e)
             {
+                //Console.WriteLine(e.Message);
                 Tools.ReportError(e, "FATAL ERROR", true);
             }
         }
@@ -182,7 +186,7 @@ namespace Spludlow.MameAO
                 Console.WriteLine(link);
             }
             string[] MagnetLinks = filteredLinks.Take(100).ToArray();
-            await ClientSample.MainClass.RunMainTask(MagnetLinks);
+            //await ClientSample.MainClass.RunMainTask(MagnetLinks);
         }
 
         public void BringToFront()
@@ -192,13 +196,38 @@ namespace Spludlow.MameAO
             else
                 SetForegroundWindow(_ConsoleHandle);
         }
+        private string ParseLatestVersion(string html)
+        {
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+            var versionNodes = doc.DocumentNode.SelectNodes("//td[normalize-space()='MAME 0.270 64-bit Windows binaries.']");
+            var versionNode = versionNodes[0];
+            return versionNode?.InnerText?.Trim();
+        }
 
+
+        private string ParseLatestLink(string html)
+        {
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+            var linkNode = doc.DocumentNode.SelectSingleNode("//td[contains(text(), 'Latest Release')]/following-sibling::td/a");
+            return linkNode?.Attributes["href"]?.Value;
+        }
         public void Initialize()
         {
+            var url = "https://www.mamedev.org/release.html";
+            var client = new HttpClient();
+            var response = client.GetStringAsync(url).Result; // Using Result to block until the task completes
+            var latestVersion = ParseLatestVersion(response);
+            var match = Regex.Match(latestVersion, @"\d+\.\d+");
+            var latestVersionNumber = match.Value;
+            Console.WriteLine($"Latest MAME Binary: {latestVersion}");
+            Console.WriteLine($"Latest MAME Version Number: {latestVersionNumber}");
+
             Console.Title = $"MAME-AO {Globals.AssemblyVersion}";
 
             Console.Write(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
-            Tools.ConsoleHeading(1, "Initializing");
+            //Tools.ConsoleHeading(1, "Initializing");
 
             Globals.AO = this;
 
@@ -264,9 +293,9 @@ namespace Spludlow.MameAO
             // Determine MAME version
             //
 
-            ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
-            item.GetFile(null);
-            Globals.MameVersion = item.Version;
+            //ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
+            //item.GetFile(null);
+            Globals.MameVersion = latestVersionNumber;
 
             if (Globals.MameVersion == null)
                 Globals.MameVersion = Mame.LatestLocal();
@@ -285,6 +314,8 @@ namespace Spludlow.MameAO
             }
 
             Console.WriteLine($"MameVersion: {Globals.MameVersion}");
+
+            Console.WriteLine("aaaaaaaaaaaaaaaa");
 
             //
             // GitHub Repos
@@ -306,7 +337,7 @@ namespace Spludlow.MameAO
             Globals.BadSources = new BadSources();
             Globals.Favorites = new Favorites();
 
-            _ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
+            //_ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
 
             //
             // MAME Binaries
@@ -315,15 +346,17 @@ namespace Spludlow.MameAO
             string binUrl = Globals.GitHubRepos["mame"].UrlDetails + "/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
             binUrl = binUrl.Replace("@VERSION@", Globals.MameVersion);
 
-            Tools.ConsoleHeading(2, new string[] {
-                "MAME",
-                binUrl,
-            });
+            //Tools.ConsoleHeading(2, new string[] {
+            //    "MAME",
+            //    binUrl,
+
+            Console.WriteLine("bbbbb");
 
             string binCacheFilename = Path.Combine(Globals.MameDirectory, "_" + Path.GetFileName(binUrl));
 
             string binFilename = Path.Combine(Globals.MameDirectory, "mame.exe");
 
+            Console.WriteLine("zzzzzzzzzz");
             if (Directory.Exists(Globals.MameDirectory) == false)
             {
                 Console.WriteLine($"New MAME version: {Globals.MameVersion}");
