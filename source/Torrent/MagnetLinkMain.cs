@@ -38,8 +38,18 @@ namespace ClientSample
             // Split the input by commas and update the list
             StartsWith = userInput.Split(',').Select(s => s.Trim()).ToList();
             // Print the updated list
-            Console.WriteLine("Updated List:");
+            Console.Write("Updated List : ");
             Console.WriteLine(string.Join(", ", StartsWith));
+
+            List<string> ContainsStrings = new List<string> { "amiga", "psx", "c" };
+            Console.Write("Enter List of Filenames Starts-Withs : ");
+            Console.WriteLine(string.Join(", ", ContainsStrings));
+            userInput = Console.ReadLine();
+            // Split the input by commas and update the list
+            ContainsStrings = userInput.Split(',').Select(s => s.Trim()).ToList();
+            // Print the updated list
+            Console.Write("Updated List : ");
+            Console.WriteLine(string.Join(", ", ContainsStrings));
 
             const int httpListeningPort = 55125;
 
@@ -81,7 +91,7 @@ namespace ClientSample
             };
             ClientEngine clientEngine = new ClientEngine(settingBuilder.ToSettings());
             //using ClientEngine engine = clientEngine;
-            Task task = new StandardDownloader(clientEngine).DownloadAsync(token, StartsWith, args);
+            Task task = new StandardDownloader(clientEngine).DownloadAsync(token, StartsWith, ContainsStrings, args);
 
             if (clientEngine.Settings.AllowPortForwarding)
                 Console.WriteLine("uPnP or NAT-PMP port mappings will be created for any ports needed by MonoTorrent");
