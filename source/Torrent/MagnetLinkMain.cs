@@ -8,6 +8,7 @@ using System.Threading.Tasks;
 
 using MonoTorrent;
 using MonoTorrent.Client;
+using Spludlow.MameAO;
 
 namespace ClientSample
 {
@@ -31,25 +32,11 @@ namespace ClientSample
 
         static async Task MainAsync(string[] args, CancellationToken token)
         {
-            List<string> StartsWith = new List<string> { "amiga", "psx", "c" };
-            Console.Write("Enter List of Filenames Starts-Withs Strings : ");
-            Console.WriteLine(string.Join(", ", StartsWith));
-            string userInput = Console.ReadLine();
-            // Split the input by commas and update the list
-            StartsWith = userInput.Split(',').Select(s => s.Trim()).ToList();
-            // Print the updated list
-            Console.Write("Updated List : ");
-            Console.WriteLine(string.Join(", ", StartsWith));
+            List<string> StartsWith = new List<string> { "z", "b", "c" };
+            StartsWith = MameAOProcessor.EnterNewList(StartsWith, "Enter List of Magnet Link Excludes : ");
 
-            List<string> ContainsStrings = new List<string> { "amiga", "psx", "c" };
-            Console.Write("Enter List of Filenames Contains Strings : ");
-            Console.WriteLine(string.Join(", ", ContainsStrings));
-            userInput = Console.ReadLine();
-            // Split the input by commas and update the list
-            ContainsStrings = userInput.Split(',').Select(s => s.Trim()).ToList();
-            // Print the updated list
-            Console.Write("Updated List : ");
-            Console.WriteLine(string.Join(", ", ContainsStrings));
+            List<string> ContainsStrings = new List<string> { "amiga", "psx", "comm" };
+            ContainsStrings = MameAOProcessor.EnterNewList(ContainsStrings, "Enter List of Magnet Link Excludes : ");
 
             const int httpListeningPort = 55125;
 
