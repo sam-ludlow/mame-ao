@@ -145,6 +145,16 @@ namespace Spludlow.MameAO
             //Random rng = new Random();
 
             List<string> excludedWords = new List<string> { "(bios-devices)", "EXTRAs", "Multimedia", "Update", "(non-merged)", "(split)", "Rollback" };
+            Console.Write("Enter List of Magnet Link Excludes : ");
+            Console.WriteLine(string.Join(", ", excludedWords));
+            string userInput = Console.ReadLine();
+            // Split the input by commas and update the list
+            excludedWords = userInput.Split(',').Select(s => s.Trim()).ToList();
+            // Print the updated list
+            Console.Write("Updated List : ");
+            Console.WriteLine(string.Join(", ", excludedWords));
+
+
             var decodedLinks = magnetLinks.Select(HttpUtility.UrlDecode).ToList();
 
             var filteredLinks = decodedLinks.Where(link =>

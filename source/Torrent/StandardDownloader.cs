@@ -206,7 +206,10 @@ namespace ClientSample
                     AppendFormat(sb, "", null);
                     if (manager.Torrent != null)
                         foreach (var file in manager.Files)
-                            AppendFormat(sb, "{1:0.00}% - {0}", file.Path, file.BitField.PercentComplete);
+                            if (file.BitField.PercentComplete > 0)
+                            {
+                                AppendFormat(sb, "{1:0.00}% - {0}", file.Path, file.BitField.PercentComplete);
+                            }
                 }
                 Console.Clear();
                 Console.WriteLine(sb.ToString());

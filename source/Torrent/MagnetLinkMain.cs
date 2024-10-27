@@ -32,7 +32,7 @@ namespace ClientSample
         static async Task MainAsync(string[] args, CancellationToken token)
         {
             List<string> StartsWith = new List<string> { "amiga", "psx", "c" };
-            Console.Write("Enter List of Filenames Starts-Withs : ");
+            Console.Write("Enter List of Filenames Starts-Withs Strings : ");
             Console.WriteLine(string.Join(", ", StartsWith));
             string userInput = Console.ReadLine();
             // Split the input by commas and update the list
@@ -42,7 +42,7 @@ namespace ClientSample
             Console.WriteLine(string.Join(", ", StartsWith));
 
             List<string> ContainsStrings = new List<string> { "amiga", "psx", "c" };
-            Console.Write("Enter List of Filenames Starts-Withs : ");
+            Console.Write("Enter List of Filenames Contains Strings : ");
             Console.WriteLine(string.Join(", ", ContainsStrings));
             userInput = Console.ReadLine();
             // Split the input by commas and update the list
