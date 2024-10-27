@@ -50,30 +50,32 @@ namespace Spludlow.MameAO
 
 				string cookie = null;
 
-				//do
-				//{
-				//	Console.WriteLine();
+				do
+				{
+					Console.WriteLine();
 
-				//	//Console.WriteLine("Enter your Archive.org username:");
-				//	//username = Console.ReadLine();
+					Console.WriteLine("Enter your Archive.org username:");
+					username = Console.ReadLine();
 
-				//	//Console.WriteLine("Enter your Archive.org password:");
-				//	//password = Console.ReadLine();
+					Console.WriteLine("Enter your Archive.org password:");
+					password = Console.ReadLine();
 
-				//	try
-				//	{
-				//		if (username != "")
-				//			cookie = GetAuthCookie(username, password);
-				//	}
-				//	catch (HttpRequestException e)
-				//	{
-				//		if (e.Message.Contains("401"))
-				//			Console.WriteLine("Bad credentials try again. Hit enter to skip (You won't be able to download).");
-				//		else
-				//			throw e;
-				//	}
+					try
+					{
+						if (username != "")
+							cookie = GetAuthCookie(username, password);
+					}
+					catch (HttpRequestException e)
+					{
+                        if (e.Message.Contains("401"))
+                            Console.WriteLine("Bad credentials try again. Hit enter to skip (You won't be able to download).");
+                        if (e.Message.Contains("400"))
+                            Console.WriteLine("Archive.org is not available.");
+                        else
+                            throw e;
+					}
 
-				//} while (cookie == null && username != "");
+				} while (cookie == null && username != "");
 
 				if (cookie != null)
 					File.WriteAllText(CacheFilename, cookie);
