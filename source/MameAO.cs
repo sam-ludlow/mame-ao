@@ -14,6 +14,7 @@ using System.Xml;
 using HtmlAgilityPack;
 using System.Web;
 using System.Text.RegularExpressions;
+using MonoTorrent;
 
 namespace Spludlow.MameAO
 {
@@ -131,13 +132,19 @@ namespace Spludlow.MameAO
 			Directory.CreateDirectory(Globals.ReportDirectory);
 		}
 
+        private static string ExtractTorrentName(string magnetLink)
+        {
+            // Use regex to extract the torrent name (dn parameter)
+            var match = Regex.Match(magnetLink, @"dn=([^&]+)");
+            return match.Success ? Uri.UnescapeDataString(match.Groups[1].Value) : "No name found";
+        }
         static async void DownloadMagnets(List<string> magnetLinks)
         {
 
             //Create a new Random instance
             //Random rng = new Random();
 
-            List<string> excludedWords = new List<string> { "Update", "(non-merged)", "(split)", "Rollback" };
+            List<string> excludedWords = new List<string> { "(bios-devices)", "EXTRAs", "Multimedia", "Update", "(non-merged)", "(split)", "Rollback" };
             var decodedLinks = magnetLinks.Select(HttpUtility.UrlDecode).ToList();
 
             var filteredLinks = decodedLinks.Where(link =>
@@ -147,7 +154,8 @@ namespace Spludlow.MameAO
             // Print the filtered links
             foreach (var link in filteredLinks)
             {
-                Console.WriteLine(link);
+                string torrentName = ExtractTorrentName(link);
+                Console.WriteLine(torrentName);
             }
             string[] MagnetLinks = filteredLinks.Take(100).ToArray();
 			await ClientSample.MainClass.RunMainTask(MagnetLinks);

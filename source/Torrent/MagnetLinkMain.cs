@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
@@ -31,7 +32,17 @@ namespace ClientSample
         static async Task MainAsync(string[] args, CancellationToken token)
         {
             List<string> StartsWith = new List<string> { "amiga", "psx", "c" };
+            Console.Write("Enter List of Filenames Starts-Withs : ");
+            Console.WriteLine(string.Join(", ", StartsWith));
+            string userInput = Console.ReadLine();
+            // Split the input by commas and update the list
+            StartsWith = userInput.Split(',').Select(s => s.Trim()).ToList();
+            // Print the updated list
+            Console.WriteLine("Updated List:");
+            Console.WriteLine(string.Join(", ", StartsWith));
+
             const int httpListeningPort = 55125;
+
             var settingBuilder = new EngineSettingsBuilder
             {
                 // Allow the engine to automatically forward ports using upnp/nat-pmp (if a compatible router is available)
