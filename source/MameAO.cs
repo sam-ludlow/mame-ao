@@ -10,6 +10,11 @@ using System.Reflection;
 using System.Threading.Tasks;
 using System.Runtime.InteropServices;
 using System.Net;
+using System.Xml;
+using HtmlAgilityPack;
+using System.Web;
+using System.Text.RegularExpressions;
+using MonoTorrent;
 
 namespace Spludlow.MameAO
 {
@@ -127,11 +132,88 @@ namespace Spludlow.MameAO
 			Directory.CreateDirectory(Globals.ReportDirectory);
 		}
 
-		public void Run()
+        private static string ExtractTorrentName(string magnetLink)
+        {
+            // Use regex to extract the torrent name (dn parameter)
+            var match = Regex.Match(magnetLink, @"dn=([^&]+)");
+            return match.Success ? Uri.UnescapeDataString(match.Groups[1].Value) : "No name found";
+        }
+        static async void DownloadMagnets(List<string> magnetLinks)
+        {
+
+            //Create a new Random instance
+            //Random rng = new Random();
+
+            List<string> excludedWords = new List<string> { "(bios-devices)", "EXTRAs", "Multimedia", "Update", "(non-merged)", "(split)", "Rollback" };
+            var decodedLinks = magnetLinks.Select(HttpUtility.UrlDecode).ToList();
+
+            var filteredLinks = decodedLinks.Where(link =>
+                excludedWords.All(word => !link.Contains(word))
+            ).ToList();
+
+            // Print the filtered links
+            foreach (var link in filteredLinks)
+            {
+                string torrentName = ExtractTorrentName(link);
+                Console.WriteLine(torrentName);
+            }
+            string[] MagnetLinks = filteredLinks.Take(100).ToArray();
+			await ClientSample.MainClass.RunMainTask(MagnetLinks);
+		}
+
+        private string ParseLatestVersion(string html)
+        {
+            var doc = new HtmlDocument();
+            doc.LoadHtml(html);
+            var versionNodes = doc.DocumentNode.SelectNodes("//td[normalize-space()='MAME 0.270 64-bit Windows binaries.']");
+            var versionNode = versionNodes[0];
+            return versionNode?.InnerText?.Trim();
+        }
+
+        private static async Task<string> CallUrl(string fullUrl)
+        {
+            HttpClient client = new HttpClient();
+            var response = await client.GetStringAsync(fullUrl);
+            return response;
+        }
+
+        public void Run()
 		{
-			try
-			{
-				Initialize();
+            var url = "https://www.mamedev.org/release.html";
+            var client = new HttpClient();
+            var response = client.GetStringAsync(url).Result; // Using Result to block until the task completes
+            var latestVersion = ParseLatestVersion(response);
+            var match = Regex.Match(latestVersion, @"\d+\.\d+");
+            var latestVersionNumber = match.Value;
+            Console.WriteLine($"Latest MAME Binary: {latestVersion}");
+            Console.WriteLine($"Latest MAME Version Number: {latestVersionNumber}");
+
+            try
+            {
+                url = "https://pleasuredome.github.io/pleasuredome/mame/";
+                HtmlDocument htmlDoc = new HtmlDocument();
+                htmlDoc.LoadHtml(CallUrl(url).Result);
+
+                // Find all magnet links
+                IEnumerable<HtmlNode> linkNodes = htmlDoc.DocumentNode.SelectNodes("//a[@href]");
+                List<string> magnetLinks = new List<string>();
+
+                // Filter out and print the magnet links
+                foreach (HtmlNode linkNode in linkNodes)
+                {
+                    string hrefValue = linkNode.GetAttributeValue("href", string.Empty);
+                    if (hrefValue.StartsWith("magnet:"))
+                    {
+                        //Console.WriteLine(hrefValue);
+                        magnetLinks.Add(hrefValue);
+                    }
+                }
+
+                DownloadMagnets(magnetLinks);
+
+                Console.WriteLine("----------------------------------");
+
+                Initialize();
 
 				Shell();
 			}
