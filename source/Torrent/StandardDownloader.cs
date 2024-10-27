@@ -69,7 +69,7 @@ namespace ClientSample
                     {
 
                         if (!StartsWithStrings.Any(prefix => files.Path.StartsWith(prefix)) ||
-                           (!SContainsStrings.Any(prefix => files.Path.Contains(prefix))))
+                           (!ContainsStrings.Any(prefix => files.Path.Contains(prefix))))
                         {
                             await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);
                             n2++;
