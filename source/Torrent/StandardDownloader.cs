@@ -24,7 +24,7 @@ namespace ClientSample
             Listener = new Top10Listener(10);
         }
 
-        public async Task DownloadAsync(CancellationToken token, List<string> StartsWith, string[] Magnets)
+        public async Task DownloadAsync(CancellationToken token, List<string> StartsWithStrings, string[] Magnets)
         {
             // Torrents will be downloaded to this directory
             var downloadsPath = Path.Combine(Environment.CurrentDirectory, "Downloads");
@@ -67,17 +67,15 @@ namespace ClientSample
 
                     foreach (var files in manager.Files)
                     {
-                        Console.Write($"{files.Path}");
 
-                        if (!StartsWith.Any(prefix => files.Path.StartsWith(prefix)))
+                        if (!StartsWithStrings.Any(prefix => files.Path.StartsWith(prefix) || files.Path.Contains(prefix)))
                         {
-                            Console.WriteLine($" X");
                             await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);
                             n2++;
                         }
                         else
                         {
-                            Console.WriteLine($" ");
+                          Console.WriteLine($"{files.Path}");
                         }
                     }
                     Console.WriteLine($"Count {n1} {n2}");
