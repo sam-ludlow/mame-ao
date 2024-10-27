@@ -32,11 +32,11 @@ namespace ClientSample
 
         static async Task MainAsync(string[] args, CancellationToken token)
         {
-            List<string> StartsWith = new List<string> { "z", "b", "c" };
-            StartsWith = MameAOProcessor.EnterNewList(StartsWith, "Enter List of Magnet Link Excludes : ");
+            List<string> StartsWith = new List<string> { "a", "b", "c" };
+            StartsWith = MameAOProcessor.EnterNewList(StartsWith, "Enter List of Filename Starts Withs : ");
 
-            List<string> ContainsStrings = new List<string> { "amiga", "psx", "comm" };
-            ContainsStrings = MameAOProcessor.EnterNewList(ContainsStrings, "Enter List of Magnet Link Excludes : ");
+            List<string> ContainsStrings = new List<string> { "ami", "out", "com" };
+            ContainsStrings = MameAOProcessor.EnterNewList(ContainsStrings, "Enter List of Filename Contains : ");
 
             const int httpListeningPort = 55125;
 
