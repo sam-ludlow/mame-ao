@@ -42,7 +42,7 @@ namespace ClientSample
 
             // For each file in the torrents path that is a .torrent file, load it into the engine.
             // foreach (string file in Directory.GetFiles(torrentsPath))
-            foreach (string file in Magnets)
+            foreach (string magnetlink in Magnets)
             {
                 //if (file.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))
                 //{
@@ -58,27 +58,61 @@ namespace ClientSample
                     {
                         MaximumConnections = 60,
                     };
-                    MagnetLink.TryParse(file, out MagnetLink link);
+                    MagnetLink.TryParse(magnetlink, out MagnetLink link);
                     var manager = await Engine.AddAsync(link, downloadsPath, settingsBuilder.ToSettings());
 
                     Torrent torrent = manager.Torrent;
                     var n1 = manager.Files.Count;
-                    var n2 = 0;
+                    var n2 = n1;
+                    Console.WriteLine($"{n1} - {n2}");
 
-                    foreach (var files in manager.Files)
+                    //var tasks = manager.Files
+                    //.Where(files => !StartsWithStrings.Any(prefix => files.Path.StartsWith(prefix)) ||
+                    //                !ContainsStrings.Any(prefix => files.Path.Contains(prefix)))
+                    //.Select(async files =>
+                    //{
+                    //    await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);
+                    //    n2--;
+                    //});
+                    //await Task.WhenAll(tasks);
+
+                    var fileArray = manager.Files.ToArray();
+                    var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+
+                    await Task.Run(() =>
                     {
+                        Parallel.ForEach(fileArray, parallelOptions, async file =>
+                        {
+                            if (!StartsWithStrings.Any(prefix => file.Path.StartsWith(prefix)) ||
+                                !ContainsStrings.Any(prefix => file.Path.Contains(prefix)))
+                            {
+                                await manager.SetFilePriorityAsync(file, Priority.DoNotDownload);
+                                Interlocked.Decrement(ref n2);
+                            }
+                        });
+                    });
 
-                        if (!StartsWithStrings.Any(prefix => files.Path.StartsWith(prefix)) ||
-                           (!ContainsStrings.Any(prefix => files.Path.Contains(prefix))))
-                        {
-                            await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);
-                            n2++;
-                        }
-                        else
-                        {
-                          Console.WriteLine($"{files.Path}");
-                        }
-                    }
+                    manager.Files
+                    .Where(files => StartsWithStrings.Any(prefix => files.Path.StartsWith(prefix)) &&
+                                    ContainsStrings.Any(prefix => files.Path.Contains(prefix)))
+                    .ToList()
+                    .ForEach(files => Console.WriteLine(files.Path));
+
+                    //foreach (var files in manager.Files)
+                    //{
+
+                    //    if (!StartsWithStrings.Any(prefix => files.Path.StartsWith(prefix)) ||
+                    //       (!ContainsStrings.Any(prefix => files.Path.Contains(prefix))))
+                    //    {
+                    //        await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);
+                    //        n2++;
+                    //    }
+                    //    else
+                    //    {
+                    //      Console.WriteLine($"{files.Path}");
+                    //    }
+                    //}
+
                     if (n1 == n2)
                     {
                         Console.WriteLine($"{n1} - {n2} No files found");
@@ -87,13 +121,12 @@ namespace ClientSample
                     {
                         Console.WriteLine($"{n1} - {n2}");
                     }
-                   
 
                     Console.WriteLine(manager.InfoHashes.V1OrV2.ToHex());
                 }
                 catch (Exception e)
                 {
-                    Console.Write("Couldn't decode {0}: ", file);
+                    Console.Write("Couldn't decode {0}: ", magnetlink);
                     Console.WriteLine(e.Message);
                 }
                 //}
