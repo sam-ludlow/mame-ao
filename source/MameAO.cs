@@ -185,11 +185,11 @@ namespace Spludlow.MameAO
             return string_list;
         }
 
-        private string (string html)
+        private string ParseLatestVersion(string html)
         {
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
-            var versionNodes = doc.DocumentNode.SelectNodes("//td[normalize-space()='MAME 0.270 64-bit Windows binaries.']");
+            var versionNodes = doc.DocumentNode.SelectNodes("//td[normalize-space()='MAME 0.271 64-bit Windows binaries.']");
             var versionNode = versionNodes[0];
             return versionNode?.InnerText?.Trim();
         }
