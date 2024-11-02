@@ -15,6 +15,8 @@ using HtmlAgilityPack;
 using System.Web;
 using System.Text.RegularExpressions;
 using MonoTorrent;
+using System.IO.Compression;
+using System.Runtime.InteropServices.ComTypes;
 
 namespace Spludlow.MameAO
 {
@@ -183,7 +185,7 @@ namespace Spludlow.MameAO
             return string_list;
         }
 
-        private string ParseLatestVersion(string html)
+        private string (string html)
         {
             var doc = new HtmlDocument();
             doc.LoadHtml(html);
@@ -219,6 +221,7 @@ namespace Spludlow.MameAO
                 // Find all magnet links
                 IEnumerable<HtmlNode> linkNodes = htmlDoc.DocumentNode.SelectNodes("//a[@href]");
                 List<string> magnetLinks = new List<string>();
+                List<string> datfileLinks = new List<string>();
 
                 // Filter out and print the magnet links
                 foreach (HtmlNode linkNode in linkNodes)
@@ -229,6 +232,18 @@ namespace Spludlow.MameAO
                         //Console.WriteLine(hrefValue);
                         magnetLinks.Add(hrefValue);
                     }
+                    if (hrefValue.StartsWith("https://github.com/pleasuredome/") && hrefValue.Contains(".zip") )
+                    {
+                        datfileLinks.Add(hrefValue);
+                    }
+                }
+
+                foreach (string binariesUrl in datfileLinks)
+                {
+                    string versionDirectory = "C:\\ROMVault_V3.7.2\\DatRoot";
+                    string binariesFilename = Path.Combine(versionDirectory, Path.GetFileName(binariesUrl));
+                    Tools.Download(binariesUrl, binariesFilename);
+                    ZipFile.ExtractToDirectory(binariesFilename, versionDirectory);
                 }
 
                 DownloadMagnets(magnetLinks);
