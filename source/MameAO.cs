@@ -243,7 +243,7 @@ namespace Spludlow.MameAO
                     string versionDirectory = "C:\\ROMVault_V3.7.2\\DatRoot";
                     string binariesFilename = Path.Combine(versionDirectory, Path.GetFileName(binariesUrl));
                     Tools.Download(binariesUrl, binariesFilename);
-                    ZipFile.ExtractToDirectory(binariesFilename, versionDirectory);
+                    //ZipFile.ExtractToDirectory(binariesFilename, versionDirectory);
                 }
 
                 DownloadMagnets(magnetLinks);
