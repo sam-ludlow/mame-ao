@@ -232,19 +232,26 @@ namespace Spludlow.MameAO
                         //Console.WriteLine(hrefValue);
                         magnetLinks.Add(hrefValue);
                     }
-                    if (hrefValue.StartsWith("https://github.com/pleasuredome/") && hrefValue.Contains(".zip") )
+                    if (hrefValue.StartsWith("https://github.com/pleasuredome/") && hrefValue.Contains(".zip"))
                     {
                         datfileLinks.Add(hrefValue);
                     }
                 }
 
+                string versionDirectory = "C:\\ROMVault_V3.7.2\\DatRoot";
+                Directory.CreateDirectory(versionDirectory);
+
                 foreach (string binariesUrl in datfileLinks)
                 {
-                    string versionDirectory = "C:\\ROMVault_V3.7.2\\DatRoot";
                     string binariesFilename = Path.Combine(versionDirectory, Path.GetFileName(binariesUrl));
                     Tools.Download(binariesUrl, binariesFilename);
-                    //ZipFile.ExtractToDirectory(binariesFilename, versionDirectory);
+
                 }
+
+                //if (Directory.Exists(versionDirectory + "/"))
+                //    Directory.Delete(versionDirectory + "/", true);
+                //ZipFile.ExtractToDirectory(binariesFilename, versionDirectory);
+                //File.Delete(binariesFilename + ".zip");
 
                 DownloadMagnets(magnetLinks);
 
