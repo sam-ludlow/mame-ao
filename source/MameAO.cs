@@ -92,7 +92,7 @@ namespace Spludlow.MameAO
     public class MameAOProcessor
     {
         private IntPtr ConsoleHandle;
-
+        private static List<string> excludedWords;
         private readonly string WelcomeText = @"@VERSION
 '##::::'##::::'###::::'##::::'##:'########:::::::'###:::::'#######::
  ###::'###:::'## ##::: ###::'###: ##.....:::::::'## ##:::'##.... ##:
@@ -145,7 +145,6 @@ namespace Spludlow.MameAO
             //Create a new Random instance
             //Random rng = new Random();
 
-            List<string> excludedWords = EnterNewList(GetExcludedWords(), "Enter List of Magnet Link Excludes : ");
 
             var decodedLinks = magnetLinks.Select(HttpUtility.UrlDecode).ToList();
 
@@ -165,7 +164,7 @@ namespace Spludlow.MameAO
 
         private static List<string> GetExcludedWords()
         {
-            return new List<string> { "(bios-devices)", "EXTRAs", "Multimedia", "Update", "(non-merged)", "(split)", "Rollback" };
+            return new List<string> { "(bios-devices)", "EXTRAs", "Multimedia", "Update", "(non-merged)", "(split)", "Rollback", "(dir2dat)" };
         }
 
         public static List<string> EnterNewList(List<string> string_list, string prompt_text)
@@ -238,10 +237,14 @@ namespace Spludlow.MameAO
                     }
                 }
 
+                excludedWords = EnterNewList(GetExcludedWords(), "Enter List of Magnet Link Excludes : ");
+
+                var filteredLinks = datfileLinks.Where(link => excludedWords.All(word => !link.Contains(word))).ToList();
+
                 string versionDirectory = "C:\\ROMVault_V3.7.2\\DatRoot";
                 Directory.CreateDirectory(versionDirectory);
 
-                foreach (string binariesUrl in datfileLinks)
+                foreach (string binariesUrl in filteredLinks)
                 {
                     string binariesFilename = Path.Combine(versionDirectory, Path.GetFileName(binariesUrl));
                     Tools.Download(binariesUrl, binariesFilename);
