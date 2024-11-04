@@ -208,6 +208,8 @@ namespace Spludlow.MameAO
             var latestVersion = ParseLatestVersion(response);
             var match = Regex.Match(latestVersion, @"\d+\.\d+");
             var latestVersionNumber = match.Value;
+            Console.Title = ($"MAME-AO-BIT-TORRENT");
+            Console.SetWindowSize(250,150);
             Console.WriteLine($"Latest MAME Binary: {latestVersion}");
             Console.WriteLine($"Latest MAME Version Number: {latestVersionNumber}");
 

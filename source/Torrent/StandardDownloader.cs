@@ -66,16 +66,6 @@ namespace ClientSample
                     var n2 = n1;
                     Console.WriteLine($"{n1} - {n2}");
 
-                    //var tasks = manager.Files
-                    //.Where(files => !StartsWithStrings.Any(prefix => files.Path.StartsWith(prefix)) ||
-                    //                !ContainsStrings.Any(prefix => files.Path.Contains(prefix)))
-                    //.Select(async files =>
-                    //{
-                    //    await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);
-                    //    n2--;
-                    //});
-                    //await Task.WhenAll(tasks);
-
                     var fileArray = manager.Files.ToArray();
                     var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
 
@@ -89,12 +79,14 @@ namespace ClientSample
                                 await manager.SetFilePriorityAsync(file, Priority.DoNotDownload);
                                 Interlocked.Decrement(ref n2);
                             }
+                            else await manager.SetFilePriorityAsync(file, Priority.Normal);
+
+
                         });
                     });
 
                     manager.Files
-                    .Where(files => StartsWithStrings.Any(prefix => files.Path.StartsWith(prefix)) &&
-                                    ContainsStrings.Any(prefix => files.Path.Contains(prefix)))
+                    .Where(files => files.Priority == Priority.Normal)
                     .ToList()
                     .ForEach(files => Console.WriteLine(files.Path));
 
