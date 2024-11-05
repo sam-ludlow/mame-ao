@@ -202,7 +202,7 @@ namespace Spludlow.MameAO
             var inputTask = Task.Run(() => Console.ReadLine(), cts.Token);
 
             // Wait for input or timeout (5 seconds)
-            if (await Task.WhenAny(inputTask, Task.Delay(5000)) == inputTask)
+            if (await Task.WhenAny(inputTask, Task.Delay(10000)) == inputTask)
             {
                 // If input received
                 string userInput = await inputTask;
