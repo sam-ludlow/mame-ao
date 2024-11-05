@@ -33,10 +33,10 @@ namespace ClientSample
         static async Task MainAsync(string[] args, CancellationToken token)
         {
             List<string> StartsWith = new List<string> { "a", "b", "c" };
-            StartsWith = MameAOProcessor.EnterNewList(StartsWith, "Enter List of Filename Starts Withs : ");
+            StartsWith = MameAOProcessor.EnterNewList(StartsWith, "Enter List of Filename Starts Withs : ").Result;
 
             List<string> ContainsStrings = new List<string> { "ami", "out", "com" };
-            ContainsStrings = MameAOProcessor.EnterNewList(ContainsStrings, "Enter List of Filename Contains : ");
+            ContainsStrings = MameAOProcessor.EnterNewList(ContainsStrings, "Enter List of Filename Contains : ").Result;
 
             const int httpListeningPort = 55125;
 

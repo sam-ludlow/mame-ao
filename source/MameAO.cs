@@ -17,6 +17,7 @@ using System.Text.RegularExpressions;
 using MonoTorrent;
 using System.IO.Compression;
 using System.Runtime.InteropServices.ComTypes;
+using System.Threading;
 
 namespace Spludlow.MameAO
 {
@@ -167,20 +168,56 @@ namespace Spludlow.MameAO
             return new List<string> { "(bios-devices)", "EXTRAs", "Multimedia", "Update", "(non-merged)", "(split)", "Rollback", "(dir2dat)" };
         }
 
-        public static List<string> EnterNewList(List<string> string_list, string prompt_text)
-        {
-            Console.Write(prompt_text);
-            Console.WriteLine(string.Join(", ", string_list));
-            string userInput = Console.ReadLine();
-            // Split the input by commas and update the list
-            if (!string.IsNullOrWhiteSpace(userInput))
-            {
-                string_list = userInput.Split(',').Select(s => s.Trim()).ToList();
-                // Print the updated list
-                Console.Write("Updated List : ");
-                Console.WriteLine(string.Join(", ", string_list));
-            }
 
+        //        using System;
+        //using System.Collections.Generic;
+        //using System.Linq;
+        //using System.Threading;
+        //using System.Threading.Tasks;
+
+        //class Program
+        //    {
+        //        static async Task Main(string[] args)
+        //        {
+        //            List<string> string_list = new List<string> { "default1", "default2", "default3" };
+        //            string prompt_text = "Enter List of Filenames Starts-Withs (comma separated), press Enter within 5 seconds:";
+
+        //        Console.WriteLine(prompt_text);
+        //        Console.WriteLine(string.Join(", ", string_list));
+
+        //        // Initialize cancellation token source and task for user input
+
+        //        // Display the updated or default list
+        //        Console.WriteLine("Final List:");
+        //        Console.WriteLine(string.Join(", ", string_list));
+        //    }
+        //}
+
+        public static async Task<List<string>> EnterNewList(List<string> string_list, string prompt_text)
+        {
+
+            Console.WriteLine(prompt_text); Console.WriteLine(string.Join(", ", string_list));
+            // Initialize cancellation token source and task for user input
+            var cts = new CancellationTokenSource();
+            var inputTask = Task.Run(() => Console.ReadLine(), cts.Token);
+
+            // Wait for input or timeout (5 seconds)
+            if (await Task.WhenAny(inputTask, Task.Delay(5000)) == inputTask)
+            {
+                // If input received
+                string userInput = await inputTask;
+                if (!string.IsNullOrWhiteSpace(userInput))
+                {
+                    string_list = userInput.Split(',').Select(s => s.Trim()).ToList();
+                }
+            }
+            else
+            {
+                // If timeout
+                Console.WriteLine("No input received within 5 seconds. Using default list.");
+            }
+            Console.WriteLine("Updated List : ");
+            Console.WriteLine(string.Join(", ", string_list));
             return string_list;
         }
 
@@ -209,7 +246,7 @@ namespace Spludlow.MameAO
             var match = Regex.Match(latestVersion, @"\d+\.\d+");
             var latestVersionNumber = match.Value;
             Console.Title = ($"MAME-AO-BIT-TORRENT");
-            Console.SetWindowSize(250,150);
+            //Console.SetWindowSize(250,150);
             Console.WriteLine($"Latest MAME Binary: {latestVersion}");
             Console.WriteLine($"Latest MAME Version Number: {latestVersionNumber}");
 
@@ -239,7 +276,7 @@ namespace Spludlow.MameAO
                     }
                 }
 
-                excludedWords = EnterNewList(GetExcludedWords(), "Enter List of Magnet Link Excludes : ");
+                excludedWords = EnterNewList(GetExcludedWords(), "Enter List of Magnet Link Excludes : ").Result;
 
                 var filteredLinks = datfileLinks.Where(link => excludedWords.All(word => !link.Contains(word))).ToList();
 
@@ -272,13 +309,13 @@ namespace Spludlow.MameAO
             }
         }
 
-        public void BringToFront()
-        {
-            if (ConsoleHandle == IntPtr.Zero)
-                Console.WriteLine("!!! Wanring can't get handle on Console Window.");
-            else
-                SetForegroundWindow(ConsoleHandle);
-        }
+        //public void BringToFront()
+        //{
+        //    if (ConsoleHandle == IntPtr.Zero)
+        //        Console.WriteLine("!!! Wanring can't get handle on Console Window.");
+        //    else
+        //        SetForegroundWindow(ConsoleHandle);
+        //}
 
         public void Initialize()
         {
@@ -575,7 +612,7 @@ namespace Spludlow.MameAO
             if (Globals.WorkerTask != null && Globals.WorkerTask.Status != TaskStatus.RanToCompletion)
                 return false;
 
-            BringToFront();
+            //BringToFront();
 
             Globals.WorkerTask = new Task(() =>
             {
