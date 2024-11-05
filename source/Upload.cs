@@ -49,9 +49,19 @@ namespace Spludlow.MameAO
 				"status	action	name	description	sha1",
 				"String	String	String	String		String");
 
-			Dictionary<string, string> fileManifestSHA1s = new Dictionary<string, string>();
+			string manifestCacheFilename = Path.Combine(Globals.CacheDirectory, $"{MANIFEST_KEY}_{itemName}.txt");
 
 			ArchiveOrgFile manifestFile = item.GetFile(MANIFEST_KEY);
+
+			if (File.Exists(manifestCacheFilename) == true && (manifestFile == null || Tools.SHA1HexFile(manifestCacheFilename) != manifestFile.sha1))
+			{
+				// TODO: upload manifest if cache is differnt
+			}
+
+
+			Dictionary<string, string> fileManifestSHA1s = new Dictionary<string, string>();
+
+
 			if (manifestFile != null)
 			{
 				using (StringReader reader = new StringReader(Tools.Query(item.DownloadLink(manifestFile))))
@@ -193,6 +203,8 @@ namespace Spludlow.MameAO
 				}
 				finally
 				{
+					//	TODO: save local copy of manifest if lost connection or somthing
+
 					using (TempDirectory tempDir = new TempDirectory())
 					{
 						string filename = Path.Combine(tempDir.Path, MANIFEST_NAME);
@@ -283,8 +295,6 @@ namespace Spludlow.MameAO
 
 		public static void SoftwareDisk(string itemName, int batchSize, string softwareListName)
 		{
-			string targetDirectory = @"D:\TMP";
-
 			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnection,
 				"SELECT softwarelist.name AS softwarelist_name, software.name, software.cloneof, software.description, software.software_id " +
 				"FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id " +
