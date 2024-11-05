@@ -34,7 +34,7 @@ namespace Spludlow.MameAO
 
 		public static readonly int AssetDownloadTimeoutMilliseconds = 6 * 60 * 60 * 1000;	// assets 6 hours
 
-		public static string ListenAddress = "http://localhost:12380/";
+		public static string ListenAddress = "http://*:12380/";
 
 		public static long DownloadDotSize = 1024 * 1024;
 
