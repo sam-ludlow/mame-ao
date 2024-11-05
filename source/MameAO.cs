@@ -168,31 +168,6 @@ namespace Spludlow.MameAO
             return new List<string> { "(bios-devices)", "EXTRAs", "Multimedia", "Update", "(non-merged)", "(split)", "Rollback", "(dir2dat)" };
         }
 
-
-        //        using System;
-        //using System.Collections.Generic;
-        //using System.Linq;
-        //using System.Threading;
-        //using System.Threading.Tasks;
-
-        //class Program
-        //    {
-        //        static async Task Main(string[] args)
-        //        {
-        //            List<string> string_list = new List<string> { "default1", "default2", "default3" };
-        //            string prompt_text = "Enter List of Filenames Starts-Withs (comma separated), press Enter within 5 seconds:";
-
-        //        Console.WriteLine(prompt_text);
-        //        Console.WriteLine(string.Join(", ", string_list));
-
-        //        // Initialize cancellation token source and task for user input
-
-        //        // Display the updated or default list
-        //        Console.WriteLine("Final List:");
-        //        Console.WriteLine(string.Join(", ", string_list));
-        //    }
-        //}
-
         public static async Task<List<string>> EnterNewList(List<string> string_list, string prompt_text)
         {
 
