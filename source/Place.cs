@@ -4,9 +4,9 @@ using System.Data;
 using System.IO;
 using System.IO.Compression;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
-	public class Place
+	public static class Place
 	{
 		public static void PlaceAssets(string machineName, string softwareName)
 		{

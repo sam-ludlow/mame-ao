@@ -5,12 +5,10 @@ using System.IO;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-
 using MonoTorrent;
 using MonoTorrent.Client;
-using MonoTorrent.Connections;
 
-namespace ClientSample
+namespace mame_ao.source.Torrent
 {
     class MagnetLinkStreaming
     {

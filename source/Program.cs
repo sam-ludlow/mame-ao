@@ -1,6 +1,6 @@
 ﻿using System;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	internal class Program
 	{

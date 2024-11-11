@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.IO;
-using System.Data;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	public class HashStore
 	{

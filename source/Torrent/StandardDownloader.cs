@@ -2,21 +2,28 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using System.Net;
 using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
-
 using MonoTorrent;
 using MonoTorrent.Client;
-using MonoTorrent.Logging;
 
-namespace ClientSample
+namespace mame_ao.source.Torrent
 {
+    public class FileType
+    {
+        public string Path { get; set; }
+        public Priority Priority { get; set; }
+    }
     class StandardDownloader
     {
+        private static List<string> StartsWithStrings;
+        private static List<string> ContainsStrings;
+
         ClientEngine Engine { get; }
-        Top10Listener Listener { get; }			// This is a subclass of TraceListener which remembers the last 20 statements sent to it
+        Top10Listener Listener { get; }         // This is a subclass of TraceListener which remembers the last 20 statements sent to it
+        public static TorrentManager manager { get; private set; }
+        //public static int n2 { get; private set; }
 
         public StandardDownloader(ClientEngine engine)
         {
@@ -24,7 +31,23 @@ namespace ClientSample
             Listener = new Top10Listener(10);
         }
 
-        public async Task DownloadAsync(CancellationToken token, List<string> StartsWithStrings, List<string> ContainsStrings, string[] Magnets)
+        //private static async Task ProcessFileAsync(FileType file, List<string> StartsWithStrings, List<string> ContainsStrings, IProgress<string> progress, ref int n2)
+        //{
+        //    if (!StartsWithStrings.Any(prefix => file.Path.StartsWith(prefix)) ||
+        //        !ContainsStrings.Any(prefix => file.Path.Contains(prefix)))
+        //    {
+        //        await manager.SetFilePriorityAsync((ITorrentManagerFile)file, Priority.DoNotDownload);
+        //        Interlocked.Decrement(ref n2);
+        //        progress.Report($"File {file.Path} set to DoNotDownload");
+        //    }
+        //    else
+        //    {
+        //        await manager.SetFilePriorityAsync((ITorrentManagerFile)file, Priority.Normal);
+        //        progress.Report($"File {file.Path} set to Normal");
+        //    }
+        //}
+
+        public async Task DownloadAsync(CancellationToken token, List<string> startsWithStrings, List<string> containsStrings, string[] magnets)
         {
             // Torrents will be downloaded to this directory
             var downloadsPath = Path.Combine(Environment.CurrentDirectory, "Downloads");
@@ -42,7 +65,7 @@ namespace ClientSample
 
             // For each file in the torrents path that is a .torrent file, load it into the engine.
             // foreach (string file in Directory.GetFiles(torrentsPath))
-            foreach (string magnetlink in Magnets)
+            foreach (string magnetlink in magnets)
             {
                 //if (file.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))
                 //{
@@ -59,31 +82,34 @@ namespace ClientSample
                         MaximumConnections = 60,
                     };
                     MagnetLink.TryParse(magnetlink, out MagnetLink link);
-                    var manager = await Engine.AddAsync(link, downloadsPath, settingsBuilder.ToSettings());
+                    manager = await Engine.AddAsync(link, downloadsPath, settingsBuilder.ToSettings()).ConfigureAwait(false);
 
-                    Torrent torrent = manager.Torrent;
+                    MonoTorrent.Torrent torrent = manager.Torrent;
                     var n1 = manager.Files.Count;
                     var n2 = n1;
                     Console.WriteLine($"{n1} - {n2}");
-
+                    
                     var fileArray = manager.Files.ToArray();
                     var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+                    IProgress<string> progress = new Progress<string>(message => Console.WriteLine(message));
 
                     await Task.Run(() =>
                     {
                         Parallel.ForEach(fileArray, parallelOptions, async file =>
                         {
-                            if (!StartsWithStrings.Any(prefix => file.Path.StartsWith(prefix)) ||
-                                !ContainsStrings.Any(prefix => file.Path.Contains(prefix)))
+                            if (!startsWithStrings.Any(prefix => file.Path.StartsWith(prefix)) ||
+                                !containsStrings.Any(prefix => file.Path.Contains(prefix)))
                             {
-                                await manager.SetFilePriorityAsync(file, Priority.DoNotDownload);
+                                await manager.SetFilePriorityAsync(file, Priority.DoNotDownload).ConfigureAwait(false);
                                 Interlocked.Decrement(ref n2);
+                                progress.Report($"File {file.Path} set to DoNotDownload");
+
                             }
-                            else await manager.SetFilePriorityAsync(file, Priority.Normal);
+                            else await manager.SetFilePriorityAsync(file, Priority.Normal).ConfigureAwait(false);
 
 
                         });
-                    });
+                    }).ConfigureAwait(false);
 
                     manager.Files
                     .Where(files => files.Priority == Priority.Normal)
@@ -106,13 +132,9 @@ namespace ClientSample
                     //}
 
                     if (n1 == n2)
-                    {
                         Console.WriteLine($"{n1} - {n2} No files found");
-                    }
                     else
-                    {
-                        Console.WriteLine($"{n1} - {n2}");
-                    }
+                        Console.WriteLine($"{n1} - {n1 - n2}");
 
                     Console.WriteLine(manager.InfoHashes.V1OrV2.ToHex());
                 }
@@ -175,7 +197,7 @@ namespace ClientSample
                 // Start the torrentmanager. The file will then hash (if required) and begin downloading/seeding.
                 // As EngineSettings.AutoSaveLoadDhtCache is enabled, any cached data will be loaded into the
                 // Dht engine when the first torrent is started, enabling it to bootstrap more rapidly.
-                await manager.StartAsync();
+                await manager.StartAsync().ConfigureAwait(false);
             }
 
             // While the torrents are still running, print out some stats to the screen.
@@ -213,9 +235,9 @@ namespace ClientSample
                         AppendFormat(sb, $"\t{tier.ActiveTracker} : Announce Succeeded: {tier.LastAnnounceSucceeded}. Scrape Succeeded: {tier.LastScrapeSucceeded}.");
 
                     if (manager.PieceManager != null)
-                        AppendFormat(sb, "Current Requests:   {0}", await manager.PieceManager.CurrentRequestCountAsync());
+                        AppendFormat(sb, "Current Requests:   {0}", await manager.PieceManager.CurrentRequestCountAsync().ConfigureAwait(false));
 
-                    var peers = await manager.GetPeersAsync();
+                    var peers = await manager.GetPeersAsync().ConfigureAwait(false);
                     AppendFormat(sb, "Outgoing:");
                     foreach (PeerId p in peers.Where(t => t.ConnectionDirection == Direction.Outgoing))
                     {
@@ -240,8 +262,13 @@ namespace ClientSample
                 Console.WriteLine(sb.ToString());
                 Listener.ExportTo(Console.Out);
 
-                await Task.Delay(5000, token);
+                await Task.Delay(5000, token).ConfigureAwait(false);
             }
+        }
+
+        private async Task ProcessFileAsync(ITorrentManagerFile file, Progress<string> progress)
+        {
+            throw new NotImplementedException();
         }
 
         void Manager_PeersFound(object sender, PeersAddedEventArgs e)

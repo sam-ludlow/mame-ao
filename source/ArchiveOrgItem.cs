@@ -4,10 +4,9 @@ using System.IO;
 using System.Linq;
 using System.Net.Http;
 using System.Threading.Tasks;
-
 using Newtonsoft.Json;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	public enum ItemType
 	{

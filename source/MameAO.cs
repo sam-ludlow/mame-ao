@@ -1,25 +1,22 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Net.Http;
-using System.IO;
 using System.Data;
 using System.Diagnostics;
-using System.Reflection;
-using System.Threading.Tasks;
-using System.Runtime.InteropServices;
+using System.IO;
+using System.Linq;
 using System.Net;
-using System.Xml;
-using HtmlAgilityPack;
-using System.Web;
+using System.Net.Http;
+using System.Reflection;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.RegularExpressions;
-using MonoTorrent;
-using System.IO.Compression;
-using System.Runtime.InteropServices.ComTypes;
 using System.Threading;
+using System.Threading.Tasks;
+using System.Web;
+using HtmlAgilityPack;
+using mame_ao.source.Torrent;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
     public static class Globals
     {
@@ -160,12 +157,13 @@ namespace Spludlow.MameAO
                 Console.WriteLine(torrentName);
             }
             string[] MagnetLinks = filteredLinks.Take(100).ToArray();
-            await ClientSample.MainClass.RunMainTask(MagnetLinks);
+            await MainClass.RunMainTask(MagnetLinks);
         }
 
         private static List<string> GetExcludedWords()
         {
-            return new List<string> { "(bios-devices)", "EXTRAs", "Multimedia", "Update", "(non-merged)", "(split)", "Rollback", "(dir2dat)" };
+            //return new List<string> { "(bios-devices)", "EXTRAs", "Multimedia", "Update", "(non-merged)", "(merged)", "Rollback", "(dir2dat)" };
+            return new List<string> { "Update", "(non-merged)", "(dir2dat)" };
         }
 
         public static async Task<List<string>> EnterNewList(List<string> string_list, string prompt_text)

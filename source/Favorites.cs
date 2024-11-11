@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Text;
 using System.Data;
 using System.IO;
+using System.Text;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	public class Favorites
 	{

@@ -1,17 +1,16 @@
+using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Xml.Linq;
+using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Data.SqlClient;
+using System.Xml.Linq;
 
-using System.Data.SQLite;
-
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
-	public class Database
+    public class Database
 	{
 		public class DataQueryProfile
 		{
@@ -112,8 +111,8 @@ namespace Spludlow.MameAO
 			},
 		};
 
-		public SQLiteConnection _MachineConnection;
-		public SQLiteConnection _SoftwareConnection;
+		public SqlConnection _MachineConnection;
+		public SqlConnection _SoftwareConnection;
 
 		private Dictionary<string, DataRow[]> _DevicesRefs;
 		private DataTable _SoftwarelistTable;
@@ -345,7 +344,7 @@ namespace Spludlow.MameAO
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
-			SQLiteCommand command = new SQLiteCommand(commandText, _SoftwareConnection);
+			SqlCommand command = new SqlCommand(commandText, _SoftwareConnection);
 
 			if (search != null)
 			{
@@ -471,7 +470,7 @@ namespace Spludlow.MameAO
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
-			SQLiteCommand command = new SQLiteCommand(commandText, _MachineConnection);
+			SqlCommand command = new SqlCommand(commandText, _MachineConnection);
 
 			if (search != null)
 			{
@@ -490,7 +489,7 @@ namespace Spludlow.MameAO
 		{
 			HashSet<string> result = new HashSet<string>();
 
-			foreach (SQLiteConnection connection in new SQLiteConnection[] { _MachineConnection, _SoftwareConnection })
+			foreach (SqlConnection connection in new SqlConnection[] { _MachineConnection, _SoftwareConnection })
 			{
 				foreach (string tableName in new string[] { "rom", "disk" })
 				{
@@ -503,11 +502,11 @@ namespace Spludlow.MameAO
 			return result;
 		}
 
-		public static SQLiteConnection DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)
+		public static SqlConnection DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)
 		{
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
-			SQLiteConnection connection = new SQLiteConnection(connectionString);
+            SqlConnection connection = new SqlConnection(connectionString);
 
 			if (File.Exists(sqliteFilename) == true)
 			{
@@ -545,7 +544,7 @@ namespace Spludlow.MameAO
 
 			return connection;
 		}
-		public static SQLiteConnection DatabaseFromXML(XElement document, SQLiteConnection connection, DataSet dataSet)
+		public static SqlConnection DatabaseFromXML(XElement document, SqlConnection connection, DataSet dataSet)
 		{
 			Console.Write($"Creating SQLite {document.Name.LocalName} ...");
 			connection.Open();
@@ -576,7 +575,7 @@ namespace Spludlow.MameAO
 
 					string tableDefinition = $"CREATE TABLE {table.TableName}({String.Join(",", columnDefinitions.ToArray())});";
 
-					using (SQLiteCommand command = new SQLiteCommand(tableDefinition, connection))
+					using (SqlCommand command = new SqlCommand(tableDefinition, connection))
 					{
 						command.ExecuteNonQuery();
 					}
@@ -596,12 +595,12 @@ namespace Spludlow.MameAO
 
 					string commandText = $"INSERT INTO {table.TableName}({String.Join(",", columnNames.ToArray())}) VALUES({String.Join(",", parameterNames.ToArray())});";
 
-					SQLiteTransaction transaction = connection.BeginTransaction();
+					SqlTransaction transaction = connection.BeginTransaction();
 					try
 					{
 						foreach (DataRow row in table.Rows)
 						{
-							using (SQLiteCommand command = new SQLiteCommand(commandText, connection, transaction))
+							using (SqlCommand command = new SqlCommand(commandText, connection, transaction))
 							{
 								foreach (DataColumn column in table.Columns)
 									command.Parameters.AddWithValue("@" + column.ColumnName, row[column]);
@@ -624,7 +623,7 @@ namespace Spludlow.MameAO
 					foreach (string commandText in new string[] {
 						"CREATE INDEX machine_name_index ON machine(name);"
 						})
-						using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+						using (SqlCommand command = new SqlCommand(commandText, connection))
 							command.ExecuteNonQuery();
 				}
 
@@ -643,7 +642,7 @@ namespace Spludlow.MameAO
 			return connection;
 		}
 
-		public static bool TableExists(SQLiteConnection connection, string tableName)
+		public static bool TableExists(SqlConnection connection, string tableName)
 		{
 			object obj = ExecuteScalar(connection, $"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}'");
 
@@ -666,12 +665,12 @@ namespace Spludlow.MameAO
 			}
 			return tableNames.ToArray();
 		}
-		public static object ExecuteScalar(SQLiteConnection connection, string commandText)
+		public static object ExecuteScalar(SqlConnection connection, string commandText)
 		{
 			connection.Open();
 			try
 			{
-				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+				using (SqlCommand command = new SqlCommand(commandText, connection))
 					return command.ExecuteScalar();
 			}
 			finally
@@ -680,31 +679,31 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static int ExecuteNonQuery(SQLiteConnection connection, string commandText)
-		{
-			connection.Open();
-			try
-			{
-				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
-					return command.ExecuteNonQuery();
-			}
-			finally
-			{
-				connection.Close();
-			}
-		}
+		//public static int ExecuteNonQuery(SQLiteConnection connection, string commandText)
+		//{
+		//	connection.Open();
+		//	try
+		//	{
+		//		using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+		//			return command.ExecuteNonQuery();
+		//	}
+		//	finally
+		//	{
+		//		connection.Close();
+		//	}
+		//}
 
-		public static DataTable ExecuteFill(SQLiteConnection connection, string commandText)
+		public static DataTable ExecuteFill(SqlConnection connection, string commandText)
 		{
 			DataTable table = new DataTable();
-			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, connection))
+			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connection))
 				adapter.Fill(table);
 			return table;
 		}
-		public static DataTable ExecuteFill(SQLiteCommand command)
+		public static DataTable ExecuteFill(SqlCommand command)
 		{
 			DataTable table = new DataTable();
-			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+			using (SqlDataAdapter adapter = new SqlDataAdapter(command))
 				adapter.Fill(table);
 			return table;
 		}
@@ -723,20 +722,20 @@ namespace Spludlow.MameAO
 			return true;
 		}
 
-		public static object ExecuteScalar(SqlConnection connection, string commandText)
-		{
-			connection.Open();
-			try
-			{
-				using (SqlCommand command = new SqlCommand(commandText, connection))
-					return command.ExecuteScalar();
-			}
-			finally
-			{
-				connection.Close();
-			}
+		//public static object ExecuteScalar(SQLiteConnection connection, string commandText)
+		//{
+		//	connection.Open();
+		//	try
+		//	{
+		//		using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+		//			return command.ExecuteScalar();
+		//	}
+		//	finally
+		//	{
+		//		connection.Close();
+		//	}
 
-		}
+		//}
 
 		public static int ExecuteNonQuery(SqlConnection connection, string commandText)
 		{
@@ -751,10 +750,10 @@ namespace Spludlow.MameAO
 				connection.Close();
 			}
 		}
-		public static DataTable ExecuteFill(SqlConnection connection, string commandText)
+		public static DataTable ExecuteFill(SQLiteConnection connection, string commandText)
 		{
 			DataTable table = new DataTable();
-			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connection))
+			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, connection))
 				adapter.Fill(table);
 			return table;
 		}
@@ -794,7 +793,7 @@ namespace Spludlow.MameAO
 
 		public static void ConsoleQuery(string database, string commandText)
 		{
-			SQLiteConnection connection = database == "m" ? Globals.Database._MachineConnection : Globals.Database._SoftwareConnection;
+			SqlConnection connection = database == "m" ? Globals.Database._MachineConnection : Globals.Database._SoftwareConnection;
 
 			try
 			{

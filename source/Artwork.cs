@@ -5,7 +5,7 @@ using System.IO;
 using System.Linq;
 using System.Xml.Linq;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	public class ArtworkData
 	{

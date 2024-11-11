@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
-
-using MonoTorrent;
 using MonoTorrent.Client;
-using Spludlow.MameAO;
 
-namespace ClientSample
+namespace mame_ao.source.Torrent
 {
     class MainClass
     {
@@ -78,7 +73,7 @@ namespace ClientSample
             };
             ClientEngine clientEngine = new ClientEngine(settingBuilder.ToSettings());
             //using ClientEngine engine = clientEngine;
-            Task task = new StandardDownloader(clientEngine).DownloadAsync(token, StartsWith, ContainsStrings, args);
+            Task task = new StandardDownloader(clientEngine).DownloadAsync(token, startsWithStrings: StartsWith, ContainsStrings, args);
 
             if (clientEngine.Settings.AllowPortForwarding)
                 Console.WriteLine("uPnP or NAT-PMP port mappings will be created for any ports needed by MonoTorrent");

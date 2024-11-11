@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	public class Export
 	{
