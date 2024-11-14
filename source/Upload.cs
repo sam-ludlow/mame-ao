@@ -30,6 +30,23 @@ namespace Spludlow.MameAO
 			ApiAuth = File.ReadAllText(authFilename);
 		}
 
+		public static Dictionary<string, string> ParseManifest(string data)
+		{
+			Dictionary<string, string> fileManifestSHA1s = new Dictionary<string, string>();
+
+			using (StringReader reader = new StringReader(data))
+			{
+				string line;
+				while ((line = reader.ReadLine()) != null)
+				{
+					string[] parts = line.Split('\t');
+					fileManifestSHA1s.Add(parts[0], parts[1]);
+				}
+			}
+
+			return fileManifestSHA1s;
+		}
+
 		public static void MachineRom(string itemName, int batchSize)
 		{
 			ArchiveOrgItem item = new ArchiveOrgItem(itemName, null, null);
@@ -49,30 +66,26 @@ namespace Spludlow.MameAO
 				"status	action	name	description	sha1",
 				"String	String	String	String		String");
 
-			string manifestCacheFilename = Path.Combine(Globals.CacheDirectory, $"{MANIFEST_KEY}_{itemName}.txt");
+			string manifestCacheFilename = Path.Combine(Globals.CacheDirectory, $"upload_{itemName}{MANIFEST_KEY}.txt");
+
+			Dictionary<string, string> fileManifestSHA1s = null;
 
 			ArchiveOrgFile manifestFile = item.GetFile(MANIFEST_KEY);
 
 			if (File.Exists(manifestCacheFilename) == true && (manifestFile == null || Tools.SHA1HexFile(manifestCacheFilename) != manifestFile.sha1))
 			{
-				// TODO: upload manifest if cache is differnt
+				Console.WriteLine("!!! Refreshing manifest from cache");
+				UploadFile(itemName, manifestCacheFilename, MANIFEST_NAME);
+
+				fileManifestSHA1s = ParseManifest(File.ReadAllText(manifestCacheFilename, Encoding.ASCII));
 			}
 
-
-			Dictionary<string, string> fileManifestSHA1s = new Dictionary<string, string>();
-
-
-			if (manifestFile != null)
+			if (fileManifestSHA1s == null)
 			{
-				using (StringReader reader = new StringReader(Tools.Query(item.DownloadLink(manifestFile))))
-				{
-					string line;
-					while ((line = reader.ReadLine()) != null)
-					{
-						string[] parts = line.Split('\t');
-						fileManifestSHA1s.Add(parts[0], parts[1]);
-					}
-				}
+				if (manifestFile == null)
+					fileManifestSHA1s = new Dictionary<string, string>();
+				else
+					fileManifestSHA1s = ParseManifest(Tools.Query(item.DownloadLink(manifestFile)));
 			}
 
 			List<string> parentNames = new List<string>();
@@ -174,7 +187,7 @@ namespace Spludlow.MameAO
 								string manifest = CreateRomManifest(nameHashes);
 								string manifestSha1 = Tools.SHA1HexText(manifest, Encoding.ASCII);
 
-								UploadFile(itemName, targetFilename);
+								UploadFile(itemName, targetFilename, Path.GetFileName(targetFilename));
 
 								if (fileManifestSHA1s.ContainsKey(fileSha1) == false)
 									fileManifestSHA1s.Add(fileSha1, manifestSha1);
@@ -203,17 +216,15 @@ namespace Spludlow.MameAO
 				}
 				finally
 				{
-					//	TODO: save local copy of manifest if lost connection or somthing
-
-					using (TempDirectory tempDir = new TempDirectory())
+					if (fileManifestSHA1s.Count > 0)
 					{
-						string filename = Path.Combine(tempDir.Path, MANIFEST_NAME);
-
-						using (StreamWriter writer = new StreamWriter(filename, false))
+						using (StreamWriter writer = new StreamWriter(manifestCacheFilename, false, Encoding.ASCII))
 							foreach (string key in fileManifestSHA1s.Keys)
 								writer.WriteLine($"{key}\t{fileManifestSHA1s[key]}");
 
-						UploadFile(itemName, filename);
+						Console.WriteLine("!!! Updating manifest");
+
+						UploadFile(itemName, manifestCacheFilename, MANIFEST_NAME);
 					}
 
 					Globals.Reports.SaveHtmlReport(views.ToArray(), headings, report.TableName + " - Actions");
@@ -452,11 +463,11 @@ namespace Spludlow.MameAO
 			return manifest.ToString();
 		}
 
-		public static string UploadFile(string itemName, string filename)
+		public static string UploadFile(string itemName, string sourceFilename, string targetFilename)
 		{
-			string url = $"https://s3.us.archive.org/{Uri.EscapeUriString(itemName)}/{Uri.EscapeUriString(Path.GetFileName(filename))}";
+			string url = $"https://s3.us.archive.org/{Uri.EscapeUriString(itemName)}/{Uri.EscapeUriString(targetFilename)}";
 
-			FileInfo fileInfo = new FileInfo(filename);
+			FileInfo fileInfo = new FileInfo(sourceFilename);
 
 			lock (Globals.WorkerTaskInfo)
 				Globals.WorkerTaskInfo.BytesTotal = fileInfo.Length;
@@ -482,7 +493,7 @@ namespace Spludlow.MameAO
 
 			using (Stream targetStream = request.GetRequestStream())
 			{
-				using (FileStream sourceStream = new FileStream(filename, FileMode.Open))
+				using (FileStream sourceStream = new FileStream(sourceFilename, FileMode.Open))
 				{
 					int bytesRead;
 					long progress = 0;

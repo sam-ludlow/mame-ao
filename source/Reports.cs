@@ -8,7 +8,6 @@ using System.Reflection;
 using System.Text;
 using System.Xml.Linq;
 using System.Net;
-using System.Web.UI.WebControls;
 
 namespace Spludlow.MameAO
 {
@@ -105,6 +104,13 @@ namespace Spludlow.MameAO
 				Code = "AVS",
 				Text = "Software",
 				Decription = "List Software that is available to run.",
+			},
+			new ReportType(){
+				Key = "summary",
+				Group = "available",
+				Code = "AVSUM",
+				Text = "Summary",
+				Decription = "Summary of all store completeness.",
 			},
 			new ReportType(){
 				Key = "software-disk-list",
@@ -1003,6 +1009,70 @@ namespace Spludlow.MameAO
 
 			this.SaveHtmlReport(dataSet, "Avaliable Software ROM and DISK");
 
+		}
+
+		public void Report_AVSUM()
+		{
+			string[] names = new string[] {
+				"Machine Rom",
+				"Machine Disk",
+				"Software Rom",
+				"Software Disk",
+			};
+
+			HashStore[] hashStores = new HashStore[] {
+				Globals.RomHashStore,
+				Globals.DiskHashStore,
+				Globals.RomHashStore,
+				Globals.DiskHashStore,
+			};
+
+			HashSet<string>[] databaseHashes = new HashSet<string>[] {
+				new HashSet<string>(Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
+				new HashSet<string>(Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
+				new HashSet<string>(Database.ExecuteFill(Globals.Database._SoftwareConnection, "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
+				new HashSet<string>(Database.ExecuteFill(Globals.Database._SoftwareConnection, "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
+			};
+
+			DataTable table = Tools.MakeDataTable("Summary",
+				"Store	Total	Have	Missing	Unused	Complete",
+				"String	Int32	Int32	Int32	Int32	String"
+			);
+
+			for (int index = 0; index < names.Length; ++index)
+			{
+				string name = names[index];
+				HashSet<string> databaseHash = databaseHashes[index];
+				HashStore hashStore = hashStores[index];
+				string[] missingHashes = MissingHashes(hashStore, databaseHash);
+				string[] unusedHashes = UnusedHashes(hashStore, databaseHash);
+
+				decimal complete = Math.Round((100.0M / databaseHash.Count) * (databaseHash.Count - missingHashes.Length), 3);
+
+				table.Rows.Add(name, databaseHash.Count, hashStore.Length, missingHashes.Length, unusedHashes.Length, complete.ToString() + " %");
+			}
+
+			this.SaveHtmlReport(table, "Summary of all store completeness");
+		}
+		public static string[] MissingHashes(HashStore hashStore, HashSet<string> databaseHashes)
+		{
+			HashSet<string> missing = new HashSet<string>();
+			foreach (string sha1 in databaseHashes)
+			{
+				if (hashStore.Exists(sha1) == false)
+					missing.Add(sha1);
+			}
+			return missing.ToArray();
+		}
+		public static string[] UnusedHashes(HashStore hashStore, HashSet<string> databaseHashes)
+		{
+			HashSet<string> notUsed = new HashSet<string>();
+			foreach (string sha1 in hashStore.Hashes())
+			{
+				if (databaseHashes.Contains(sha1) == false)
+					notUsed.Add(sha1);
+			}
+			return notUsed.ToArray();
 		}
 
 		public void Report_AVSDL()

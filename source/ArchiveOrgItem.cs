@@ -137,9 +137,18 @@ namespace Spludlow.MameAO
 				}
 			}
 
+			bool ok = false;
 			List<string> cookies = new List<string>();
 			foreach (Cookie cookie in CookieContainer.GetCookies(new Uri(url)))
+			{
 				cookies.Add($"{cookie.Name}={cookie.Value}");
+
+				if (cookie.Name == "logged-in-user")
+					ok = true;
+			}
+
+			if (ok == false)
+				throw new HttpRequestException("Dummy 401");
 
 			return String.Join("; ", cookies.ToArray());
 		}

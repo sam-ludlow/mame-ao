@@ -683,7 +683,7 @@ namespace Spludlow.MameAO
 						return;
 
 					case ".upload":
-						if (parts.Length != 5)
+						if (parts.Length != 4 && parts.Length != 5)
 							throw new ApplicationException($"Usage: {parts[0]} <type> <archive.org item name> <batch size> <asset name>");
 
 						switch (parts[1].ToUpper())
@@ -703,6 +703,13 @@ namespace Spludlow.MameAO
 								throw new ApplicationException("Upload Unknown type not (MR, MD, SR, SD).");
 
 						}
+						return;
+
+					case ".aodel":
+						if (parts.Length != 3)
+							throw new ApplicationException($"Usage: {parts[0]} <archive.org item name> <filename>");
+
+						Upload.DeleteFile(parts[1], parts[2]);
 						return;
 
 					default:
