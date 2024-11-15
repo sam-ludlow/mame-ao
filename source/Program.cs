@@ -1,12 +1,14 @@
 ﻿using System;
+using Terminal.Gui;
 
 namespace mame_ao.source
 {
-	internal class Program
+    internal class Program
 	{
 		static int Main(string[] args)
 		{
-			foreach (string arg in args)
+
+            foreach (string arg in args)
 			{
 				int index = arg.IndexOf('=');
 				if (index == -1)
@@ -18,7 +20,7 @@ namespace mame_ao.source
 			if (Globals.Arguments.ContainsKey("DIRECTORY") == false)
 				Globals.Arguments.Add("DIRECTORY", Environment.CurrentDirectory);
 
-			MameAOProcessor proc = new MameAOProcessor();
+			//MameAOProcessor proc = new();
 
 			if (Globals.Arguments.ContainsKey("OPERATION") == true)
 				return Operations.ProcessOperation(Globals.Arguments);
@@ -29,9 +31,12 @@ namespace mame_ao.source
 				return 0;
 			}
 
-			proc.Run();
-
-			return 0;
+			//var proc = ;
+            Application.Init();
+            Application.Run(new MameAOProcessor());
+			//Application.Run(new MyView());
+			//proc.RunAsync().RunSynchronously();
+            return 0;
 		}
 	}
 }

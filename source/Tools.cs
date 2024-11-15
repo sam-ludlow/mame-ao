@@ -397,7 +397,7 @@ namespace mame_ao.source
 							progress += bytesRead;
 							if (progress >= Globals.DownloadDotSize)
 							{
-								Console.Write(".");
+								//Console.Write(".");
 								progress = 0;
 							}
 

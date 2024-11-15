@@ -9,11 +9,11 @@ namespace mame_ao.source.Torrent
 {
     class MainClass
     {
-        public static async Task RunMainTask(string[] args)
+        public static async Task RunMainTask(string[] args, List<string> StartsWith, List<string> ContainsStrings)
         {
             CancellationTokenSource cancellation = new CancellationTokenSource();
 
-            var task = MainAsync(args, cancellation.Token);
+            var task = MainAsync(args, StartsWith, ContainsStrings, cancellation.Token);
 
             // We need to cleanup correctly when the user closes the window by using ctrl-c
             // or an unhandled exception happens
@@ -25,13 +25,13 @@ namespace mame_ao.source.Torrent
             task.Wait();
         }
 
-        static async Task MainAsync(string[] args, CancellationToken token)
+        static async Task MainAsync(string[] args, List<string> StartsWith, List<string> ContainsStrings, CancellationToken token)
         {
-            List<string> StartsWith = new List<string> { "a", "b", "c" };
-            StartsWith = MameAOProcessor.EnterNewList(StartsWith, "Enter List of Filename Starts Withs : ").Result;
+            //List<string> StartsWith = new List<string> { "a", "b", "c" };
+            //StartsWith = (await MameAOProcessor.EnterNewList(StartsWith, "Enter List of Filename Starts Withs : ").ConfigureAwait(false)).Result;
 
-            List<string> ContainsStrings = new List<string> { "ami", "out", "com" };
-            ContainsStrings = MameAOProcessor.EnterNewList(ContainsStrings, "Enter List of Filename Contains : ").Result;
+            //List<string> ContainsStrings = new List<string> { "ami", "out", "com" };
+            //ContainsStrings = MameAOProcessor.EnterNewList(ContainsStrings, "Enter List of Filename Contains : ").Result;
 
             const int httpListeningPort = 55125;
 

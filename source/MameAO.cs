@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
-using System.Reflection;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -15,79 +14,12 @@ using System.Threading.Tasks;
 using System.Web;
 using HtmlAgilityPack;
 using mame_ao.source.Torrent;
+using Terminal.Gui;
 
 namespace mame_ao.source
 {
-    public static class Globals
-    {
-        public class TaskInfo
-        {
-            public string Command = "";
-            public long BytesCurrent = 0;
-            public long BytesTotal = 0;
-        }
 
-        static Globals()
-        {
-            Version assemblyVersion = Assembly.GetExecutingAssembly().GetName().Version;
-            AssemblyVersion = $"{assemblyVersion.Major}.{assemblyVersion.Minor}";
-
-            HttpClient = new HttpClient(new HttpClientHandler { UseCookies = false });
-            HttpClient.DefaultRequestHeaders.Add("User-Agent", $"mame-ao/{Globals.AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)");
-            HttpClient.Timeout = TimeSpan.FromSeconds(180);     // metdata 3 minutes
-        }
-
-        public static readonly int AssetDownloadTimeoutMilliseconds = 6 * 60 * 60 * 1000;   // assets 6 hours
-
-        public static string ListenAddress = "http://localhost:12380/";
-
-        public static long DownloadDotSize = 1024 * 1024;
-
-        public static string AssemblyVersion;
-
-        public static HttpClient HttpClient;
-        public static string AuthCookie = null;
-
-        public static Dictionary<string, string> Arguments = new Dictionary<string, string>();
-
-        public static string RootDirectory;
-        public static string TempDirectory;
-        public static string CacheDirectory;
-        public static string ReportDirectory;
-
-        public static string MameDirectory;
-
-        public static string MameVersion;
-
-        public static bool LinkingEnabled = false;
-
-        public static Dictionary<ItemType, ArchiveOrgItem[]> ArchiveOrgItems = new Dictionary<ItemType, ArchiveOrgItem[]>();
-        public static Dictionary<string, GitHubRepo> GitHubRepos = new Dictionary<string, GitHubRepo>();
-
-        public static HashStore RomHashStore;
-        public static HashStore DiskHashStore;
-
-        public static MameAOProcessor AO;
-
-        public static Artwork Artwork;
-        public static BadSources BadSources;
-        public static Database Database;
-        public static Favorites Favorites;
-        public static Genre Genre;
-        public static MameChdMan MameChdMan;
-        public static Reports Reports;
-        public static Samples Samples;
-        public static Settings Settings;
-        public static WebServer WebServer = null;
-
-        public static Task WorkerTask = null;
-        public static TaskInfo WorkerTaskInfo = new TaskInfo();
-        public static DataSet WorkerTaskReport;
-
-        public static PhoneHome PhoneHome;
-    }
-
-    public class MameAOProcessor
+    public partial class MameAOProcessor : Terminal.Gui.Window
     {
         private IntPtr ConsoleHandle;
         private static List<string> excludedWords;
@@ -110,6 +42,10 @@ namespace mame_ao.source
 
 ";
 
+        public List<string> StartsWith { get; private set; }
+        public List<string> ContainsStrings { get; private set; }
+        public bool Gui { get; private set; }
+
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         static extern bool SetForegroundWindow(IntPtr hWnd);
@@ -119,6 +55,12 @@ namespace mame_ao.source
 
         public MameAOProcessor()
         {
+            InitializeComponent();
+            //window.Text = WelcomeText;
+            //int width = 100; // Width in characters
+            //int height = 40; // Height in characters
+            //Console.SetWindowSize(width, height);
+            //Console.SetBufferSize(width, height);
             Globals.RootDirectory = Globals.Arguments["DIRECTORY"];
             Directory.CreateDirectory(Globals.RootDirectory);
 
@@ -130,6 +72,28 @@ namespace mame_ao.source
 
             Globals.ReportDirectory = Path.Combine(Globals.RootDirectory, "_REPORTS");
             Directory.CreateDirectory(Globals.ReportDirectory);
+
+             Gui = true;
+            StartsWith = new List<string> { "a", "b", "c" };
+            ContainsStrings = new List<string> { "ami", "out", "com" };
+            if (Gui)
+            {
+                listView1.SetSource(GetExcludedWords());
+                listView2.SetSource(StartsWith);
+                listView3.SetSource(ContainsStrings);
+
+                excludedWords = (List<string>)listView1.Source.ToList();
+                StartsWith = (List<string>)listView2.Source.ToList();
+                ContainsStrings = (List<string>)listView3.Source.ToList();
+
+            }
+            button.Clicked += Button_Clicked;
+
+        }
+
+        private async void Button_Clicked()
+        {
+                 await RunAsync();
         }
 
         private static string ExtractTorrentName(string magnetLink)
@@ -138,7 +102,7 @@ namespace mame_ao.source
             var match = Regex.Match(magnetLink, @"dn=([^&]+)");
             return match.Success ? Uri.UnescapeDataString(match.Groups[1].Value) : "No name found";
         }
-        static async void DownloadMagnets(List<string> magnetLinks)
+        private async Task DownloadMagnets(List<string> magnetLinks)
         {
             //Create a new Random instance
             //Random rng = new Random();
@@ -154,45 +118,56 @@ namespace mame_ao.source
             foreach (var link in filteredLinks)
             {
                 string torrentName = ExtractTorrentName(link);
-                Console.WriteLine(torrentName);
+
+                WriteLine(torrentName);
             }
             string[] MagnetLinks = filteredLinks.Take(100).ToArray();
-            await MainClass.RunMainTask(MagnetLinks);
+            await MainClass.RunMainTask(MagnetLinks,StartsWith,ContainsStrings);
+        }
+
+        private void WriteLine(string torrentName)
+        {
+            window.Text += torrentName;
         }
 
         private static List<string> GetExcludedWords()
         {
-            //return new List<string> { "(bios-devices)", "EXTRAs", "Multimedia", "Update", "(non-merged)", "(merged)", "Rollback", "(dir2dat)" };
-            return new List<string> { "Update", "(non-merged)", "(dir2dat)" };
+            return new List<string> { "(bios-devices)", "EXTRAs", "Multimedia", "Update", "(non-merged)", "(merged)", "Rollback", "(dir2dat)" };
         }
 
         public static async Task<List<string>> EnterNewList(List<string> string_list, string prompt_text)
         {
+                Console.WriteLine(prompt_text);
+                Console.WriteLine(string.Join(", ", string_list));
+                // Initialize cancellation token source and task for user input
+                var cts = new CancellationTokenSource();
+                var inputTask = Task.Run(() => Console.ReadLine(), cts.Token);
 
-            Console.WriteLine(prompt_text); Console.WriteLine(string.Join(", ", string_list));
-            // Initialize cancellation token source and task for user input
-            var cts = new CancellationTokenSource();
-            var inputTask = Task.Run(() => Console.ReadLine(), cts.Token);
-
-            // Wait for input or timeout (5 seconds)
-            if (await Task.WhenAny(inputTask, Task.Delay(10000)) == inputTask)
-            {
-                // If input received
-                string userInput = await inputTask;
-                if (!string.IsNullOrWhiteSpace(userInput))
+                // Wait for input or timeout (5 seconds)
+                if (await Task.WhenAny(inputTask, Task.Delay(10000)) == inputTask)
                 {
-                    string_list = userInput.Split(',').Select(s => s.Trim()).ToList();
+                    // If input received
+                    string userInput = await inputTask;
+                    if (!string.IsNullOrWhiteSpace(userInput))
+                    {
+                        string_list = userInput.Split(',').Select(s => s.Trim()).ToList();
+                    }
                 }
-            }
-            else
-            {
-                // If timeout
-                Console.WriteLine("No input received within 5 seconds. Using default list.");
-            }
-            Console.WriteLine("Updated List : ");
-            Console.WriteLine(string.Join(", ", string_list));
-            return string_list;
-        }
+                else
+                {
+                    // If timeout
+                    Console.WriteLine("No input received within 5 seconds. Using default list.");
+                }
+                Console.WriteLine("Updated List : ");
+                Console.WriteLine(string.Join(", ", string_list));
+               return string_list;
+         }
+            //else
+            //{
+            //    //listView.SetSource(string_list);
+            //    //string_list = (List<string>)listView.Source.ToList();
+            //}
+        //}
 
         private string ParseLatestVersion(string html)
         {
@@ -205,51 +180,49 @@ namespace mame_ao.source
 
         private static async Task<string> CallUrl(string fullUrl)
         {
-            HttpClient client = new HttpClient();
-            var response = await client.GetStringAsync(fullUrl);
-            return response;
+            //HttpClient client = new HttpClient();
+            //var response = await client.GetStringAsync(fullUrl);
+            using (HttpClient client = new HttpClient())
+            {
+                HttpResponseMessage response = client.GetAsync(fullUrl).Result;
+                if (response.IsSuccessStatusCode)
+                { string content = await response.Content.ReadAsStringAsync(); return content; }
+                else { string content = ""; Console.WriteLine($"Error: {response.StatusCode}"); return content; }
+            }
+
         }
 
-        public void Run()
+        public async Task RunAsync()
         {
-            var url = "https://www.mamedev.org/release.html";
-            var client = new HttpClient();
-            var response = client.GetStringAsync(url).Result; // Using Result to block until the task completes
-            var latestVersion = ParseLatestVersion(response);
-            var match = Regex.Match(latestVersion, @"\d+\.\d+");
-            var latestVersionNumber = match.Value;
-            Console.Title = ($"MAME-AO-BIT-TORRENT");
-            //Console.SetWindowSize(250,150);
-            Console.WriteLine($"Latest MAME Binary: {latestVersion}");
-            Console.WriteLine($"Latest MAME Version Number: {latestVersionNumber}");
-
             try
             {
-                url = "https://pleasuredome.github.io/pleasuredome/mame/";
-                HtmlDocument htmlDoc = new HtmlDocument();
-                htmlDoc.LoadHtml(CallUrl(url).Result);
+                var url = "https://www.mamedev.org/release.html";
+                //var client = new HttpClient();
+                //var response = client.GetStringAsync(url).Result; // Using Result to block until the task completes
+                var response = await CallUrl(url);
+                var latestVersion = ParseLatestVersion(response);
+                var match = Regex.Match(latestVersion, @"\d+\.\d+");
+                var latestVersionNumber = match.Value;
+                Title = ($"MAME-AO-BIT-TORRENT");
+                //Console.SetWindowSize(250,150);
+                WriteLine($"Latest MAME Binary: {latestVersion}");
+                WriteLine($"Latest MAME Version Number: {latestVersionNumber}");
 
-                // Find all magnet links
-                IEnumerable<HtmlNode> linkNodes = htmlDoc.DocumentNode.SelectNodes("//a[@href]");
-                List<string> magnetLinks = new List<string>();
-                List<string> datfileLinks = new List<string>();
-
-                // Filter out and print the magnet links
-                foreach (HtmlNode linkNode in linkNodes)
+                List<string> magnetLinks, datfileLinks;
+                NewMethod(out url, out magnetLinks, out datfileLinks);
+                listView4.SetSource(datfileLinks);
+                listView5.SetSource(magnetLinks);
+                //bool Gui = true;
+                //StartsWith = new List<string> { "a", "b", "c" };
+                //ContainsStrings = new List<string> { "ami", "out", "com" };
+                if (!Gui)
                 {
-                    string hrefValue = linkNode.GetAttributeValue("href", string.Empty);
-                    if (hrefValue.StartsWith("magnet:"))
-                    {
-                        //Console.WriteLine(hrefValue);
-                        magnetLinks.Add(hrefValue);
-                    }
-                    if (hrefValue.StartsWith("https://github.com/pleasuredome/") && hrefValue.Contains(".zip"))
-                    {
-                        datfileLinks.Add(hrefValue);
-                    }
+                    excludedWords = (await EnterNewList(GetExcludedWords(), "Enter List of Magnet Link Excludes : ").ConfigureAwait(false));
+                    StartsWith = (await MameAOProcessor.EnterNewList(StartsWith, "Enter List of Filename Starts Withs : ").ConfigureAwait(false));
+                    ContainsStrings = (await EnterNewList(ContainsStrings, "Enter List of Filename Contains : ").ConfigureAwait(false));
                 }
 
-                excludedWords = EnterNewList(GetExcludedWords(), "Enter List of Magnet Link Excludes : ").Result;
+
 
                 var filteredLinks = datfileLinks.Where(link => excludedWords.All(word => !link.Contains(word))).ToList();
 
@@ -268,17 +241,47 @@ namespace mame_ao.source
                 //ZipFile.ExtractToDirectory(binariesFilename, versionDirectory);
                 //File.Delete(binariesFilename + ".zip");
 
-                DownloadMagnets(magnetLinks);
+                //await DownloadMagnets(magnetLinks).ConfigureAwait(false);
 
-                Console.WriteLine("----------------------------------");
+                WriteLine("----------------------------------");
 
-                Initialize();
+                //Initialize();
 
-                Shell();
+                //Shell();
             }
             catch (Exception e)
             {
                 Tools.ReportError(e, "FATAL ERROR", true);
+            }
+        }
+
+        private static void NewMethod(out string url, out List<string> magnetLinks, out List<string> datfileLinks)
+        {
+            url = "https://pleasuredome.github.io/pleasuredome/mame/";
+            HtmlDocument htmlDoc = new HtmlDocument();
+            //var client = new HttpClient();
+            //response = client.GetStringAsync(url).Result; // Using Result to block until the task completes
+
+            htmlDoc.LoadHtml(CallUrl(url).Result);
+
+            // Find all magnet links
+            IEnumerable<HtmlNode> linkNodes = htmlDoc.DocumentNode.SelectNodes("//a[@href]");
+            magnetLinks = new List<string>();
+            datfileLinks = new List<string>();
+
+            // Filter out and print the magnet links
+            foreach (HtmlNode linkNode in linkNodes)
+            {
+                string hrefValue = linkNode.GetAttributeValue("href", string.Empty);
+                if (hrefValue.StartsWith("magnet:"))
+                {
+                    //Console.WriteLine(hrefValue);
+                    magnetLinks.Add(hrefValue);
+                }
+                if (hrefValue.StartsWith("https://github.com/pleasuredome/") && hrefValue.Contains(".zip"))
+                {
+                    datfileLinks.Add(hrefValue);
+                }
             }
         }
 
@@ -294,8 +297,9 @@ namespace mame_ao.source
         {
             Console.Title = $"MAME-AO {Globals.AssemblyVersion}";
 
-            Console.Write(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
-            Tools.ConsoleHeading(1, "Initializing");
+            //Console.Write(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
+            WriteLine(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
+            consoleHeading.Text = ("Initializing");
 
             Globals.AO = this;
 
