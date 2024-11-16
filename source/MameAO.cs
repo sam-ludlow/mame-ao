@@ -160,6 +160,22 @@ namespace Spludlow.MameAO
 
 			Globals.Settings = new Settings();
 
+			Dictionary<string, string> config = new Dictionary<string, string>();
+			string configFilename = Path.Combine(Globals.RootDirectory, "_config.txt");
+			if (File.Exists(configFilename) == true)
+			{
+				using (StreamReader reader = new StreamReader(configFilename, Encoding.UTF8))
+				{
+					string line;
+					while ((line = reader.ReadLine()) != null)
+					{
+						string[] parts = line.Split('\t');
+						if (parts.Length == 2)
+							config.Add(parts[0], parts[1]);
+					}
+				}
+			}
+
 			//
 			// Fixes
 			//
@@ -311,11 +327,11 @@ namespace Spludlow.MameAO
 			// Hash Stores
 			//
 
-			string directory = Path.Combine(Globals.RootDirectory, "_STORE");
+			string directory = Path.Combine(Globals.RootDirectory, config.ContainsKey("StorePathRom") == true ? config["StorePathRom"] : "_STORE");
 			Directory.CreateDirectory(directory);
 			Globals.RomHashStore = new HashStore(directory, Tools.SHA1HexFile);
 
-			directory = Path.Combine(Globals.RootDirectory, "_STORE_DISK");
+			directory = Path.Combine(Globals.RootDirectory, config.ContainsKey("StorePathDisk") == true ? config["StorePathDisk"] : "_STORE_DISK");
 			Directory.CreateDirectory(directory);
 			Globals.DiskHashStore = new HashStore(directory, Globals.MameChdMan.Hash);
 
