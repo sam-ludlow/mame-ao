@@ -14,12 +14,11 @@ using System.Threading.Tasks;
 using System.Web;
 using HtmlAgilityPack;
 using mame_ao.source.Torrent;
-using Terminal.Gui;
 
 namespace mame_ao.source
 {
 
-    public partial class MameAOProcessor : Terminal.Gui.Window
+    public partial class MameAOProcessor
     {
         private IntPtr ConsoleHandle;
         private static List<string> excludedWords;
@@ -55,7 +54,7 @@ namespace mame_ao.source
 
         public MameAOProcessor()
         {
-            InitializeComponent();
+            //InitializeComponent();
             //window.Text = WelcomeText;
             //int width = 100; // Width in characters
             //int height = 40; // Height in characters
@@ -76,18 +75,18 @@ namespace mame_ao.source
              Gui = true;
             StartsWith = new List<string> { "a", "b", "c" };
             ContainsStrings = new List<string> { "ami", "out", "com" };
-            if (Gui)
-            {
-                listView1.SetSource(GetExcludedWords());
-                listView2.SetSource(StartsWith);
-                listView3.SetSource(ContainsStrings);
+            //if (Gui)
+            //{
+            //    listView1.SetSource(GetExcludedWords());
+            //    listView2.SetSource(StartsWith);
+            //    listView3.SetSource(ContainsStrings);
 
-                excludedWords = (List<string>)listView1.Source.ToList();
-                StartsWith = (List<string>)listView2.Source.ToList();
-                ContainsStrings = (List<string>)listView3.Source.ToList();
+            //    excludedWords = (List<string>)listView1.Source.ToList();
+            //    StartsWith = (List<string>)listView2.Source.ToList();
+            //    ContainsStrings = (List<string>)listView3.Source.ToList();
 
-            }
-            button.Clicked += Button_Clicked;
+            //}
+            //button.Clicked += Button_Clicked;
 
         }
 
@@ -127,7 +126,7 @@ namespace mame_ao.source
 
         private void WriteLine(string torrentName)
         {
-            window.Text += torrentName;
+            //window.Text += torrentName;
         }
 
         private static List<string> GetExcludedWords()
@@ -203,15 +202,15 @@ namespace mame_ao.source
                 var latestVersion = ParseLatestVersion(response);
                 var match = Regex.Match(latestVersion, @"\d+\.\d+");
                 var latestVersionNumber = match.Value;
-                Title = ($"MAME-AO-BIT-TORRENT");
+                //Title = ($"MAME-AO-BIT-TORRENT");
                 //Console.SetWindowSize(250,150);
                 WriteLine($"Latest MAME Binary: {latestVersion}");
                 WriteLine($"Latest MAME Version Number: {latestVersionNumber}");
 
                 List<string> magnetLinks, datfileLinks;
                 NewMethod(out url, out magnetLinks, out datfileLinks);
-                listView4.SetSource(datfileLinks);
-                listView5.SetSource(magnetLinks);
+                //listView4.SetSource(datfileLinks);
+                //listView5.SetSource(magnetLinks);
                 //bool Gui = true;
                 //StartsWith = new List<string> { "a", "b", "c" };
                 //ContainsStrings = new List<string> { "ami", "out", "com" };
@@ -299,7 +298,7 @@ namespace mame_ao.source
 
             //Console.Write(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
             WriteLine(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
-            consoleHeading.Text = ("Initializing");
+            //consoleHeading.Text = ("Initializing");
 
             Globals.AO = this;
 

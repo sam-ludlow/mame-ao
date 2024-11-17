@@ -1,3 +1,4 @@
+//using Microsoft.Data.SqlClient;
 using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
@@ -111,8 +112,8 @@ namespace mame_ao.source
 			},
 		};
 
-		public SqlConnection _MachineConnection;
-		public SqlConnection _SoftwareConnection;
+		public SQLiteConnection _MachineConnection;
+		public SQLiteConnection _SoftwareConnection;
 
 		private Dictionary<string, DataRow[]> _DevicesRefs;
 		private DataTable _SoftwarelistTable;
@@ -344,7 +345,7 @@ namespace mame_ao.source
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
-			SqlCommand command = new SqlCommand(commandText, _SoftwareConnection);
+            SQLiteCommand command = new SQLiteCommand(commandText, _SoftwareConnection);
 
 			if (search != null)
 			{
@@ -470,7 +471,7 @@ namespace mame_ao.source
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
-			SqlCommand command = new SqlCommand(commandText, _MachineConnection);
+			SQLiteCommand command = new SQLiteCommand(commandText, _MachineConnection);
 
 			if (search != null)
 			{
@@ -489,7 +490,7 @@ namespace mame_ao.source
 		{
 			HashSet<string> result = new HashSet<string>();
 
-			foreach (SqlConnection connection in new SqlConnection[] { _MachineConnection, _SoftwareConnection })
+			foreach (SQLiteConnection connection in new SQLiteConnection[] { _MachineConnection, _SoftwareConnection })
 			{
 				foreach (string tableName in new string[] { "rom", "disk" })
 				{
@@ -502,11 +503,11 @@ namespace mame_ao.source
 			return result;
 		}
 
-		public static SqlConnection DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)
+		public static SQLiteConnection DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)
 		{
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
-            SqlConnection connection = new SqlConnection(connectionString);
+            SQLiteConnection connection = new SQLiteConnection(connectionString);
 
 			if (File.Exists(sqliteFilename) == true)
 			{
@@ -544,7 +545,7 @@ namespace mame_ao.source
 
 			return connection;
 		}
-		public static SqlConnection DatabaseFromXML(XElement document, SqlConnection connection, DataSet dataSet)
+		public static SQLiteConnection DatabaseFromXML(XElement document, SQLiteConnection connection, DataSet dataSet)
 		{
 			Console.Write($"Creating SQLite {document.Name.LocalName} ...");
 			connection.Open();
@@ -575,7 +576,7 @@ namespace mame_ao.source
 
 					string tableDefinition = $"CREATE TABLE {table.TableName}({String.Join(",", columnDefinitions.ToArray())});";
 
-					using (SqlCommand command = new SqlCommand(tableDefinition, connection))
+					using (SQLiteCommand command = new SQLiteCommand(tableDefinition, connection))
 					{
 						command.ExecuteNonQuery();
 					}
@@ -595,12 +596,12 @@ namespace mame_ao.source
 
 					string commandText = $"INSERT INTO {table.TableName}({String.Join(",", columnNames.ToArray())}) VALUES({String.Join(",", parameterNames.ToArray())});";
 
-					SqlTransaction transaction = connection.BeginTransaction();
+					SQLiteTransaction transaction = connection.BeginTransaction();
 					try
 					{
 						foreach (DataRow row in table.Rows)
 						{
-							using (SqlCommand command = new SqlCommand(commandText, connection, transaction))
+							using (SQLiteCommand command = new SQLiteCommand(commandText, connection, transaction))
 							{
 								foreach (DataColumn column in table.Columns)
 									command.Parameters.AddWithValue("@" + column.ColumnName, row[column]);
@@ -623,7 +624,7 @@ namespace mame_ao.source
 					foreach (string commandText in new string[] {
 						"CREATE INDEX machine_name_index ON machine(name);"
 						})
-						using (SqlCommand command = new SqlCommand(commandText, connection))
+						using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 							command.ExecuteNonQuery();
 				}
 
@@ -642,7 +643,7 @@ namespace mame_ao.source
 			return connection;
 		}
 
-		public static bool TableExists(SqlConnection connection, string tableName)
+		public static bool TableExists(SQLiteConnection connection, string tableName)
 		{
 			object obj = ExecuteScalar(connection, $"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}'");
 
@@ -665,12 +666,12 @@ namespace mame_ao.source
 			}
 			return tableNames.ToArray();
 		}
-		public static object ExecuteScalar(SqlConnection connection, string commandText)
+		public static object ExecuteScalar(SQLiteConnection connection, string commandText)
 		{
 			connection.Open();
 			try
 			{
-				using (SqlCommand command = new SqlCommand(commandText, connection))
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 					return command.ExecuteScalar();
 			}
 			finally
@@ -679,31 +680,31 @@ namespace mame_ao.source
 			}
 		}
 
-		//public static int ExecuteNonQuery(SQLiteConnection connection, string commandText)
-		//{
-		//	connection.Open();
-		//	try
-		//	{
-		//		using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
-		//			return command.ExecuteNonQuery();
-		//	}
-		//	finally
-		//	{
-		//		connection.Close();
-		//	}
-		//}
+		public static int ExecuteNonQuery(SQLiteConnection connection, string commandText)
+		{
+			connection.Open();
+			try
+			{
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+					return command.ExecuteNonQuery();
+			}
+			finally
+			{
+				connection.Close();
+			}
+		}
 
-		public static DataTable ExecuteFill(SqlConnection connection, string commandText)
+		public static DataTable ExecuteFill(SQLiteConnection connection, string commandText)
 		{
 			DataTable table = new DataTable();
-			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connection))
+			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, connection))
 				adapter.Fill(table);
 			return table;
 		}
-		public static DataTable ExecuteFill(SqlCommand command)
+		public static DataTable ExecuteFill(SQLiteCommand command)
 		{
 			DataTable table = new DataTable();
-			using (SqlDataAdapter adapter = new SqlDataAdapter(command))
+			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
 				adapter.Fill(table);
 			return table;
 		}
@@ -722,20 +723,20 @@ namespace mame_ao.source
 			return true;
 		}
 
-		//public static object ExecuteScalar(SQLiteConnection connection, string commandText)
-		//{
-		//	connection.Open();
-		//	try
-		//	{
-		//		using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
-		//			return command.ExecuteScalar();
-		//	}
-		//	finally
-		//	{
-		//		connection.Close();
-		//	}
+		public static object ExecuteScalar(SqlConnection connection, string commandText)
+		{
+			connection.Open();
+			try
+			{
+				using (SqlCommand command = new SqlCommand(commandText, connection))
+					return command.ExecuteScalar();
+			}
+			finally
+			{
+				connection.Close();
+			}
 
-		//}
+		}
 
 		public static int ExecuteNonQuery(SqlConnection connection, string commandText)
 		{
@@ -750,10 +751,10 @@ namespace mame_ao.source
 				connection.Close();
 			}
 		}
-		public static DataTable ExecuteFill(SQLiteConnection connection, string commandText)
+		public static DataTable ExecuteFill(SqlConnection connection, string commandText)
 		{
 			DataTable table = new DataTable();
-			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, connection))
+			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connection))
 				adapter.Fill(table);
 			return table;
 		}
@@ -793,7 +794,7 @@ namespace mame_ao.source
 
 		public static void ConsoleQuery(string database, string commandText)
 		{
-			SqlConnection connection = database == "m" ? Globals.Database._MachineConnection : Globals.Database._SoftwareConnection;
+			SQLiteConnection connection = database == "m" ? Globals.Database._MachineConnection : Globals.Database._SoftwareConnection;
 
 			try
 			{

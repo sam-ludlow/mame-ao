@@ -270,14 +270,14 @@ namespace mame_ao.source
 
 			machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name FROM machine");
 
-			using (SqlCommand command = new SqlCommand("UPDATE machine SET genre_id = @genre_id WHERE machine_id = @machine_id", Globals.Database._MachineConnection))
+			using (SQLiteCommand command = new SQLiteCommand("UPDATE machine SET genre_id = @genre_id WHERE machine_id = @machine_id", Globals.Database._MachineConnection))
 			{
-				command.Parameters.Add("@genre_id", (SqlDbType)DbType.Int64);
-				command.Parameters.Add("@machine_id", (SqlDbType)DbType.Int64);
+				command.Parameters.Add("@genre_id", (DbType)(SqlDbType)DbType.Int64);
+				command.Parameters.Add("@machine_id", (DbType)(SqlDbType)DbType.Int64);
 
 				Globals.Database._MachineConnection.Open();
 
-				SqlTransaction transaction = Globals.Database._MachineConnection.BeginTransaction();
+				SQLiteTransaction transaction = Globals.Database._MachineConnection.BeginTransaction();
 
 				try
 				{

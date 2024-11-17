@@ -262,7 +262,7 @@ namespace mame_ao.source
 
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
-			SqlConnection connection = new SqlConnection(connectionString);
+            SQLiteConnection connection = new SQLiteConnection(connectionString);
 
 			Database.DatabaseFromXML(document, connection, dataSet);
 		}
@@ -303,7 +303,7 @@ namespace mame_ao.source
 		}
 		public static void XML2MSSQL(string xmlFilename, string serverConnectionString, string databaseName)
 		{
-			SqlConnection targetConnection = new SqlConnection(serverConnectionString);
+            SqlConnection targetConnection = new SqlConnection(serverConnectionString);
 
 			if (Database.DatabaseExists(targetConnection, databaseName) == true)
 				return;
