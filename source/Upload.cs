@@ -25,7 +25,7 @@ namespace Spludlow.MameAO
 			string authFilename = Path.Combine(Globals.RootDirectory, "_api-auth.txt");
 
 			if (File.Exists(authFilename) == false)
-				throw new ApplicationException($"API Auth file missing:'{authFilename}'. Format: 'LOW <Your_S3_access_key>:<Your_S3_secret_key>'");
+				throw new ApplicationException($"API Auth file missing:'{authFilename}'. https://archive.org/account/s3.php Format: 'LOW <Your_S3_access_key>:<Your_S3_secret_key>'");
 
 			ApiAuth = File.ReadAllText(authFilename);
 		}
@@ -467,6 +467,8 @@ namespace Spludlow.MameAO
 		{
 			string url = $"https://s3.us.archive.org/{Uri.EscapeUriString(itemName)}/{Uri.EscapeUriString(targetFilename)}";
 
+			string result;
+
 			FileInfo fileInfo = new FileInfo(sourceFilename);
 
 			lock (Globals.WorkerTaskInfo)
@@ -487,7 +489,7 @@ namespace Spludlow.MameAO
 			request.Headers.Add("x-archive-size-hint", fileInfo.Length.ToString());
 			request.Headers.Add("x-archive-queue-derive", "0");
 
-			request.AllowWriteStreamBuffering = true;	//	TEST BOTH
+			request.AllowWriteStreamBuffering = false;
 
 			Console.Write($"Uploading size:{Tools.DataSize(fileInfo.Length)} {url} ...");
 
@@ -529,14 +531,20 @@ namespace Spludlow.MameAO
 				using (Stream responseStream = response.GetResponseStream())
 				{
 					using (StreamReader reader = new StreamReader(responseStream))
-						return reader.ReadToEnd();
+						result = reader.ReadToEnd();
 				}
 			}
+
+			Console.WriteLine($"PUT Response: {result}");
+
+			return result;
 		}
 
 		public static string DeleteFile(string itemName, string filename)
 		{
 			string url = $"https://s3.us.archive.org/{Uri.EscapeUriString(itemName)}/{Uri.EscapeUriString(Path.GetFileName(filename))}";
+
+			string result;
 
 			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
 			request.Method = "DELETE";
@@ -559,9 +567,13 @@ namespace Spludlow.MameAO
 					Console.WriteLine("...done.");
 
 					using (StreamReader reader = new StreamReader(responseStream))
-						return reader.ReadToEnd();
+						result = reader.ReadToEnd();
 				}
 			}
+
+			Console.WriteLine($"DELETE Response: {result}");
+
+			return result;
 		}
 
 	}

@@ -700,7 +700,7 @@ namespace Spludlow.MameAO
 
 					case ".upload":
 						if (parts.Length != 4 && parts.Length != 5)
-							throw new ApplicationException($"Usage: {parts[0]} <type> <archive.org item name> <batch size> <asset name>");
+							throw new ApplicationException($"Usage: {parts[0]} <type> <archive.org item name> <batch size> [asset name]");
 
 						switch (parts[1].ToUpper())
 						{
@@ -708,12 +708,11 @@ namespace Spludlow.MameAO
 								Upload.MachineRom(parts[2], Int32.Parse(parts[3]));
 								break;
 							case "MD":
-								break;
+								throw new NotImplementedException("Coming soon.");
 							case "SR":
-								break;
+								throw new NotImplementedException("Coming soon.");
 							case "SD":
-								Upload.SoftwareDisk(parts[2], Int32.Parse(parts[3]), parts[4]);
-								break;
+								throw new NotImplementedException("Coming soon.");
 
 							default:
 								throw new ApplicationException("Upload Unknown type not (MR, MD, SR, SD).");

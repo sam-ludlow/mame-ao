@@ -223,6 +223,23 @@ Options available on the UI settings page
 - `Yes Verbose` Send data and show payload in console.
 - `No` Do not send data.
 
+## Configuration
+You can set certain advanced configuration options in the file `_config.txt`, each line should be `KEY	VALUE` (TAB separator).
+
+- `StorePathRom` - Override default ROM Store directory
+- `StorePathDisk` - Override default DISK Store directory
+
+## Archive.org Upload
+MAME-AO can be used to upload files to archive.org items, for people serious about software preservation.
+
+Obtain your API Key from here https://archive.org/account/s3.php
+
+Create a text file in the MAME-AO root directory `_api-auth.txt` and put in your API key details in this format:
+
+`LOW <Your_S3_access_key>:<Your_S3_secret_key>`
+
+Use the command `.upload`
+
 ## MAME Data Operations
 MAME-AO has the capability to perform various MAME Data operations by passing command line options when starting the program, it will exit immediately when finished.
 
