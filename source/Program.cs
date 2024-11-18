@@ -7,7 +7,7 @@ namespace mame_ao.source
 	{
 		public static int Main(string[] args)
         {
-            NewMethod();
+            HellowWorld();
             foreach (string arg in args)
             {
                 int index = arg.IndexOf('=');
@@ -39,7 +39,7 @@ namespace mame_ao.source
             return 0;
         }
 
-        public static void NewMethod()
+        public static void HellowWorld()
         {
             //AnsiConsoleSettings settings = new AnsiConsoleSettings();
             //System.IO.TextWriter t = settings.Out.Writer;

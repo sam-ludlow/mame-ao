@@ -31,9 +31,9 @@ namespace mame_ao.source
 
 		private static readonly char[] _HeadingChars = new char[] { ' ', '#', '=', '-' };
 
-		private static readonly SHA1Managed _SHA1Managed = new SHA1Managed();
+		private static readonly SHA256 _SHA256 = SHA256.Create();
 
-		public static string DataRowValue(DataRow row, string columnName)
+        public static string DataRowValue(DataRow row, string columnName)
 		{
 			if (row.IsNull(columnName))
 				return null;
@@ -227,7 +227,7 @@ namespace mame_ao.source
 
 		public static string SHA1Hex(Stream stream)
 		{
-			byte[] hash = _SHA1Managed.ComputeHash(stream);
+			byte[] hash = _SHA256.ComputeHash(stream);
 			StringBuilder hex = new StringBuilder();
 			foreach (byte b in hash)
 				hex.Append(b.ToString("x2"));
@@ -329,8 +329,8 @@ namespace mame_ao.source
 
 			return result;
 		}
-
-		public static string Query(string url)
+        //arch1vepass
+        public static string Query(string url)
 		{
 			try
 			{

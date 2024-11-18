@@ -2,8 +2,11 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Net.Http;
+using System.Text;
 using System.Threading.Tasks;
+using System.Web;
 using Newtonsoft.Json;
 
 namespace mame_ao.source
@@ -22,8 +25,9 @@ namespace mame_ao.source
 		public static string CacheFilename;
 
 		private static HttpClient HttpClient;
+        private static CookieContainer CookieContainer;
 
-		static ArchiveOrgAuth()
+        static ArchiveOrgAuth()
 		{
 			CacheFilename = Path.Combine(Globals.CacheDirectory, "archive.org-auth-cookie.txt");
 
@@ -51,7 +55,7 @@ namespace mame_ao.source
 
 				do
 				{
-					Console.WriteLine();
+					//Console.WriteLine();
 
 					Console.WriteLine("Enter your Archive.org username:");
 					username = Console.ReadLine();
@@ -70,8 +74,8 @@ namespace mame_ao.source
                             Console.WriteLine("Bad credentials try again. Hit enter to skip (You won't be able to download).");
                         if (e.Message.Contains("400"))
                             Console.WriteLine("Archive.org is not available.");
-                        else
-                            throw e;
+                        //else
+                        //    throw e;
 					}
 
 				} while (cookie == null && username != "");
@@ -86,57 +90,115 @@ namespace mame_ao.source
 			return null;
 		}
 
-		private static string GetAuthCookie(string username, string password)
-		{
-			string url = "https://archive.org/account/login";
+        private static string GetAuthCookie(string username, string password)
+        {
+            string url = "https://archive.org/account/login";
 
-			using (Task<HttpResponseMessage> requestTask = HttpClient.GetAsync(url))
-			{
-				requestTask.Wait();
-				requestTask.Result.EnsureSuccessStatusCode();
-			}
+            var payloadValues = new Dictionary<string, string>()
+                {
+                    { "login", "true" },
+                    { "username", username },
+                    { "password", password },
+                    { "remember", "true" },
+                    { "referer", url },
+                    { "submit-to-login", "Log in" },
+                };
 
-			List<string> cookies = new List<string>();
+            var payload = new StringBuilder();
+            foreach (string key in payloadValues.Keys)
+            {
+                if (payload.Length > 0)
+                    payload.Append("&");
 
-			using (var requestMessage = new HttpRequestMessage(HttpMethod.Post, url))
-			{
-				using (var content = new MultipartFormDataContent())
-				{
-					content.Add(new StringContent(username), "username");
-					content.Add(new StringContent(password), "password");
-					content.Add(new StringContent("true"), "remember");
-					content.Add(new StringContent("https://archive.org/"), "referer");
-					content.Add(new StringContent("true"), "login");
-					content.Add(new StringContent("true"), "submit_by_js");
+                payload.Append($"{key}={HttpUtility.UrlEncode(payloadValues[key])}");
+            }
 
-					requestMessage.Content = content;
+            using (Task<HttpResponseMessage> requestTask = HttpClient.GetAsync(url))
+            {
+                requestTask.Wait();
+                requestTask.Result.EnsureSuccessStatusCode();
+            }
 
-					using (Task<HttpResponseMessage> requestTask = HttpClient.SendAsync(requestMessage))
-					{
-						requestTask.Wait();
-						HttpResponseMessage responseMessage = requestTask.Result;
+            using (var requestMessage = new HttpRequestMessage(HttpMethod.Post, url))
+            {
+                requestMessage.Content = new StringContent(payload.ToString(), Encoding.UTF8, "application/x-www-form-urlencoded");
 
-						responseMessage.EnsureSuccessStatusCode();
+                using (Task<HttpResponseMessage> requestTask = HttpClient.SendAsync(requestMessage))
+                {
+                    requestTask.Wait();
+                    HttpResponseMessage responseMessage = requestTask.Result;
 
-						foreach (string cookie in responseMessage.Headers.GetValues("Set-Cookie"))
-						{
-							string[] parts = cookie.Split(';');
-							string[] pair = parts[0].Split('=');
-							if (pair.Length == 2)
-								cookies.Add($"{pair[0].Trim()}={pair[1].Trim()}");
-						}
-					}
-				}
-			}
+                    responseMessage.EnsureSuccessStatusCode();
+                }
+            }
 
-			cookies.Add("donation=x");
+            bool ok = false;
+            List<string> cookies = new List<string>();
+            foreach (Cookie cookie in CookieContainer.GetCookies(new Uri(url)))
+            {
+                cookies.Add($"{cookie.Name}={cookie.Value}");
 
-			return String.Join("; ", cookies.ToArray());
-		}
+                if (cookie.Name == "logged-in-user")
+                    ok = true;
+            }
 
-	}
+            if (ok == false)
+                throw new HttpRequestException("Dummy 401");
 
-	public class ArchiveOrgFile
+            return String.Join("; ", cookies.ToArray());
+        }
+
+        //private static string GetAuthCookie(string username, string password)
+        //{
+        //	string url = "https://archive.org/account/login";
+
+        //	using (Task<HttpResponseMessage> requestTask = HttpClient.GetAsync(url))
+        //	{
+        //		requestTask.Wait();
+        //		requestTask.Result.EnsureSuccessStatusCode();
+        //	}
+
+        //	List<string> cookies = new List<string>();
+
+        //	using (var requestMessage = new HttpRequestMessage(HttpMethod.Post, url))
+        //	{
+        //		using (var content = new MultipartFormDataContent())
+        //		{
+        //			content.Add(new StringContent(username), "username");
+        //			content.Add(new StringContent(password), "password");
+        //			content.Add(new StringContent("true"), "remember");
+        //			content.Add(new StringContent("https://archive.org/"), "referer");
+        //			content.Add(new StringContent("true"), "login");
+        //			content.Add(new StringContent("true"), "submit_by_js");
+
+        //			requestMessage.Content = content;
+
+        //			using (Task<HttpResponseMessage> requestTask = HttpClient.SendAsync(requestMessage))
+        //			{
+        //				requestTask.Wait();
+        //				HttpResponseMessage responseMessage = requestTask.Result;
+
+        //				responseMessage.EnsureSuccessStatusCode();
+
+        //				foreach (string cookie in responseMessage.Headers.GetValues("Set-Cookie"))
+        //				{
+        //					string[] parts = cookie.Split(';');
+        //					string[] pair = parts[0].Split('=');
+        //					if (pair.Length == 2)
+        //						cookies.Add($"{pair[0].Trim()}={pair[1].Trim()}");
+        //				}
+        //			}
+        //		}
+        //	}
+
+        //	cookies.Add("donation=x");
+
+        //	return String.Join("; ", cookies.ToArray());
+        //}
+
+    }
+
+    public class ArchiveOrgFile
 	{
 		private static readonly DateTime EpochDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 

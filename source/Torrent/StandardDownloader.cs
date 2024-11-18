@@ -15,10 +15,16 @@ namespace mame_ao.source.Torrent
         public string Path { get; set; }
         public Priority Priority { get; set; }
     }
+    public class DatfileItem
+    {
+        public string Datname { get; set; }
+
+        //public string MagnetLink { get; set; }
+    }
 
     public class MagnetItem
     {
-        public string torrentName;
+        public string torrentName { get; set; }
 
         public string MagnetLink { get; set; }
     }

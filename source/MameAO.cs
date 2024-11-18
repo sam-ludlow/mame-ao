@@ -82,28 +82,28 @@ namespace mame_ao.source
             var match = Regex.Match(magnetLink, @"dn=([^&]+)");
             return match.Success ? Uri.UnescapeDataString(match.Groups[1].Value) : "No name found";
         }
-        public async Task DownloadMagnets(MagnetItem magnetLinks)
-        {
-            //Create a new Random instance
-            //Random rng = new Random();
+        //public async Task DownloadMagnets(MagnetItem magnetLinks)
+        //{
+        //    //Create a new Random instance
+        //    //Random rng = new Random();
 
 
-            //var decodedLinks = magnetLinks.Select(HttpUtility.UrlDecode).ToList();
+        //    //var decodedLinks = magnetLinks.Select(HttpUtility.UrlDecode).ToList();
 
-            //var filteredLinks = decodedLinks.Where(link =>
-            //    excludedWords.All(word => !link.Contains(word))
-            //).ToList();
+        //    //var filteredLinks = decodedLinks.Where(link =>
+        //    //    excludedWords.All(word => !link.Contains(word))
+        //    //).ToList();
 
-            //// Print the filtered links
-            //foreach (var link in filteredLinks)
-            //{
-            //    string torrentName = ExtractTorrentName(link);
-            //    AnsiConsole.Markup($"[underline red]{torrentName}[/] World!");
-            //    //WriteLine(torrentName);
-            //}
-            //string[] MagnetLinks = filteredLinks.Take(100).ToArray();
-            await MainClass.RunMainTask(magnetLinks, StartsWith, ContainsStrings);
-        }
+        //    //// Print the filtered links
+        //    //foreach (var link in filteredLinks)
+        //    //{
+        //    //    string torrentName = ExtractTorrentName(link);
+        //    //    AnsiConsole.Markup($"[underline red]{torrentName}[/] World!");
+        //    //    //WriteLine(torrentName);
+        //    //}
+        //    //string[] MagnetLinks = filteredLinks.Take(100).ToArray();
+        //    await MainClass.RunMainTask(magnetLinks, StartsWith, ContainsStrings);
+        //}
         public List<MagnetItem> FilterMagnets(List<MagnetItem> magnetLinks)
         {
             List<string> excludedWords = new List<string> { "Update", "(non-merged)", "(split)", "Rollback" };
@@ -115,6 +115,7 @@ namespace mame_ao.source
             foreach (var link in filteredLinks)
             {
                 string torrentName = ExtractTorrentName(link.MagnetLink);
+                link.torrentName = torrentName;
                 AnsiConsole.Markup($"[underline red]{torrentName}[/] {Environment.NewLine}");
             }
             List<MagnetItem> MagnetLinks = filteredLinks.Take(100).ToList();
@@ -165,14 +166,14 @@ namespace mame_ao.source
         //}
         //}
 
-        private string ParseLatestVersion(string html)
-        {
-            var doc = new HtmlDocument();
-            doc.LoadHtml(html);
-            var versionNodes = doc.DocumentNode.SelectNodes("//td[normalize-space()='MAME 0.271 64-bit Windows binaries.']");
-            var versionNode = versionNodes[0];
-            return versionNode?.InnerText?.Trim();
-        }
+        //private string ParseLatestVersion(string html)
+        //{
+        //    var doc = new HtmlDocument();
+        //    doc.LoadHtml(html);
+        //    var versionNodes = doc.DocumentNode.SelectNodes("//td[normalize-space()='MAME 0.271 64-bit Windows binaries.']");
+        //    var versionNode = versionNodes[0];
+        //    return versionNode?.InnerText?.Trim();
+        //}
 
         private static async Task<string> CallUrl(string fullUrl)
         {
@@ -188,100 +189,13 @@ namespace mame_ao.source
 
         }
 
-        public async Task Run()
+        public void BringToFront()
         {
-            try
-            {
-                var url = "https://www.mamedev.org/release.html";
-                //var client = new HttpClient();
-                //var response = client.GetStringAsync(url).Result; // Using Result to block until the task completes
-                var response = await CallUrl(url);
-                var latestVersion = ParseLatestVersion(response);
-                var match = Regex.Match(latestVersion, @"\d+\.\d+");
-                var latestVersionNumber = match.Value;
-                //Title = ($"MAME-AO-BIT-TORRENT");
-                //Console.SetWindowSize(250,150);
-                AnsiConsole.Markup($"Latest MAME Binary: {latestVersion}");
-                AnsiConsole.Markup($"Latest MAME Version Number: {latestVersionNumber}");
-
-                List<string> magnetLinks, datfileLinks;
-                NewMethod(out url, out magnetLinks, out datfileLinks);
-                //listView4.SetSource(datfileLinks);
-                //listView5.SetSource(magnetLinks);
-                //bool Gui = true;
-                //StartsWith = new List<string> { "a", "b", "c" };
-                //ContainsStrings = new List<string> { "ami", "out", "com" };
-                excludedWords = (await EnterNewList(GetExcludedWords(), "Enter List of Magnet Link Excludes : ").ConfigureAwait(false));
-                StartsWith = (await MameAOProcessor.EnterNewList(StartsWith, "Enter List of Filename Starts Withs : ").ConfigureAwait(false));
-                ContainsStrings = (await EnterNewList(ContainsStrings, "Enter List of Filename Contains : ").ConfigureAwait(false));
-                var filteredLinks = datfileLinks.Where(link => excludedWords.All(word => !link.Contains(word))).ToList();
-
-                string versionDirectory = "C:\\ROMVault_V3.7.2\\DatRoot";
-                Directory.CreateDirectory(versionDirectory);
-
-                foreach (string binariesUrl in filteredLinks)
-                {
-                    string binariesFilename = Path.Combine(versionDirectory, Path.GetFileName(binariesUrl));
-                    Tools.Download(binariesUrl, binariesFilename);
-
-                }
-
-                //if (Directory.Exists(versionDirectory + "/"))
-                //    Directory.Delete(versionDirectory + "/", true);
-                //ZipFile.ExtractToDirectory(binariesFilename, versionDirectory);
-                //File.Delete(binariesFilename + ".zip");
-
-                //await DownloadMagnets(magnetLinks).ConfigureAwait(false);
-
-                //WriteLine("----------------------------------");
-
-                Initialize();
-
-                Shell();
-            }
-            catch (Exception e)
-            {
-                Tools.ReportError(e, "FATAL ERROR", true);
-            }
+            if (ConsoleHandle == IntPtr.Zero)
+                Console.WriteLine("!!! Wanring can't get handle on Console Window.");
+            else
+                SetForegroundWindow(ConsoleHandle);
         }
-
-        private static void NewMethod(out string url, out List<string> magnetLinks, out List<string> datfileLinks)
-        {
-            url = "https://pleasuredome.github.io/pleasuredome/mame/";
-            HtmlDocument htmlDoc = new HtmlDocument();
-            //var client = new HttpClient();
-            //response = client.GetStringAsync(url).Result; // Using Result to block until the task completes
-
-            htmlDoc.LoadHtml(CallUrl(url).Result);
-
-            // Find all magnet links
-            IEnumerable<HtmlNode> linkNodes = htmlDoc.DocumentNode.SelectNodes("//a[@href]");
-            magnetLinks = new List<string>();
-            datfileLinks = new List<string>();
-
-            // Filter out and print the magnet links
-            foreach (HtmlNode linkNode in linkNodes)
-            {
-                string hrefValue = linkNode.GetAttributeValue("href", string.Empty);
-                if (hrefValue.StartsWith("magnet:"))
-                {
-                    //Console.WriteLine(hrefValue);
-                    magnetLinks.Add(hrefValue);
-                }
-                if (hrefValue.StartsWith("https://github.com/pleasuredome/") && hrefValue.Contains(".zip"))
-                {
-                    datfileLinks.Add(hrefValue);
-                }
-            }
-        }
-
-        //public void BringToFront()
-        //{
-        //    if (ConsoleHandle == IntPtr.Zero)
-        //        Console.WriteLine("!!! Wanring can't get handle on Console Window.");
-        //    else
-        //        SetForegroundWindow(ConsoleHandle);
-        //}
 
         private static void PrintRainbowText(string text)
         {
@@ -294,6 +208,7 @@ namespace mame_ao.source
             }
             AnsiConsole.MarkupLine("");
         }
+
         public void Initialize()
         {
             Console.Title = $"MAME-AO {Globals.AssemblyVersion}";
@@ -540,7 +455,7 @@ namespace mame_ao.source
             Console.WriteLine("");
         }
 
-        public void Shell()
+        public async Task Shell()
         {
             Globals.WebServer = new WebServer();
 
@@ -561,22 +476,28 @@ namespace mame_ao.source
 
             });
             AnsiConsole.Markup("[underline red]Hello[/] World!");
-            ProcessStartInfo startInfo = new ProcessStartInfo { FileName = "http://localhost:12380/", WorkingDirectory = @"C:\Users\morty\source\repos\mame-ao-assist\mame.ao.assist\bin\Debug\net9.0-windows10.0.26100.0", UseShellExecute = true };
+            ProcessStartInfo startInfo = new ProcessStartInfo { FileName = Globals.ListenAddress, WorkingDirectory = @"C:\Users\morty\source\repos\mame-ao-assist\mame.ao.assist\bin\Debug\net9.0-windows10.0.26100.0", UseShellExecute = true };
             //Process.Start(Globals.ListenAddress);
             Process process = Process.Start(startInfo);
             Tools.ConsoleHeading(1, "Shell ready for commands");
             Console.WriteLine("");
-
             while (true)
             {
                 Console.Write($"MAME Shell ({Globals.MameVersion})> ");
-                string line = Console.ReadLine();
-                line = line.Trim();
+                string line = Console.ReadLine().Trim();
+
+                // Check if the user wants to exit the loop
+                if (line.Equals("exit", StringComparison.OrdinalIgnoreCase) ||
+                    line.Equals("quit", StringComparison.OrdinalIgnoreCase))
+                {
+                    Console.WriteLine("Exiting the shell...");
+                    break;
+                }
 
                 if (line.Length == 0)
                     continue;
 
-                if (RunLineTask(line) == true)
+                if (RunLineTask(line))
                     Globals.WorkerTask.Wait();
                 else
                     Console.WriteLine("BUSY!");
