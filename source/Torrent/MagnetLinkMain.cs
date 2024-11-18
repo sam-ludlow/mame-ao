@@ -7,13 +7,13 @@ using MonoTorrent.Client;
 
 namespace mame_ao.source.Torrent
 {
-    class MainClass
+    public class MainClass
     {
-        public static async Task RunMainTask(string[] args, List<string> StartsWith, List<string> ContainsStrings)
+        public static async Task RunMainTask(MagnetItem magnet, List<string> StartsWith, List<string> ContainsStrings)
         {
             CancellationTokenSource cancellation = new CancellationTokenSource();
 
-            var task = MainAsync(args, StartsWith, ContainsStrings, cancellation.Token);
+            var task = MainAsync(magnet, StartsWith, ContainsStrings, cancellation.Token);
 
             // We need to cleanup correctly when the user closes the window by using ctrl-c
             // or an unhandled exception happens
@@ -25,7 +25,7 @@ namespace mame_ao.source.Torrent
             task.Wait();
         }
 
-        static async Task MainAsync(string[] args, List<string> StartsWith, List<string> ContainsStrings, CancellationToken token)
+        static async Task MainAsync(MagnetItem magnet, List<string> StartsWith, List<string> ContainsStrings, CancellationToken token)
         {
             //List<string> StartsWith = new List<string> { "a", "b", "c" };
             //StartsWith = (await MameAOProcessor.EnterNewList(StartsWith, "Enter List of Filename Starts Withs : ").ConfigureAwait(false)).Result;
@@ -73,13 +73,13 @@ namespace mame_ao.source.Torrent
             };
             ClientEngine clientEngine = new ClientEngine(settingBuilder.ToSettings());
             //using ClientEngine engine = clientEngine;
-            Task task = new StandardDownloader(clientEngine).DownloadAsync(token, startsWithStrings: StartsWith, ContainsStrings, args);
 
             if (clientEngine.Settings.AllowPortForwarding)
                 Console.WriteLine("uPnP or NAT-PMP port mappings will be created for any ports needed by MonoTorrent");
 
             try
             {
+                Task task = new StandardDownloader(clientEngine).DownloadAsync(token, startsWithStrings: StartsWith, ContainsStrings, magnet);
                 await task;
                 //task.Wait();
             }

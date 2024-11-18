@@ -14,6 +14,7 @@ using System.Threading.Tasks;
 using System.Web;
 using HtmlAgilityPack;
 using mame_ao.source.Torrent;
+using Spectre.Console;
 
 namespace mame_ao.source
 {
@@ -22,7 +23,7 @@ namespace mame_ao.source
     {
         private IntPtr ConsoleHandle;
         private static List<string> excludedWords;
-        private readonly string WelcomeText = @"@VERSION
+        private readonly string IntroText = @"@VERSION
 '##::::'##::::'###::::'##::::'##:'########:::::::'###:::::'#######::
  ###::'###:::'## ##::: ###::'###: ##.....:::::::'## ##:::'##.... ##:
  ####'####::'##:. ##:: ####'####: ##:::::::::::'##:. ##:: ##:::: ##:
@@ -30,20 +31,14 @@ namespace mame_ao.source
  ##. #: ##: #########: ##. #: ##: ##...::::::: #########: ##:::: ##:
  ##:.:: ##: ##.... ##: ##:.:: ##: ##:::::::::: ##.... ##: ##:::: ##:
  ##:::: ##: ##:::: ##: ##:::: ##: ########:::: ##:::: ##:. #######::
-..:::::..::..:::::..::..:::::..::........:::::..:::::..:::.......:::
-
+..:::::..::..:::::..::..:::::..::........:::::..:::::..:::.......:::";
+        private readonly string WelcomeText = @"
        Please wait the first time it has to prepare the data
-
-         The Web User Interface will pop up when ready
-
+         The Web User Interface will pop up when ready. 
               See the README for more information
-             https://github.com/sam-ludlow/mame-ao
-
-";
-
+             https://github.com/sam-ludlow/mame-ao";
         public List<string> StartsWith { get; private set; }
         public List<string> ContainsStrings { get; private set; }
-        public bool Gui { get; private set; }
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
@@ -72,28 +67,14 @@ namespace mame_ao.source
             Globals.ReportDirectory = Path.Combine(Globals.RootDirectory, "_REPORTS");
             Directory.CreateDirectory(Globals.ReportDirectory);
 
-             Gui = true;
             StartsWith = new List<string> { "a", "b", "c" };
             ContainsStrings = new List<string> { "ami", "out", "com" };
-            //if (Gui)
-            //{
-            //    listView1.SetSource(GetExcludedWords());
-            //    listView2.SetSource(StartsWith);
-            //    listView3.SetSource(ContainsStrings);
-
-            //    excludedWords = (List<string>)listView1.Source.ToList();
-            //    StartsWith = (List<string>)listView2.Source.ToList();
-            //    ContainsStrings = (List<string>)listView3.Source.ToList();
-
-            //}
-            //button.Clicked += Button_Clicked;
-
         }
 
-        private async void Button_Clicked()
-        {
-                 await RunAsync();
-        }
+        //private async void Button_Clicked()
+        //{
+        //    await RunAsync();
+        //}
 
         private static string ExtractTorrentName(string magnetLink)
         {
@@ -101,33 +82,49 @@ namespace mame_ao.source
             var match = Regex.Match(magnetLink, @"dn=([^&]+)");
             return match.Success ? Uri.UnescapeDataString(match.Groups[1].Value) : "No name found";
         }
-        private async Task DownloadMagnets(List<string> magnetLinks)
+        public async Task DownloadMagnets(MagnetItem magnetLinks)
         {
             //Create a new Random instance
             //Random rng = new Random();
 
 
-            var decodedLinks = magnetLinks.Select(HttpUtility.UrlDecode).ToList();
+            //var decodedLinks = magnetLinks.Select(HttpUtility.UrlDecode).ToList();
 
-            var filteredLinks = decodedLinks.Where(link =>
-                excludedWords.All(word => !link.Contains(word))
-            ).ToList();
+            //var filteredLinks = decodedLinks.Where(link =>
+            //    excludedWords.All(word => !link.Contains(word))
+            //).ToList();
 
+            //// Print the filtered links
+            //foreach (var link in filteredLinks)
+            //{
+            //    string torrentName = ExtractTorrentName(link);
+            //    AnsiConsole.Markup($"[underline red]{torrentName}[/] World!");
+            //    //WriteLine(torrentName);
+            //}
+            //string[] MagnetLinks = filteredLinks.Take(100).ToArray();
+            await MainClass.RunMainTask(magnetLinks, StartsWith, ContainsStrings);
+        }
+        public List<MagnetItem> FilterMagnets(List<MagnetItem> magnetLinks)
+        {
+            List<string> excludedWords = new List<string> { "Update", "(non-merged)", "(split)", "Rollback" };
+            // Decode magnet links
+            List<MagnetItem> decodedLinks = magnetLinks.Select(m => new MagnetItem { MagnetLink = HttpUtility.UrlDecode(m.MagnetLink) }).ToList();
+            // Filter out excluded words
+            List<MagnetItem> filteredLinks = decodedLinks.Where(m => !excludedWords.Any(word => m.MagnetLink.Contains(word))).ToList();
             // Print the filtered links
             foreach (var link in filteredLinks)
             {
-                string torrentName = ExtractTorrentName(link);
-
-                WriteLine(torrentName);
+                string torrentName = ExtractTorrentName(link.MagnetLink);
+                AnsiConsole.Markup($"[underline red]{torrentName}[/] {Environment.NewLine}");
             }
-            string[] MagnetLinks = filteredLinks.Take(100).ToArray();
-            await MainClass.RunMainTask(MagnetLinks,StartsWith,ContainsStrings);
+            List<MagnetItem> MagnetLinks = filteredLinks.Take(100).ToList();
+            return MagnetLinks;
         }
 
-        private void WriteLine(string torrentName)
-        {
-            //window.Text += torrentName;
-        }
+        //private void WriteLine(string torrentName)
+        //{
+        //    //window.Text += torrentName;
+        //}
 
         private static List<string> GetExcludedWords()
         {
@@ -136,36 +133,36 @@ namespace mame_ao.source
 
         public static async Task<List<string>> EnterNewList(List<string> string_list, string prompt_text)
         {
-                Console.WriteLine(prompt_text);
-                Console.WriteLine(string.Join(", ", string_list));
-                // Initialize cancellation token source and task for user input
-                var cts = new CancellationTokenSource();
-                var inputTask = Task.Run(() => Console.ReadLine(), cts.Token);
+            Console.WriteLine(prompt_text);
+            Console.WriteLine(string.Join(", ", string_list));
+            // Initialize cancellation token source and task for user input
+            var cts = new CancellationTokenSource();
+            var inputTask = Task.Run(() => Console.ReadLine(), cts.Token);
 
-                // Wait for input or timeout (5 seconds)
-                if (await Task.WhenAny(inputTask, Task.Delay(10000)) == inputTask)
+            // Wait for input or timeout (5 seconds)
+            if (await Task.WhenAny(inputTask, Task.Delay(10000)) == inputTask)
+            {
+                // If input received
+                string userInput = await inputTask;
+                if (!string.IsNullOrWhiteSpace(userInput))
                 {
-                    // If input received
-                    string userInput = await inputTask;
-                    if (!string.IsNullOrWhiteSpace(userInput))
-                    {
-                        string_list = userInput.Split(',').Select(s => s.Trim()).ToList();
-                    }
+                    string_list = userInput.Split(',').Select(s => s.Trim()).ToList();
                 }
-                else
-                {
-                    // If timeout
-                    Console.WriteLine("No input received within 5 seconds. Using default list.");
-                }
-                Console.WriteLine("Updated List : ");
-                Console.WriteLine(string.Join(", ", string_list));
-               return string_list;
-         }
-            //else
-            //{
-            //    //listView.SetSource(string_list);
-            //    //string_list = (List<string>)listView.Source.ToList();
-            //}
+            }
+            else
+            {
+                // If timeout
+                Console.WriteLine("No input received within 5 seconds. Using default list.");
+            }
+            Console.WriteLine("Updated List : ");
+            Console.WriteLine(string.Join(", ", string_list));
+            return string_list;
+        }
+        //else
+        //{
+        //    //listView.SetSource(string_list);
+        //    //string_list = (List<string>)listView.Source.ToList();
+        //}
         //}
 
         private string ParseLatestVersion(string html)
@@ -191,7 +188,7 @@ namespace mame_ao.source
 
         }
 
-        public async Task RunAsync()
+        public async Task Run()
         {
             try
             {
@@ -204,8 +201,8 @@ namespace mame_ao.source
                 var latestVersionNumber = match.Value;
                 //Title = ($"MAME-AO-BIT-TORRENT");
                 //Console.SetWindowSize(250,150);
-                WriteLine($"Latest MAME Binary: {latestVersion}");
-                WriteLine($"Latest MAME Version Number: {latestVersionNumber}");
+                AnsiConsole.Markup($"Latest MAME Binary: {latestVersion}");
+                AnsiConsole.Markup($"Latest MAME Version Number: {latestVersionNumber}");
 
                 List<string> magnetLinks, datfileLinks;
                 NewMethod(out url, out magnetLinks, out datfileLinks);
@@ -214,15 +211,9 @@ namespace mame_ao.source
                 //bool Gui = true;
                 //StartsWith = new List<string> { "a", "b", "c" };
                 //ContainsStrings = new List<string> { "ami", "out", "com" };
-                if (!Gui)
-                {
-                    excludedWords = (await EnterNewList(GetExcludedWords(), "Enter List of Magnet Link Excludes : ").ConfigureAwait(false));
-                    StartsWith = (await MameAOProcessor.EnterNewList(StartsWith, "Enter List of Filename Starts Withs : ").ConfigureAwait(false));
-                    ContainsStrings = (await EnterNewList(ContainsStrings, "Enter List of Filename Contains : ").ConfigureAwait(false));
-                }
-
-
-
+                excludedWords = (await EnterNewList(GetExcludedWords(), "Enter List of Magnet Link Excludes : ").ConfigureAwait(false));
+                StartsWith = (await MameAOProcessor.EnterNewList(StartsWith, "Enter List of Filename Starts Withs : ").ConfigureAwait(false));
+                ContainsStrings = (await EnterNewList(ContainsStrings, "Enter List of Filename Contains : ").ConfigureAwait(false));
                 var filteredLinks = datfileLinks.Where(link => excludedWords.All(word => !link.Contains(word))).ToList();
 
                 string versionDirectory = "C:\\ROMVault_V3.7.2\\DatRoot";
@@ -242,11 +233,11 @@ namespace mame_ao.source
 
                 //await DownloadMagnets(magnetLinks).ConfigureAwait(false);
 
-                WriteLine("----------------------------------");
+                //WriteLine("----------------------------------");
 
-                //Initialize();
+                Initialize();
 
-                //Shell();
+                Shell();
             }
             catch (Exception e)
             {
@@ -292,14 +283,23 @@ namespace mame_ao.source
         //        SetForegroundWindow(ConsoleHandle);
         //}
 
+        private static void PrintRainbowText(string text)
+        {
+            var colors = new[] { "red", "orange1", "yellow1", "green1", "blue", "purple_1" };
+            int colorIndex = 0;
+            foreach (char c in text)
+            {
+                AnsiConsole.Markup($"[{colors[colorIndex]}]{c}[/]");
+                colorIndex = (colorIndex + 1) % colors.Length;
+            }
+            AnsiConsole.MarkupLine("");
+        }
         public void Initialize()
         {
             Console.Title = $"MAME-AO {Globals.AssemblyVersion}";
-
-            //Console.Write(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
-            WriteLine(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
-            //consoleHeading.Text = ("Initializing");
-
+            AnsiConsole.Markup("Initializing");
+            PrintRainbowText(IntroText.Replace("@VERSION", Globals.AssemblyVersion));
+            AnsiConsole.Markup($"[bold green]{WelcomeText}[/]");
             Globals.AO = this;
 
             Globals.Settings = new Settings();
@@ -560,10 +560,10 @@ namespace mame_ao.source
                 $"e.g. {Globals.ListenAddress}api/command?line=a2600 et -window"
 
             });
-            Console.WriteLine("");
-
-            Process.Start(Globals.ListenAddress);
-
+            AnsiConsole.Markup("[underline red]Hello[/] World!");
+            ProcessStartInfo startInfo = new ProcessStartInfo { FileName = "http://localhost:12380/", WorkingDirectory = @"C:\Users\morty\source\repos\mame-ao-assist\mame.ao.assist\bin\Debug\net9.0-windows10.0.26100.0", UseShellExecute = true };
+            //Process.Start(Globals.ListenAddress);
+            Process process = Process.Start(startInfo);
             Tools.ConsoleHeading(1, "Shell ready for commands");
             Console.WriteLine("");
 

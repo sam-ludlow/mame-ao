@@ -15,6 +15,14 @@ namespace mame_ao.source.Torrent
         public string Path { get; set; }
         public Priority Priority { get; set; }
     }
+
+    public class MagnetItem
+    {
+        public string torrentName;
+
+        public string MagnetLink { get; set; }
+    }
+
     class StandardDownloader
     {
         private static List<string> StartsWithStrings;
@@ -47,7 +55,7 @@ namespace mame_ao.source.Torrent
         //    }
         //}
 
-        public async Task DownloadAsync(CancellationToken token, List<string> startsWithStrings, List<string> containsStrings, string[] magnets)
+        public async Task DownloadAsync(CancellationToken token, List<string> startsWithStrings, List<string> containsStrings, MagnetItem magnet)
         {
             // Torrents will be downloaded to this directory
             var downloadsPath = Path.Combine(Environment.CurrentDirectory, "Downloads");
@@ -65,86 +73,86 @@ namespace mame_ao.source.Torrent
 
             // For each file in the torrents path that is a .torrent file, load it into the engine.
             // foreach (string file in Directory.GetFiles(torrentsPath))
-            foreach (string magnetlink in magnets)
+            //foreach (string magnetlink in magnets)
+            //{
+            //if (file.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))
+            //{
+            try
             {
-                //if (file.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))
-                //{
-                try
+                // EngineSettings.AutoSaveLoadFastResume is enabled, so any cached fast resume
+                // data will be implicitly loaded. If fast resume data is found, the 'hash check'
+                // phase of starting a torrent can be skipped.
+                // 
+                // TorrentSettingsBuilder can be used to modify the settings for this
+                // torrent.
+                var settingsBuilder = new TorrentSettingsBuilder
                 {
-                    // EngineSettings.AutoSaveLoadFastResume is enabled, so any cached fast resume
-                    // data will be implicitly loaded. If fast resume data is found, the 'hash check'
-                    // phase of starting a torrent can be skipped.
-                    // 
-                    // TorrentSettingsBuilder can be used to modify the settings for this
-                    // torrent.
-                    var settingsBuilder = new TorrentSettingsBuilder
-                    {
-                        MaximumConnections = 60,
-                    };
-                    MagnetLink.TryParse(magnetlink, out MagnetLink link);
-                    manager = await Engine.AddAsync(link, downloadsPath, settingsBuilder.ToSettings()).ConfigureAwait(false);
+                    MaximumConnections = 60,
+                };
+                MagnetLink.TryParse(magnet.MagnetLink, out MagnetLink link);
+                manager = await Engine.AddAsync(link, downloadsPath, settingsBuilder.ToSettings()).ConfigureAwait(false);
 
-                    MonoTorrent.Torrent torrent = manager.Torrent;
-                    var n1 = manager.Files.Count;
-                    var n2 = n1;
-                    Console.WriteLine($"{n1} - {n2}");
-                    
-                    var fileArray = manager.Files.ToArray();
-                    var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
-                    IProgress<string> progress = new Progress<string>(message => Console.WriteLine(message));
+                MonoTorrent.Torrent torrent = manager.Torrent;
+                var n1 = manager.Files.Count;
+                var n2 = n1;
+                Console.WriteLine($"{n1} - {n2}");
 
-                    await Task.Run(() =>
+                var fileArray = manager.Files.ToArray();
+                var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
+                IProgress<string> progress = new Progress<string>(message => Console.WriteLine(message));
+
+                await Task.Run(() =>
+                {
+                    Parallel.ForEach(fileArray, parallelOptions, async file =>
                     {
-                        Parallel.ForEach(fileArray, parallelOptions, async file =>
+                        if (!startsWithStrings.Any(prefix => file.Path.StartsWith(prefix)) ||
+                            !containsStrings.Any(prefix => file.Path.Contains(prefix)))
                         {
-                            if (!startsWithStrings.Any(prefix => file.Path.StartsWith(prefix)) ||
-                                !containsStrings.Any(prefix => file.Path.Contains(prefix)))
-                            {
-                                await manager.SetFilePriorityAsync(file, Priority.DoNotDownload).ConfigureAwait(false);
-                                Interlocked.Decrement(ref n2);
-                                progress.Report($"File {file.Path} set to DoNotDownload");
+                            await manager.SetFilePriorityAsync(file, Priority.DoNotDownload).ConfigureAwait(false);
+                            Interlocked.Decrement(ref n2);
+                            progress.Report($"File {file.Path} set to DoNotDownload");
 
-                            }
-                            else await manager.SetFilePriorityAsync(file, Priority.Normal).ConfigureAwait(false);
+                        }
+                        else await manager.SetFilePriorityAsync(file, Priority.Normal).ConfigureAwait(false);
 
 
-                        });
-                    }).ConfigureAwait(false);
+                    });
+                }).ConfigureAwait(false);
 
-                    manager.Files
-                    .Where(files => files.Priority == Priority.Normal)
-                    .ToList()
-                    .ForEach(files => Console.WriteLine(files.Path));
+                manager.Files
+                .Where(files => files.Priority == Priority.Normal)
+                .ToList()
+                .ForEach(files => Console.WriteLine(files.Path));
 
-                    //foreach (var files in manager.Files)
-                    //{
+                //foreach (var files in manager.Files)
+                //{
 
-                    //    if (!StartsWithStrings.Any(prefix => files.Path.StartsWith(prefix)) ||
-                    //       (!ContainsStrings.Any(prefix => files.Path.Contains(prefix))))
-                    //    {
-                    //        await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);
-                    //        n2++;
-                    //    }
-                    //    else
-                    //    {
-                    //      Console.WriteLine($"{files.Path}");
-                    //    }
-                    //}
-
-                    if (n1 == n2)
-                        Console.WriteLine($"{n1} - {n2} No files found");
-                    else
-                        Console.WriteLine($"{n1} - {n1 - n2}");
-
-                    Console.WriteLine(manager.InfoHashes.V1OrV2.ToHex());
-                }
-                catch (Exception e)
-                {
-                    Console.Write("Couldn't decode {0}: ", magnetlink);
-                    Console.WriteLine(e.Message);
-                }
+                //    if (!StartsWithStrings.Any(prefix => files.Path.StartsWith(prefix)) ||
+                //       (!ContainsStrings.Any(prefix => files.Path.Contains(prefix))))
+                //    {
+                //        await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);
+                //        n2++;
+                //    }
+                //    else
+                //    {
+                //      Console.WriteLine($"{files.Path}");
+                //    }
                 //}
+
+                if (n1 == n2)
+                    Console.WriteLine($"{n1} - {n2} No files found");
+                else
+                    Console.WriteLine($"{n1} - {n1 - n2}");
+
+                Console.WriteLine(manager.InfoHashes.V1OrV2.ToHex());
             }
+            catch (Exception e)
+            {
+                Console.Write("Couldn't decode {0}: ", magnet.MagnetLink);
+                Console.WriteLine(e.Message);
+            }
+            //}
+            //}
 
             // If we loaded no torrents, just exist. The user can put files in the torrents directory and start
             // the client again
@@ -155,6 +163,12 @@ namespace mame_ao.source.Torrent
                 return;
             }
 
+            bool start_engine = false;
+            if (start_engine) { await StartEngine(token).ConfigureAwait(false); }
+        }
+
+        private async Task StartEngine(CancellationToken token)
+        {
             // For each torrent manager we loaded and stored in our list, hook into the events
             // in the torrent manager and start the engine.
             foreach (TorrentManager manager in Engine.Torrents)
