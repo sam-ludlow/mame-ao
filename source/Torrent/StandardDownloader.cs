@@ -61,7 +61,7 @@ namespace mame_ao.source.Torrent
         //    }
         //}
 
-        public async Task DownloadAsync(CancellationToken token, List<string> startsWithStrings, List<string> containsStrings, MagnetItem magnet)
+        public async Task DownloadAsync(List<string> startsWithStrings, List<string> containsStrings, MagnetItem magnet)
         {
             // Torrents will be downloaded to this directory
             var downloadsPath = Path.Combine(Environment.CurrentDirectory, "Downloads");
@@ -72,92 +72,39 @@ namespace mame_ao.source.Torrent
 #if DEBUG
             //LoggerFactory.Register(new TextWriterLogger(Console.Out));
 #endif
+            var settingsBuilder = new TorrentSettingsBuilder
+            {
+                MaximumConnections = 60,
+            };
 
             // If the torrentsPath does not exist, we want to create it
             if (!Directory.Exists(torrentsPath))
                 Directory.CreateDirectory(torrentsPath);
+            //try
+            //{
 
             // For each file in the torrents path that is a .torrent file, load it into the engine.
             // foreach (string file in Directory.GetFiles(torrentsPath))
-            //foreach (string magnetlink in magnets)
+            //foreach (MagnetItem magnet in magnets)
             //{
             //if (file.EndsWith(".torrent", StringComparison.OrdinalIgnoreCase))
             //{
-            try
-            {
-                // EngineSettings.AutoSaveLoadFastResume is enabled, so any cached fast resume
-                // data will be implicitly loaded. If fast resume data is found, the 'hash check'
-                // phase of starting a torrent can be skipped.
-                // 
-                // TorrentSettingsBuilder can be used to modify the settings for this
-                // torrent.
-                var settingsBuilder = new TorrentSettingsBuilder
-                {
-                    MaximumConnections = 60,
-                };
-                MagnetLink.TryParse(magnet.MagnetLink, out MagnetLink link);
-                manager = await Engine.AddAsync(link, downloadsPath, settingsBuilder.ToSettings()).ConfigureAwait(false);
-
-                MonoTorrent.Torrent torrent = manager.Torrent;
-                var n1 = manager.Files.Count;
-                var n2 = n1;
-                Console.WriteLine($"{n1} - {n2}");
-
-                var fileArray = manager.Files.ToArray();
-                var parallelOptions = new ParallelOptions { MaxDegreeOfParallelism = Environment.ProcessorCount };
-                IProgress<string> progress = new Progress<string>(message => Console.WriteLine(message));
-
-                await Task.Run(() =>
-                {
-                    Parallel.ForEach(fileArray, parallelOptions, async file =>
-                    {
-                        if (!startsWithStrings.Any(prefix => file.Path.StartsWith(prefix)) ||
-                            !containsStrings.Any(prefix => file.Path.Contains(prefix)))
-                        {
-                            await manager.SetFilePriorityAsync(file, Priority.DoNotDownload).ConfigureAwait(false);
-                            Interlocked.Decrement(ref n2);
-                            progress.Report($"File {file.Path} set to DoNotDownload");
-
-                        }
-                        else await manager.SetFilePriorityAsync(file, Priority.Normal).ConfigureAwait(false);
-
-
-                    });
-                }).ConfigureAwait(false);
-
-                manager.Files
-                .Where(files => files.Priority == Priority.Normal)
-                .ToList()
-                .ForEach(files => Console.WriteLine(files.Path));
-
-                //foreach (var files in manager.Files)
-                //{
-
-                //    if (!StartsWithStrings.Any(prefix => files.Path.StartsWith(prefix)) ||
-                //       (!ContainsStrings.Any(prefix => files.Path.Contains(prefix))))
-                //    {
-                //        await manager.SetFilePriorityAsync(files, Priority.DoNotDownload);
-                //        n2++;
-                //    }
-                //    else
-                //    {
-                //      Console.WriteLine($"{files.Path}");
-                //    }
-                //}
-
-                if (n1 == n2)
-                    Console.WriteLine($"{n1} - {n2} No files found");
-                else
-                    Console.WriteLine($"{n1} - {n1 - n2}");
-
-                Console.WriteLine(manager.InfoHashes.V1OrV2.ToHex());
-            }
-            catch (Exception e)
-            {
-                Console.Write("Couldn't decode {0}: ", magnet.MagnetLink);
-                Console.WriteLine(e.Message);
-            }
+            // EngineSettings.AutoSaveLoadFastResume is enabled, so any cached fast resume
+            // data will be implicitly loaded. If fast resume data is found, the 'hash check'
+            // phase of starting a torrent can be skipped.
+            // 
+            // TorrentSettingsBuilder can be used to modify the settings for this
+            // torrent.
+            MagnetLink.TryParse(magnet.MagnetLink, out MagnetLink magnetLink);
+            await Engine.AddAsync(magnetLink, downloadsPath, settingsBuilder.ToSettings()).ConfigureAwait(false);
             //}
+
+            //await NewMethod(startsWithStrings, containsStrings).ConfigureAwait(false);
+
+            //catch (Exception e)
+            //{
+            //    Console.Write("Couldn't decode {0}: ", magnet.MagnetLink);
+            //    Console.WriteLine(e.Message);
             //}
 
             // If we loaded no torrents, just exist. The user can put files in the torrents directory and start
@@ -169,122 +116,10 @@ namespace mame_ao.source.Torrent
                 return;
             }
 
-            bool start_engine = false;
-            if (start_engine) { await StartEngine(token).ConfigureAwait(false); }
+            bool start_engine = true;
         }
 
-        private async Task StartEngine(CancellationToken token)
-        {
-            // For each torrent manager we loaded and stored in our list, hook into the events
-            // in the torrent manager and start the engine.
-            foreach (TorrentManager manager in Engine.Torrents)
-            {
-                manager.PeersFound += (o, e) =>
-                {
-                    Listener.WriteLine(string.Format($"{e.GetType().Name}: {e.NewPeers} peers for {e.TorrentManager.Name}"));
-                };
-                manager.PeerConnected += (o, e) =>
-                {
-                    lock (Listener)
-                        Listener.WriteLine($"Connection succeeded: {e.Peer.Uri}");
-                };
-                manager.ConnectionAttemptFailed += (o, e) =>
-                {
-                    lock (Listener)
-                        Listener.WriteLine(
-                            $"Connection failed: {e.Peer.ConnectionUri} - {e.Reason}");
-                };
-                // Every time a piece is hashed, this is fired.
-                manager.PieceHashed += delegate (object o, PieceHashedEventArgs e)
-                {
-                    lock (Listener)
-                        Listener.WriteLine($"Piece Hashed: {e.PieceIndex} - {(e.HashPassed ? "Pass" : "Fail")}");
-                };
 
-                // Every time the state changes (Stopped -> Seeding -> Downloading -> Hashing) this is fired
-                manager.TorrentStateChanged += delegate (object o, TorrentStateChangedEventArgs e)
-                {
-                    lock (Listener)
-                        Listener.WriteLine($"OldState: {e.OldState} NewState: {e.NewState}");
-                };
-
-                // Every time the tracker's state changes, this is fired
-                manager.TrackerManager.AnnounceComplete += (sender, e) =>
-                {
-                    Listener.WriteLine($"{e.Successful}: {e.Tracker}");
-                };
-
-                // Start the torrentmanager. The file will then hash (if required) and begin downloading/seeding.
-                // As EngineSettings.AutoSaveLoadDhtCache is enabled, any cached data will be loaded into the
-                // Dht engine when the first torrent is started, enabling it to bootstrap more rapidly.
-                await manager.StartAsync().ConfigureAwait(false);
-            }
-
-            // While the torrents are still running, print out some stats to the screen.
-            // Details for all the loaded torrent managers are shown.
-            StringBuilder sb = new StringBuilder(1024);
-            while (Engine.IsRunning)
-            {
-                sb.Remove(0, sb.Length);
-
-                AppendFormat(sb, $"Transfer Rate:      {Engine.TotalDownloadRate / 1024.0:0.00}kB/sec ↓ / {Engine.TotalUploadRate / 1024.0:0.00}kB/sec ↑");
-                AppendFormat(sb, $"Memory Cache:       {Engine.DiskManager.CacheBytesUsed / 1024.0:0.00}/{Engine.Settings.DiskCacheBytes / 1024.0:0.00} kB");
-                AppendFormat(sb, $"Disk IO Rate:       {Engine.DiskManager.ReadRate / 1024.0:0.00} kB/s read / {Engine.DiskManager.WriteRate / 1024.0:0.00} kB/s write");
-                AppendFormat(sb, $"Disk IO Total:      {Engine.DiskManager.TotalBytesRead / 1024.0:0.00} kB read / {Engine.DiskManager.TotalBytesWritten / 1024.0:0.00} kB written");
-                AppendFormat(sb, $"Open Files:         {Engine.DiskManager.OpenFiles} / {Engine.DiskManager.MaximumOpenFiles}");
-                AppendFormat(sb, $"Open Connections:   {Engine.ConnectionManager.OpenConnections}");
-                AppendFormat(sb, $"DHT State:          {Engine.Dht.State}");
-
-                // Print out the port mappings
-                foreach (var mapping in Engine.PortMappings.Created)
-                    AppendFormat(sb, $"Successful Mapping    {mapping.PublicPort}:{mapping.PrivatePort} ({mapping.Protocol})");
-                foreach (var mapping in Engine.PortMappings.Failed)
-                    AppendFormat(sb, $"Failed mapping:       {mapping.PublicPort}:{mapping.PrivatePort} ({mapping.Protocol})");
-                foreach (var mapping in Engine.PortMappings.Pending)
-                    AppendFormat(sb, $"Pending mapping:      {mapping.PublicPort}:{mapping.PrivatePort} ({mapping.Protocol})");
-
-                foreach (TorrentManager manager in Engine.Torrents)
-                {
-                    AppendSeparator(sb);
-                    AppendFormat(sb, $"State:              {manager.State}");
-                    AppendFormat(sb, $"Name:               {(manager.Torrent == null ? "MetaDataMode" : manager.Torrent.Name)}");
-                    AppendFormat(sb, $"Progress:           {manager.Progress:0.00}");
-                    AppendFormat(sb, $"Transferred:        {manager.Monitor.DataBytesReceived / 1024.0 / 1024.0:0.00} MB ↓ / {manager.Monitor.DataBytesSent / 1024.0 / 1024.0:0.00} MB ↑");
-                    AppendFormat(sb, $"Tracker Status");
-                    foreach (var tier in manager.TrackerManager.Tiers)
-                        AppendFormat(sb, $"\t{tier.ActiveTracker} : Announce Succeeded: {tier.LastAnnounceSucceeded}. Scrape Succeeded: {tier.LastScrapeSucceeded}.");
-
-                    if (manager.PieceManager != null)
-                        AppendFormat(sb, "Current Requests:   {0}", await manager.PieceManager.CurrentRequestCountAsync().ConfigureAwait(false));
-
-                    var peers = await manager.GetPeersAsync().ConfigureAwait(false);
-                    AppendFormat(sb, "Outgoing:");
-                    foreach (PeerId p in peers.Where(t => t.ConnectionDirection == Direction.Outgoing))
-                    {
-                        AppendFormat(sb, $"\t{p.AmRequestingPiecesCount} - {(p.Monitor.DownloadRate / 1024.0):0.00}/{(p.Monitor.UploadRate / 1024.0):0.00}kB/sec - {p.Uri} - {p.EncryptionType}");
-                    }
-                    AppendFormat(sb, "");
-                    AppendFormat(sb, "Incoming:");
-                    foreach (PeerId p in peers.Where(t => t.ConnectionDirection == Direction.Incoming))
-                    {
-                        AppendFormat(sb, $"\t{p.AmRequestingPiecesCount} - {(p.Monitor.DownloadRate / 1024.0):0.00}/{(p.Monitor.UploadRate / 1024.0):0.00}kB/sec - {p.Uri} - {p.EncryptionType}");
-                    }
-
-                    AppendFormat(sb, "", null);
-                    if (manager.Torrent != null)
-                        foreach (var file in manager.Files)
-                            if (file.BitField.PercentComplete > 0)
-                            {
-                                AppendFormat(sb, "{1:0.00}% - {0}", file.Path, file.BitField.PercentComplete);
-                            }
-                }
-                Console.Clear();
-                Console.WriteLine(sb.ToString());
-                Listener.ExportTo(Console.Out);
-
-                await Task.Delay(5000, token).ConfigureAwait(false);
-            }
-        }
 
         private async Task ProcessFileAsync(ITorrentManagerFile file, Progress<string> progress)
         {
