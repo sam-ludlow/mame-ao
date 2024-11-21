@@ -193,10 +193,14 @@ namespace Spludlow.MameAO
 									fileManifestSHA1s.Add(fileSha1, manifestSha1);
 								else
 									if (fileManifestSHA1s[fileSha1] != manifestSha1)
-									throw new ApplicationException($"Manifest SHA1 Missmatch fileSha1:{fileSha1}.");
+										throw new ApplicationException($"Manifest SHA1 Missmatch fileSha1:{fileSha1}.");
 							}
 
 							reportRow["action"] = "PUT";
+
+							using (StreamWriter writer = new StreamWriter(manifestCacheFilename, false, Encoding.ASCII))
+								foreach (string key in fileManifestSHA1s.Keys)
+									writer.WriteLine($"{key}\t{fileManifestSHA1s[key]}");
 
 							if (++count >= batchSize)
 								break;
@@ -218,11 +222,7 @@ namespace Spludlow.MameAO
 				{
 					if (fileManifestSHA1s.Count > 0)
 					{
-						using (StreamWriter writer = new StreamWriter(manifestCacheFilename, false, Encoding.ASCII))
-							foreach (string key in fileManifestSHA1s.Keys)
-								writer.WriteLine($"{key}\t{fileManifestSHA1s[key]}");
-
-						Console.WriteLine("!!! Updating manifest");
+						Console.WriteLine("!!! Uploading manifest");
 
 						UploadFile(itemName, manifestCacheFilename, MANIFEST_NAME);
 					}
@@ -517,8 +517,6 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			Console.WriteLine("...done.");
-
 			using (WebResponse response = request.GetResponse())
 			{
 				HttpWebResponse httpResponse = (HttpWebResponse)response;
@@ -535,7 +533,7 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			Console.WriteLine($"PUT Response: {result}");
+			Console.WriteLine("...done.");
 
 			return result;
 		}
@@ -564,14 +562,12 @@ namespace Spludlow.MameAO
 
 				using (Stream responseStream = response.GetResponseStream())
 				{
-					Console.WriteLine("...done.");
-
 					using (StreamReader reader = new StreamReader(responseStream))
 						result = reader.ReadToEnd();
 				}
 			}
-
-			Console.WriteLine($"DELETE Response: {result}");
+			
+			Console.WriteLine("...done.");
 
 			return result;
 		}
