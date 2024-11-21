@@ -14,9 +14,19 @@ namespace mame_ao.source.Torrent
 {
     public class MainClass
     {
-        public EngineSettingsBuilder settingBuilder { get; private set; }
-        public ClientEngine Engine { get; private set; }
-        const int httpListeningPort = 55125;
+        //public EngineSettingsBuilder settingBuilder { get; private set; }
+        //public ClientEngine Engine { get; private set; }
+
+        public MainClass(EngineSettingsBuilder settingBuilder, ClientEngine engine, Top10Listener listener)
+        {
+            SettingBuilder = settingBuilder;
+            Engine = engine;
+            Listener = listener;
+        }
+
+        public EngineSettingsBuilder SettingBuilder { get; }
+        public ClientEngine Engine { get; }
+        public Top10Listener Listener { get; }
 
         public async Task RunMainTask(List<MagnetItem> magnets, List<string> StartsWith, List<string> ContainsStrings)
         {
@@ -88,43 +98,43 @@ namespace mame_ao.source.Torrent
             //ContainsStrings = MameAOProcessor.EnterNewList(ContainsStrings, "Enter List of Filename Contains : ").Result;
 
 
-            settingBuilder = new EngineSettingsBuilder
-            {
-                // Allow the engine to automatically forward ports using upnp/nat-pmp (if a compatible router is available)
-                AllowPortForwarding = true,
+            //settingBuilder = new EngineSettingsBuilder
+            //{
+            //    // Allow the engine to automatically forward ports using upnp/nat-pmp (if a compatible router is available)
+            //    AllowPortForwarding = true,
 
-                // Automatically save a cache of the DHT table when all torrents are stopped.
-                AutoSaveLoadDhtCache = true,
+            //    // Automatically save a cache of the DHT table when all torrents are stopped.
+            //    AutoSaveLoadDhtCache = true,
 
-                // Automatically save 'FastResume' data when TorrentManager.StopAsync is invoked, automatically load it
-                // before hash checking the torrent. Fast Resume data will be loaded as part of 'engine.AddAsync' if
-                // torrent metadata is available. Otherwise, if a magnetlink is used to download a torrent, fast resume
-                // data will be loaded after the metadata has been downloaded. 
-                AutoSaveLoadFastResume = true,
+            //    // Automatically save 'FastResume' data when TorrentManager.StopAsync is invoked, automatically load it
+            //    // before hash checking the torrent. Fast Resume data will be loaded as part of 'engine.AddAsync' if
+            //    // torrent metadata is available. Otherwise, if a magnetlink is used to download a torrent, fast resume
+            //    // data will be loaded after the metadata has been downloaded. 
+            //    AutoSaveLoadFastResume = true,
 
-                // If a MagnetLink is used to download a torrent, the engine will try to load a copy of the metadata
-                // it's cache directory. Otherwise the metadata will be downloaded and stored in the cache directory
-                // so it can be reloaded later.
-                AutoSaveLoadMagnetLinkMetadata = true,
+            //    // If a MagnetLink is used to download a torrent, the engine will try to load a copy of the metadata
+            //    // it's cache directory. Otherwise the metadata will be downloaded and stored in the cache directory
+            //    // so it can be reloaded later.
+            //    AutoSaveLoadMagnetLinkMetadata = true,
 
-                // Use a fixed port to accept incoming connections from other peers for testing purposes. Production usages should use a random port, 0, if possible.
-                ListenEndPoints = new Dictionary<string, IPEndPoint> {
-                    { "ipv4", new IPEndPoint (IPAddress.Any, 55123) },
-                    { "ipv6", new IPEndPoint (IPAddress.IPv6Any, 55123) }
-                },
+            //    // Use a fixed port to accept incoming connections from other peers for testing purposes. Production usages should use a random port, 0, if possible.
+            //    ListenEndPoints = new Dictionary<string, IPEndPoint> {
+            //        { "ipv4", new IPEndPoint (IPAddress.Any, 55123) },
+            //        { "ipv6", new IPEndPoint (IPAddress.IPv6Any, 55123) }
+            //    },
 
-                // Use a fixed port for DHT communications for testing purposes. Production usages should use a random port, 0, if possible.
-                DhtEndPoint = new IPEndPoint(IPAddress.Any, 55123),
+            //    // Use a fixed port for DHT communications for testing purposes. Production usages should use a random port, 0, if possible.
+            //    DhtEndPoint = new IPEndPoint(IPAddress.Any, 55123),
 
 
-                // Wildcards such as these are supported as long as the underlying .NET framework version, and the operating system, supports them:
-                //HttpStreamingPrefix = $"http://+:{httpListeningPort}/"
-                //HttpStreamingPrefix = $"http://*.mydomain.com:{httpListeningPort}/"
+            //    // Wildcards such as these are supported as long as the underlying .NET framework version, and the operating system, supports them:
+            //    //HttpStreamingPrefix = $"http://+:{httpListeningPort}/"
+            //    //HttpStreamingPrefix = $"http://*.mydomain.com:{httpListeningPort}/"
 
-                // For now just bind to localhost.
-                HttpStreamingPrefix = $"http://127.0.0.1:{httpListeningPort}/"
-            };
-            Engine = new ClientEngine(settingBuilder.ToSettings());
+            //    // For now just bind to localhost.
+            //    HttpStreamingPrefix = $"http://127.0.0.1:{httpListeningPort}/"
+            //};
+            //Engine = new ClientEngine(settingBuilder.ToSettings());
             //using ClientEngine engine = clientEngine;
 
             if (Engine.Settings.AllowPortForwarding)
@@ -264,7 +274,14 @@ namespace mame_ao.source.Torrent
                 await Task.Delay(5000, token).ConfigureAwait(false);
             }
         }
-        Top10Listener Listener = new Top10Listener(10);
+        //Top10Listener Listener = new Top10Listener(10);
+
+        //public MainClass(EngineSettingsBuilder settingBuilder, ClientEngine engine, Top10Listener listener)
+        //{
+        //    this.settingBuilder = settingBuilder;
+        //    Engine = engine;
+        //    Listener = listener;
+        //}
 
         void AppendFormat(StringBuilder sb, string str, params object[] formatting)
         {
