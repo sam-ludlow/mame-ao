@@ -8,6 +8,7 @@ using System.IO.Compression;
 using System.Net;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -54,6 +55,38 @@ namespace Spludlow.MameAO
 			item.GetFile(null);
 
 			dynamic metadata = JsonConvert.DeserializeObject<dynamic>(Tools.Query(item.UrlMetadata));
+
+			DateTime? confilct = null;
+			if (metadata.conflict != null)
+				confilct = Tools.FromEpochDate((string)metadata.conflict);
+
+			int files_count = 0;
+			if (metadata.files_count != null)
+				files_count = (int)metadata.files_count;
+
+			bool pending_tasks = false;
+			if (metadata.pending_tasks != null)
+				pending_tasks = (bool)metadata.pending_tasks;
+
+			bool servers_unavailable = false;
+			if (metadata.servers_unavailable != null)
+				servers_unavailable = (bool)metadata.servers_unavailable;
+
+			//	Seems to max out (503) when you reach 1000?
+			JArray tasks = new JArray();
+			if (metadata.tasks != null)
+				tasks = metadata.tasks;
+
+			Tools.ConsoleHeading(3, new string[] {
+				"metadata info",
+				"=============",
+				$"conflict: {(confilct == null ? "OK" : confilct.ToString())}",
+				$"files_count: {files_count}",
+				$"pending_tasks: {pending_tasks}",
+				$"servers_unavailable: {servers_unavailable}",
+				$"tasks: {tasks.Count}",
+			});
+
 			if (metadata.conflict != null)
 				throw new ApplicationException("Archive.org item status is 'conflict' try again later.");
 

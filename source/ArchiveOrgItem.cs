@@ -157,14 +157,12 @@ namespace Spludlow.MameAO
 
 	public class ArchiveOrgFile
 	{
-		private static readonly DateTime EpochDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
-
 		public ArchiveOrgFile(dynamic file)
 		{
 			name = file.name;
 			size = Int64.Parse((string)file.size);
 			sha1 = file.sha1;
-			mtime = EpochDateTime.AddSeconds(double.Parse((string)file.mtime));
+			mtime = Tools.FromEpochDate((string)file.mtime);
 		}
 
 		public string name { get; set; }

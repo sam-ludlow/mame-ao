@@ -459,6 +459,10 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static DateTime FromEpochDate(string epoch)
+		{
+			return FromEpochDate(double.Parse(epoch));
+		}
 		public static DateTime FromEpochDate(double epoch)
 		{
 			return EpochDateTime.AddSeconds(epoch);
