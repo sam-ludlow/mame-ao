@@ -1,21 +1,20 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.Data;
 using System.Text;
-using System.Threading.Tasks;
-using System.ComponentModel;
-using System.Drawing;
 using System.Text.RegularExpressions;
-
+using System.Threading.Tasks;
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	public class Tools
 	{
@@ -32,9 +31,9 @@ namespace Spludlow.MameAO
 
 		private static readonly char[] _HeadingChars = new char[] { ' ', '#', '=', '-' };
 
-		private static readonly SHA1Managed _SHA1Managed = new SHA1Managed();
+		private static readonly SHA256 _SHA256 = SHA256.Create();
 
-		public static string DataRowValue(DataRow row, string columnName)
+        public static string DataRowValue(DataRow row, string columnName)
 		{
 			if (row.IsNull(columnName))
 				return null;
@@ -228,7 +227,7 @@ namespace Spludlow.MameAO
 
 		public static string SHA1Hex(Stream stream)
 		{
-			byte[] hash = _SHA1Managed.ComputeHash(stream);
+			byte[] hash = _SHA256.ComputeHash(stream);
 			StringBuilder hex = new StringBuilder();
 			foreach (byte b in hash)
 				hex.Append(b.ToString("x2"));
@@ -330,8 +329,8 @@ namespace Spludlow.MameAO
 
 			return result;
 		}
-
-		public static string Query(string url)
+        //arch1vepass
+        public static string Query(string url)
 		{
 			try
 			{
@@ -398,7 +397,7 @@ namespace Spludlow.MameAO
 							progress += bytesRead;
 							if (progress >= Globals.DownloadDotSize)
 							{
-								Console.Write(".");
+								//Console.Write(".");
 								progress = 0;
 							}
 

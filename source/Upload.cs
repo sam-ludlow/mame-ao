@@ -2,14 +2,13 @@
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
-using System.Linq;
-using System.Text;
 using System.IO.Compression;
+using System.Linq;
 using System.Net;
-
+using System.Text;
 using Newtonsoft.Json;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	public class Upload
 	{

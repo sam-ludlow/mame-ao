@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Diagnostics;
-using System.IO.Compression;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Threading;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	public class SelfUpdate
 	{

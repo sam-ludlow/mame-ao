@@ -2,7 +2,7 @@
 using System.IO;
 using System.Text;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	public class BadSources
 	{

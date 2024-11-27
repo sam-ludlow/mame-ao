@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.IO.Compression;
 using System.IO;
+using System.IO.Compression;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	public class Import
 	{
