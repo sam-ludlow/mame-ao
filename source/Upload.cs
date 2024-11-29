@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.IO.Compression;
 using System.Net;
+using System.Threading;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -50,6 +51,8 @@ namespace Spludlow.MameAO
 
 		public static void MachineRom(string itemName, int batchSize)
 		{
+			int uploadSleepMs = 500;
+
 			ArchiveOrgItem item = new ArchiveOrgItem(itemName, null, null);
 			item.DontCache = true;
 			item.GetFile(null);
@@ -72,10 +75,15 @@ namespace Spludlow.MameAO
 			if (metadata.servers_unavailable != null)
 				servers_unavailable = (bool)metadata.servers_unavailable;
 
-			//	Seems to max out (503) when you reach 1000?
 			JArray tasks = new JArray();
 			if (metadata.tasks != null)
 				tasks = metadata.tasks;
+
+			string[] workable_servers = new string[0];
+			if (metadata.workable_servers != null)
+				workable_servers = ((JArray)metadata.workable_servers).Select(i => i.ToString()).ToArray();
+
+			string host = workable_servers.Length == 0 ? null : workable_servers[workable_servers.Length - 1];
 
 			Tools.ConsoleHeading(3, new string[] {
 				"metadata info",
@@ -85,10 +93,14 @@ namespace Spludlow.MameAO
 				$"pending_tasks: {pending_tasks}",
 				$"servers_unavailable: {servers_unavailable}",
 				$"tasks: {tasks.Count}",
+				$"workable_servers: {string.Join(", ", workable_servers)}",
 			});
 
 			if (metadata.conflict != null)
 				throw new ApplicationException("Archive.org item status is 'conflict' try again later.");
+
+			if (host == null)
+				throw new ApplicationException("Archive.org item no workable_servers");
 
 			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name, cloneof, description FROM machine ORDER BY machine.name");
 			DataTable romTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
@@ -108,7 +120,7 @@ namespace Spludlow.MameAO
 			if (File.Exists(manifestCacheFilename) == true && (manifestFile == null || Tools.SHA1HexFile(manifestCacheFilename) != manifestFile.sha1))
 			{
 				Console.WriteLine("!!! Refreshing manifest from cache");
-				UploadFile(itemName, manifestCacheFilename, MANIFEST_NAME);
+				UploadFile(host, itemName, manifestCacheFilename, MANIFEST_NAME, "", 0);
 
 				fileManifestSHA1s = ParseManifest(File.ReadAllText(manifestCacheFilename, Encoding.ASCII));
 			}
@@ -220,7 +232,7 @@ namespace Spludlow.MameAO
 								string manifest = CreateRomManifest(nameHashes);
 								string manifestSha1 = Tools.SHA1HexText(manifest, Encoding.ASCII);
 
-								UploadFile(itemName, targetFilename, Path.GetFileName(targetFilename));
+								UploadFile(host, itemName, targetFilename, Path.GetFileName(targetFilename), $"{count + 1}/{batchSize} {DateTime.Now}", uploadSleepMs);
 
 								if (fileManifestSHA1s.ContainsKey(fileSha1) == false)
 									fileManifestSHA1s.Add(fileSha1, manifestSha1);
@@ -257,7 +269,7 @@ namespace Spludlow.MameAO
 					{
 						Console.WriteLine("!!! Uploading manifest");
 
-						UploadFile(itemName, manifestCacheFilename, MANIFEST_NAME);
+						UploadFile(host, itemName, manifestCacheFilename, MANIFEST_NAME, "", 0);
 					}
 
 					Globals.Reports.SaveHtmlReport(views.ToArray(), headings, report.TableName + " - Actions");
@@ -496,9 +508,9 @@ namespace Spludlow.MameAO
 			return manifest.ToString();
 		}
 
-		public static string UploadFile(string itemName, string sourceFilename, string targetFilename)
+		public static string UploadFile(string host, string itemName, string sourceFilename, string targetFilename, string info, int sleepMs)
 		{
-			string url = $"https://s3.us.archive.org/{Uri.EscapeUriString(itemName)}/{Uri.EscapeUriString(targetFilename)}";
+			string url = $"https://{host}/{Uri.EscapeUriString(itemName)}/{Uri.EscapeUriString(targetFilename)}";
 
 			string result;
 
@@ -524,29 +536,41 @@ namespace Spludlow.MameAO
 
 			request.AllowWriteStreamBuffering = false;
 
-			Console.Write($"Uploading size:{Tools.DataSize(fileInfo.Length)} {url} ...");
+			Console.Write($"Uploading {info} size:{Tools.DataSize(fileInfo.Length)} {url} ...");
 
-			using (Stream targetStream = request.GetRequestStream())
+			Exception uploadException = null;
+
+			using (FileStream sourceStream = new FileStream(sourceFilename, FileMode.Open))
 			{
-				using (FileStream sourceStream = new FileStream(sourceFilename, FileMode.Open))
+				try
 				{
-					int bytesRead;
-					long progress = 0;
-					while ((bytesRead = sourceStream.Read(buffer, 0, buffer.Length)) > 0)
+					using (Stream targetStream = request.GetRequestStream())
 					{
-						total += bytesRead;
-						targetStream.Write(buffer, 0, bytesRead);
-
-						progress += bytesRead;
-						if (progress >= Globals.DownloadDotSize)
+						int bytesRead;
+						long progress = 0;
+						while ((bytesRead = sourceStream.Read(buffer, 0, buffer.Length)) > 0)
 						{
-							Console.Write(".");
-							progress = 0;
-						}
+							total += bytesRead;
+							targetStream.Write(buffer, 0, bytesRead);
 
-						lock (Globals.WorkerTaskInfo)
-							Globals.WorkerTaskInfo.BytesCurrent = total;
+							progress += bytesRead;
+							if (progress >= Globals.DownloadDotSize)
+							{
+								Console.Write(".");
+								progress = 0;
+							}
+
+							lock (Globals.WorkerTaskInfo)
+								Globals.WorkerTaskInfo.BytesCurrent = total;
+
+							if (sleepMs > 0)
+								Thread.Sleep(sleepMs);
+						}
 					}
+				}
+				catch (WebException e)
+				{
+					uploadException = e;
 				}
 			}
 
@@ -556,14 +580,17 @@ namespace Spludlow.MameAO
 
 				int statusCode = (int)httpResponse.StatusCode;
 
-				if (statusCode < 200 || statusCode >= 300)
-					throw new ApplicationException($"Bad status code:{statusCode}, url:{url}");
-
 				using (Stream responseStream = response.GetResponseStream())
 				{
 					using (StreamReader reader = new StreamReader(responseStream))
 						result = reader.ReadToEnd();
 				}
+
+				if (statusCode < 200 || statusCode >= 300)
+					throw new ApplicationException($"Upload failed, Bad status code:{statusCode}, url:{url}, response:{result}");
+
+				if (uploadException != null)
+					throw new ApplicationException($"Upload failed, status:{statusCode}, url:{url}, message:{uploadException.Message}, response:{result}", uploadException);
 			}
 
 			Console.WriteLine("...done.");
@@ -590,14 +617,14 @@ namespace Spludlow.MameAO
 
 				int statusCode = (int)httpResponse.StatusCode;
 
-				if (statusCode < 200 || statusCode >= 300)
-					throw new ApplicationException($"Bad status code:{statusCode}, url:{url}");
-
 				using (Stream responseStream = response.GetResponseStream())
 				{
 					using (StreamReader reader = new StreamReader(responseStream))
 						result = reader.ReadToEnd();
 				}
+
+				if (statusCode < 200 || statusCode >= 300)
+					throw new ApplicationException($"Bad status code:{statusCode}, url:{url}, response:{result}");
 			}
 			
 			Console.WriteLine("...done.");
