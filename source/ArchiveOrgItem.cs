@@ -25,7 +25,7 @@ namespace mame_ao.source
 		public static string CacheFilename;
 
 		private static HttpClient HttpClient;
-        private static CookieContainer CookieContainer;
+        private static readonly CookieContainer CookieContainer;
 
         static ArchiveOrgAuth()
 		{

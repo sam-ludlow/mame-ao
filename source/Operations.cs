@@ -9,6 +9,7 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using Newtonsoft.Json;
+using System.Threading.Tasks;
 
 namespace mame_ao.source
 {
@@ -18,7 +19,7 @@ namespace mame_ao.source
 	public class Operations
 	{
 
-		public static int ProcessOperation(Dictionary<string, string> parameters)
+		public static async Task<int> ProcessOperationAsync(Dictionary<string, string> parameters)
 		{
 			int exitCode;
 
@@ -29,7 +30,7 @@ namespace mame_ao.source
 				case "GET_MAME":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
 
-					exitCode = GetMame(parameters["DIRECTORY"], parameters["VERSION"]);
+					exitCode = await GetMameAsync(parameters["DIRECTORY"], parameters["VERSION"]);
 					break;
 
 				case "MAKE_XML":
@@ -117,7 +118,7 @@ namespace mame_ao.source
 		//
 		// MAME
 		//
-		public static int GetMame(string directory, string version)
+		public static async Task<int> GetMameAsync(string directory, string version)
 		{
 			int newVersion = 0;
 
@@ -145,7 +146,7 @@ namespace mame_ao.source
 
 				string binariesFilename = Path.Combine(versionDirectory, Path.GetFileName(binariesUrl));
 
-				Tools.Download(binariesUrl, binariesFilename);
+				await Tools.DownloadAsync(binariesUrl, binariesFilename);
 
 				Mame.RunSelfExtract(binariesFilename);
 			}

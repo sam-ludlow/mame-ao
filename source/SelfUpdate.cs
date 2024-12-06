@@ -4,12 +4,13 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading;
+using System.Threading.Tasks;
 
 namespace mame_ao.source
 {
 	public class SelfUpdate
 	{
-		public static void Update(int startingPid)
+		public static async Task UpdateAsync(int startingPid)
 		{
 			string updateDirectory = Path.Combine(Globals.TempDirectory, "UPDATE");
 
@@ -29,7 +30,7 @@ namespace mame_ao.source
 				string archiveUrl = repo.Assets[repo.Assets.First().Key];
 				string archiveFilename = Path.Combine(Globals.RootDirectory, $"mame-ao-{repo.tag_name}.zip");
 
-				Tools.Download(archiveUrl, archiveFilename);
+				await Tools.DownloadAsync(archiveUrl, archiveFilename);
 
 				if (Directory.Exists(updateDirectory) == true)
 				{

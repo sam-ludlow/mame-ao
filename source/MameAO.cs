@@ -22,7 +22,7 @@ namespace mame_ao.source
     public partial class MameAOProcessor
     {
         private IntPtr ConsoleHandle;
-        private static List<string> excludedWords;
+        //private static List<string> excludedWords;
         private readonly string IntroText = @"@VERSION
 '##::::'##::::'###::::'##::::'##:'########:::::::'###:::::'#######::
  ###::'###:::'## ##::: ###::'###: ##.....:::::::'## ##:::'##.... ##:
@@ -211,7 +211,7 @@ namespace mame_ao.source
 
         public void Initialize()
         {
-            Console.Title = $"MAME-AO {Globals.AssemblyVersion}";
+            string v = $"MAME-AO {Globals.AssemblyVersion}";Console.Title = v;
             AnsiConsole.Markup("Initializing");
             PrintRainbowText(IntroText.Replace("@VERSION", Globals.AssemblyVersion));
             AnsiConsole.Markup($"[bold green]{WelcomeText}[/]");
@@ -351,7 +351,7 @@ namespace mame_ao.source
                 if (File.Exists(binCacheFilename) == false)
                 {
                     Console.Write($"Downloading MAME binaries {binUrl} ...");
-                    Tools.Download(binUrl, binCacheFilename);
+                    Tools.DownloadAsync(binUrl, binCacheFilename);
                     Console.WriteLine("...done.");
                 }
 
@@ -426,7 +426,7 @@ namespace mame_ao.source
             // Bits & Bobs
             //
 
-            ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
+            ConsoleHandle = FindWindowByCaption(IntPtr.Zero, lpWindowName: v);
 
             Globals.Reports = new Reports();
             Globals.BadSources = new BadSources();
@@ -461,7 +461,7 @@ namespace mame_ao.source
 
             try
             {
-                Globals.WebServer.StartListener();
+                await Globals.WebServer.StartListener().ConfigureAwait(false);
             }
             catch (HttpListenerException)
             {
@@ -593,11 +593,11 @@ namespace mame_ao.source
                         return;
 
                     case ".up":
-                        SelfUpdate.Update(0);
+                        SelfUpdate.UpdateAsync(0);
                         return;
 
                     case ".upany":
-                        SelfUpdate.Update(-1);
+                        SelfUpdate.UpdateAsync(-1);
                         return;
 
                     case ".favm":
@@ -755,7 +755,7 @@ namespace mame_ao.source
                         switch (parts[1].ToUpper())
                         {
                             case "MR":
-                                Upload.MachineRom(parts[2], Int32.Parse(parts[3]));
+                                Upload.MachineRomAsync(parts[2], Int32.Parse(parts[3]));
                                 break;
                             case "MD":
                                 break;
@@ -811,7 +811,7 @@ namespace mame_ao.source
             }
             else
             {
-                Place.PlaceAssets(machine, software);
+                Place.PlaceAssetsAsync(machine, software);
                 Globals.PhoneHome.Ready();
                 Mame.RunMame(binFilename, machine + " " + software + " " + arguments);
             }

@@ -3,12 +3,13 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.IO.Compression;
+using System.Threading.Tasks;
 
 namespace mame_ao.source
 {
 	public static class Place
 	{
-		public static void PlaceAssets(string machineName, string softwareName)
+		public static async Task PlaceAssetsAsync(string machineName, string softwareName)
 		{
 			Tools.ConsoleHeading(1, "Asset Acquisition");
 			Console.WriteLine();
@@ -20,7 +21,7 @@ namespace mame_ao.source
 			int missingCount = 0;
 
 			missingCount += PlaceMachineRoms(machineName);
-			missingCount += PlaceMachineDisks(machineName);
+			missingCount += await PlaceMachineDisksAsync(machineName).ConfigureAwait(false);
 
 			if (softwareName != "")
 			{
@@ -80,7 +81,7 @@ namespace mame_ao.source
 							if ((string)findSoftware["name"] == requiredSoftwareName)
 							{
 								missingCount += PlaceSoftwareRoms(softwarelist, findSoftware);
-								missingCount += PlaceSoftwareDisks(softwarelist, findSoftware);
+								missingCount += await PlaceSoftwareDisksAsync(softwarelist, findSoftware);
 
 								++softwareFound;
 							}
@@ -162,7 +163,7 @@ namespace mame_ao.source
 			return missingCount;
 		}
 
-		private static int PlaceMachineDisks(string machineName)
+		private static async Task<int> PlaceMachineDisksAsync(string machineName)
 		{
 			ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineDisk][0];
 
@@ -184,7 +185,7 @@ namespace mame_ao.source
 					ArchiveOrgFile file = MachineDiskAvailableSourceFile(machineRow, row, item);
 
 					if (file != null)
-						DownloadImportDisk(item, file, sha1, info);
+                        await DownloadImportDiskAsync(item, file, sha1, info);
 				}
 			}
 
@@ -237,7 +238,7 @@ namespace mame_ao.source
 			return PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
 		}
 
-		private static int PlaceSoftwareDisks(DataRow softwareList, DataRow software)
+		private static async Task<int> PlaceSoftwareDisksAsync(DataRow softwareList, DataRow software)
 		{
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
@@ -278,7 +279,7 @@ namespace mame_ao.source
 							ArchiveOrgFile file = item.GetFile(key);
 
 							if (file != null)
-								found = DownloadImportDisk(item, file, sha1, info);
+								found = await DownloadImportDiskAsync(item, file, sha1, info);
 						}
 					}
 				}
@@ -352,7 +353,7 @@ namespace mame_ao.source
 			return downloadRequired;
 		}
 
-		public static void DownloadImportFiles(string url, long expectedSize, string[] info)
+		public static async void DownloadImportFiles(string url, long expectedSize, string[] info)
 		{
 			using (TempDirectory tempDir = new TempDirectory())
 			{
@@ -362,7 +363,7 @@ namespace mame_ao.source
 
 				Console.Write($"Downloading size:{Tools.DataSize(expectedSize)} url:{url} ...");
 				DateTime startTime = DateTime.Now;
-				long size = Tools.Download(url, archiveFilename, expectedSize);
+				long size = await Tools.Download(url, archiveFilename, expectedSize);
 				TimeSpan took = DateTime.Now - startTime;
 				Console.WriteLine("...done");
 
@@ -396,7 +397,7 @@ namespace mame_ao.source
 			}
 		}
 
-		private static bool DownloadImportDisk(ArchiveOrgItem item, ArchiveOrgFile file, string expectedSha1, string[] info)
+		private static async Task<bool> DownloadImportDiskAsync(ArchiveOrgItem item, ArchiveOrgFile file, string expectedSha1, string[] info)
 		{
 			if (Globals.BadSources.AlreadyDownloaded(file) == true)
 			{
@@ -414,7 +415,7 @@ namespace mame_ao.source
 			string url = item.DownloadLink(file);
 			Console.Write($"Downloading {file.name} size:{Tools.DataSize(file.size)} url:{url} ...");
 			DateTime startTime = DateTime.Now;
-			long size = Tools.Download(url, tempFilename, file.size);
+			long size = await Tools.Download(url, tempFilename, file.size);
 			TimeSpan took = DateTime.Now - startTime;
 			Console.WriteLine("...done");
 

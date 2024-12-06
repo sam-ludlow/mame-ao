@@ -1,11 +1,12 @@
 ﻿using Spectre.Console;
 using System;
+using System.Threading.Tasks;
 
 namespace mame_ao.source
 {
     public static class Program
 	{
-		public static int Main(string[] args)
+		public static async Task<int> Main(string[] args)
         {
             HellowWorld();
             foreach (string arg in args)
@@ -23,11 +24,11 @@ namespace mame_ao.source
             //MameAOProcessor proc = new();
 
             if (Globals.Arguments.ContainsKey("OPERATION") == true)
-                return Operations.ProcessOperation(Globals.Arguments);
+                return await Operations.ProcessOperationAsync(Globals.Arguments);
 
             if (Globals.Arguments.ContainsKey("UPDATE") == true)
             {
-                SelfUpdate.Update(Int32.Parse(Globals.Arguments["UPDATE"]));
+                SelfUpdate.UpdateAsync(Int32.Parse(Globals.Arguments["UPDATE"]));
                 return 0;
             }
 

@@ -143,7 +143,7 @@ namespace mame_ao.source.Torrent
         {
             var stopwatch = Stopwatch.StartNew();
             stream.Seek(position, SeekOrigin.Begin);
-            await stream.ReadAsync(new byte[1], 0, 1, token);
+            await stream.ReadExactlyAsync((new byte[1]).AsMemory(0, 1), token);
             lock (times)
                 times.Add(($"Read piece: {manager.Torrent.ByteOffsetToPieceIndex(stream.Position - 1)}. Time since seeking: ", stopwatch.Elapsed));
         }

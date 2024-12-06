@@ -31,8 +31,8 @@ namespace mame_ao.source.Torrent
 
     class StandardDownloader
     {
-        private static List<string> StartsWithStrings;
-        private static List<string> ContainsStrings;
+        //private static List<string> StartsWithStrings;
+        //private static List<string> ContainsStrings;
 
         ClientEngine Engine { get; }
         Top10Listener Listener { get; }         // This is a subclass of TraceListener which remembers the last 20 statements sent to it
@@ -116,7 +116,7 @@ namespace mame_ao.source.Torrent
                 return;
             }
 
-            bool start_engine = true;
+            //bool start_engine = true;
         }
 
 

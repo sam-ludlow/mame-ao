@@ -5,7 +5,6 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
-using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
@@ -16,560 +15,570 @@ using Newtonsoft.Json.Linq;
 
 namespace mame_ao.source
 {
-	public class Tools
-	{
-		private static readonly string[] _SystemOfUnits =
-		{
-			"Bytes (B)",
-			"Kilobytes (KiB)",
-			"Megabytes (MiB)",
-			"Gigabytes (GiB)",
-			"Terabytes (TiB)",
-			"Petabytes (PiB)",
-			"Exabytes (EiB)"
-		};
+    public class Tools
+    {
+        private static readonly string[] _SystemOfUnits =
+        {
+            "Bytes (B)",
+            "Kilobytes (KiB)",
+            "Megabytes (MiB)",
+            "Gigabytes (GiB)",
+            "Terabytes (TiB)",
+            "Petabytes (PiB)",
+            "Exabytes (EiB)"
+        };
 
-		private static readonly char[] _HeadingChars = new char[] { ' ', '#', '=', '-' };
+        private static readonly char[] _HeadingChars = new char[] { ' ', '#', '=', '-' };
 
-		private static readonly SHA256 _SHA256 = SHA256.Create();
+        private static readonly SHA256 _SHA256 = SHA256.Create();
 
         public static string DataRowValue(DataRow row, string columnName)
-		{
-			if (row.IsNull(columnName))
-				return null;
-			return (string)row[columnName];
-		}
+        {
+            if (row.IsNull(columnName))
+                return null;
+            return (string)row[columnName];
+        }
 
-		public static void ConsoleRule(int head)
-		{
-			Console.WriteLine(new String(_HeadingChars[head], Console.WindowWidth - 1));
-		}
+        public static void ConsoleRule(int head)
+        {
+            Console.WriteLine(new String(_HeadingChars[head], Console.WindowWidth - 1));
+        }
 
-		public static void ConsoleHeading(int head, string line)
-		{
-			ConsoleHeading(head, new string[] { line });
-		}
-		public static void ConsoleHeading(int head, string[] lines)
-		{
-			ConsoleRule(head);
+        public static void ConsoleHeading(int head, string line)
+        {
+            ConsoleHeading(head, new string[] { line });
+        }
+        public static void ConsoleHeading(int head, string[] lines)
+        {
+            ConsoleRule(head);
 
-			char ch = _HeadingChars[head];
+            char ch = _HeadingChars[head];
 
-			foreach (string line in lines)
-			{
-				int pad = Console.WindowWidth - 3 - line.Length;
-				if (pad < 1)
-					pad = 1;
-				int odd = pad % 2;
-				pad /= 2;
+            foreach (string line in lines)
+            {
+                int pad = Console.WindowWidth - 3 - line.Length;
+                if (pad < 1)
+                    pad = 1;
+                int odd = pad % 2;
+                pad /= 2;
 
-				Console.Write(ch);
-				Console.Write(new String(' ', pad));
-				Console.Write(line);
-				Console.Write(new String(' ', pad + odd));
-				Console.Write(ch);
-				Console.WriteLine();
-			}
+                Console.Write(ch);
+                Console.Write(new String(' ', pad));
+                Console.Write(line);
+                Console.Write(new String(' ', pad + odd));
+                Console.Write(ch);
+                Console.WriteLine();
+            }
 
-			ConsoleRule(head);
-		}
+            ConsoleRule(head);
+        }
 
-		public static void ReportError(Exception e, string title, bool fatal)
-		{
-			Console.WriteLine();
-			Console.WriteLine($"!!! {title}: " + e.Message);
-			Console.WriteLine();
-			Console.WriteLine(e.ToString());
-			Console.WriteLine();
-			Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
-			Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
-			Console.WriteLine();
-			Console.WriteLine("Report issues here https://github.com/sam-ludlow/mame-ao/issues");
+        public static void ReportError(Exception e, string title, bool fatal)
+        {
+            Console.WriteLine();
+            Console.WriteLine($"!!! {title}: " + e.Message);
+            Console.WriteLine();
+            Console.WriteLine(e.ToString());
+            Console.WriteLine();
+            Console.WriteLine("If you want to submit an error report please copy and paste the text from here.");
+            Console.WriteLine("Select All (Ctrl+A) -> Copy (Ctrl+C) -> notepad -> paste (Ctrl+V)");
+            Console.WriteLine();
+            Console.WriteLine("Report issues here https://github.com/sam-ludlow/mame-ao/issues");
 
-			if (fatal == true)
-			{
-				Console.WriteLine();
-				Console.WriteLine("Press any key to continue, program has crashed and will exit.");
-				Console.ReadKey();
-				Environment.Exit(1);
-			}
-		}
+            if (fatal == true)
+            {
+                Console.WriteLine();
+                Console.WriteLine("Press any key to continue, program has crashed and will exit.");
+                Console.ReadKey();
+                Environment.Exit(1);
+            }
+        }
 
-		public static string CleanWhiteSpace(string text)
-		{
-			return Regex.Replace(text, @"\s+", " ").Trim();
-		}
+        public static string CleanWhiteSpace(string text)
+        {
+            return Regex.Replace(text, @"\s+", " ").Trim();
+        }
 
-		public static void CleanDynamic(dynamic data)
-		{
-			List<string> deleteList = new List<string>();
-			foreach (PropertyDescriptor descriptor in TypeDescriptor.GetProperties(data))
-			{
-				if (descriptor.GetValue(data) == null)
-					deleteList.Add(descriptor.Name);
-			}
+        public static void CleanDynamic(dynamic data)
+        {
+            List<string> deleteList = new List<string>();
+            foreach (PropertyDescriptor descriptor in TypeDescriptor.GetProperties(data))
+            {
+                if (descriptor.GetValue(data) == null)
+                    deleteList.Add(descriptor.Name);
+            }
 
-			foreach (string key in deleteList)
-				((JObject)data).Remove(key);
-		}
+            foreach (string key in deleteList)
+                ((JObject)data).Remove(key);
+        }
 
-		public static void PopText(DataSet dataSet)
-		{
-			StringBuilder text = new StringBuilder();
+        public static void PopText(DataSet dataSet)
+        {
+            StringBuilder text = new StringBuilder();
 
-			foreach (DataTable table in dataSet.Tables)
-			{
-				string hr = new string('-', table.TableName.Length);
-				text.AppendLine(hr);
-				text.AppendLine(table.TableName);
-				text.AppendLine(hr);
-				text.AppendLine(TextTable(table));
-				text.AppendLine();
-			}
+            foreach (DataTable table in dataSet.Tables)
+            {
+                string hr = new string('-', table.TableName.Length);
+                text.AppendLine(hr);
+                text.AppendLine(table.TableName);
+                text.AppendLine(hr);
+                text.AppendLine(TextTable(table));
+                text.AppendLine();
+            }
 
-			PopText(text.ToString());
-		}
-		public static void PopText(DataTable table)
-		{
-			PopText(TextTable(table));
-		}
-		public static void PopText(string text)
-		{
-			string filename = Path.GetTempFileName();
-			File.WriteAllText(filename, text, Encoding.UTF8);
-			Process.Start("notepad.exe", filename);
-			Environment.Exit(0);
-		}
+            PopText(text.ToString());
+        }
+        public static void PopText(DataTable table)
+        {
+            PopText(TextTable(table));
+        }
+        public static void PopText(string text)
+        {
+            string filename = Path.GetTempFileName();
+            File.WriteAllText(filename, text, Encoding.UTF8);
+            Process.Start("notepad.exe", filename);
+            Environment.Exit(0);
+        }
 
-		public static string TextTable(DataTable table)
-		{
-			StringBuilder result = new StringBuilder();
+        public static string TextTable(DataTable table)
+        {
+            StringBuilder result = new StringBuilder();
 
-			foreach (DataColumn column in table.Columns)
-			{
-				if (column.Ordinal != 0)
-					result.Append('\t');
+            foreach (DataColumn column in table.Columns)
+            {
+                if (column.Ordinal != 0)
+                    result.Append('\t');
 
-				result.Append(column.ColumnName);
-			}
-			result.AppendLine();
+                result.Append(column.ColumnName);
+            }
+            result.AppendLine();
 
-			foreach (DataColumn column in table.Columns)
-			{
-				if (column.Ordinal != 0)
-					result.Append('\t');
+            foreach (DataColumn column in table.Columns)
+            {
+                if (column.Ordinal != 0)
+                    result.Append('\t');
 
-				result.Append(column.DataType);
-			}
-			result.AppendLine();
+                result.Append(column.DataType);
+            }
+            result.AppendLine();
 
-			foreach (DataRow row in table.Rows)
-			{
-				foreach (DataColumn column in table.Columns)
-				{
-					if (column.Ordinal != 0)
-						result.Append('\t');
+            foreach (DataRow row in table.Rows)
+            {
+                foreach (DataColumn column in table.Columns)
+                {
+                    if (column.Ordinal != 0)
+                        result.Append('\t');
 
-					object value = row[column];
+                    object value = row[column];
 
-					if (value != null)
-						result.Append(Convert.ToString(value));
-				}
-				result.AppendLine();
-			}
+                    if (value != null)
+                        result.Append(Convert.ToString(value));
+                }
+                result.AppendLine();
+            }
 
-			return result.ToString();
-		}
+            return result.ToString();
+        }
 
-		public static string ValidFileName(string name)
-		{
-			return ValidName(name, _InvalidFileNameChars, "_");
-		}
-		private static readonly List<char> _InvalidFileNameChars = new List<char>(Path.GetInvalidFileNameChars());
+        public static string ValidFileName(string name)
+        {
+            return ValidName(name, _InvalidFileNameChars, "_");
+        }
+        private static readonly List<char> _InvalidFileNameChars = new List<char>(Path.GetInvalidFileNameChars());
 
-		private static string ValidName(string name, List<char> invalidChars, string replaceBadWith)
-		{
-			StringBuilder sb = new StringBuilder();
+        private static string ValidName(string name, List<char> invalidChars, string replaceBadWith)
+        {
+            StringBuilder sb = new StringBuilder();
 
-			foreach (char c in name)
-			{
-				if (invalidChars.Contains(c) == true)
-					sb.Append(replaceBadWith);
-				else
-					sb.Append(c);
-			}
+            foreach (char c in name)
+            {
+                if (invalidChars.Contains(c) == true)
+                    sb.Append(replaceBadWith);
+                else
+                    sb.Append(c);
+            }
 
-			return sb.ToString();
-		}
+            return sb.ToString();
+        }
 
-		public static string SHA1HexFile(string filename)
-		{
-			using (FileStream stream = File.OpenRead(filename))
-				return SHA1Hex(stream);
-		}
+        public static string SHA1HexFile(string filename)
+        {
+            using (FileStream stream = File.OpenRead(filename))
+                return SHA1Hex(stream);
+        }
 
-		public static string SHA1HexText(string text)
-		{
-			return SHA1HexText(text, Encoding.UTF8);
-		}
+        public static string SHA1HexText(string text)
+        {
+            return SHA1HexText(text, Encoding.UTF8);
+        }
 
-		public static string SHA1HexText(string text, Encoding encoding)
-		{
-			using (MemoryStream stream = new MemoryStream())
-			{
-				using (StreamWriter writer = new StreamWriter(stream, encoding, 4096, true))
-					writer.Write(text);
+        public static string SHA1HexText(string text, Encoding encoding)
+        {
+            using (MemoryStream stream = new MemoryStream())
+            {
+                using (StreamWriter writer = new StreamWriter(stream, encoding, 4096, true))
+                    writer.Write(text);
 
-				stream.Position = 0;
-				return SHA1Hex(stream);
-			}
-		}
+                stream.Position = 0;
+                return SHA1Hex(stream);
+            }
+        }
 
-		public static string SHA1Hex(Stream stream)
-		{
-			byte[] hash = _SHA256.ComputeHash(stream);
-			StringBuilder hex = new StringBuilder();
-			foreach (byte b in hash)
-				hex.Append(b.ToString("x2"));
-			return hex.ToString();
-		}
+        public static string SHA1Hex(Stream stream)
+        {
+            byte[] hash = _SHA256.ComputeHash(stream);
+            StringBuilder hex = new StringBuilder();
+            foreach (byte b in hash)
+                hex.Append(b.ToString("x2"));
+            return hex.ToString();
+        }
 
-		public static void ClearAttributes(string directory)
-		{
-			foreach (string filename in Directory.GetFiles(directory, "*", SearchOption.AllDirectories))
-				File.SetAttributes(filename, FileAttributes.Normal);
-		}
+        public static void ClearAttributes(string directory)
+        {
+            foreach (string filename in Directory.GetFiles(directory, "*", SearchOption.AllDirectories))
+                File.SetAttributes(filename, FileAttributes.Normal);
+        }
 
-		public static string PrettyJSON(string json)
-		{
-			dynamic obj = JsonConvert.DeserializeObject<dynamic>(json);
-			return JsonConvert.SerializeObject(obj, Newtonsoft.Json.Formatting.Indented);
-		}
+        public static string PrettyJSON(string json)
+        {
+            dynamic obj = JsonConvert.DeserializeObject<dynamic>(json);
+            return JsonConvert.SerializeObject(obj, Newtonsoft.Json.Formatting.Indented);
+        }
 
-		public static DataTable MakeDataTable(string columnNames, string columnTypes)
-		{
-			return MakeDataTable("untitled", columnNames, columnTypes);
-		}
+        public static DataTable MakeDataTable(string columnNames, string columnTypes)
+        {
+            return MakeDataTable("untitled", columnNames, columnTypes);
+        }
 
-		public static DataTable MakeDataTable(string tableName, string columnNames, string columnTypes)
-		{
-			string[] names = columnNames.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
-			string[] types = columnTypes.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+        public static DataTable MakeDataTable(string tableName, string columnNames, string columnTypes)
+        {
+            string[] names = columnNames.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+            string[] types = columnTypes.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
 
-			if (names.Length != types.Length)
-				throw new ApplicationException("Make Data Table Bad definition.");
+            if (names.Length != types.Length)
+                throw new ApplicationException("Make Data Table Bad definition.");
 
-			DataTable table = new DataTable(tableName);
+            DataTable table = new DataTable(tableName);
 
-			List<int> keyColumnIndexes = new List<int>();
+            List<int> keyColumnIndexes = new List<int>();
 
-			for (int index = 0; index < names.Length; ++index)
-			{
-				string name = names[index];
-				string typeName = "System." + types[index];
+            for (int index = 0; index < names.Length; ++index)
+            {
+                string name = names[index];
+                string typeName = "System." + types[index];
 
-				if (typeName.EndsWith("*") == true)
-				{
-					typeName = typeName.Substring(0, typeName.Length - 1);
-					keyColumnIndexes.Add(index);
-				}
+                if (typeName.EndsWith("*") == true)
+                {
+                    typeName = typeName.Substring(0, typeName.Length - 1);
+                    keyColumnIndexes.Add(index);
+                }
 
-				table.Columns.Add(name, Type.GetType(typeName, true));
-			}
+                table.Columns.Add(name, Type.GetType(typeName, true));
+            }
 
-			if (keyColumnIndexes.Count > 0)
-			{
-				List<DataColumn> keyColumns = new List<DataColumn>();
-				foreach (int index in keyColumnIndexes)
-					keyColumns.Add(table.Columns[index]);
-				table.PrimaryKey = keyColumns.ToArray();
-			}
+            if (keyColumnIndexes.Count > 0)
+            {
+                List<DataColumn> keyColumns = new List<DataColumn>();
+                foreach (int index in keyColumnIndexes)
+                    keyColumns.Add(table.Columns[index]);
+                table.PrimaryKey = keyColumns.ToArray();
+            }
 
-			return table;
-		}
+            return table;
+        }
 
-		public static string FetchTextCached(string url)
-		{
-			string filename = Path.Combine(Globals.CacheDirectory, Tools.ValidFileName(url.Substring(8)));
-		
-			string result = null;
+        public static string FetchTextCached(string url)
+        {
+            string filename = Path.Combine(Globals.CacheDirectory, Tools.ValidFileName(url.Substring(8)));
 
-			if (File.Exists(filename) == false || (DateTime.Now - File.GetLastWriteTime(filename) > TimeSpan.FromHours(3)))
-			{
-				try
-				{
-					Console.Write($"Downloading {url} ...");
-					result = Query(url);
-					Console.WriteLine("...done");
+            string result = null;
 
-					string extention = Path.GetExtension(filename).ToLower();
+            if (File.Exists(filename) == false || (DateTime.Now - File.GetLastWriteTime(filename) > TimeSpan.FromHours(3)))
+            {
+                try
+                {
+                    Console.Write($"Downloading {url} ...");
+                    result = Query(url);
+                    Console.WriteLine("...done");
 
-					if (extention == ".json" && (result.StartsWith("{") == true || result.StartsWith("[") == true))
-						result = PrettyJSON(result);
-				}
-				catch (TaskCanceledException e)
-				{
-					Console.WriteLine($"ERROR Fetch client timeout: {url} {e.Message}");
-				}
-				catch (HttpRequestException e)
-				{
-					Console.WriteLine($"ERROR Fetch request: {url} {e.Message} {e.InnerException?.Message}");
-				}
-				catch (Exception e)
-				{
-					Console.WriteLine($"ERROR Fetch: {url} {e.Message} {e.InnerException?.Message}");
-				}
+                    string extention = Path.GetExtension(filename).ToLower();
 
-				if (result != null)
-					File.WriteAllText(filename, result, Encoding.UTF8);
-			}
+                    if (extention == ".json" && (result.StartsWith("{") == true || result.StartsWith("[") == true))
+                        result = PrettyJSON(result);
+                }
+                catch (TaskCanceledException e)
+                {
+                    Console.WriteLine($"ERROR Fetch client timeout: {url} {e.Message}");
+                }
+                catch (HttpRequestException e)
+                {
+                    Console.WriteLine($"ERROR Fetch request: {url} {e.Message} {e.InnerException?.Message}");
+                }
+                catch (Exception e)
+                {
+                    Console.WriteLine($"ERROR Fetch: {url} {e.Message} {e.InnerException?.Message}");
+                }
 
-			if (result == null && File.Exists(filename) == true)
-				result = File.ReadAllText(filename, Encoding.UTF8);
+                if (result != null)
+                    File.WriteAllText(filename, result, Encoding.UTF8);
+            }
 
-			return result;
-		}
+            if (result == null && File.Exists(filename) == true)
+                result = File.ReadAllText(filename, Encoding.UTF8);
+
+            return result;
+        }
         //arch1vepass
         public static string Query(string url)
-		{
-			try
-			{
-				using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url))
-				{
-					if (url.StartsWith("https://archive.org/") == true)
-						requestMessage.Headers.Add("Cookie", Globals.AuthCookie);
+        {
+            try
+            {
+                using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Get, url))
+                {
+                    if (url.StartsWith("https://archive.org/") == true)
+                        requestMessage.Headers.Add("Cookie", Globals.AuthCookie);
 
-					Task<HttpResponseMessage> requestTask = Globals.HttpClient.SendAsync(requestMessage);
-					requestTask.Wait();
-					HttpResponseMessage responseMessage = requestTask.Result;
+                    Task<HttpResponseMessage> requestTask = Globals.HttpClient.SendAsync(requestMessage);
+                    requestTask.Wait();
+                    HttpResponseMessage responseMessage = requestTask.Result;
 
-					responseMessage.EnsureSuccessStatusCode();
+                    responseMessage.EnsureSuccessStatusCode();
 
-					Task<string> responseMessageTask = responseMessage.Content.ReadAsStringAsync();
-					responseMessageTask.Wait();
-					string responseBody = responseMessageTask.Result;
+                    Task<string> responseMessageTask = responseMessage.Content.ReadAsStringAsync();
+                    responseMessageTask.Wait();
+                    string responseBody = responseMessageTask.Result;
 
-					return responseBody;
-				}
-			}
-			catch (AggregateException e)
-			{
-				throw e.InnerException ?? e;
-			}
-		}
+                    return responseBody;
+                }
+            }
+            catch (AggregateException e)
+            {
+                throw e.InnerException ?? e;
+            }
+        }
 
 
-		public static long Download(string url, string filename)
-		{
-			return Download(url, filename, 0);
-		}
+        public static async Task<long> DownloadAsync(string url, string filename)
+        {
+            return await Download(url, filename, 0);
+        }
 
-		public static long Download(string url, string filename, long expectedSize)
-		{
-			if (expectedSize > 0)
-				lock (Globals.WorkerTaskInfo)
-					Globals.WorkerTaskInfo.BytesTotal = expectedSize;
+        public static async Task<long> Download(string url, string filename, long expectedSize)
+        {
+            if (expectedSize > 0)
+                lock (Globals.WorkerTaskInfo)
+                    Globals.WorkerTaskInfo.BytesTotal = expectedSize;
 
-			long total = 0;
-			byte[] buffer = new byte[64 * 1024];
+            long total = 0;
+            byte[] buffer = new byte[64 * 1024];
+            long progress = 0;
 
-			HttpWebRequest request = (HttpWebRequest)WebRequest.Create(url);
-			request.Method = "GET";
-			request.Timeout = Globals.AssetDownloadTimeoutMilliseconds;
+            using (HttpClient client = new HttpClient())
+            {
+                HttpResponseMessage response_message = await client.GetAsync(url);
+                client.Timeout = TimeSpan.FromMilliseconds(Globals.AssetDownloadTimeoutMilliseconds);
+                if (url.StartsWith("https://archive.org/") == true)
+                    response_message.Headers.Add("Cookie", Globals.AuthCookie);
+                response_message.EnsureSuccessStatusCode();
+                using (Stream sourceStream = await response_message.Content.ReadAsStreamAsync())
+                {
+                    using (FileStream targetStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
+                    {
+                        int bytesRead;
+                        while ((bytesRead = sourceStream.Read(buffer, 0, buffer.Length)) > 0)
+                        {
+                            total += bytesRead;
+                            targetStream.Write(buffer, 0, bytesRead);
 
-			if (url.StartsWith("https://archive.org/") == true)
-				request.Headers.Add("Cookie", Globals.AuthCookie);
+                            progress += bytesRead;
+                            if (progress >= Globals.DownloadDotSize)
+                            {
+                                //Console.Write(".");
+                                progress = 0;
+                            }
 
-			long progress = 0;
+                            if (expectedSize > 0)
+                                lock (Globals.WorkerTaskInfo)
+                                    Globals.WorkerTaskInfo.BytesCurrent = total;
+                        }
+                    }
 
-			using (WebResponse response = request.GetResponse())
-			{
-				using (Stream sourceStream = response.GetResponseStream())
-				{
-					using (FileStream targetStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
-					{
-						int bytesRead;
-						while ((bytesRead = sourceStream.Read(buffer, 0, buffer.Length)) > 0)
-						{
-							total += bytesRead;
-							targetStream.Write(buffer, 0, bytesRead);
+                }
+                //Console.WriteLine(responseBody); 
+            }
+            //         HttpWebRequest request = WebRequest.Create(url);
+            //request.Method = "GET";
 
-							progress += bytesRead;
-							if (progress >= Globals.DownloadDotSize)
-							{
-								//Console.Write(".");
-								progress = 0;
-							}
 
-							if (expectedSize > 0)
-								lock (Globals.WorkerTaskInfo)
-									Globals.WorkerTaskInfo.BytesCurrent = total;
-						}
-					}
-				}
-			}
 
-			return total;
-		}
+            //using (WebResponse response = request.GetResponse())
+            //{
+            //using ( response.GetResponseStream())
+            //{
+            //}
+            //}
 
-		public static void LinkFiles(string[][] linkTargetFilenames)
-		{
-			StringBuilder batch = new StringBuilder();
+            return total;
+        }
 
-			for (int index = 0; index < linkTargetFilenames.Length; ++index)
-			{
-				string link = linkTargetFilenames[index][0];
-				string target = linkTargetFilenames[index][1];
+        public static void LinkFiles(string[][] linkTargetFilenames)
+        {
+            StringBuilder batch = new StringBuilder();
 
-				//	Escape cmd special characters, may be more ?
-				link = link.Replace("%", "%%");
+            for (int index = 0; index < linkTargetFilenames.Length; ++index)
+            {
+                string link = linkTargetFilenames[index][0];
+                string target = linkTargetFilenames[index][1];
 
-				batch.Append("mklink ");
-				batch.Append('\"');
-				batch.Append(link);
-				batch.Append("\" \"");
-				batch.Append(target);
-				batch.Append('\"');
-				batch.AppendLine();
-			}
+                //	Escape cmd special characters, may be more ?
+                link = link.Replace("%", "%%");
 
-			using (TempDirectory tempDir = new TempDirectory())
-			{
-				string batchFilename = tempDir.Path + @"\link.bat";
-				File.WriteAllText(batchFilename, batch.ToString(), new UTF8Encoding(false));
+                batch.Append("mklink ");
+                batch.Append('\"');
+                batch.Append(link);
+                batch.Append("\" \"");
+                batch.Append(target);
+                batch.Append('\"');
+                batch.AppendLine();
+            }
 
-				string input = "chcp 65001" + Environment.NewLine + batchFilename + Environment.NewLine;
+            using (TempDirectory tempDir = new TempDirectory())
+            {
+                string batchFilename = tempDir.Path + @"\link.bat";
+                File.WriteAllText(batchFilename, batch.ToString(), new UTF8Encoding(false));
 
-				ProcessStartInfo startInfo = new ProcessStartInfo("cmd.exe")
-				{
-					UseShellExecute = false,
-					CreateNoWindow = true,
-					RedirectStandardInput = true,
-				};
+                string input = "chcp 65001" + Environment.NewLine + batchFilename + Environment.NewLine;
 
-				using (Process process = new Process())
-				{
-					process.StartInfo = startInfo;
-					process.Start();
-					process.StandardInput.WriteLine(input);
-					process.StandardInput.Close();
-					process.WaitForExit();
-				}
-			}
-		}
+                ProcessStartInfo startInfo = new ProcessStartInfo("cmd.exe")
+                {
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    RedirectStandardInput = true,
+                };
 
-		public static DateTime FromEpochDate(double epoch)
-		{
-			return EpochDateTime.AddSeconds(epoch);
-		}
-		private static readonly DateTime EpochDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
+                using (Process process = new Process())
+                {
+                    process.StartInfo = startInfo;
+                    process.Start();
+                    process.StandardInput.WriteLine(input);
+                    process.StandardInput.Close();
+                    process.WaitForExit();
+                }
+            }
+        }
 
-		public static string DataSize(long sizeBytes)
-		{
-			return DataSize((ulong)sizeBytes);
-		}
-		public static string DataSize(ulong sizeBytes)
-		{
-			for (int index = 0; index < _SystemOfUnits.Length; ++index)
-			{
-				ulong nextUnit = (ulong)Math.Pow(2, (index + 1) * 10);
+        public static DateTime FromEpochDate(double epoch)
+        {
+            return EpochDateTime.AddSeconds(epoch);
+        }
+        private static readonly DateTime EpochDateTime = new DateTime(1970, 1, 1, 0, 0, 0, DateTimeKind.Utc);
 
-				if (sizeBytes < nextUnit || nextUnit == 0 || index == (_SystemOfUnits.Length - 1))
-				{
-					ulong unit = (ulong)Math.Pow(2, index * 10);
-					decimal result = (decimal)sizeBytes / (decimal)unit;
-					int decimalPlaces = 0;
-					if (result <= 9.9M)
-						decimalPlaces = 1;
-					result = Math.Round(result, decimalPlaces);
-					return result.ToString() + " " + _SystemOfUnits[index];
-				}
-			}
+        public static string DataSize(long sizeBytes)
+        {
+            return DataSize((ulong)sizeBytes);
+        }
+        public static string DataSize(ulong sizeBytes)
+        {
+            for (int index = 0; index < _SystemOfUnits.Length; ++index)
+            {
+                ulong nextUnit = (ulong)Math.Pow(2, (index + 1) * 10);
 
-			throw new ApplicationException("Failed to find Data Size: " + sizeBytes.ToString());
-		}
+                if (sizeBytes < nextUnit || nextUnit == 0 || index == (_SystemOfUnits.Length - 1))
+                {
+                    ulong unit = (ulong)Math.Pow(2, index * 10);
+                    decimal result = (decimal)sizeBytes / (decimal)unit;
+                    int decimalPlaces = 0;
+                    if (result <= 9.9M)
+                        decimalPlaces = 1;
+                    result = Math.Round(result, decimalPlaces);
+                    return result.ToString() + " " + _SystemOfUnits[index];
+                }
+            }
 
-		public static void Bitmap2SVG(string filenameOrDirectory)
-		{
-			string[] filenames = new string[] { filenameOrDirectory };
+            throw new ApplicationException("Failed to find Data Size: " + sizeBytes.ToString());
+        }
 
-			if (Directory.Exists(filenameOrDirectory) == true)
-				filenames = Directory.GetFiles(filenameOrDirectory, "*.png");
+        public static void Bitmap2SVG(string filenameOrDirectory)
+        {
+            string[] filenames = new string[] { filenameOrDirectory };
 
-			foreach (string filename in filenames)
-			{
-				string targetFilename = Path.Combine(Path.GetDirectoryName(filename), Path.GetFileNameWithoutExtension(filename) + ".svg");
+            if (Directory.Exists(filenameOrDirectory) == true)
+                filenames = Directory.GetFiles(filenameOrDirectory, "*.png");
 
-				Bitmap2SVG(filename, targetFilename);
-			}
+            foreach (string filename in filenames)
+            {
+                string targetFilename = Path.Combine(Path.GetDirectoryName(filename), Path.GetFileNameWithoutExtension(filename) + ".svg");
 
-		}
-		public static void Bitmap2SVG(string filename, string targetFilename)
-		{
-			using (StreamWriter writer = new StreamWriter(targetFilename, false, Encoding.UTF8))
-			{
-				using (Image image = Image.FromFile(filename))
-				{
-					writer.WriteLine("<svg version=\"1.1\" id=\"mame-ao\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" " +
-						$"x=\"{0}px\" y=\"{0}px\" width=\"{image.Width}px\" height=\"{image.Height}px\">");
+                Bitmap2SVG(filename, targetFilename);
+            }
 
-					using (Bitmap bitmap = new Bitmap(image))
-					{
-						for (int y = 0; y < image.Height; ++y)
-						{
-							for (int x = 0; x < image.Width; ++x)
-							{
-								Color colour = bitmap.GetPixel(x, y);
+        }
+        public static void Bitmap2SVG(string filename, string targetFilename)
+        {
+            using (StreamWriter writer = new StreamWriter(targetFilename, false, Encoding.UTF8))
+            {
+                using (Image image = Image.FromFile(filename))
+                {
+                    writer.WriteLine("<svg version=\"1.1\" id=\"mame-ao\" xmlns=\"http://www.w3.org/2000/svg\" xmlns:xlink=\"http://www.w3.org/1999/xlink\" xml:space=\"preserve\" " +
+                        $"x=\"{0}px\" y=\"{0}px\" width=\"{image.Width}px\" height=\"{image.Height}px\">");
 
-								if (colour.A == 0)
-									continue;
+                    using (Bitmap bitmap = new Bitmap(image))
+                    {
+                        for (int y = 0; y < image.Height; ++y)
+                        {
+                            for (int x = 0; x < image.Width; ++x)
+                            {
+                                Color colour = bitmap.GetPixel(x, y);
 
-								string fill = String.Format("{0:x6}", colour.ToArgb() & 0xFFFFFF);
+                                if (colour.A == 0)
+                                    continue;
 
-								writer.WriteLine($"<rect x=\"{x}\" y=\"{y}\" width=\"1\" height=\"1\" fill=\"#{fill}\"/>");
-							}
-						}
-					}
+                                string fill = String.Format("{0:x6}", colour.ToArgb() & 0xFFFFFF);
 
-					Console.WriteLine($"SVG: {image.Width} X {image.Height} : {targetFilename}");
+                                writer.WriteLine($"<rect x=\"{x}\" y=\"{y}\" width=\"1\" height=\"1\" fill=\"#{fill}\"/>");
+                            }
+                        }
+                    }
 
-					writer.WriteLine("</svg>");
-				}
-			}
-		}
-	}
+                    Console.WriteLine($"SVG: {image.Width} X {image.Height} : {targetFilename}");
 
-	public class TempDirectory : IDisposable
-	{
-		private readonly string _LockFilePath;
-		private readonly string _Path;
+                    writer.WriteLine("</svg>");
+                }
+            }
+        }
+    }
 
-		public TempDirectory()
-		{
-			_LockFilePath = System.IO.Path.GetTempFileName();
-			_Path = _LockFilePath + ".dir";
+    public class TempDirectory : IDisposable
+    {
+        private readonly string _LockFilePath;
+        private readonly string _Path;
 
-			Directory.CreateDirectory(this._Path);
-		}
+        public TempDirectory()
+        {
+            _LockFilePath = System.IO.Path.GetTempFileName();
+            _Path = _LockFilePath + ".dir";
 
-		public void Dispose()
-		{
-			if (Directory.Exists(_Path) == true)
-				Directory.Delete(_Path, true);
+            Directory.CreateDirectory(this._Path);
+        }
 
-			if (_LockFilePath != null)
-				File.Delete(_LockFilePath);
-		}
+        public void Dispose()
+        {
+            if (Directory.Exists(_Path) == true)
+                Directory.Delete(_Path, true);
 
-		public string Path
-		{
-			get => _Path;
-		}
+            if (_LockFilePath != null)
+                File.Delete(_LockFilePath);
+        }
 
-		public override string ToString()
-		{
-			return _Path;
-		}
-	}
+        public string Path
+        {
+            get => _Path;
+        }
+
+        public override string ToString()
+        {
+            return _Path;
+        }
+    }
 
 }
