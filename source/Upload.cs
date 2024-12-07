@@ -203,7 +203,7 @@ namespace mame_ao.source
                             foreach (string key in fileManifestSHA1s.Keys)
                                 writer.WriteLine($"{key}\t{fileManifestSHA1s[key]}");
 
-                        UploadFile(itemName, filename);
+                        await UploadFile(itemName, filename);
                     }
 
                     Globals.Reports.SaveHtmlReport(views.ToArray(), headings, report.TableName + " - Actions");
