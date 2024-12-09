@@ -23,20 +23,25 @@ namespace mame_ao.source
     {
         private IntPtr ConsoleHandle;
         //private static List<string> excludedWords;
-        private readonly string IntroText = @"@VERSION
-'##::::'##::::'###::::'##::::'##:'########:::::::'###:::::'#######::
- ###::'###:::'## ##::: ###::'###: ##.....:::::::'## ##:::'##.... ##:
- ####'####::'##:. ##:: ####'####: ##:::::::::::'##:. ##:: ##:::: ##:
- ## ### ##:'##:::. ##: ## ### ##: ######::::::'##:::. ##: ##:::: ##:
- ##. #: ##: #########: ##. #: ##: ##...::::::: #########: ##:::: ##:
- ##:.:: ##: ##.... ##: ##:.:: ##: ##:::::::::: ##.... ##: ##:::: ##:
- ##:::: ##: ##:::: ##: ##:::: ##: ########:::: ##:::: ##:. #######::
-..:::::..::..:::::..::..:::::..::........:::::..:::::..:::.......:::";
+        private readonly string IntroText = @"
+
+        ..:::::..::..:::::..::..:::::..::........:::::..:::::..:::.......:::::::::::::::
+         ##:::::##:::::###:::::##:::::##::########::::::::###::::::#######::::::::::::::
+         ###:::###::::## ##::: ###:::###: ##.....::::::::## ##::::##.... ##:::::::::::::
+         ####:####:::##:. ##:: ####:####: ##::::::::::::##:. ##:: ##:::: ##:::::::::::::
+         ## ### ##::##:::. ##: ## ### ##: ######:::::::##:::. ##: ##:::: ##:::::::::::::
+         ##. #: ##: #########: ##. #: ##: ##...::::::: #########: ##:::: ##:::::::::::::
+         ##:.:: ##: ##.... ##: ##:.:: ##: ##:::::::::: ##.... ##: ##:::: ##:::::::::::::
+         ##:::: ##: ##:::: ##: ##:::: ##: ########:::: ##:::: ##:. #######::::::::::::::
+        ..:::::..::..:::::..::..:::::..::........:::::..:::::..:::.......:::::::::::::::";
+
         private readonly string WelcomeText = @"
        Please wait the first time it has to prepare the data
          The Web User Interface will pop up when ready. 
               See the README for more information
-             https://github.com/sam-ludlow/mame-ao";
+             https://github.com/sam-ludlow/mame-ao
+        "
+;
         public List<string> StartsWith { get; private set; }
         public List<string> ContainsStrings { get; private set; }
 
@@ -79,7 +84,7 @@ namespace mame_ao.source
         private static string ExtractTorrentName(string magnetLink)
         {
             // Use regex to extract the torrent name (dn parameter)
-            var match = Regex.Match(magnetLink, @"dn=([^&]+)");
+            var match = Regex.Match(magnetLink, @"dn=([^&]:)");
             return match.Success ? Uri.UnescapeDataString(match.Groups[1].Value) : "No name found";
         }
         //public async Task DownloadMagnets(MagnetItem magnetLinks)
@@ -209,11 +214,15 @@ namespace mame_ao.source
             AnsiConsole.MarkupLine("");
         }
 
-        public void Initialize()
+        public async Task InitializeAsync()
         {
-            string v = $"MAME-AO {Globals.AssemblyVersion}";Console.Title = v;
-            AnsiConsole.Markup("Initializing");
-            PrintRainbowText(IntroText.Replace("@VERSION", Globals.AssemblyVersion));
+            string v = $"MAME-AO {Globals.AssemblyVersion}";
+            Console.Title = v;
+            var c = Console.Title;
+            ConsoleHandle = FindWindowByCaption(IntPtr.Zero, v);
+
+            AnsiConsole.MarkupLine($"Initializing {Globals.AssemblyVersion}");
+            PrintRainbowText(IntroText);
             AnsiConsole.Markup($"[bold green]{WelcomeText}[/]");
             Globals.AO = this;
 
@@ -262,7 +271,7 @@ namespace mame_ao.source
             //	Archive.Org Credentials
             //
 
-            Globals.AuthCookie = ArchiveOrgAuth.GetCookie();
+            Globals.AuthCookie = await ArchiveOrgAuth.GetCookieAsync();
 
             //
             // Archive.Org Items
@@ -351,7 +360,7 @@ namespace mame_ao.source
                 if (File.Exists(binCacheFilename) == false)
                 {
                     Console.Write($"Downloading MAME binaries {binUrl} ...");
-                    Tools.DownloadAsync(binUrl, binCacheFilename);
+                    await Tools.DownloadAsync(binUrl, binCacheFilename);
                     Console.WriteLine("...done.");
                 }
 
@@ -426,7 +435,6 @@ namespace mame_ao.source
             // Bits & Bobs
             //
 
-            ConsoleHandle = FindWindowByCaption(IntPtr.Zero, lpWindowName: v);
 
             Globals.Reports = new Reports();
             Globals.BadSources = new BadSources();
@@ -475,7 +483,7 @@ namespace mame_ao.source
                 $"e.g. {Globals.ListenAddress}api/command?line=a2600 et -window"
 
             });
-            AnsiConsole.Markup("[underline red]Hello[/] World!");
+            AnsiConsole.Markup("[underline red]Hello[/] World!/r/n");
             ProcessStartInfo startInfo = new ProcessStartInfo { FileName = Globals.ListenAddress, WorkingDirectory = @"C:\Users\morty\source\repos\mame-ao-assist\mame.ao.assist\bin\Debug\net9.0-windows10.0.26100.0", UseShellExecute = true };
             //Process.Start(Globals.ListenAddress);
             Process process = Process.Start(startInfo);

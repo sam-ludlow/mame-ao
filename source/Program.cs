@@ -9,6 +9,7 @@ namespace mame_ao.source
 		public static async Task<int> Main(string[] args)
         {
             HellowWorld();
+            Globals.Arguments.Clear();
             foreach (string arg in args)
             {
                 int index = arg.IndexOf('=');

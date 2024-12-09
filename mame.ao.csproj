@@ -9,13 +9,14 @@
   </PropertyGroup>
   <PropertyGroup>
     <TargetFramework>net9.0-windows10.0.26100.0</TargetFramework>
-    <GenerateAssemblyInfo>false</GenerateAssemblyInfo>
+    <GenerateAssemblyInfo>True</GenerateAssemblyInfo>
     <AssemblyTitle>mame-ao</AssemblyTitle>
     <Product>mame-ao</Product>
     <Copyright>Copyright ©  2023</Copyright>
     <AssemblyVersion>1.97</AssemblyVersion>
     <FileVersion>1.97</FileVersion>
     <UseWPF>True</UseWPF>
+    <SignAssembly>False</SignAssembly>
   </PropertyGroup>
   <ItemGroup>
     <Content Include="UI.html">

@@ -369,42 +369,50 @@ namespace mame_ao.source
                 lock (Globals.WorkerTaskInfo)
                     Globals.WorkerTaskInfo.BytesTotal = expectedSize;
 
-            long total = 0;
-            byte[] buffer = new byte[64 * 1024];
-            long progress = 0;
+            //long total = 0;
+            //byte[] buffer = new byte[64 * 1024];
+            //long progress = 0;
 
             using (HttpClient client = new HttpClient())
             {
-                HttpResponseMessage response_message = await client.GetAsync(url);
                 client.Timeout = TimeSpan.FromMilliseconds(Globals.AssetDownloadTimeoutMilliseconds);
-                if (url.StartsWith("https://archive.org/") == true)
-                    response_message.Headers.Add("Cookie", Globals.AuthCookie);
-                response_message.EnsureSuccessStatusCode();
-                using (Stream sourceStream = await response_message.Content.ReadAsStreamAsync())
+                HttpResponseMessage response_message = await client.GetAsync(url);
+                if (url.StartsWith("https://archive.org/"))
                 {
-                    using (FileStream targetStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
+                    response_message.Headers.Add("Cookie", Globals.AuthCookie);
+                }
+                response_message.EnsureSuccessStatusCode();
+
+                byte[] buffer = new byte[8192]; // Declare and initialize buffer (adjust size as needed)
+                long total = 0;
+                long progress = 0;
+
+                using (Stream sourceStream = await response_message.Content.ReadAsStreamAsync())
+                using (FileStream targetStream = new FileStream(filename, FileMode.Create, FileAccess.Write))
+                {
+                    int bytesRead;
+                    while ((bytesRead = await sourceStream.ReadAsync(buffer, 0, buffer.Length)) > 0)
                     {
-                        int bytesRead;
-                        while ((bytesRead = sourceStream.Read(buffer, 0, buffer.Length)) > 0)
+                        total += bytesRead;
+                        await targetStream.WriteAsync(buffer, 0, bytesRead);
+
+                        progress += bytesRead;
+                        if (progress >= Globals.DownloadDotSize)
                         {
-                            total += bytesRead;
-                            targetStream.Write(buffer, 0, bytesRead);
+                            Console.Write(".");
+                            progress = 0;
+                        }
 
-                            progress += bytesRead;
-                            if (progress >= Globals.DownloadDotSize)
+                        if (expectedSize > 0)
+                        {
+                            lock (Globals.WorkerTaskInfo)
                             {
-                                //Console.Write(".");
-                                progress = 0;
+                                Globals.WorkerTaskInfo.BytesCurrent = total;
                             }
-
-                            if (expectedSize > 0)
-                                lock (Globals.WorkerTaskInfo)
-                                    Globals.WorkerTaskInfo.BytesCurrent = total;
                         }
                     }
-
                 }
-                //Console.WriteLine(responseBody); 
+                return total;
             }
             //         HttpWebRequest request = WebRequest.Create(url);
             //request.Method = "GET";
@@ -418,7 +426,6 @@ namespace mame_ao.source
             //}
             //}
 
-            return total;
         }
 
         public static void LinkFiles(string[][] linkTargetFilenames)
