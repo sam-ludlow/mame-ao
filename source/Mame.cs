@@ -1,11 +1,11 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Collections.Generic;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	public class Mame
 	{

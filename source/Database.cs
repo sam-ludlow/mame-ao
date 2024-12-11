@@ -1,17 +1,17 @@
+//using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Xml.Linq;
+using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Data.SqlClient;
+using System.Xml.Linq;
 
-using System.Data.SQLite;
-
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
-	public class Database
+    public class Database
 	{
 		public class DataQueryProfile
 		{
@@ -345,7 +345,7 @@ namespace Spludlow.MameAO
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
-			SQLiteCommand command = new SQLiteCommand(commandText, _SoftwareConnection);
+            SQLiteCommand command = new SQLiteCommand(commandText, _SoftwareConnection);
 
 			if (search != null)
 			{
@@ -507,7 +507,7 @@ namespace Spludlow.MameAO
 		{
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
-			SQLiteConnection connection = new SQLiteConnection(connectionString);
+            SQLiteConnection connection = new SQLiteConnection(connectionString);
 
 			if (File.Exists(sqliteFilename) == true)
 			{

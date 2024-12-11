@@ -1,17 +1,17 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using Microsoft.Data.SqlClient;
 using System.Data.SQLite;
-using System.Data.SqlClient;
 using System.IO;
+using System.Linq;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-using System.Linq;
-
 using Newtonsoft.Json;
+using System.Threading.Tasks;
 
-namespace Spludlow.MameAO
+namespace mame_ao.source
 {
 	/// <summary>
 	/// Operations - Used for MAME data processing pipelines
@@ -19,7 +19,7 @@ namespace Spludlow.MameAO
 	public class Operations
 	{
 
-		public static int ProcessOperation(Dictionary<string, string> parameters)
+		public static async Task<int> ProcessOperationAsync(Dictionary<string, string> parameters)
 		{
 			int exitCode;
 
@@ -30,7 +30,7 @@ namespace Spludlow.MameAO
 				case "GET_MAME":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
 
-					exitCode = GetMame(parameters["DIRECTORY"], parameters["VERSION"]);
+					exitCode = await GetMameAsync(parameters["DIRECTORY"], parameters["VERSION"]);
 					break;
 
 				case "MAKE_XML":
@@ -118,7 +118,7 @@ namespace Spludlow.MameAO
 		//
 		// MAME
 		//
-		public static int GetMame(string directory, string version)
+		public static async Task<int> GetMameAsync(string directory, string version)
 		{
 			int newVersion = 0;
 
@@ -146,7 +146,7 @@ namespace Spludlow.MameAO
 
 				string binariesFilename = Path.Combine(versionDirectory, Path.GetFileName(binariesUrl));
 
-				Tools.Download(binariesUrl, binariesFilename);
+				await Tools.DownloadAsync(binariesUrl, binariesFilename);
 
 				Mame.RunSelfExtract(binariesFilename);
 			}
@@ -263,7 +263,7 @@ namespace Spludlow.MameAO
 
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
-			SQLiteConnection connection = new SQLiteConnection(connectionString);
+            SQLiteConnection connection = new SQLiteConnection(connectionString);
 
 			Database.DatabaseFromXML(document, connection, dataSet);
 		}
@@ -304,7 +304,7 @@ namespace Spludlow.MameAO
 		}
 		public static void XML2MSSQL(string xmlFilename, string serverConnectionString, string databaseName)
 		{
-			SqlConnection targetConnection = new SqlConnection(serverConnectionString);
+            SqlConnection targetConnection = new SqlConnection(serverConnectionString);
 
 			if (Database.DatabaseExists(targetConnection, databaseName) == true)
 				return;
