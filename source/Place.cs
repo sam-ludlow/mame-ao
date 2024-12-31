@@ -4,6 +4,7 @@ using System.Data;
 using System.IO;
 using System.IO.Compression;
 using System.Net.Http;
+using System.Security.Policy;
 using System.Threading;
 
 using Newtonsoft.Json;
@@ -157,45 +158,10 @@ namespace Spludlow.MameAO
 							}
 							else
 							{
-								string apiUrl = $"http://localhost:12381/api/file?machine={machineName}";
-
-								float percent_complete = 0;
-
-								while (percent_complete != 100.0f)
-								{
-									dynamic fileInfo;
-									
-									try
-									{
-										fileInfo = JsonConvert.DeserializeObject<dynamic>(Tools.Query(apiUrl));
-									}
-									catch (HttpRequestException e)
-									{
-										if (e.Message.Contains("404") == true)
-											break;
-										else
-											throw e;
-									}
-
-									percent_complete = (float)fileInfo.percent_complete;
-
-									Console.WriteLine($"Torrent:\t{DateTime.Now}\t{(long)fileInfo.length}\t{percent_complete}\t{apiUrl}");
-
-									if (percent_complete == 100.0f)
-									{
-										long length = (long)fileInfo.length;
-
-										string url = (string)fileInfo.url;
-
-										DownloadImportFiles(url, length, info);
-									}
-									else
-									{
-										Thread.Sleep(5000);
-									}
-								}
+								var btFile = BitTorrent.MachineRom(machineName);
+								if (btFile != null)
+									DownloadImportFiles(btFile.Url, btFile.Length, info);
 							}
-
 						}
 					}
 					else

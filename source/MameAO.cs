@@ -181,20 +181,7 @@ namespace Spludlow.MameAO
 			// Fixes
 			//
 
-			//	Fixed in 1.88 - this file can have duff data
-			string badSourcesFilename = Path.Combine(Globals.RootDirectory, "_BadSources.txt");
-			if (File.Exists(badSourcesFilename) == true && File.GetLastWriteTime(badSourcesFilename) < new DateTime(2024, 7, 1))
-				File.Delete(badSourcesFilename);
-
-			// Moved in 1.90
-			string oldDirectory = Path.Combine(Globals.RootDirectory, "_METADATA");
-			if (Directory.Exists(oldDirectory) == true)
-				Directory.Delete(oldDirectory, true);
-
-			// Needs an extra cookie in 1.96
-			string apend = "; donation=x";
-			if (File.Exists(ArchiveOrgAuth.CacheFilename) == true && File.ReadAllText(ArchiveOrgAuth.CacheFilename).EndsWith(apend) == false)
-				File.AppendAllText(ArchiveOrgAuth.CacheFilename, apend);
+			//	...
 
 			//
 			// Symbolic Links check
@@ -266,16 +253,7 @@ namespace Spludlow.MameAO
 			// DOME-BT Available
 			//
 
-			try
-			{
-				Tools.Query("http://localhost:12381/api/info");
-				Globals.BitTorrentAvailable = true;
-				Tools.ConsoleHeading(2, "DOME-BT (Pleasure Dome Bit Torrents) Available");
-			}
-			catch (HttpRequestException)
-			{
-				Globals.BitTorrentAvailable = false;
-			}
+			Globals.BitTorrentAvailable = BitTorrent.IsAvailable();
 
 			//
 			// Determine MAME version
