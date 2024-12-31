@@ -55,6 +55,7 @@ namespace Spludlow.MameAO
 		public static string MameVersion;
 
 		public static bool LinkingEnabled = false;
+		public static bool BitTorrentAvailable = false;
 
 		public static Dictionary<ItemType, ArchiveOrgItem[]> ArchiveOrgItems = new Dictionary<ItemType, ArchiveOrgItem[]>();
 		public static Dictionary<string, GitHubRepo> GitHubRepos = new Dictionary<string, GitHubRepo>();
@@ -242,16 +243,6 @@ namespace Spludlow.MameAO
 
 			// Software DISK
 			List<ArchiveOrgItem> items = new List<ArchiveOrgItem>();
-
-			// Oh Dear these SL CHD archive.org items are gone.
-
-			//string[] tuffyTDogSoftwareLists = new string[] { "3do_m2", "abc1600_hdd", "abc800_hdd", "amiga_hdd", "amiga_workbench", "archimedes_hdd", "bbc_hdd", "cd32", "cdi", "cdtv", "dc", "fmtowns_cd", "gtfore", "hp9k3xx_cdrom", "hp9k3xx_hdd", "hyperscan", "ibm5150_hdd", "ibm5170_cdrom", "ibm5170_hdd", "interpro", "jazz", "kpython2", "mac_cdrom", "mac_hdd", "megacd", "megacdj", "mtx_hdd", "neocd", "next_cdrom", "next_hdd", "nuon", "pc1512_hdd", "pc1640_hdd", "pc8801_cdrom", "pc98_cd", "pcecd", "pcfx", "pet_hdd", "pico", "pippin", "psx", "saturn", "segacd", "sgi_mips", "sgi_mips_hdd", "snes_vkun", "softbox", "v1050_hdd", "vis", "vsmile_cd" };
-			//foreach (string softwareList in tuffyTDogSoftwareLists)
-			//{
-			//	string key = $"mame-sl-chd-{softwareList}";
-			//	items.Add(new ArchiveOrgItem(key, null, softwareList));
-			//}
-
 			items.Add(new ArchiveOrgItem("mame-software-list-chds-2", null, "*"));
 			Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, items.ToArray());
 
@@ -270,6 +261,21 @@ namespace Spludlow.MameAO
 
 			Globals.GitHubRepos.Add("MAME_Dats", new GitHubRepo("AntoPISA", "MAME_Dats"));
 			Globals.GitHubRepos.Add("MAME_SupportFiles", new GitHubRepo("AntoPISA", "MAME_SupportFiles"));
+
+			//
+			// DOME-BT Available
+			//
+
+			try
+			{
+				Tools.Query("http://localhost:12381/api/info");
+				Globals.BitTorrentAvailable = true;
+				Tools.ConsoleHeading(2, "DOME-BT (Pleasure Dome Bit Torrents) Available");
+			}
+			catch (HttpRequestException)
+			{
+				Globals.BitTorrentAvailable = false;
+			}
 
 			//
 			// Determine MAME version

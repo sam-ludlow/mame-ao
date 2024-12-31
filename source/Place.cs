@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.IO.Compression;
+using System.Net.Http;
+using System.Threading;
+
+using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
 {
@@ -145,9 +149,53 @@ namespace Spludlow.MameAO
 					{
 						if (AssetsRequired(Globals.RomHashStore, assetRows, info) == true)
 						{
-							ArchiveOrgFile file = item.GetFile(machineName);
-							if (file != null)
-								DownloadImportFiles(item.DownloadLink(file), file.size, info);
+							if (Globals.BitTorrentAvailable == false)
+							{
+								ArchiveOrgFile file = item.GetFile(machineName);
+								if (file != null)
+									DownloadImportFiles(item.DownloadLink(file), file.size, info);
+							}
+							else
+							{
+								string apiUrl = $"http://localhost:12381/api/file?machine={machineName}";
+
+								float percent_complete = 0;
+
+								while (percent_complete != 100.0f)
+								{
+									dynamic fileInfo;
+									
+									try
+									{
+										fileInfo = JsonConvert.DeserializeObject<dynamic>(Tools.Query(apiUrl));
+									}
+									catch (HttpRequestException e)
+									{
+										if (e.Message.Contains("404") == true)
+											break;
+										else
+											throw e;
+									}
+
+									percent_complete = (float)fileInfo.percent_complete;
+
+									Console.WriteLine($"Torrent:\t{DateTime.Now}\t{(long)fileInfo.length}\t{percent_complete}\t{apiUrl}");
+
+									if (percent_complete == 100.0f)
+									{
+										long length = (long)fileInfo.length;
+
+										string url = (string)fileInfo.url;
+
+										DownloadImportFiles(url, length, info);
+									}
+									else
+									{
+										Thread.Sleep(5000);
+									}
+								}
+							}
+
 						}
 					}
 					else
@@ -364,6 +412,8 @@ namespace Spludlow.MameAO
 				DateTime startTime = DateTime.Now;
 				long size = Tools.Download(url, archiveFilename, expectedSize);
 				TimeSpan took = DateTime.Now - startTime;
+				if (took.TotalSeconds < 1)
+					took = TimeSpan.FromSeconds(1);
 				Console.WriteLine("...done");
 
 				decimal kbPerSecond = (size / (decimal)took.TotalSeconds) / 1024.0M;
@@ -416,6 +466,8 @@ namespace Spludlow.MameAO
 			DateTime startTime = DateTime.Now;
 			long size = Tools.Download(url, tempFilename, file.size);
 			TimeSpan took = DateTime.Now - startTime;
+			if (took.TotalSeconds < 1)
+				took = TimeSpan.FromSeconds(1);
 			Console.WriteLine("...done");
 
 			DateTime when = DateTime.Now;
