@@ -264,16 +264,16 @@ namespace Spludlow.MameAO
 			//	return false;
 			//}
 
-			string name = Path.GetFileName(url);
+			//string name = Path.GetFileName(url);
 
-			string tempFilename = Path.Combine(Globals.TempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(name) + ".chd");
+			string tempFilename = Path.Combine(Globals.TempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + expectedSha1 + ".chd");
 
 			lock (Globals.WorkerTaskInfo)
 			{
 				Globals.WorkerTaskInfo.BytesTotal = length;
 			}
 
-			Console.Write($"Downloading {name} size:{Tools.DataSize(length)} url:{url} ...");
+			Console.Write($"Downloading size:{Tools.DataSize(length)} url:{url} ...");
 			DateTime startTime = DateTime.Now;
 			long size = Tools.Download(url, tempFilename, length);
 			TimeSpan took = DateTime.Now - startTime;

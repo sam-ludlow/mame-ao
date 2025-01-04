@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Net.Http;
 using System.Threading;
+using System.Web;
 
 using Newtonsoft.Json;
 
@@ -44,7 +45,7 @@ namespace Spludlow.MameAO
 
 		public static BitTorrentFile MachineDisk(string machine, string disk)
 		{
-			return Download($"{ClientUrl}/api/file?machine={machine}&disk={disk}");
+			return Download($"{ClientUrl}/api/file?machine={machine}&disk={HttpUtility.UrlEncode(disk)}");
 		}
 
 		public static BitTorrentFile SoftwareRom(string list, string software)
@@ -54,7 +55,7 @@ namespace Spludlow.MameAO
 
 		public static BitTorrentFile SoftwareDisk(string list, string software, string disk)
 		{
-			return Download($"{ClientUrl}/api/file?list={list}&software={software}&disk={disk}");
+			return Download($"{ClientUrl}/api/file?list={list}&software={software}&disk={HttpUtility.UrlEncode(disk)}");
 		}
 
 		public static BitTorrentFile Download(string apiUrl)
