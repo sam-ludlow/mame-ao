@@ -240,18 +240,7 @@ namespace Spludlow.MameAO
 			List<string[]> keys = new List<string[]>();
 
 			foreach (string availableMachineName in machineNames)
-			{
 				keys.Add(new string[] { availableMachineName, availableDiskName });
-
-				//string key = $"{availableMachineName}/{availableDiskName}";
-
-				//ArchiveOrgFile file = sourceItem.GetFile(key);
-
-				//if (file != null)
-				//	return file;
-			}
-
-			//return null;
 
 			return keys.ToArray();
 		}
@@ -263,8 +252,6 @@ namespace Spludlow.MameAO
 			//	Console.WriteLine($"!!! Already Downloaded before and it didn't work (bad in source) chd-sha1:{expectedSha1}");
 			//	return false;
 			//}
-
-			//string name = Path.GetFileName(url);
 
 			string tempFilename = Path.Combine(Globals.TempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + expectedSha1 + ".chd");
 
@@ -309,9 +296,6 @@ namespace Spludlow.MameAO
 
 			return true;
 		}
-
-
-
 
 		private static int PlaceSoftwareRoms(DataRow softwareList, DataRow software)
 		{
@@ -405,7 +389,7 @@ namespace Spludlow.MameAO
 
 								ArchiveOrgFile file = item.GetFile(key);
 								if (file != null)
-									found = DownloadImportDisk(item, file, sha1, info);
+									found = DownloadImportDisk(item.DownloadLink(file), file.size, sha1, info);
 							}
 						}
 						else
@@ -530,59 +514,6 @@ namespace Spludlow.MameAO
 					Globals.WorkerTaskReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, subPathName);
 				}
 			}
-		}
-
-		private static bool DownloadImportDisk(ArchiveOrgItem item, ArchiveOrgFile file, string expectedSha1, string[] info)
-		{
-			//if (Globals.BadSources.AlreadyDownloaded(file) == true)
-			//{
-			//	Console.WriteLine($"!!! Already Downloaded before and it didn't work (bad in source) chd-sha1:{expectedSha1} source-sha1: {file.sha1}");
-			//	return false;
-			//}
-
-			string tempFilename = Path.Combine(Globals.TempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(file.name) + ".chd");
-
-			lock (Globals.WorkerTaskInfo)
-			{
-				Globals.WorkerTaskInfo.BytesTotal = file.size;
-			}
-
-			string url = item.DownloadLink(file);
-			Console.Write($"Downloading {file.name} size:{Tools.DataSize(file.size)} url:{url} ...");
-			DateTime startTime = DateTime.Now;
-			long size = Tools.Download(url, tempFilename, file.size);
-			TimeSpan took = DateTime.Now - startTime;
-			if (took.TotalSeconds < 1)
-				took = TimeSpan.FromSeconds(1);
-			Console.WriteLine("...done");
-
-			DateTime when = DateTime.Now;
-
-			Globals.WorkerTaskReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, size, (long)took.TotalSeconds);
-
-			decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
-			Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
-
-			if (file.size != size)
-				Console.WriteLine($"!!! Unexpected downloaded file size expect:{file.size} actual:{size}");
-
-			string sha1 = Globals.DiskHashStore.Hash(tempFilename);
-
-			if (sha1 != expectedSha1)
-			{
-				Console.WriteLine($"!!! Unexpected downloaded CHD SHA1. It's wrong in the source and will not work. expect:{expectedSha1} actual:{sha1}");
-				//Globals.BadSources.ReportSourceFile(file, expectedSha1, sha1);
-			}
-
-			bool required = Globals.Database._AllSHA1s.Contains(sha1);
-			bool imported = false;
-
-			if (required == true)
-				imported = Globals.DiskHashStore.Add(tempFilename, true, sha1);
-
-			Globals.WorkerTaskReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, Path.GetFileName(tempFilename));
-
-			return true;
 		}
 
 		public static int PlaceAssetFiles(DataRow[] assetRows, HashStore hashStore, string targetDirectory, string filenameAppend, string[] info)
