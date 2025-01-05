@@ -21,6 +21,11 @@ You will need an archive.org account to use MAME-AO. You should create one here 
 
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-archive.org-credentials.png)
 
+## BitTorrent
+You can use BitTorrent instead of archive.org. This feature is enabled when DOME-BT is running.
+
+You can get it from here. https://github.com/sam-ludlow/dome-bt/releases/latest
+
 ## System requirements
 - Windows with .net framework 4.8
 - 32 bit / 64 bit (application is 32 bit keeps RAM usage down)
