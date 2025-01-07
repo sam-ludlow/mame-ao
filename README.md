@@ -313,9 +313,9 @@ https://raw.githubusercontent.com/AntoPISA/MAME_SupportFiles/main/catver.ini/cat
 https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/MAME_dat/MAME_Samples.dat
 
 #### Artwork XML
-- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/pS_Resources/pS_Artwork_Official.dat
-- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/pS_Resources/pS_Artwork_Unofficial_Alternate.dat
-- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/pS_Resources/pS_Artwork_WideScreen.dat
+- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/refs/heads/main/Resources/pS_Artwork_Official.dat
+- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/refs/heads/main/Resources/pS_Artwork_Unofficial_Alternate.dat
+- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/refs/heads/main/Resources/pS_Artwork_WideScreen.dat
 
 See information on the GitHub Repos in use by MAME-AO by going to the About page. http://localhost:12380/about
 
