@@ -49,6 +49,7 @@ namespace Spludlow.MameAO
 		public static string TempDirectory;
 		public static string CacheDirectory;
 		public static string ReportDirectory;
+		public static string BitTorrentDirectory;
 
 		public static string MameDirectory;
 
@@ -204,45 +205,11 @@ namespace Spludlow.MameAO
 				Tools.ConsoleHeading(3, "!!! You can save a lot of disk space by enabling symbolic links, see the README.");
 
 			//
-			//	Archive.Org Credentials
-			//
-
-			Globals.AuthCookie = ArchiveOrgAuth.GetCookie();
-
-			//
-			// Archive.Org Items
-			//
-
-			// Machine ROM
-			Globals.ArchiveOrgItems.Add(ItemType.MachineRom, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("mame-merged", "mame-merged/", null),
-			});
-
-			// Machine DISK
-			Globals.ArchiveOrgItems.Add(ItemType.MachineDisk, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, null),
-			});
-
-			// Software ROM
-			Globals.ArchiveOrgItems.Add(ItemType.SoftwareRom, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("mame-sl", "mame-sl/", null),
-			});
-
-			// Software DISK
-			List<ArchiveOrgItem> items = new List<ArchiveOrgItem>();
-			items.Add(new ArchiveOrgItem("mame-software-list-chds-2", null, "*"));
-			Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, items.ToArray());
-
-			// Support (Artwork & Samples)
-			Globals.ArchiveOrgItems.Add(ItemType.Support, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("mame-support", "Support/", null),
-			});
-
-			//
 			// GitHub Repos
 			//
 
 			Globals.GitHubRepos.Add("mame-ao", new GitHubRepo("sam-ludlow", "mame-ao"));
+			Globals.GitHubRepos.Add("dome-bt", new GitHubRepo("sam-ludlow", "dome-bt"));
 
 			Globals.GitHubRepos.Add("mame", new GitHubRepo("mamedev", "mame"));
 
@@ -250,10 +217,54 @@ namespace Spludlow.MameAO
 			Globals.GitHubRepos.Add("MAME_SupportFiles", new GitHubRepo("AntoPISA", "MAME_SupportFiles"));
 
 			//
-			// DOME-BT Available
+			// Bit Torrent
 			//
 
-			Globals.BitTorrentAvailable = BitTorrent.IsAvailable();
+			Globals.BitTorrentDirectory = config.ContainsKey("BitTorrentPath") == true ? config["BitTorrentPath"] : Path.Combine(Globals.RootDirectory, "_BT");
+			Directory.CreateDirectory(Globals.BitTorrentDirectory);
+
+			Globals.BitTorrentAvailable = BitTorrent.DomeInfo() != null;
+			if (Globals.BitTorrentAvailable == true)
+				Tools.ConsoleHeading(2, "DOME-BT (Pleasuredome Bit Torrents) Available");
+
+			if (Globals.BitTorrentAvailable == false)
+			{
+				//
+				//	Archive.Org Credentials
+				//
+
+				Globals.AuthCookie = ArchiveOrgAuth.GetCookie();
+
+				//
+				// Archive.Org Items
+				//
+
+				// Machine ROM
+				Globals.ArchiveOrgItems.Add(ItemType.MachineRom, new ArchiveOrgItem[] {
+					new ArchiveOrgItem("mame-merged", "mame-merged/", null),
+				});
+
+				// Machine DISK
+				Globals.ArchiveOrgItems.Add(ItemType.MachineDisk, new ArchiveOrgItem[] {
+					new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, null),
+				});
+
+				// Software ROM
+				Globals.ArchiveOrgItems.Add(ItemType.SoftwareRom, new ArchiveOrgItem[] {
+					new ArchiveOrgItem("mame-sl", "mame-sl/", null),
+				});
+
+				// Software DISK
+				List<ArchiveOrgItem> items = new List<ArchiveOrgItem>();
+				items.Add(new ArchiveOrgItem("mame-software-list-chds-2", null, "*"));
+				Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, items.ToArray());
+
+			}
+
+			// Support (Artwork & Samples)
+			Globals.ArchiveOrgItems.Add(ItemType.Support, new ArchiveOrgItem[] {
+				new ArchiveOrgItem("mame-support", "Support/", null),
+			});
 
 			//
 			// Determine MAME version
@@ -311,11 +322,11 @@ namespace Spludlow.MameAO
 			// Hash Stores
 			//
 
-			string directory = Path.Combine(Globals.RootDirectory, config.ContainsKey("StorePathRom") == true ? config["StorePathRom"] : "_STORE");
+			string directory = config.ContainsKey("StorePathRom") == true ? config["StorePathRom"] : Path.Combine(Globals.RootDirectory, "_STORE");
 			Directory.CreateDirectory(directory);
 			Globals.RomHashStore = new HashStore(directory, Tools.SHA1HexFile);
 
-			directory = Path.Combine(Globals.RootDirectory, config.ContainsKey("StorePathDisk") == true ? config["StorePathDisk"] : "_STORE_DISK");
+			directory = config.ContainsKey("StorePathDisk") == true ? config["StorePathDisk"] : Path.Combine(Globals.RootDirectory, "_STORE_DISK");
 			Directory.CreateDirectory(directory);
 			Globals.DiskHashStore = new HashStore(directory, Globals.MameChdMan.Hash);
 
@@ -709,6 +720,10 @@ namespace Spludlow.MameAO
 							throw new ApplicationException($"Usage: {parts[0]} <archive.org item name> <filename>");
 
 						Upload.DeleteFile(parts[1], parts[2]);
+						return;
+
+					case ".bt":
+						BitTorrent.Initialize();
 						return;
 
 					default:

@@ -1,5 +1,9 @@
 ﻿using System;
+using System.Diagnostics;
+using System.IO;
+using System.IO.Compression;
 using System.Net.Http;
+using System.Reflection;
 using System.Threading;
 using System.Web;
 
@@ -23,19 +27,91 @@ namespace Spludlow.MameAO
 	{
 		public static string ClientUrl = "http://localhost:12381";
 
-
-		public static bool IsAvailable()
+		public static dynamic DomeInfo()
 		{
 			try
 			{
-				Tools.Query($"{ClientUrl}/api/info");
-				Tools.ConsoleHeading(2, "DOME-BT (Pleasure Dome Bit Torrents) Available");
-				return true;
+				string info = Tools.Query($"{ClientUrl}/api/info");
+				return JsonConvert.DeserializeObject<dynamic>(info);
 			}
 			catch (HttpRequestException)
 			{
-				return false;
+				return null;
 			}
+		}
+
+		public static void Initialize()
+		{
+			Tools.ConsoleHeading(2, "DOME-BT (Pleasuredome Bit Torrents)");
+
+			GitHubRepo repo = Globals.GitHubRepos["dome-bt"];
+
+			string zipName = $"dome-bt-{repo.tag_name}.zip";
+
+			string exeFilename = Path.Combine(Globals.BitTorrentDirectory, "dome-bt.exe");
+
+			string remoteVersion = repo.tag_name;
+
+			string localVersion = null;
+			if (File.Exists(exeFilename) == true)
+			{
+				Version version = Assembly.LoadFile(exeFilename).GetName().Version;
+				localVersion = $"{version.Major}.{version.Minor}";
+			}
+
+			dynamic info = DomeInfo();
+
+			if (info != null && (string)info.version == remoteVersion)
+			{
+				Console.WriteLine($"DOME-BT Already running {info.version}");
+			}
+			else
+			{
+				if (info != null)
+				{
+					int pid = (int)info.pid;
+
+					Console.Write("Killing DOME-BT...");
+					using (Process startingProcess = Process.GetProcessById(pid))
+					{
+						startingProcess.Kill();
+						startingProcess.WaitForExit();
+					}
+					Console.WriteLine("...done");
+				}
+
+				if (localVersion == null || localVersion != remoteVersion)
+				{
+					Console.Write("Installing DOME-BT...");
+					Directory.Delete(Globals.BitTorrentDirectory, true);
+					Directory.CreateDirectory(Globals.BitTorrentDirectory);
+
+					string zipFilename = Path.Combine(Globals.BitTorrentDirectory, zipName);
+
+					Tools.Download(repo.Assets[zipName], zipFilename);
+
+					ZipFile.ExtractToDirectory(zipFilename, Globals.BitTorrentDirectory);
+					Console.WriteLine("...done");
+				}
+
+				Console.Write("Starting DOME-BT...");
+				ProcessStartInfo startInfo = new ProcessStartInfo(exeFilename)
+				{
+					WorkingDirectory = Globals.BitTorrentDirectory,
+					UseShellExecute = true,
+				};
+				using (Process process = new Process())
+				{
+					process.StartInfo = startInfo;
+					process.Start();
+
+					if (process.HasExited == true)
+						throw new ApplicationException($"DOME-BT exited imediatly after starting {process.ExitCode}.");
+				}
+				Console.WriteLine("...done");
+			}
+
+			Globals.BitTorrentAvailable = true;
 		}
 
 		public static BitTorrentFile MachineRom(string machine)

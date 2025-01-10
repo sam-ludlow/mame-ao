@@ -16,15 +16,16 @@ TIP: Run command `.upany` aftear initial setup, this will stop the Microsoft Def
 NOTE: First time it has to extract MAME's data, this will take a moment, next time it will start quickly, although version bumps in MAME or MAME-AO will trigger another data initialization.
 
 ## Enter your Archive.org credentials
-
-You will need an archive.org account to use MAME-AO. You should create one here https://archive.org/account/signup
+You will need an archive.org account to use MAME-AO if not using BitTorrent. You should create one here https://archive.org/account/signup
 
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-archive.org-credentials.png)
 
-## BitTorrent
-You can use BitTorrent instead of archive.org. This feature is enabled when DOME-BT is running.
+NOTE: You will not me asked and do not require an account when BitTorrent is enabled. Just hit `ENTER` twice to skip entering credentials.
 
-You can get it from here. https://github.com/sam-ludlow/dome-bt/releases/latest
+## BitTorrent
+Use the command `.bt` to enable BitTorrent. 
+
+NOTE: Bit Torrent is handled by a seperate process the first time in runs you will get a Windows Firewall message, you need to allow the `dome-bt.exe` process.
 
 ## System requirements
 - Windows with .net framework 4.8
@@ -233,6 +234,7 @@ You can set certain advanced configuration options in the file `_config.txt`, ea
 
 - `StorePathRom` - Override default ROM Store directory
 - `StorePathDisk` - Override default DISK Store directory
+- `BitTorrentPath` - Override default Bit Torrent directory
 
 ## Archive.org Upload
 MAME-AO can be used to upload files to archive.org items, for people serious about software preservation.
