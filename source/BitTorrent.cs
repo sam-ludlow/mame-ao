@@ -62,8 +62,10 @@ namespace Spludlow.MameAO
 			string localVersion = null;
 			if (File.Exists(exeFilename) == true)
 			{
-				Version version = Assembly.LoadFile(exeFilename).GetName().Version;
+				Version version = AssemblyName.GetAssemblyName(exeFilename).Version;
 				localVersion = $"{version.Major}.{version.Minor}";
+
+				Console.WriteLine($"DOME-BT Installed version:	{localVersion}");
 			}
 
 			dynamic info = DomeInfo();
@@ -90,7 +92,16 @@ namespace Spludlow.MameAO
 				if (localVersion == null || localVersion != remoteVersion)
 				{
 					Console.Write("Installing DOME-BT...");
-					Directory.Delete(Globals.BitTorrentDirectory, true);
+
+					try
+					{
+						Directory.Delete(Globals.BitTorrentDirectory, true);
+					}
+					catch (UnauthorizedAccessException e)
+					{
+						throw new ApplicationException("Looks like DOME-BT is currently running, please kill all DOME-BT processes and try again, " + e.Message, e);
+					}
+
 					Directory.CreateDirectory(Globals.BitTorrentDirectory);
 
 					string zipFilename = Path.Combine(Globals.BitTorrentDirectory, zipName);
