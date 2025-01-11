@@ -1,5 +1,5 @@
 # mame-ao
-Easiest way to use MAME. Automatic download and setup of all files from github.com & archive.org on the fly.
+Easiest way to use MAME. Automatic download and setup of all files from GitHub, BitTorrent, and archive.org on the fly.
 
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-ui.png)
 
@@ -25,11 +25,13 @@ You will need an archive.org account to use MAME-AO if not using BitTorrent. You
 ## BitTorrent
 You can enable BitTorrent in the UI or use the command `.bt`.
 
+BitTorrent is recomended as it has the vary latest assets.
+
 ![MAME-AO BitTorrent](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-enable-bit-torrent.png)
 
 Bit Torrent is handled by a seperate process the first time in runs you will get a Windows Firewall message, you need to allow the `dome-bt.exe` process.
 
-Once enable BitTorrent will start automatically next time.
+Once enabled BitTorrent will start automatically next time.
 
 ## System requirements
 - Windows with .net framework 4.8
@@ -126,7 +128,7 @@ There are also commands available they all start with a dot `.`
 - `.dbs` - Software database SQL query
 - `.creds` - Enter archive.org credentials
 - `.bt` - Enable the bit torrent client `DOME-BT`
-- 
+
 ## Saved State and previous MAME versions
 Saved state somtimes does not work between MAME versions. If you have started something with saved state you may as well use the same MAME version.
 
