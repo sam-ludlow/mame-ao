@@ -16,16 +16,20 @@ TIP: Run command `.upany` aftear initial setup, this will stop the Microsoft Def
 NOTE: First time it has to extract MAME's data, this will take a moment, next time it will start quickly, although version bumps in MAME or MAME-AO will trigger another data initialization.
 
 ## Enter your Archive.org credentials
+If you intend on using BitTorrent you can skip this step, press `ENTER` twice.
+
 You will need an archive.org account to use MAME-AO if not using BitTorrent. You should create one here https://archive.org/account/signup
 
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-archive.org-credentials.png)
 
-NOTE: You will not me asked and do not require an account when BitTorrent is enabled. Just hit `ENTER` twice to skip entering credentials.
-
 ## BitTorrent
-Use the command `.bt` to enable BitTorrent. 
+You can enable BitTorrent in the UI or use the command `.bt`.
 
-NOTE: Bit Torrent is handled by a seperate process the first time in runs you will get a Windows Firewall message, you need to allow the `dome-bt.exe` process.
+![MAME-AO BitTorrent](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-enable-bit-torrent.png)
+
+Bit Torrent is handled by a seperate process the first time in runs you will get a Windows Firewall message, you need to allow the `dome-bt.exe` process.
+
+Once enable BitTorrent will start automatically next time.
 
 ## System requirements
 - Windows with .net framework 4.8
@@ -120,7 +124,9 @@ There are also commands available they all start with a dot `.`
 - `.r` - Reload `UI.html` usfull when developing the UI.
 - `.dbm` - Machine database SQL query
 - `.dbs` - Software database SQL query
-
+- `.creds` - Enter archive.org credentials
+- `.bt` - Enable the bit torrent client `DOME-BT`
+- 
 ## Saved State and previous MAME versions
 Saved state somtimes does not work between MAME versions. If you have started something with saved state you may as well use the same MAME version.
 

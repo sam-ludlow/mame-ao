@@ -436,6 +436,7 @@ namespace Spludlow.MameAO
 			json.disk_store_count = Globals.DiskHashStore.Length;
 			json.genre_version = Globals.Genre.Data != null ? Globals.Genre.Version : "";
 			json.linking_enabled = Globals.LinkingEnabled;
+			json.bit_torrent_enabled = Globals.BitTorrentAvailable;
 
 			json.latest = mameAoRepo.tag_name;
 

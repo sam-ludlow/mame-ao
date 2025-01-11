@@ -485,6 +485,9 @@
 				`<h2>What's New in the latest MAME release</h2><a href="${_baseUrl}/api/what" target="_blank">Open whatsnew.txt</a><hr />` +
 				'<h2>MAME-AO README on github</h2><a href="https://github.com/sam-ludlow/mame-ao#mame-ao" target="_blank">View instructions</a><hr />';
 
+			if (_info.bit_torrent_enabled !== true)
+				html += '<h2>Warning - Bit Torrent not enabled</h2><a onclick="runCommand(\'.bt\')" href="javascript:void(0);">Click here to enable immediately. You will have to Allow in Windows Firewall when the dialog apears.</a><hr />';
+
 			if (_info.linking_enabled !== true)
 				html += '<h2>Warning - Symbolic Links not enabled</h2><a href="https://github.com/sam-ludlow/mame-ao?tab=readme-ov-file#symbolic-links---save-disk-space" target="_blank">View instructions on enabling</a><hr />';
 

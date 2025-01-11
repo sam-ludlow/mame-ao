@@ -48,11 +48,11 @@ namespace Spludlow.MameAO
 			{
 				Console.WriteLine();
 				Tools.ConsoleHeading(2, new string[] {
-					"Please enter your archive.org credentials.",
-					"You can create an account here https://archive.org/account/signup",
+					"If you want to use BitTorrents you can skip this step, press ENTER twice. To enable enter the command '.bt'",
+					"Please enter your archive.org credentials. You can create an account here https://archive.org/account/signup",
 					"Your username & password are not stored just the auth cookie which is kept here",
 					CacheFilename,
-					"If you have download problems with a status of 401/403 delete this file then re-start MAME-AO."
+					"If you have archive.org download problems with a status of 401/403 delete this file then re-start MAME-AO."
 				});
 
 				string username;

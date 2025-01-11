@@ -40,6 +40,13 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static bool IsInstalled()
+		{
+			string exeFilename = Path.Combine(Globals.BitTorrentDirectory, "dome-bt.exe");
+
+			return File.Exists(exeFilename);
+		}
+
 		public static void Initialize()
 		{
 			Tools.ConsoleHeading(2, "DOME-BT (Pleasuredome Bit Torrents)");

@@ -223,9 +223,8 @@ namespace Spludlow.MameAO
 			Globals.BitTorrentDirectory = config.ContainsKey("BitTorrentPath") == true ? config["BitTorrentPath"] : Path.Combine(Globals.RootDirectory, "_BT");
 			Directory.CreateDirectory(Globals.BitTorrentDirectory);
 
-			Globals.BitTorrentAvailable = BitTorrent.DomeInfo() != null;
-			if (Globals.BitTorrentAvailable == true)
-				Tools.ConsoleHeading(2, "DOME-BT (Pleasuredome Bit Torrents) Available");
+			if (BitTorrent.IsInstalled() == true)
+				BitTorrent.Initialize();
 
 			if (Globals.BitTorrentAvailable == false)
 			{
@@ -724,6 +723,11 @@ namespace Spludlow.MameAO
 
 					case ".bt":
 						BitTorrent.Initialize();
+						return;
+
+					case ".creds":
+						File.Delete(ArchiveOrgAuth.CacheFilename);
+						Globals.AuthCookie = ArchiveOrgAuth.GetCookie();
 						return;
 
 					default:
