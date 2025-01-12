@@ -725,6 +725,11 @@ namespace Spludlow.MameAO
 						BitTorrent.Initialize();
 						return;
 
+					case ".btx":
+						BitTorrent.Remove();
+						Tools.ConsoleHeading(1, "Restart MAME-AO to use with archive.org");
+						return;
+
 					case ".creds":
 						File.Delete(ArchiveOrgAuth.CacheFilename);
 						Globals.AuthCookie = ArchiveOrgAuth.GetCookie();

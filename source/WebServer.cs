@@ -437,6 +437,8 @@ namespace Spludlow.MameAO
 			json.genre_version = Globals.Genre.Data != null ? Globals.Genre.Version : "";
 			json.linking_enabled = Globals.LinkingEnabled;
 			json.bit_torrent_enabled = Globals.BitTorrentAvailable;
+			if (Globals.BitTorrentAvailable == true)
+				json.bit_torrent_url = BitTorrent.ClientUrl;
 
 			json.latest = mameAoRepo.tag_name;
 

@@ -31,7 +31,7 @@ BitTorrent is recomended as it has the vary latest assets.
 
 Bit Torrent is handled by a seperate process the first time in runs you will get a Windows Firewall message, you need to allow the `dome-bt.exe` process.
 
-Once enabled BitTorrent will start automatically next time.
+Once enabled BitTorrent will start automatically next time. To remove BitTorrent use the UI or command `.btx`, then restart MAME-AO.
 
 ## System requirements
 - Windows with .net framework 4.8

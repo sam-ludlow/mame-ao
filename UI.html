@@ -566,6 +566,53 @@
 
 			canvas.appendChild(table);
 
+			// Tottents
+
+			if (_info.bit_torrent_enabled === true) {
+
+				div = document.createElement('div');
+				div.innerHTML = '<hr /><h2>Magnet Links</h2>';
+				canvas.appendChild(div);
+
+				let btInfo;
+
+				try {
+					btInfo = await fetchJson('/api/info', _info.bit_torrent_url);
+				}
+				catch (e) {
+					div = document.createElement('div');
+					div.innerHTML = `<h3>Error connecting to DOME-BT<h3><p>${e.message}</p>`;
+					canvas.appendChild(div);
+				}
+
+				if (btInfo) {
+					columnDefs = [
+						{ heading: 'Asset Type', columnName: 'type' },
+						{ heading: 'Name', columnName: 'name' },
+						{ heading: 'Version', columnName: 'version' },
+						{ heading: 'Available', columnName: 'torrent_available' },
+						{ heading: 'Magnet Link', columnName: 'magnet_link' },
+					];
+
+					table = document.createElement('table');
+
+					buildTable(columnDefs, btInfo.magnets, table, (columnDef, result, resultIndex, row, cell) => {
+
+						const value = result[columnDef.columnName];
+
+						if (value === undefined)
+							return;
+
+						cell.innerHTML = value;
+					});
+					canvas.appendChild(table);
+				}
+
+				div = document.createElement('div');
+				div.innerHTML = '<p><a onclick="runCommand(\'.btx\')" href="javascript:void(0);">Click here to remove BitTorrent immediately then restart MAME-AO to use with archive.org</a></p>';
+				canvas.appendChild(div);
+			}
+
 			// Items
 
 			div = document.createElement('div');
@@ -1230,7 +1277,7 @@
 
 		const sleep = ms => new Promise(r => setTimeout(r, ms));
 
-		const fetchJson = async url => (await fetch(`${_baseUrl}${url}`)).json();
+		const fetchJson = async (url, base = _baseUrl) => (await fetch(`${base}${url}`)).json();
 
 		const getCanvas = () => {
 			const page = document.getElementById('canvas');

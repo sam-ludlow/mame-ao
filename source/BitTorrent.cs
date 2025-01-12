@@ -47,6 +47,39 @@ namespace Spludlow.MameAO
 			return File.Exists(exeFilename);
 		}
 
+		public static void Remove()
+		{
+			dynamic info = DomeInfo();
+
+			if (info != null)
+			{
+				int pid = (int)info.pid;
+
+				Console.Write("Killing DOME-BT...");
+				using (Process startingProcess = Process.GetProcessById(pid))
+				{
+					startingProcess.Kill();
+					startingProcess.WaitForExit();
+				}
+				Console.WriteLine("...done");
+			}
+
+			Console.Write("Removing DOME-BT...");
+			try
+			{
+				Directory.Delete(Globals.BitTorrentDirectory, true);
+			}
+			catch (UnauthorizedAccessException e)
+			{
+				throw new ApplicationException("Looks like DOME-BT is currently running, please kill all DOME-BT processes and try again, " + e.Message, e);
+			}
+
+			Directory.CreateDirectory(Globals.BitTorrentDirectory);
+			Console.WriteLine("...done");
+
+			Globals.BitTorrentAvailable = false;
+		}
+
 		public static void Initialize()
 		{
 			Tools.ConsoleHeading(2, "DOME-BT (Pleasuredome Bit Torrents)");
