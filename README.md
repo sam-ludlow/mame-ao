@@ -63,6 +63,8 @@ NOTE: Machines that emulate keyboards will take over, use `Scroll Lock` to toggl
 
 You should use a joystick but you will need a few keyboard commands. Full keyboard docs here https://docs.mamedev.org/usingmame/defaultkeys.html
 
+![MAME-AO Real Man's Joystick](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-joystick.png)
+
 - Player 1 Coin Up: `5`
 - Player 1 Start: `1`
 
@@ -128,6 +130,7 @@ There are also commands available they all start with a dot `.`
 - `.dbs` - Software database SQL query
 - `.creds` - Enter archive.org credentials
 - `.bt` - Enable the bit torrent client `DOME-BT`
+- `.btx` - Remove the bit torrent client, restart MAME-AO to use archive.org
 
 ## Saved State and previous MAME versions
 Saved state somtimes does not work between MAME versions. If you have started something with saved state you may as well use the same MAME version.
@@ -323,9 +326,9 @@ https://raw.githubusercontent.com/AntoPISA/MAME_SupportFiles/main/catver.ini/cat
 https://raw.githubusercontent.com/AntoPISA/MAME_Dats/main/MAME_dat/MAME_Samples.dat
 
 #### Artwork XML
-- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/refs/heads/main/Resources/pS_Artwork_Official.dat
-- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/refs/heads/main/Resources/pS_Artwork_Unofficial_Alternate.dat
-- https://raw.githubusercontent.com/AntoPISA/MAME_Dats/refs/heads/main/Resources/pS_Artwork_WideScreen.dat
+https://raw.githubusercontent.com/AntoPISA/MAME_Dats/refs/heads/main/Resources/pS_Artwork_Official.dat
+https://raw.githubusercontent.com/AntoPISA/MAME_Dats/refs/heads/main/Resources/pS_Artwork_Unofficial_Alternate.dat
+https://raw.githubusercontent.com/AntoPISA/MAME_Dats/refs/heads/main/Resources/pS_Artwork_WideScreen.dat
 
 See information on the GitHub Repos in use by MAME-AO by going to the About page. http://localhost:12380/about
 
