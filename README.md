@@ -94,6 +94,8 @@ NOTE: When saving state you have to then press another key or button to name the
 ### MAME UI
 When starting MAME without a machine you will get the MAME UI.
 
+![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ui.png)
+
 Use the mouse or `Cursor keys` and `Enter` to navigate.
 
 Use `Tab` to move between windows.
@@ -131,6 +133,7 @@ There are also commands available they all start with a dot `.`
 - `.creds` - Enter archive.org credentials
 - `.bt` - Enable the bit torrent client `DOME-BT`
 - `.btx` - Remove the bit torrent client, restart MAME-AO to use archive.org
+- `.test` - Perform asset place tests
 
 ## Saved State and previous MAME versions
 Saved state somtimes does not work between MAME versions. If you have started something with saved state you may as well use the same MAME version.

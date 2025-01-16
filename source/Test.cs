@@ -37,13 +37,18 @@ namespace Spludlow.MameAO
 
 					DataRow softwareListRow = Globals.Database.GetSoftwareList(softwareListName);
 
-					DataRow[] softwareRows = Globals.Database.GetSoftwareListsSoftware(softwareListRow);
+					if (softwareListRow != null)
+					{
+						DataRow[] softwareRows = Globals.Database.GetSoftwareListsSoftware(softwareListRow);
 
-					int next = random.Next(softwareRows.Length);
+						DataRow softwareRow = softwareRows[random.Next(softwareRows.Length)];
 
-					DataRow softwareRow = softwareRows[next];
-
-					software = (string)softwareRow["name"];
+						software = (string)softwareRow["name"];
+					}
+					else
+					{
+						Console.WriteLine($"!!! Software list not found: {softwareListName}");
+					}
 				}
 
 				table.Rows[index].Delete();
