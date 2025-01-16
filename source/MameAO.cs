@@ -735,6 +735,12 @@ namespace Spludlow.MameAO
 						Globals.AuthCookie = ArchiveOrgAuth.GetCookie();
 						return;
 
+					case ".test":
+						if (parts.Length != 3)
+							throw new ApplicationException($"Usage: {parts[0]} <profile> <count>");
+						Test.Run(parts[1], Int32.Parse(parts[2]));
+						return;
+
 					default:
 						binFilename = Path.Combine(Globals.RootDirectory, machine.Substring(1), "mame.exe");
 
