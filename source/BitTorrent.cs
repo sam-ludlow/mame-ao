@@ -13,12 +13,12 @@ namespace Spludlow.MameAO
 {
 	public class BitTorrentFile
 	{
-		public string Url;
+		public string Filename;
 		public long Length;
 
-		public BitTorrentFile(string url, long length)
+		public BitTorrentFile(string filename, long length)
 		{
-			Url = url;
+			Filename = filename;
 			Length = length;
 		}
 	}
@@ -216,7 +216,7 @@ namespace Spludlow.MameAO
 				Console.WriteLine($"Torrent:\t{DateTime.Now}\t{(long)fileInfo.length}\t{percent_complete}\t{apiUrl}");
 
 				if (percent_complete == 100.0f)
-					return new BitTorrentFile((string)fileInfo.url, (long)fileInfo.length);
+					return new BitTorrentFile((string)fileInfo.filename, (long)fileInfo.length);
 
 				Thread.Sleep(5000);
 			}

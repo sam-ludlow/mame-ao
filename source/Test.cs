@@ -13,6 +13,9 @@ namespace Spludlow.MameAO
 
 			DataTable table = Globals.Database.QueryMachine(dataQueryProfile.Key, 0, 0xfff, null);
 
+			if (count == 0 || count > table.Rows.Count)
+				count = table.Rows.Count;
+
 			Random random = new Random();
 
 			while (count-- > 0)

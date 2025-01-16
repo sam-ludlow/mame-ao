@@ -154,7 +154,7 @@ namespace Spludlow.MameAO
 							{
 								var btFile = BitTorrent.MachineRom(machineName);
 								if (btFile != null)
-									DownloadImportFiles(btFile.Url, btFile.Length, info);
+									DownloadImportFiles(btFile.Filename, btFile.Length, info);
 							}
 						}
 					}
@@ -203,7 +203,7 @@ namespace Spludlow.MameAO
 						{
 							var btFile = BitTorrent.MachineDisk(availableMachineName, availableDiskName);
 							if (btFile != null)
-								DownloadImportDisk(btFile.Url, btFile.Length, sha1, info);
+								DownloadImportDisk(btFile.Filename, btFile.Length, sha1, info);
 						}
 					}
 				}
@@ -245,7 +245,7 @@ namespace Spludlow.MameAO
 			return keys.ToArray();
 		}
 
-		private static bool DownloadImportDisk(string url, long length, string expectedSha1, string[] info)
+		private static bool DownloadImportDisk(string urlOrFilename, long length, string expectedSha1, string[] info)
 		{
 			//if (Globals.BadSources.AlreadyDownloaded(expectedSha1) == true)
 			//{
@@ -260,17 +260,30 @@ namespace Spludlow.MameAO
 				Globals.WorkerTaskInfo.BytesTotal = length;
 			}
 
-			Console.Write($"Downloading size:{Tools.DataSize(length)} url:{url} ...");
 			DateTime startTime = DateTime.Now;
-			long size = Tools.Download(url, tempFilename, length);
+			long size;
+
+			if (urlOrFilename.StartsWith("http") == true)
+			{
+				Console.Write($"Downloading size:{Tools.DataSize(length)} url:{urlOrFilename} ...");
+				size = Tools.Download(urlOrFilename, tempFilename, length);
+				Console.WriteLine("...done");
+			}
+			else
+			{
+				File.Copy(urlOrFilename, tempFilename);
+
+				FileInfo fileInfo = new FileInfo(tempFilename);
+				size = fileInfo.Length;
+			}
+
 			TimeSpan took = DateTime.Now - startTime;
 			if (took.TotalSeconds < 1)
 				took = TimeSpan.FromSeconds(1);
-			Console.WriteLine("...done");
 
 			DateTime when = DateTime.Now;
 
-			Globals.WorkerTaskReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, size, (long)took.TotalSeconds);
+			Globals.WorkerTaskReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], urlOrFilename, size, (long)took.TotalSeconds);
 
 			decimal mbPerSecond = (size / (decimal)took.TotalSeconds) / (1024.0M * 1024.0M);
 			Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(mbPerSecond, 3)} MiB/s");
@@ -339,7 +352,7 @@ namespace Spludlow.MameAO
 				{
 					var btFile = BitTorrent.SoftwareRom(softwareListName, requiredSoftwareName);
 					if (btFile != null)
-						DownloadImportFiles(btFile.Url, btFile.Length, info);
+						DownloadImportFiles(btFile.Filename, btFile.Length, info);
 				}
 			}
 
@@ -396,7 +409,7 @@ namespace Spludlow.MameAO
 						{
 							var btFile = BitTorrent.SoftwareDisk(softwareListName, downloadSoftwareName, name);
 							if (btFile != null)
-								DownloadImportDisk(btFile.Url, btFile.Length, sha1, info);
+								DownloadImportDisk(btFile.Filename, btFile.Length, sha1, info);
 						}
 					}
 				}
@@ -470,7 +483,7 @@ namespace Spludlow.MameAO
 			return downloadRequired;
 		}
 
-		public static void DownloadImportFiles(string url, long expectedSize, string[] info)
+		public static void DownloadImportFiles(string urlOrFilename, long expectedSize, string[] info)
 		{
 			using (TempDirectory tempDir = new TempDirectory())
 			{
@@ -478,22 +491,35 @@ namespace Spludlow.MameAO
 				string extractDirectory = Path.Combine(tempDir.Path, "OUT");
 				Directory.CreateDirectory(extractDirectory);
 
-				Console.Write($"Downloading size:{Tools.DataSize(expectedSize)} url:{url} ...");
 				DateTime startTime = DateTime.Now;
-				long size = Tools.Download(url, archiveFilename, expectedSize);
+				long size;
+
+				if (urlOrFilename.StartsWith("http") == true)
+				{
+					Console.Write($"Downloading size:{Tools.DataSize(expectedSize)} url:{urlOrFilename} ...");
+					size = Tools.Download(urlOrFilename, archiveFilename, expectedSize);
+					Console.WriteLine("...done");
+				}
+				else
+				{
+					File.Copy(urlOrFilename, archiveFilename);
+
+					FileInfo fileInfo = new FileInfo(archiveFilename);
+					size = fileInfo.Length;
+				}
+
 				TimeSpan took = DateTime.Now - startTime;
 				if (took.TotalSeconds < 1)
 					took = TimeSpan.FromSeconds(1);
-				Console.WriteLine("...done");
 
 				decimal kbPerSecond = (size / (decimal)took.TotalSeconds) / 1024.0M;
 				Console.WriteLine($"Download rate: {Math.Round(took.TotalSeconds, 3)}s = {Math.Round(kbPerSecond, 3)} KiB/s");
 				if (size != expectedSize)
-					Console.WriteLine($"!!! Unexpected downloaded file size expect:{expectedSize} actual:{size}");
+					Console.WriteLine($"!!! Unexpected file size expect:{expectedSize} actual:{size}");
 
 				DateTime when = DateTime.Now;
 
-				Globals.WorkerTaskReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], url, expectedSize, (long)took.TotalSeconds);
+				Globals.WorkerTaskReport.Tables["Download"].Rows.Add(when, info[0], info[1], info[2], urlOrFilename, expectedSize, (long)took.TotalSeconds);
 
 				Console.Write($"Extracting {archiveFilename} ...");
 				ZipFile.ExtractToDirectory(archiveFilename, extractDirectory);
