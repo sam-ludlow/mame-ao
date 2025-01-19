@@ -226,44 +226,47 @@ namespace Spludlow.MameAO
 			if (BitTorrent.IsInstalled() == true)
 				BitTorrent.Initialize();
 
-			if (Globals.BitTorrentAvailable == false)
-			{
-				//
-				//	Archive.Org Credentials
-				//
+			//
+			//	Archive.Org Credentials
+			//
 
+			if (Globals.BitTorrentAvailable == false)
 				Globals.AuthCookie = ArchiveOrgAuth.GetCookie();
 
-				//
-				// Archive.Org Items
-				//
-
+			//
+			// Archive.Org Items
+			//
+			if (Globals.BitTorrentAvailable == false)
+			{
 				// Machine ROM
-				Globals.ArchiveOrgItems.Add(ItemType.MachineRom, new ArchiveOrgItem[] {
-					new ArchiveOrgItem("mame-merged", "mame-merged/", null),
-				});
+				if (Globals.ArchiveOrgItems.ContainsKey(ItemType.MachineRom) == false)
+					Globals.ArchiveOrgItems.Add(ItemType.MachineRom, new ArchiveOrgItem[] {
+						new ArchiveOrgItem("mame-merged", "mame-merged/", null),
+					});
 
 				// Machine DISK
-				Globals.ArchiveOrgItems.Add(ItemType.MachineDisk, new ArchiveOrgItem[] {
-					new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, null),
-				});
+				if (Globals.ArchiveOrgItems.ContainsKey(ItemType.MachineDisk) == false)
+					Globals.ArchiveOrgItems.Add(ItemType.MachineDisk, new ArchiveOrgItem[] {
+						new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, null),
+					});
 
 				// Software ROM
-				Globals.ArchiveOrgItems.Add(ItemType.SoftwareRom, new ArchiveOrgItem[] {
-					new ArchiveOrgItem("mame-sl", "mame-sl/", null),
-				});
+				if (Globals.ArchiveOrgItems.ContainsKey(ItemType.SoftwareRom) == false)
+					Globals.ArchiveOrgItems.Add(ItemType.SoftwareRom, new ArchiveOrgItem[] {
+						new ArchiveOrgItem("mame-sl", "mame-sl/", null),
+					});
 
 				// Software DISK
-				List<ArchiveOrgItem> items = new List<ArchiveOrgItem>();
-				items.Add(new ArchiveOrgItem("mame-software-list-chds-2", null, "*"));
-				Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, items.ToArray());
-
+				if (Globals.ArchiveOrgItems.ContainsKey(ItemType.SoftwareDisk) == false)
+					Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, new ArchiveOrgItem[] {
+						new ArchiveOrgItem("mame-software-list-chds-2", null, "*"),
+					});
 			}
-
 			// Support (Artwork & Samples)
-			Globals.ArchiveOrgItems.Add(ItemType.Support, new ArchiveOrgItem[] {
-				new ArchiveOrgItem("mame-support", "Support/", null),
-			});
+			if (Globals.ArchiveOrgItems.ContainsKey(ItemType.Support) == false)
+				Globals.ArchiveOrgItems.Add(ItemType.Support, new ArchiveOrgItem[] {
+					new ArchiveOrgItem("mame-support", "Support/", null),
+				});
 
 			//
 			// Determine MAME version
