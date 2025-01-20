@@ -236,32 +236,31 @@ namespace Spludlow.MameAO
 			//
 			// Archive.Org Items
 			//
-			if (Globals.BitTorrentAvailable == false)
-			{
-				// Machine ROM
-				if (Globals.ArchiveOrgItems.ContainsKey(ItemType.MachineRom) == false)
-					Globals.ArchiveOrgItems.Add(ItemType.MachineRom, new ArchiveOrgItem[] {
-						new ArchiveOrgItem("mame-merged", "mame-merged/", null),
-					});
 
-				// Machine DISK
-				if (Globals.ArchiveOrgItems.ContainsKey(ItemType.MachineDisk) == false)
-					Globals.ArchiveOrgItems.Add(ItemType.MachineDisk, new ArchiveOrgItem[] {
-						new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, null),
-					});
+			// Machine ROM
+			if (Globals.ArchiveOrgItems.ContainsKey(ItemType.MachineRom) == false)
+				Globals.ArchiveOrgItems.Add(ItemType.MachineRom, new ArchiveOrgItem[] {
+					new ArchiveOrgItem("mame-merged", "mame-merged/", null),
+				});
 
-				// Software ROM
-				if (Globals.ArchiveOrgItems.ContainsKey(ItemType.SoftwareRom) == false)
-					Globals.ArchiveOrgItems.Add(ItemType.SoftwareRom, new ArchiveOrgItem[] {
-						new ArchiveOrgItem("mame-sl", "mame-sl/", null),
-					});
+			// Machine DISK
+			if (Globals.ArchiveOrgItems.ContainsKey(ItemType.MachineDisk) == false)
+				Globals.ArchiveOrgItems.Add(ItemType.MachineDisk, new ArchiveOrgItem[] {
+					new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, null),
+				});
 
-				// Software DISK
-				if (Globals.ArchiveOrgItems.ContainsKey(ItemType.SoftwareDisk) == false)
-					Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, new ArchiveOrgItem[] {
-						new ArchiveOrgItem("mame-software-list-chds-2", null, "*"),
-					});
-			}
+			// Software ROM
+			if (Globals.ArchiveOrgItems.ContainsKey(ItemType.SoftwareRom) == false)
+				Globals.ArchiveOrgItems.Add(ItemType.SoftwareRom, new ArchiveOrgItem[] {
+					new ArchiveOrgItem("mame-sl", "mame-sl/", null),
+				});
+
+			// Software DISK
+			if (Globals.ArchiveOrgItems.ContainsKey(ItemType.SoftwareDisk) == false)
+				Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, new ArchiveOrgItem[] {
+					new ArchiveOrgItem("mame-software-list-chds-2", null, "*"),
+				});
+
 			// Support (Artwork & Samples)
 			if (Globals.ArchiveOrgItems.ContainsKey(ItemType.Support) == false)
 				Globals.ArchiveOrgItems.Add(ItemType.Support, new ArchiveOrgItem[] {
