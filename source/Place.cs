@@ -13,6 +13,19 @@ namespace Spludlow.MameAO
 			Tools.ConsoleHeading(1, "Asset Acquisition");
 			Console.WriteLine();
 
+			if (Globals.AuthCookie == null && Globals.BitTorrentAvailable == false)
+			{
+				Tools.ConsoleHeading(1, new string[] {
+					"IMPORTANT - You must do either of the following to dowdload assets",
+					"",
+					"1) : Archive.org - Enter the command: .creds",
+					"2) : BitTorrent  - Enter the command: .bt   ",
+					""
+				});
+
+				return;
+			}
+
 			DataRow machine = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: {machineName}");
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
@@ -291,7 +304,9 @@ namespace Spludlow.MameAO
 			if (length != size)
 				Console.WriteLine($"!!! Unexpected downloaded file size expect:{length} actual:{size}");
 
+			Console.Write($"CHD Verify {tempFilename} ...");
 			string sha1 = Globals.DiskHashStore.Hash(tempFilename);
+			Console.WriteLine("...done");
 
 			if (sha1 != expectedSha1)
 			{

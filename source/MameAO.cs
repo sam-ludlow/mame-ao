@@ -650,24 +650,20 @@ namespace Spludlow.MameAO
 
 					case ".valid":
 						if (parts.Length != 2)
-							throw new ApplicationException($"Usage: {parts[0]} <rom, disk, diskv>");
+							throw new ApplicationException($"Usage: {parts[0]} <rom, disk>");
 
 						switch (parts[1].ToUpper())
 						{
 							case "ROM":
-								HashStore.ValidateHashStore(Globals.RomHashStore, "ROM", Globals.Reports, null);
+								HashStore.ValidateHashStore(Globals.RomHashStore, "ROM");
 								break;
 
 							case "DISK":
-								HashStore.ValidateHashStore(Globals.DiskHashStore, "DISK", Globals.Reports, null);
-								break;
-
-							case "DISKV":
-								HashStore.ValidateHashStore(Globals.DiskHashStore, "DISK", Globals.Reports, Globals.MameChdMan);
+								HashStore.ValidateHashStore(Globals.DiskHashStore, "DISK");
 								break;
 
 							default:
-								throw new ApplicationException("Valid Unknown store type (row, disk, diskv).");
+								throw new ApplicationException("Valid Unknown store type (row, disk).");
 						}
 						return;
 

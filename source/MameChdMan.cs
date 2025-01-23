@@ -27,7 +27,10 @@ namespace Spludlow.MameAO
 				sha1 = info["SHA1"];
 
 			if (sha1.Length != 40)
-				throw new ApplicationException($"MameChdMan, hash not found in output: {filename}");
+				throw new ApplicationException($"CHD Info SHA1 not found in output: {filename}");
+
+			if (Verify(filename) == false)
+				throw new ApplicationException($"CHD Verify SHA1 bad file: {filename}");
 
 			return sha1;
 		}

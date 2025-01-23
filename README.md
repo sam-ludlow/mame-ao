@@ -9,29 +9,30 @@ Easiest way to use MAME. Automatic download and setup of all files from GitHub, 
 - put ZIP in empty directory and extract
 - double click "mame-ao.exe"
 - wait for the MAME-AO to start
+- perform option 1 OR 2 below
 - click image to start machine
 
 TIP: Run command `.upany` aftear initial setup, this will stop the Microsoft Defender notice.
 
 NOTE: First time it has to extract MAME's data, this will take a moment, next time it will start quickly, although version bumps in MAME or MAME-AO will trigger another data initialization.
 
-## Enter your Archive.org credentials
-If you intend on using BitTorrent you can skip this step, press `ENTER` twice.
+## Enter your Archive.org credentials (Option 1)
+If you intend on using BitTorrent you can skip this step, press `ENTER` twice. You can enter your credentials later with the command `.creds`.
 
 You will need an archive.org account to use MAME-AO if not using BitTorrent. You should create one here https://archive.org/account/signup
 
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-archive.org-credentials.png)
 
-## BitTorrent
-You can enable BitTorrent in the UI or use the command `.bt`.
+## Enable BitTorrent (Option 2)
+You can enable BitTorrent in the UI or use the command `.bt`. Once enabled BitTorrent will start automatically next time.
 
 BitTorrent is recomended as it has the vary latest assets.
 
 ![MAME-AO BitTorrent](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-enable-bit-torrent.png)
 
-Bit Torrent is handled by a seperate process the first time in runs you will get a Windows Firewall message, you need to allow the `dome-bt.exe` process.
+Bit Torrent is handled by a seperate process the first time in runs you will get a Windows Firewall message, you need to allow the `dome-bt.exe` process. More info here https://github.com/sam-ludlow/dome-bt
 
-Once enabled BitTorrent will start automatically next time. To remove BitTorrent use the UI or command `.btx`, then restart MAME-AO.
+To remove BitTorrent use the UI or command `.btx` then use the command `.creds` to enter Archive.org credentials if you have not already.
 
 ## System requirements
 - Windows with .net framework 4.8
@@ -130,9 +131,9 @@ There are also commands available they all start with a dot `.`
 - `.r` - Reload `UI.html` usfull when developing the UI.
 - `.dbm` - Machine database SQL query
 - `.dbs` - Software database SQL query
-- `.creds` - Enter archive.org credentials
-- `.bt` - Enable the bit torrent client `DOME-BT`
-- `.btx` - Remove the bit torrent client, restart MAME-AO to use archive.org
+- `.creds` - Enter archive.org credentials, If you press `ENTER` twice your auth cookie will be deleted.
+- `.bt` - Enable the bit torrent client
+- `.btx` - Remove the bit torrent client
 - `.test` - Perform asset place tests
 
 ## Saved State and previous MAME versions
@@ -195,8 +196,7 @@ Machine DISKs that exist in a parent machine will not be exported, as the file w
 You can check the hash store is in good order using the following commands:
 
 - `.valid rom` - Validate the ROM Hash Store, each file will be SHA1 hashed and compared to the filename.
-- `.valid disk` - Validate the DISK Hash Store, each file will have the SHA1 checked with chdman.exe and compared to the filename.
-- `.valid diskv` - Validate the DISK Hash Store, each file will have the SHA1 verified with chdman.exe and compared to the filename. WARNING: This can take a while, each CHD will have its SHA1 calculated to verify it is correct.
+- `.valid disk` - Validate the DISK Hash Store, each file will have the SHA1 verified with chdman.exe and compared to the filename. WARNING: This can take a while, each CHD will have its SHA1 calculated to verify it is correct.
 
 If any issues are found a report will be produced, if all good then no report. Problem files in the report should be manually deleted.
 

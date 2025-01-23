@@ -176,7 +176,7 @@ namespace Spludlow.MameAO
 			return path.ToString();
 		}
 
-		public static void ValidateHashStore(HashStore hashStore, string type, Reports reports, MameChdMan verifyChdMan)
+		public static void ValidateHashStore(HashStore hashStore, string type)
 		{
 			string[] filenames = hashStore.FileNames();
 
@@ -185,7 +185,7 @@ namespace Spludlow.MameAO
 				"String		String"
 			);
 
-			string title = $"Validate hashstore {type} {(verifyChdMan != null ? "(CHD verify)" : "")}, count: {filenames.Length}";
+			string title = $"Validate hashstore {type} count: {filenames.Length}";
 
 			Console.Write($"{title} ...");
 
@@ -198,10 +198,7 @@ namespace Spludlow.MameAO
 					string actualHash = hashStore.Hash(filename);
 
 					if (storeHash != actualHash)
-						throw new ApplicationException(actualHash);
-
-					if (verifyChdMan != null && verifyChdMan.Verify(filename) == false)
-						throw new ApplicationException("SHA1 verification");
+						throw new ApplicationException($"storeHash:{storeHash}, actualHash:{actualHash}");
 
 					Console.Write(".");
 
@@ -221,7 +218,7 @@ namespace Spludlow.MameAO
 			if (table.Rows.Count > 0)
 			{
 				Console.WriteLine("!!! Bad files found see the report.");
-				reports.SaveHtmlReport(table, title);
+				Globals.Reports.SaveHtmlReport(table, title);
 			}
 		}
 	}
