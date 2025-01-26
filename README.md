@@ -28,11 +28,13 @@ You can enable BitTorrent in the UI or use the command `.bt`. Once enabled BitTo
 
 BitTorrent is recomended as it has the vary latest assets.
 
-![MAME-AO BitTorrent](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-enable-bit-torrent.png)
+![MAME-AO Enable BitTorrent](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-enable-bit-torrent.png)
 
 Bit Torrent is handled by a seperate process the first time in runs you will get a Windows Firewall message, you need to allow the `dome-bt.exe` process. More info here https://github.com/sam-ludlow/dome-bt
 
 To remove BitTorrent use the UI or command `.btx` then use the command `.creds` to enter Archive.org credentials if you have not already.
+
+![MAME-AO Disable BitTorrent](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-disable-bit-torrent.png)
 
 ## System requirements
 - Windows with .net framework 4.8
@@ -249,6 +251,7 @@ You can set certain advanced configuration options in the file `_config.txt`, ea
 - `StorePathRom` - Override default ROM Store directory
 - `StorePathDisk` - Override default DISK Store directory
 - `BitTorrentPath` - Override default Bit Torrent directory
+- `MameArguments` - Pass arguments to MAME e.g. `-window`
 
 ## Archive.org Upload
 MAME-AO can be used to upload files to archive.org items, for people serious about software preservation.

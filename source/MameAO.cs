@@ -55,6 +55,8 @@ namespace Spludlow.MameAO
 
 		public static string MameVersion;
 
+		public static string MameArguments = "";
+
 		public static bool LinkingEnabled = false;
 		public static bool BitTorrentAvailable = false;
 
@@ -177,6 +179,8 @@ namespace Spludlow.MameAO
 					}
 				}
 			}
+
+			Globals.MameArguments = config.ContainsKey("MameArguments") == true ? config["MameArguments"] : "";
 
 			//
 			// Fixes
@@ -720,7 +724,7 @@ namespace Spludlow.MameAO
 
 					case ".btx":
 						BitTorrent.Remove();
-						Tools.ConsoleHeading(1, "Restart MAME-AO to use with archive.org");
+						Tools.ConsoleHeading(1, "To use with archive.org enter the command '.creds' if you have not already entered your credentials");
 						return;
 
 					case ".creds":

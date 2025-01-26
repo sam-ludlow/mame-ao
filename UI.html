@@ -170,6 +170,11 @@
 					href: '/settings',
 				},
 				{
+					text: 'BitTorrent',
+					title: 'BitTorrent Client Information',
+					href: '/bittorrent',
+				},
+				{
 					text: 'About',
 					title: 'About & System Information',
 					href: '/about',
@@ -434,6 +439,7 @@
 				'/export':			exportFiles,
 				'/genres':			genres,
 				'/settings':		settings,
+				'/bittorrent':		bittorrent,
 				'/about':			about,
 			}[_path];
 
@@ -475,6 +481,224 @@
 		}
 
 		//
+		// BitTorrent
+		//
+		const bittorrent = async () => {
+
+			const canvas = getCanvas();
+
+			const refreshLink = '<p><a href="javascript:window.location.href=window.location.href">Refresh this page to see changes</a></p>';
+
+			let div;
+			let table;
+			let columnDefs;
+
+			if (_info.bit_torrent_enabled !== true) {
+
+				div = document.createElement('div');
+				div.innerHTML = '<h2>BitTorrent Currently Disabled</h2>' +
+					'<p>Click button to enable immediately. You will have to Allow in Windows Firewall when the dialog apears.</p>' +
+					'<button type="submit" onclick="runCommand(\'.bt\'); return false;">Enable BitTorrent</button>' +
+					refreshLink;
+				canvas.appendChild(div);
+				return;
+			}
+
+
+			div = document.createElement('div');
+			div.innerHTML = 'Connecting to DOME-BT ...';
+			canvas.appendChild(div);
+
+			let btInfo;
+			try {
+				btInfo = await fetchJson('/api/info', _info.bit_torrent_url);
+				div.innerHTML = '';
+			}
+			catch (e) {
+				div.innerHTML = `<h2>Error connecting to DOME-BT</h2><p>Ensure the DOME-BT process is running you can use the command ".bt" or click the button.</p><p>Error: ${e.message}</p>` +
+					'<button type="submit" onclick="runCommand(\'.bt\'); return false;">Start BitTorrent</button>' +
+					refreshLink;
+				return;
+			}
+
+			// BitTorrent Client Information
+
+			div = document.createElement('div');
+			div.style = 'width:100%;';
+			div.innerHTML = '<h2>BitTorrent Client Information</h2><table style="width:100%;">' +
+				'<tr><th>Version</th><th>Start Time</th><th>Time Now</th><th>Running for</th></tr>' +
+				`<tr><td>DOME-BT ${btInfo.version}</td><td>${btInfo.start_time}</td><td>${btInfo.time_now}</td><td>${btInfo.run_time_text}</td></tr>` +
+				'</table>';
+			canvas.appendChild(div);
+
+			div = document.createElement('div');
+			div.style = 'width:100%;';
+			div.innerHTML = '<table style="width:100%;">' +
+				'<tr><th>Open Connections</th><th>Download Rate</th><th>Upload Rate</th></tr>' +
+				`<tr><td>${btInfo.open_connections}</td><td>${btInfo.total_download_rate_text}/s</td><td>${btInfo.total_upload_rate_text}/s</td></tr>` +
+				'</table>';
+			canvas.appendChild(div);
+
+			div = document.createElement('div');
+			div.style = 'width:100%;';
+			div.innerHTML = '<table style="width:100%;">' +
+				'<tr><th>Download Total</th><th>Upload Total</th></tr>' +
+				`<tr><td>${btInfo.total_bytes_received_text}</td><td>${btInfo.total_bytes_sent_text}</td></tr>` +
+				'</table>';
+			canvas.appendChild(div);
+
+			// BitTorrents
+
+			div = document.createElement('div');
+			div.style = 'width:100%;';
+			div.innerHTML = '<hr /><h2>BitTorrents</h2>';
+			canvas.appendChild(div);
+
+			columnDefs = [
+				{ heading: 'Name', columnName: 'name' },
+				{ heading: 'State', columnName: 'state' },
+				{ heading: 'File Count', columnName: 'file_count' },
+				{ heading: 'Open Connections', columnName: 'open_connections' },
+				{ heading: 'Peers Available', columnName: 'peers_available' },
+				{ heading: 'Peers Leechs', columnName: 'peers_leechs' },
+				{ heading: 'Peers Seeds', columnName: 'peers_seeds' },
+				{ heading: 'Downloaded', columnName: 'bytes_received_text' },
+				{ heading: 'Uploaded', columnName: 'bytes_sent_text' },
+			];
+
+			table = document.createElement('table');
+			table.style = 'width:100%;';
+
+			buildTable(columnDefs, btInfo.torrents, table, (columnDef, result, resultIndex, row, cell) => {
+
+				const value = result[columnDef.columnName];
+
+				if (value === undefined)
+					return;
+
+				switch (columnDef.columnName) {
+
+					default:
+						cell.innerHTML = value;
+						break;
+				}
+			});
+			canvas.appendChild(table);
+
+			// Port Mappings
+
+			div = document.createElement('div');
+			div.innerHTML = '<hr /><h2>Port Mappings</h2>';
+			canvas.appendChild(div);
+
+			columnDefs = [
+				{ heading: 'Name', columnName: 'name' },
+				{ heading: 'Mappings', columnName: 'mappings' },
+			];
+
+			table = document.createElement('table');
+
+			buildTable(columnDefs, btInfo.port_mappings, table, (columnDef, result, resultIndex, row, cell) => {
+
+				const value = result[columnDef.columnName];
+
+				if (value === undefined)
+					return;
+
+				switch (columnDef.columnName) {
+
+					case 'mappings':
+						cell.innerHTML = value.map(item => `${item.protocol}:${item.public_port}`).join(', ');
+						break;
+
+					default:
+						cell.innerHTML = value;
+						break;
+				}
+			});
+			canvas.appendChild(table);
+
+			// BitTorrent Client Details
+
+			div = document.createElement('div');
+			div.innerHTML = '<hr /><h2>BitTorrent Client Details</h2>';
+			canvas.appendChild(div);
+
+			const infoData = [];
+
+			Object.keys(btInfo).forEach((key) => {
+
+				if (Array.isArray(btInfo[key]) === true)
+					return;
+
+				infoData.push({ key: key, value: btInfo[key] });
+			});
+
+			table = document.createElement('table');
+
+			columnDefs = [
+				{ heading: 'Key', columnName: 'key' },
+				{ heading: 'Value', columnName: 'value' },
+			];
+
+			buildTable(columnDefs, infoData, table, (columnDef, result, resultIndex, row, cell) => {
+
+				const value = result[columnDef.columnName];
+
+				if (value === undefined)
+					return;
+
+				cell.innerHTML = value;
+			});
+
+			canvas.appendChild(table);
+
+			// Magnet Links
+
+			div = document.createElement('div');
+			div.innerHTML = '<hr /><h2>Magnet Links</h2>';
+			canvas.appendChild(div);
+
+			columnDefs = [
+				{ heading: 'Asset Type', columnName: 'type' },
+				{ heading: 'Name / Link', columnName: 'name' },
+				{ heading: 'Version', columnName: 'version' },
+				{ heading: 'Available', columnName: 'torrent_available' },
+			];
+
+			table = document.createElement('table');
+
+			buildTable(columnDefs, btInfo.magnets, table, (columnDef, result, resultIndex, row, cell) => {
+
+				const value = result[columnDef.columnName];
+
+				if (value === undefined)
+					return;
+
+				switch (columnDef.columnName) {
+
+					case 'name':
+						cell.innerHTML = `<a href="${result.magnet_link}" target="_blank">${value}</a>`;
+						break;
+					default:
+						cell.innerHTML = value;
+						break;
+				}
+			});
+			canvas.appendChild(table);
+
+			// Disable
+
+			div = document.createElement('div');
+			div.innerHTML = '<hr /><h2>Disable BitTorrent</h2>' +
+				'<p>Click button to disable & remove BitTorrent.</p>' +
+				'<p>If you want to use archive.org for downloading assets use the command ".creds" to enter your credentials if you have not already.</p>' +
+				'<button type="submit" onclick="runCommand(\'.btx\'); return false;">Disable BitTorrent</button>' +
+				refreshLink;
+			canvas.appendChild(div);
+		}
+
+		//
 		// About
 		//
 		const about = async () => {
@@ -484,9 +708,6 @@
 			let html =
 				`<h2>What's New in the latest MAME release</h2><a href="${_baseUrl}/api/what" target="_blank">Open whatsnew.txt</a><hr />` +
 				'<h2>MAME-AO README on github</h2><a href="https://github.com/sam-ludlow/mame-ao#mame-ao" target="_blank">View instructions</a><hr />';
-
-			if (_info.bit_torrent_enabled !== true)
-				html += '<h2>Warning - Bit Torrent not enabled</h2><a onclick="runCommand(\'.bt\')" href="javascript:void(0);">Click here to enable immediately. You will have to Allow in Windows Firewall when the dialog apears.</a><hr />';
 
 			if (_info.linking_enabled !== true)
 				html += '<h2>Warning - Symbolic Links not enabled</h2><a href="https://github.com/sam-ludlow/mame-ao?tab=readme-ov-file#symbolic-links---save-disk-space" target="_blank">View instructions on enabling</a><hr />';
@@ -565,53 +786,6 @@
 			});
 
 			canvas.appendChild(table);
-
-			// Tottents
-
-			if (_info.bit_torrent_enabled === true) {
-
-				div = document.createElement('div');
-				div.innerHTML = `<hr /><h2>Magnet Links</h2><p><a href="${_info.bit_torrent_url}/api/info" target="_blank">DOME-BT /api/info</a></p>`;
-				canvas.appendChild(div);
-
-				let btInfo;
-
-				try {
-					btInfo = await fetchJson('/api/info', _info.bit_torrent_url);
-				}
-				catch (e) {
-					div = document.createElement('div');
-					div.innerHTML = `<h3>Error connecting to DOME-BT<h3><p>${e.message}</p>`;
-					canvas.appendChild(div);
-				}
-
-				if (btInfo) {
-					columnDefs = [
-						{ heading: 'Asset Type', columnName: 'type' },
-						{ heading: 'Name', columnName: 'name' },
-						{ heading: 'Version', columnName: 'version' },
-						{ heading: 'Available', columnName: 'torrent_available' },
-						{ heading: 'Magnet Link', columnName: 'magnet_link' },
-					];
-
-					table = document.createElement('table');
-
-					buildTable(columnDefs, btInfo.magnets, table, (columnDef, result, resultIndex, row, cell) => {
-
-						const value = result[columnDef.columnName];
-
-						if (value === undefined)
-							return;
-
-						cell.innerHTML = value;
-					});
-					canvas.appendChild(table);
-				}
-
-				div = document.createElement('div');
-				div.innerHTML = '<p><a onclick="runCommand(\'.btx\')" href="javascript:void(0);">Click here to remove BitTorrent immediately then restart MAME-AO to use with archive.org</a></p>';
-				canvas.appendChild(div);
-			}
 
 			// Items
 

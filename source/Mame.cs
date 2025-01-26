@@ -72,6 +72,9 @@ namespace Spludlow.MameAO
 		}
 		public static void RunMame(string binFilename, string arguments)
 		{
+			if (Globals.MameArguments.Length > 0)
+				arguments += " " + Globals.MameArguments;
+
 			Tools.ConsoleHeading(1, new string[] {
 				"Starting MAME",
 				binFilename,
