@@ -270,13 +270,21 @@ namespace Spludlow.MameAO
 			// Determine MAME version
 			//
 
-			Globals.MameVersion = Globals.GitHubRepos["mame"].tag_name.Substring(4);
+			if (config.ContainsKey("MameVersion") == true)
+			{
+				Globals.MameVersion = config["MameVersion"];
+				Console.WriteLine($"MAME Version fixed: {Globals.MameVersion}");
+			}
+			else
+			{
+				Globals.MameVersion = Globals.GitHubRepos["mame"].tag_name.Substring(4);
 
-			if (Globals.MameVersion == null)
-				Globals.MameVersion = Mame.LatestLocal();
+				if (Globals.MameVersion == null)
+					Globals.MameVersion = Mame.LatestLocal();
 
-			if (Globals.MameVersion == null)
-				throw new ApplicationException("Unable to determine MAME Version.");
+				if (Globals.MameVersion == null)
+					throw new ApplicationException("Unable to determine MAME Version.");
+			}
 
 			Globals.MameVersion = Globals.MameVersion.Replace(".", "");
 			Globals.MameDirectory = Path.Combine(Globals.RootDirectory, Globals.MameVersion);
