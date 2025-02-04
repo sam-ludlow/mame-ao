@@ -41,6 +41,7 @@ To remove BitTorrent use the UI or command `.btx` then use the command `.creds` 
 - 32 bit / 64 bit (application is 32 bit keeps RAM usage down)
 - 2 Gb RAM free
 - 2 Gb DISK free (absolute minimum)
+- CPU with x86-64-v2 functionality (MAME >= 0274)
 
 ## Reporting issues
 https://github.com/sam-ludlow/mame-ao/issues
@@ -252,6 +253,7 @@ You can set certain advanced configuration options in the file `_config.txt`, ea
 - `StorePathDisk` - Override default DISK Store directory
 - `BitTorrentPath` - Override default Bit Torrent directory
 - `MameArguments` - Pass arguments to MAME e.g. `-window`
+- `MameVersion` - Run MAME-AO on a fixed MAME version. If you have an old CPU you are stuck with `0273`
 
 ## Archive.org Upload
 MAME-AO can be used to upload files to archive.org items, for people serious about software preservation.
