@@ -95,19 +95,6 @@ NOTE: When saving state you have to then press another key or button to name the
 
 - Keyboard UI controls OR full keyboard : `Scroll Lock`
 
-### MAME UI
-When starting MAME without a machine you will get the MAME UI.
-
-![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ui.png)
-
-Use the mouse or `Cursor keys` and `Enter` to navigate.
-
-Use `Tab` to move between windows.
-
-The `available` filter (top left) is handy when running previous MAME versions, use the mouse or `Tab` to get into the filters.
-
-NOTE: Selecting machines with software will then take you to the software list, you can use the same `available` filter trick.
-
 ## Settings - User Preferences
 You can configure optional settings from the UI page http://localhost:12380/settings
 
@@ -396,7 +383,12 @@ https://www.progettosnaps.net/catver/
 
 https://github.com/AntoPISA/MAME_SupportFiles
 
-### Newtonsoft
+### Pugsy
+MAME Cheat files
+
+https://www.mamecheat.co.uk/
+
+### James Newton-King (Newtonsoft)
 JSON Library
 
 https://www.newtonsoft.com/json
@@ -405,6 +397,16 @@ https://www.newtonsoft.com/json
 SQL Database
 
 https://www.sqlite.org/
+
+### Jonathan Magnan (ZZZ Projects)
+HTML Parsing (DOME-BT)
+
+https://github.com/zzzprojects/html-agility-pack/
+
+### Alan McGovern
+BitTorrent Client Library (DOME-BT)
+
+https://github.com/alanmcgovern/monotorrent
 
 ### Spludlow MAME
 Image hosting
