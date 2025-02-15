@@ -260,12 +260,6 @@ namespace Spludlow.MameAO
 
 		private static bool DownloadImportDisk(string urlOrFilename, long length, string expectedSha1, string[] info)
 		{
-			//if (Globals.BadSources.AlreadyDownloaded(expectedSha1) == true)
-			//{
-			//	Console.WriteLine($"!!! Already Downloaded before and it didn't work (bad in source) chd-sha1:{expectedSha1}");
-			//	return false;
-			//}
-
 			string tempFilename = Path.Combine(Globals.TempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + expectedSha1 + ".chd");
 
 			lock (Globals.WorkerTaskInfo)
@@ -309,10 +303,7 @@ namespace Spludlow.MameAO
 			Console.WriteLine("...done");
 
 			if (sha1 != expectedSha1)
-			{
 				Console.WriteLine($"!!! Unexpected downloaded CHD SHA1. It's wrong in the source and will not work. expect:{expectedSha1} actual:{sha1}");
-				//Globals.BadSources.ReportSourceFile(file, expectedSha1, sha1);
-			}
 
 			bool required = Globals.Database._AllSHA1s.Contains(sha1);
 			bool imported = false;

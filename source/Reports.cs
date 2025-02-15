@@ -37,8 +37,8 @@ namespace Spludlow.MameAO
 			},
 			new ReportGroup(){
 				Key = "available",
-				Text = "Available Machines & Software",
-				Decription = "Report on Machines & Software that are available, already downloaded.",
+				Text = "Available & Missing Machines & Software",
+				Decription = "Report on Machines & Software that are available, already downloaded & missing.",
 			},
 			new ReportGroup(){
 				Key = "integrity",
@@ -96,14 +96,14 @@ namespace Spludlow.MameAO
 				Group = "available",
 				Code = "AVM",
 				Text = "Machines",
-				Decription = "List Machines that are available to run.",
+				Decription = "List Machines that are available to run and missing.",
 			},
 			new ReportType(){
 				Key = "software",
 				Group = "available",
 				Code = "AVS",
 				Text = "Software",
-				Decription = "List Software that is available to run.",
+				Decription = "List Software that is available to run and missing.",
 			},
 			new ReportType(){
 				Key = "summary",
@@ -488,8 +488,7 @@ namespace Spludlow.MameAO
 			viewTable.TableName = "Available in Source";
 			dataSet.Tables.Add(viewTable);
 
-
-			this.SaveHtmlReport(dataSet, "Source Exists Machine Rom");
+			SaveHtmlReport(dataSet, "Source Exists Machine Rom");
 		}
 
 		public void Report_SEMD()
@@ -560,7 +559,7 @@ namespace Spludlow.MameAO
 			viewTable.TableName = "Available in Source";
 			dataSet.Tables.Add(viewTable);
 
-			this.SaveHtmlReport(dataSet, "Source Exists Machine Disk");
+			SaveHtmlReport(dataSet, "Source Exists Machine Disk");
 		}
 
 		public void Report_SESR()
@@ -604,7 +603,7 @@ namespace Spludlow.MameAO
 			DataSet dataSet = new DataSet();
 			dataSet.Tables.Add(table);
 
-			this.SaveHtmlReport(dataSet, "Source Exists Software Rom");
+			SaveHtmlReport(dataSet, "Source Exists Software Rom");
 		}
 
 		public void Report_SESD()
@@ -687,7 +686,7 @@ namespace Spludlow.MameAO
 			viewTable.TableName = "Available in Source";
 			dataSet.Tables.Add(viewTable);
 
-			this.SaveHtmlReport(dataSet, "Source Exists Software Disk");
+			SaveHtmlReport(dataSet, "Source Exists Software Disk");
 		}
 
 		public void Report_SEMS()
@@ -763,7 +762,7 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			this.SaveHtmlReport(dataSet, "Source Exists Machine Samples");
+			SaveHtmlReport(dataSet, "Source Exists Machine Samples");
 		}
 
 		public void Report_SEMA()
@@ -841,7 +840,7 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			this.SaveHtmlReport(resultDataSet, "Source Exists Machine Artwork");
+			SaveHtmlReport(resultDataSet, "Source Exists Machine Artwork");
 		}
 
 		public void Report_AVM()
@@ -877,7 +876,6 @@ namespace Spludlow.MameAO
 						++diskHaveCount;
 				}
 
-
 				if (romRows.Length == 0 && diskRows.Length == 0)
 					continue;
 
@@ -888,10 +886,11 @@ namespace Spludlow.MameAO
 				table.Rows.Add("", (string)machineRow["name"], (string)machineRow["description"], complete, romRows.Length, diskRows.Length, romHaveCount, diskHaveCount);
 			}
 
-			DataSet dataSet = new DataSet();
-
+			DataSet dataSet;
 			DataView view;
 			DataTable viewTable;
+
+			dataSet = new DataSet();
 
 			view = new DataView(table)
 			{
@@ -913,7 +912,31 @@ namespace Spludlow.MameAO
 			viewTable.TableName = "Without DISK";
 			dataSet.Tables.Add(viewTable);
 
-			this.SaveHtmlReport(dataSet, "Avaliable Machine ROM and DISK");
+			SaveHtmlReport(dataSet, "Avaliable Machine ROM and DISK");
+
+			dataSet = new DataSet();
+
+			view = new DataView(table)
+			{
+				RowFilter = "DiskCount > 0 AND Complete = 0"
+			};
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "Missing With DISK";
+			dataSet.Tables.Add(viewTable);
+
+			view = new DataView(table)
+			{
+				RowFilter = "DiskCount = 0 AND Complete = 0"
+			};
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "Missing Without DISK";
+			dataSet.Tables.Add(viewTable);
+
+			SaveHtmlReport(dataSet, "Missing Machine ROM and DISK");
 		}
 
 		public void Report_AVS()
@@ -938,7 +961,6 @@ namespace Spludlow.MameAO
 				"INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_Id = diskarea.part_Id) " +
 				"INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
 				"WHERE (disk.sha1 IS NOT NULL)");
-
 
 			DataTable table = Tools.MakeDataTable(
 				"Status	ListName	ListDescription	SoftwareName	SoftwareDescription	Complete	RomCount	DiskCount	RomHave	DiskHave",
@@ -974,22 +996,21 @@ namespace Spludlow.MameAO
 							++diskHaveCount;
 					}
 
-
 					bool complete = romRows.Length == romHaveCount && diskRows.Length == diskHaveCount;
 
-					if (complete == true)
-						table.Rows.Add("", softwarelist_name, softwarelist_description, software_name, software_description, complete, romRows.Length, diskRows.Length, romHaveCount, diskHaveCount);
+					table.Rows.Add("", softwarelist_name, softwarelist_description, software_name, software_description, complete, romRows.Length, diskRows.Length, romHaveCount, diskHaveCount);
 				}
 			}
 
-			DataSet dataSet = new DataSet();
-
+			DataSet dataSet;
 			DataView view;
 			DataTable viewTable;
 
+			dataSet = new DataSet();
+
 			view = new DataView(table)
 			{
-				RowFilter = "DiskCount > 0"
+				RowFilter = "DiskCount > 0 AND Complete = 1"
 			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
@@ -999,7 +1020,7 @@ namespace Spludlow.MameAO
 
 			view = new DataView(table)
 			{
-				RowFilter = "DiskCount = 0"
+				RowFilter = "DiskCount = 0 AND Complete = 1"
 			};
 			viewTable = table.Clone();
 			foreach (DataRowView rowView in view)
@@ -1007,8 +1028,31 @@ namespace Spludlow.MameAO
 			viewTable.TableName = "ROM Software";
 			dataSet.Tables.Add(viewTable);
 
-			this.SaveHtmlReport(dataSet, "Avaliable Software ROM and DISK");
+			SaveHtmlReport(dataSet, "Avaliable Software ROM and DISK");
 
+			dataSet = new DataSet();
+
+			view = new DataView(table)
+			{
+				RowFilter = "DiskCount > 0 AND Complete = 0"
+			};
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "DISK Software";
+			dataSet.Tables.Add(viewTable);
+
+			view = new DataView(table)
+			{
+				RowFilter = "DiskCount = 0 AND Complete = 0"
+			};
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "ROM Software";
+			dataSet.Tables.Add(viewTable);
+
+			SaveHtmlReport(dataSet, "Missing Software ROM and DISK");
 		}
 
 		public void Report_AVSUM()

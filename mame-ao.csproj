@@ -57,7 +57,6 @@
   <ItemGroup>
     <Compile Include="source\ArchiveOrgItem.cs" />
     <Compile Include="source\Artwork.cs" />
-    <Compile Include="source\BadSources.cs" />
     <Compile Include="source\BitTorrent.cs" />
     <Compile Include="source\Database.cs" />
     <Compile Include="source\Export.cs" />

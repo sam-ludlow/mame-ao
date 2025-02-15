@@ -69,7 +69,6 @@ namespace Spludlow.MameAO
 		public static MameAOProcessor AO;
 
 		public static Artwork Artwork;
-		public static BadSources BadSources;
 		public static Database Database;
 		public static Favorites Favorites;
 		public static Genre Genre;
@@ -389,7 +388,6 @@ namespace Spludlow.MameAO
 			ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
 
 			Globals.Reports = new Reports();
-			Globals.BadSources = new BadSources();
 			Globals.Favorites = new Favorites();
 
 			Globals.Artwork = new Artwork();
