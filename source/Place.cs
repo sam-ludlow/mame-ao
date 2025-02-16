@@ -111,6 +111,8 @@ namespace Spludlow.MameAO
 			Globals.Samples.PlaceAssets(machine);
 			Globals.Artwork.PlaceAssets(machine);
 
+			Cheats.Place();
+
 			if (Globals.Settings.Options["PlaceReport"] == "Yes")
 				Globals.Reports.SaveHtmlReport(Globals.WorkerTaskReport, $"Place Assets {machineName} {softwareName}".Trim());
 

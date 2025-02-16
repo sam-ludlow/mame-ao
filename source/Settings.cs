@@ -12,12 +12,14 @@ namespace Spludlow.MameAO
 		public Dictionary<string, List<string>> AvailableOptions = new Dictionary<string, List<string>>()
 		{
 			{ "Artwork", new List<string>(new string[] { "No", "Artworks", "ArtworksAlt", "ArtworksWideScreen" }) },
+			{ "Cheats", new List<string>(new string[] { "No", "Yes" }) },
 			{ "PlaceReport", new List<string>(new string[] { "No", "Yes" }) },
 			{ "PhoneHome", new List<string>(new string[] { "Yes", "YesVerbose", "No" }) },
 		};
 
 		public Dictionary<string, string> OptionDescriptions = new Dictionary<string, string>() {
 			{ "Artwork", "Place Artwork Files. Note when set to \"No\" the machine artwork directories will be deleted. If changing artwork types run the machne with \"No\" first." },
+			{ "Cheats", "Use Pugsy's Cheats." },
 			{ "PlaceReport", "Report on placing files (rom, disk, samples, artwork)." },
 			{ "PhoneHome", "Help the project by submitting usage data. Switch to \"No\" if you do not want. To see exaclty what's being sent switch to \"YesVerbose\"." },
 		};

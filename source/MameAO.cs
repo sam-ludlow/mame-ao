@@ -778,6 +778,9 @@ namespace Spludlow.MameAO
 			machine = machine.ToLower().Trim();
 			software = software.ToLower().Trim();
 
+			if (Globals.Settings.Options["Cheats"] == "Yes")
+				arguments += " -cheat";
+
 			if (machine.StartsWith(".") == true)
 			{
 				Mame.RunMame(binFilename, arguments);
