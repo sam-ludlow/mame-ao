@@ -11,6 +11,7 @@ using System.Threading.Tasks;
 using System.ComponentModel;
 using System.Drawing;
 using System.Text.RegularExpressions;
+using System.Linq;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -160,7 +161,10 @@ namespace Spludlow.MameAO
 				if (column.Ordinal != 0)
 					result.Append('\t');
 
-				result.Append(column.DataType);
+				result.Append(column.DataType.Name);
+
+				if (table.PrimaryKey.Contains(column) == true)
+					result.Append("*");
 			}
 			result.AppendLine();
 
@@ -180,6 +184,70 @@ namespace Spludlow.MameAO
 			}
 
 			return result.ToString();
+		}
+
+		public static DataTable TextTableReadFile(string filename)
+		{
+			using (FileStream stream = new FileStream(filename, FileMode.Open, FileAccess.Read))
+				return TextTableReadStream(stream);
+		}
+		public static DataTable TextTableReadStream(Stream stream)
+		{
+			DataTable table = null;
+
+			using (StreamReader reader = new StreamReader(stream, Encoding.UTF8))
+			{
+				string[] columnNames = null;
+
+				string line;
+				while ((line = reader.ReadLine()) != null)
+				{
+					string[] words = line.Split('\t');
+
+					if (table == null)
+					{
+						if (columnNames == null)
+						{
+							columnNames = words;
+						}
+						else
+						{
+							table = new DataTable();
+							List<DataColumn> primaryKeyColumns = new List<DataColumn>();
+
+							for (int index = 0; index < columnNames.Length; ++index)
+							{
+								string name = columnNames[index];
+								string type = words[index];
+								bool pk = false;
+								if (type.EndsWith("*") == true)
+								{
+									type = type.Substring(0, type.Length - 1);
+									pk = true;
+								}
+								DataColumn column = new DataColumn(name, Type.GetType($"System.{type}", true));
+								table.Columns.Add(column);
+								if (pk == true)
+									primaryKeyColumns.Add(column);
+							}
+
+							if (primaryKeyColumns.Count > 0)
+								table.PrimaryKey = primaryKeyColumns.ToArray();
+						}
+					}
+					else
+					{
+						DataRow row = table.NewRow();
+
+						for (int index = 0; index < table.Columns.Count; ++index)
+							row[index] = index < words.Length ? words[index] : "";
+
+						table.Rows.Add(row);
+					}
+				}
+			}
+
+			return table;
 		}
 
 		public static string ValidFileName(string name)
