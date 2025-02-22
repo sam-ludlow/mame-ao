@@ -1,6 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
+using System.Linq;
 using System.Xml.Linq;
 
 namespace Spludlow.MameAO
@@ -62,25 +64,23 @@ namespace Spludlow.MameAO
 		{
 			string rootElementName = document.Name.LocalName;
 
-			HashSet<string> keepTables;
+			DataSet dataSet = new DataSet();
 
 			switch (rootElementName)
 			{
 				case "mame":
-					keepTables = RequiredMachineTables;
+					ImportXMLWork(document, dataSet, null, RequiredMachineTables);
 					break;
 
 				case "softwarelists":
-					keepTables = RequiredSoftwareTables;
+					CombineHashSoftwareLists(document);
+
+					ImportXMLWork(document, dataSet, null, RequiredSoftwareTables);
 					break;
 
 				default:
 					throw new ApplicationException($"Unknown XML root element: {rootElementName}");
 			}
-
-			DataSet dataSet = new DataSet();
-
-			ImportXMLWork(document, dataSet, null, keepTables);
 
 			return dataSet;
 		}
@@ -150,6 +150,19 @@ namespace Spludlow.MameAO
 			{
 				if (childElement.HasAttributes == true || childElement.HasElements == true)
 					ImportXMLWork(childElement, dataSet, row, keepTables);
+			}
+		}
+
+		public static void CombineHashSoftwareLists(XElement document)
+		{
+			string hashDirectory = Path.Combine(Globals.MameDirectory, "hash");
+
+			HashSet<string> softwareListNames = new HashSet<string>(document.Elements("softwarelist").Select(element => element.Attribute("name").Value));
+
+			foreach (string filename in Directory.GetFiles(hashDirectory, "*.xml"))
+			{
+				if (softwareListNames.Contains(Path.GetFileNameWithoutExtension(filename)) == false)
+					document.Add(XElement.Load(filename));
 			}
 		}
 	}

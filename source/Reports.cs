@@ -32,7 +32,7 @@ namespace Spludlow.MameAO
 		public static ReportGroup[] ReportGroups = new ReportGroup[] {
 			new ReportGroup(){
 				Key = "source-exists",
-				Text = "Source Exists",
+				Text = "Exists on Archive.org",
 				Decription = "Check that files exist in the archive.org source metadata. Tests are NOT performed to check if ZIPs, ROMs, or CHDs are valid.",
 			},
 			new ReportGroup(){
@@ -1198,7 +1198,7 @@ namespace Spludlow.MameAO
 				if (foundBytes > 0)
 					projectedBytes = (long)((decimal)foundBytes / (decimal)foundCount * (decimal)diskCount);
 
-				string machines = String.Join(", ", softwareListMachines[softwarelist_name]);
+				string machines = softwareListMachines.ContainsKey(softwarelist_name) == true ? String.Join(", ", softwareListMachines[softwarelist_name]) : "";
 
 				resultTable.Rows.Add(softwarelist_name, softwarelist_description, diskCount, foundCount, missingCount, dupCount, foundBytes, Tools.DataSize(foundBytes), Math.Round(complete, 3), projectedBytes, Tools.DataSize(projectedBytes), machines);
 			}
@@ -1250,12 +1250,14 @@ namespace Spludlow.MameAO
 			
 			table = softwareListsTable.Clone();
 
-			foreach (DataRow row in softwareListsTable.Rows)
+			XElement mameOutputDocument = XElement.Load(Path.Combine(Globals.MameDirectory, "_software.xml"));
+
+			foreach (XElement listElement in mameOutputDocument.Elements("softwarelist"))
 			{
-				string name = (string)row["name"];
+				string name = listElement.Attribute("name").Value;
 
 				if (machinesListsTable.Rows.Find(name) == null)
-					table.ImportRow(row);
+					table.Rows.Add(name, listElement.Attribute("description").Value);
 			}
 
 			table.TableName = "MAME -listsoftware output";
