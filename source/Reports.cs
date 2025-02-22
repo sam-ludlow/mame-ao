@@ -598,10 +598,30 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			table.TableName = "All Software Lists";
-
 			DataSet dataSet = new DataSet();
-			dataSet.Tables.Add(table);
+
+			DataView view;
+			DataTable viewTable;
+
+			view = new DataView(table)
+			{
+				RowFilter = "Status = 'MISSING'"
+			};
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "Missing in Source";
+			dataSet.Tables.Add(viewTable);
+
+			view = new DataView(table)
+			{
+				RowFilter = "Status = ''"
+			};
+			viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+			viewTable.TableName = "Available in Source";
+			dataSet.Tables.Add(viewTable);
 
 			SaveHtmlReport(dataSet, "Source Exists Software Rom");
 		}
@@ -625,7 +645,7 @@ namespace Spludlow.MameAO
 				string software_name = (string)softwareDiskRow["software_name"];
 				string name = (string)softwareDiskRow["name"];
 				string sha1 = (string)softwareDiskRow["sha1"];
-				string status = (string)softwareDiskRow["status"];
+				string status = softwareDiskRow.IsNull("status") == false ? (string)softwareDiskRow["status"] : "unkown";
 
 				DataRow row = table.Rows.Add("", "", softwarelist_name, software_name, name, sha1, status);
 
