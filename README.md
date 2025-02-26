@@ -12,7 +12,7 @@ Easiest way to use MAME. Automatic download and setup of all files from GitHub, 
 - perform option 1 OR 2 below
 - click image to start machine
 
-TIP: Run command `.upany` aftear initial setup, this will stop the Microsoft Defender notice.
+TIP: Run command `.upany` after initial setup, this will stop the Microsoft Defender notice.
 
 NOTE: First time it has to extract MAME's data, this will take a moment, next time it will start quickly, although version bumps in MAME or MAME-AO will trigger another data initialization.
 
