@@ -744,6 +744,31 @@ namespace Spludlow.MameAO
 						Test.Run(parts[1], Int32.Parse(parts[2]));
 						return;
 
+					case ".fetch":
+						if (parts.Length != 2)
+							throw new ApplicationException($"Usage: {parts[0]} <type>");
+
+						switch (parts[1].ToUpper())
+						{
+							case "MR":
+								Import.FetchMachineRom();
+								break;
+							case "MD":
+								Import.FetchMachineDisk();
+								break;
+							case "SR":
+								Import.FetchSoftwareRom();
+								break;
+							case "SD":
+								Import.FetchSoftwareDisk();
+								break;
+
+							default:
+								throw new ApplicationException("Upload Unknown type not (MR, MD, SR, SD).");
+
+						}
+						return;
+
 					default:
 						binFilename = Path.Combine(Globals.RootDirectory, machine.Substring(1), "mame.exe");
 

@@ -140,19 +140,27 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 		}
 
-		private static int PlaceMachineRoms(string mainMachineName)
+		public static int PlaceMachineRoms(string mainMachineName)
 		{
 			int missingCount = 0;
+
+			DataRow mainMachine = Globals.Database.GetMachine(mainMachineName) ?? throw new ApplicationException($"Machine not found: ${mainMachineName}");
+
+			DataRow[] mainAssetRows = Globals.Database.GetMachineRoms(mainMachine);
+
+			List<string> mainMachineNames = new List<string>(new string[] { mainMachineName });
+			if (mainMachine.IsNull("cloneof") == false)
+				mainMachineNames.Add((string)mainMachine["cloneof"]);
 
 			for (int pass = 0; pass < 2; ++pass)
 			{
 				foreach (string machineName in FindAllMachines(mainMachineName))
 				{
-					DataRow machineRow = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: ${machineName}");
-
-					DataRow[] assetRows = Globals.Database.GetMachineRoms(machineRow);
-
 					string[] info = new string[] { "machine rom", mainMachineName, machineName };
+
+					DataRow[] assetRows = mainAssetRows;
+					if (mainMachineNames.Contains(machineName) == false)
+						assetRows = Globals.Database.GetMachineRoms(Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: ${machineName}"));
 
 					if (pass == 0)
 					{
@@ -185,7 +193,7 @@ namespace Spludlow.MameAO
 			return missingCount;
 		}
 
-		private static int PlaceMachineDisks(string machineName)
+		public static int PlaceMachineDisks(string machineName)
 		{
 			DataRow machineRow = Globals.Database.GetMachine(machineName);
 
@@ -318,7 +326,7 @@ namespace Spludlow.MameAO
 			return true;
 		}
 
-		private static int PlaceSoftwareRoms(DataRow softwareList, DataRow software)
+		public static int PlaceSoftwareRoms(DataRow softwareList, DataRow software)
 		{
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
@@ -369,7 +377,7 @@ namespace Spludlow.MameAO
 			return PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
 		}
 
-		private static int PlaceSoftwareDisks(DataRow softwareList, DataRow software)
+		public static int PlaceSoftwareDisks(DataRow softwareList, DataRow software)
 		{
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
