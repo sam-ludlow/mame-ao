@@ -4,7 +4,7 @@ Easiest way to use MAME. Automatic download and setup of all files from GitHub, 
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-ui.png)
 
 ## Installation & Usage
-- create an empty directory e.g. "C:\MameAO"
+- create an empty directory e.g. `C:\MameAO`
 - download latest release ZIP from https://github.com/sam-ludlow/mame-ao/releases/latest
 - put ZIP in empty directory and extract
 - double click "mame-ao.exe"
@@ -37,12 +37,13 @@ To remove BitTorrent use the UI or command `.btx` then use the command `.creds` 
 ![MAME-AO Disable BitTorrent](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-disable-bit-torrent.png)
 
 ## System requirements
-- Windows with .net framework 4.8
-- 32 bit / 64 bit (application is 32 bit keeps RAM usage down)
+- Windows 64-Bit with .net framework 4.8
 - 2 Gb RAM free
 - 2 Gb DISK free (absolute minimum)
 - CPU with x86-64-v2 functionality (MAME >= 0274)
 
+NOTE: MAME-AO application is 32 bit to keep RAM usage down.
+ 
 ## Reporting issues
 https://github.com/sam-ludlow/mame-ao/issues
 
@@ -140,11 +141,7 @@ When starting previous MAME versions use the available filter in the MAME UI.
 Sometimes a regression in MAME will break a machine in the current version, so if a machine doesn't work after updating MAME you can run a previous version.
 
 ## Import
-MAME-AO is all about downloading not bothering the user with details.
-
 If you have downloaded files elsewhere you can feed them into MAME-AO with the import function. MAME-AO will still place them as normal.
-
-This might make sense for large files, or for files not available on archive.org. You can download them on the side using whatever method you prefer.
 
 Use the following command to perform an import
 

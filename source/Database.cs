@@ -112,8 +112,8 @@ namespace Spludlow.MameAO
 			},
 		};
 
-		public SQLiteConnection _MachineConnection;
-		public SQLiteConnection _SoftwareConnection;
+		public string _MachineConnectionString;
+		public string _SoftwareConnectionString;
 
 		private Dictionary<string, DataRow[]> _DevicesRefs;
 		private DataTable _SoftwarelistTable;
@@ -126,16 +126,16 @@ namespace Spludlow.MameAO
 
 		public void InitializeMachine(string xmlFilename, string databaseFilename, string assemblyVersion)
 		{
-			_MachineConnection = Database.DatabaseFromXML(xmlFilename, databaseFilename, assemblyVersion);
+			_MachineConnectionString = Database.DatabaseFromXML(xmlFilename, databaseFilename, assemblyVersion);
 
 			Console.Write("Creating machine performance caches...");
 
 			// Cache device_ref to speed up machine dependancy resolution
-			DataTable device_ref_Table = Database.ExecuteFill(_MachineConnection, "SELECT * FROM device_ref");
+			DataTable device_ref_Table = Database.ExecuteFill(_MachineConnectionString, "SELECT * FROM device_ref");
 
 			_DevicesRefs = new Dictionary<string, DataRow[]>();
 
-			DataTable machineTable = Database.ExecuteFill(_MachineConnection, "SELECT machine_id, name FROM machine");
+			DataTable machineTable = Database.ExecuteFill(_MachineConnectionString, "SELECT machine_id, name FROM machine");
 			foreach (DataRow row in machineTable.Rows)
 			{
 				string machineName = (string)row["name"];
@@ -150,12 +150,12 @@ namespace Spludlow.MameAO
 
 		public void InitializeSoftware(string xmlFilename, string databaseFilename, string assemblyVersion)
 		{
-			_SoftwareConnection = Database.DatabaseFromXML(xmlFilename, databaseFilename, assemblyVersion);
+			_SoftwareConnectionString = Database.DatabaseFromXML(xmlFilename, databaseFilename, assemblyVersion);
 
 			Console.Write("Creating software performance caches...");
 
 			// Cache softwarelists for description
-			_SoftwarelistTable = ExecuteFill(_SoftwareConnection, "SELECT name, description FROM softwarelist");
+			_SoftwarelistTable = ExecuteFill(_SoftwareConnectionString, "SELECT name, description FROM softwarelist");
 			_SoftwarelistTable.PrimaryKey = new DataColumn[] { _SoftwarelistTable.Columns["name"] };
 
 			Console.WriteLine("...done");
@@ -221,7 +221,7 @@ namespace Spludlow.MameAO
 
 		public DataRow GetMachine(string name)
 		{
-			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM machine WHERE name = '{name}'");
+			DataTable table = ExecuteFill(_MachineConnectionString, $"SELECT * FROM machine WHERE name = '{name}'");
 			if (table.Rows.Count == 0)
 				return null;
 			return table.Rows[0];
@@ -230,14 +230,14 @@ namespace Spludlow.MameAO
 		public DataRow[] GetMachineRoms(DataRow machine)
 		{
 			long machine_id = (long)machine["machine_id"];
-			DataTable table = Database.ExecuteFill(_MachineConnection, $"SELECT * FROM rom WHERE machine_id = {machine_id} AND [name] IS NOT NULL AND [sha1] IS NOT NULL");
+			DataTable table = Database.ExecuteFill(_MachineConnectionString, $"SELECT * FROM rom WHERE machine_id = {machine_id} AND [name] IS NOT NULL AND [sha1] IS NOT NULL");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
 		public DataRow[] GetMachineDisks(DataRow machine)
 		{
 			long machine_id = (long)machine["machine_id"];
-			DataTable table = Database.ExecuteFill(_MachineConnection, $"SELECT * FROM disk WHERE machine_id = {machine_id} AND [name] IS NOT NULL AND [sha1] IS NOT NULL");
+			DataTable table = Database.ExecuteFill(_MachineConnectionString, $"SELECT * FROM disk WHERE machine_id = {machine_id} AND [name] IS NOT NULL AND [sha1] IS NOT NULL");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
@@ -245,7 +245,7 @@ namespace Spludlow.MameAO
 		{
 			long machine_id = (long)machine["machine_id"];
 			string machineName = (string)machine["name"];
-			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM softwarelist WHERE machine_id = {machine_id}");
+			DataTable table = ExecuteFill(_MachineConnectionString, $"SELECT * FROM softwarelist WHERE machine_id = {machine_id}");
 
 			table.Columns.Add("description", typeof(string));
 
@@ -266,7 +266,7 @@ namespace Spludlow.MameAO
 		public DataRow[] GetMachineFeatures(DataRow machine)
 		{
 			long machine_id = (long)machine["machine_id"];
-			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM feature WHERE machine_id = {machine_id}");
+			DataTable table = ExecuteFill(_MachineConnectionString, $"SELECT * FROM feature WHERE machine_id = {machine_id}");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 		public DataRow[] GetMachineDeviceRefs(string machineName)
@@ -277,14 +277,14 @@ namespace Spludlow.MameAO
 		public DataRow[] GetMachineSamples(DataRow machine)
 		{
 			long machine_id = (long)machine["machine_id"];
-			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM sample WHERE machine_id = {machine_id}");
+			DataTable table = ExecuteFill(_MachineConnectionString, $"SELECT * FROM sample WHERE machine_id = {machine_id}");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
 		public DataRow GetMachineDriver(DataRow machine)
 		{
 			long machine_id = (long)machine["machine_id"];
-			DataTable table = ExecuteFill(_MachineConnection, $"SELECT * FROM driver WHERE machine_id = {machine_id}");
+			DataTable table = ExecuteFill(_MachineConnectionString, $"SELECT * FROM driver WHERE machine_id = {machine_id}");
 
 			if (table.Rows.Count == 0)
 				return null;
@@ -295,7 +295,7 @@ namespace Spludlow.MameAO
 		public DataRow[] GetSoftwareListsSoftware(DataRow softwarelist)
 		{
 			long softwarelist_id = (long)softwarelist["softwarelist_id"];
-			DataTable table = ExecuteFill(_SoftwareConnection, $"SELECT * FROM software WHERE softwarelist_id = {softwarelist_id}");
+			DataTable table = ExecuteFill(_SoftwareConnectionString, $"SELECT * FROM software WHERE softwarelist_id = {softwarelist_id}");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
@@ -345,15 +345,21 @@ namespace Spludlow.MameAO
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
-			SQLiteCommand command = new SQLiteCommand(commandText, _SoftwareConnection);
+			DataTable table;
 
-			if (search != null)
+			using (SQLiteConnection connection = new SQLiteConnection(_SoftwareConnectionString))
 			{
-				command.Parameters.AddWithValue("@name", search);
-				command.Parameters.AddWithValue("@description", search);
-			}
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+				{
+					if (search != null)
+					{
+						command.Parameters.AddWithValue("@name", search);
+						command.Parameters.AddWithValue("@description", search);
+					}
 
-			DataTable table = ExecuteFill(command);
+					table = ExecuteFill(command);
+				}
+			}
 
 			if (favorites_machine != null)
 				Globals.Favorites.AddColumnSoftware(table, favorites_machine, softwareListName, "name", "favorite");
@@ -363,7 +369,7 @@ namespace Spludlow.MameAO
 
 		public DataRow GetSoftwareList(string name)
 		{
-			DataTable table = ExecuteFill(_SoftwareConnection, $"SELECT * FROM softwarelist WHERE name = '{name}'");
+			DataTable table = ExecuteFill(_SoftwareConnectionString, $"SELECT * FROM softwarelist WHERE name = '{name}'");
 			if (table.Rows.Count == 0)
 				return null;
 			return table.Rows[0];
@@ -372,7 +378,7 @@ namespace Spludlow.MameAO
 		public DataRow[] GetSoftwareRoms(DataRow software)
 		{
 			long software_id = (long)software["software_id"];
-			DataTable table = ExecuteFill(_SoftwareConnection,
+			DataTable table = ExecuteFill(_SoftwareConnectionString,
 				"SELECT rom.* FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id " +
 				$"WHERE part.software_id = {software_id} AND rom.[name] IS NOT NULL AND rom.[sha1] IS NOT NULL");
 			return table.Rows.Cast<DataRow>().ToArray();
@@ -381,7 +387,7 @@ namespace Spludlow.MameAO
 		public DataRow[] GetSoftwareDisks(DataRow software)
 		{
 			long software_id = (long)software["software_id"];
-			DataTable table = ExecuteFill(_SoftwareConnection,
+			DataTable table = ExecuteFill(_SoftwareConnectionString,
 				"SELECT disk.* FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
 				$"WHERE part.software_id = {software_id} AND disk.[name] IS NOT NULL AND disk.[sha1] IS NOT NULL");
 			return table.Rows.Cast<DataRow>().ToArray();
@@ -390,7 +396,7 @@ namespace Spludlow.MameAO
 		public DataRow[] GetSoftwareSharedFeats(DataRow software)
 		{
 			long software_id = (long)software["software_id"];
-			DataTable table = ExecuteFill(_SoftwareConnection, $"SELECT * FROM sharedfeat WHERE software_id = {software_id}");
+			DataTable table = ExecuteFill(_SoftwareConnectionString, $"SELECT * FROM sharedfeat WHERE software_id = {software_id}");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
@@ -471,15 +477,21 @@ namespace Spludlow.MameAO
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
-			SQLiteCommand command = new SQLiteCommand(commandText, _MachineConnection);
+			DataTable table;
 
-			if (search != null)
+			using (var connection = new SQLiteConnection(_MachineConnectionString))
 			{
-				command.Parameters.AddWithValue("@name", search);
-				command.Parameters.AddWithValue("@description", search);
-			}
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+				{
+					if (search != null)
+					{
+						command.Parameters.AddWithValue("@name", search);
+						command.Parameters.AddWithValue("@description", search);
+					}
 
-			DataTable table = ExecuteFill(command);
+					table = ExecuteFill(command);
+				}
+			}
 
 			Globals.Favorites.AddColumnMachines(table, "name", "favorite");
 
@@ -490,43 +502,45 @@ namespace Spludlow.MameAO
 		{
 			HashSet<string> result = new HashSet<string>();
 
-			foreach (SQLiteConnection connection in new SQLiteConnection[] { _MachineConnection, _SoftwareConnection })
+			foreach (string connectionString in new string[] { _MachineConnectionString, _SoftwareConnectionString })
 			{
-				foreach (string tableName in new string[] { "rom", "disk" })
+				using (SQLiteConnection connection = new SQLiteConnection(connectionString))
 				{
-					DataTable table = ExecuteFill(connection, $"SELECT \"sha1\" FROM \"{tableName}\" WHERE \"sha1\" IS NOT NULL");
-					foreach (DataRow row in table.Rows)
-						result.Add((string)row["sha1"]);
+					foreach (string tableName in new string[] { "rom", "disk" })
+					{
+						DataTable table = ExecuteFill(connection, $"SELECT [sha1] FROM [{tableName}] WHERE [sha1] IS NOT NULL");
+						foreach (DataRow row in table.Rows)
+							result.Add((string)row["sha1"]);
+					}
 				}
 			}
 			
 			return result;
 		}
 
-		public static SQLiteConnection DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)
+		public static string DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)
 		{
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
-			SQLiteConnection connection = new SQLiteConnection(connectionString);
-
 			if (File.Exists(sqliteFilename) == true)
 			{
-				if (TableExists(connection, "ao_info") == true)
+				using (SQLiteConnection connection = new SQLiteConnection(connectionString))
 				{
-					DataTable aoInfoTable = ExecuteFill(connection, "SELECT * FROM ao_info");
-					if (aoInfoTable.Rows.Count == 1)
+					if (TableExists(connection, "ao_info") == true)
 					{
-						string dbAssemblyVersion = (string)aoInfoTable.Rows[0]["assembly_version"];
-						if (dbAssemblyVersion == assemblyVersion)
-							return connection;
+						DataTable aoInfoTable = ExecuteFill(connection, "SELECT * FROM ao_info");
+						if (aoInfoTable.Rows.Count == 1)
+						{
+							string dbAssemblyVersion = (string)aoInfoTable.Rows[0]["assembly_version"];
+							if (dbAssemblyVersion == assemblyVersion)
+								return connectionString;
+						}
 					}
+					Console.WriteLine("Existing SQLite database is old version re-creating: " + sqliteFilename);
 				}
-				Console.WriteLine("Existing SQLite database is old version re-creating: " + sqliteFilename);
 			}
 
-			if (File.Exists(sqliteFilename) == true)
-				File.Delete(sqliteFilename);
-
+			File.Delete(sqliteFilename);
 			File.WriteAllBytes(sqliteFilename, new byte[0]);
 
 			Console.Write($"Loading XML {xmlFilename} ...");
@@ -541,106 +555,106 @@ namespace Spludlow.MameAO
 			AddDataExtras(dataSet, document.Name.LocalName, assemblyVersion);
 			Console.WriteLine("...done.");
 
-			DatabaseFromXML(document, connection, dataSet);
+			DatabaseFromXML(document, connectionString, dataSet);
 
-			return connection;
+			return connectionString;
 		}
-		public static SQLiteConnection DatabaseFromXML(XElement document, SQLiteConnection connection, DataSet dataSet)
+		public static void DatabaseFromXML(XElement document, string connectionString, DataSet dataSet)
 		{
-			Console.Write($"Creating SQLite {document.Name.LocalName} ...");
-			connection.Open();
-			try
+			using (SQLiteConnection connection = new SQLiteConnection(connectionString))
 			{
-				foreach (DataTable table in dataSet.Tables)
+				Console.Write($"Creating SQLite {document.Name.LocalName} ...");
+				connection.Open();
+				try
 				{
-					List<string> columnDefinitions = new List<string>();
-
-					foreach (DataColumn column in table.Columns)
+					foreach (DataTable table in dataSet.Tables)
 					{
-						string dataType = "TEXT";
-						if (column.ColumnName.EndsWith("_id") == true)
+						List<string> columnDefinitions = new List<string>();
+
+						foreach (DataColumn column in table.Columns)
 						{
-							dataType = columnDefinitions.Count == 0 ? "INTEGER PRIMARY KEY" : "INTEGER";
-						}
-						else
-						{
-							if (column.DataType == typeof(int) || column.DataType == typeof(long))
-								dataType = "INTEGER";
-						}
-
-						if (table.TableName == "machine" && column.ColumnName == "description")
-							dataType += " COLLATE NOCASE";
-
-						columnDefinitions.Add($"\"{column.ColumnName}\" {dataType}");
-					}
-
-					string tableDefinition = $"CREATE TABLE {table.TableName}({String.Join(",", columnDefinitions.ToArray())});";
-
-					using (SQLiteCommand command = new SQLiteCommand(tableDefinition, connection))
-					{
-						command.ExecuteNonQuery();
-					}
-				}
-
-				foreach (DataTable table in dataSet.Tables)
-				{
-					Console.Write($"{table.TableName}...");
-
-					List<string> columnNames = new List<string>();
-					List<string> parameterNames = new List<string>();
-					foreach (DataColumn column in table.Columns)
-					{
-						columnNames.Add($"\"{column.ColumnName}\"");
-						parameterNames.Add("@" + column.ColumnName);
-					}
-
-					string commandText = $"INSERT INTO {table.TableName}({String.Join(",", columnNames.ToArray())}) VALUES({String.Join(",", parameterNames.ToArray())});";
-
-					SQLiteTransaction transaction = connection.BeginTransaction();
-					try
-					{
-						foreach (DataRow row in table.Rows)
-						{
-							using (SQLiteCommand command = new SQLiteCommand(commandText, connection, transaction))
+							string dataType = "TEXT";
+							if (column.ColumnName.EndsWith("_id") == true)
 							{
-								foreach (DataColumn column in table.Columns)
-									command.Parameters.AddWithValue("@" + column.ColumnName, row[column]);
-
-								command.ExecuteNonQuery();
+								dataType = columnDefinitions.Count == 0 ? "INTEGER PRIMARY KEY" : "INTEGER";
 							}
+							else
+							{
+								if (column.DataType == typeof(int) || column.DataType == typeof(long))
+									dataType = "INTEGER";
+							}
+
+							if (table.TableName == "machine" && column.ColumnName == "description")
+								dataType += " COLLATE NOCASE";
+
+							columnDefinitions.Add($"\"{column.ColumnName}\" {dataType}");
 						}
 
-						transaction.Commit();
-					}
-					catch
-					{
-						transaction.Rollback();
-						throw;
-					}
-				}
+						string tableDefinition = $"CREATE TABLE {table.TableName}({String.Join(",", columnDefinitions.ToArray())});";
 
-				if (document.Name.LocalName == "mame")
-				{
-					foreach (string commandText in new string[] {
+						using (SQLiteCommand command = new SQLiteCommand(tableDefinition, connection))
+						{
+							command.ExecuteNonQuery();
+						}
+					}
+
+					foreach (DataTable table in dataSet.Tables)
+					{
+						Console.Write($"{table.TableName}...");
+
+						List<string> columnNames = new List<string>();
+						List<string> parameterNames = new List<string>();
+						foreach (DataColumn column in table.Columns)
+						{
+							columnNames.Add($"\"{column.ColumnName}\"");
+							parameterNames.Add("@" + column.ColumnName);
+						}
+
+						string commandText = $"INSERT INTO {table.TableName}({String.Join(",", columnNames.ToArray())}) VALUES({String.Join(",", parameterNames.ToArray())});";
+
+						SQLiteTransaction transaction = connection.BeginTransaction();
+						try
+						{
+							foreach (DataRow row in table.Rows)
+							{
+								using (SQLiteCommand command = new SQLiteCommand(commandText, connection, transaction))
+								{
+									foreach (DataColumn column in table.Columns)
+										command.Parameters.AddWithValue("@" + column.ColumnName, row[column]);
+
+									command.ExecuteNonQuery();
+								}
+							}
+
+							transaction.Commit();
+						}
+						catch
+						{
+							transaction.Rollback();
+							throw;
+						}
+					}
+
+					if (document.Name.LocalName == "mame")
+					{
+						foreach (string commandText in new string[] {
 						"CREATE INDEX machine_name_index ON machine(name);"
 						})
-						using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
-							command.ExecuteNonQuery();
-				}
+							using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+								command.ExecuteNonQuery();
+					}
 
-				if (document.Name.LocalName == "softwarelists")
+					if (document.Name.LocalName == "softwarelists")
+					{
+
+					}
+				}
+				finally
 				{
-
+					connection.Close();
 				}
-
+				Console.WriteLine("...done.");
 			}
-			finally
-			{
-				connection.Close();
-			}
-			Console.WriteLine("...done.");
-
-			return connection;
 		}
 
 		public static bool TableExists(SQLiteConnection connection, string tableName)
@@ -680,6 +694,22 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static int ExecuteNonQuery(string connectionString, string commandText)
+		{
+			using (SQLiteConnection connection = new SQLiteConnection(connectionString))
+			{
+				connection.Open();
+				try
+				{
+					using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+						return command.ExecuteNonQuery();
+				}
+				finally
+				{
+					connection.Close();
+				}
+			}
+		}
 		public static int ExecuteNonQuery(SQLiteConnection connection, string commandText)
 		{
 			connection.Open();
@@ -693,18 +723,25 @@ namespace Spludlow.MameAO
 				connection.Close();
 			}
 		}
-
+		public static DataTable ExecuteFill(string connectionString, string commandText)
+		{
+			var table = new DataTable();
+			using (var connection = new SQLiteConnection(connectionString))
+				using (var adapter = new SQLiteDataAdapter(commandText, connection))
+					adapter.Fill(table);
+			return table;
+		}
 		public static DataTable ExecuteFill(SQLiteConnection connection, string commandText)
 		{
-			DataTable table = new DataTable();
-			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(commandText, connection))
+			var table = new DataTable();
+			using (var adapter = new SQLiteDataAdapter(commandText, connection))
 				adapter.Fill(table);
 			return table;
 		}
 		public static DataTable ExecuteFill(SQLiteCommand command)
 		{
-			DataTable table = new DataTable();
-			using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+			var table = new DataTable();
+			using (var adapter = new SQLiteDataAdapter(command))
 				adapter.Fill(table);
 			return table;
 		}
@@ -794,50 +831,51 @@ namespace Spludlow.MameAO
 
 		public static void ConsoleQuery(string database, string commandText)
 		{
-			SQLiteConnection connection = database == "m" ? Globals.Database._MachineConnection : Globals.Database._SoftwareConnection;
-
-			try
+			using (SQLiteConnection connection = new SQLiteConnection(database == "m" ? Globals.Database._MachineConnectionString : Globals.Database._SoftwareConnectionString))
 			{
-				DataTable table = ExecuteFill(connection, commandText);
-
-				StringBuilder text = new StringBuilder();
-
-				foreach (DataColumn column in table.Columns)
+				try
 				{
-					if (column.Ordinal > 0)
-						text.Append('\t');
-					text.Append(column.ColumnName);
-				}
-				Console.WriteLine(text.ToString());
+					DataTable table = ExecuteFill(connection, commandText);
 
-				text.Length = 0;
-				foreach (DataColumn column in table.Columns)
-				{
-					if (column.Ordinal > 0)
-						text.Append('\t');
-					text.Append(new String('=', column.ColumnName.Length));
-				}
-				Console.WriteLine(text.ToString());
+					StringBuilder text = new StringBuilder();
 
-				foreach (DataRow row in table.Rows)
-				{
+					foreach (DataColumn column in table.Columns)
+					{
+						if (column.Ordinal > 0)
+							text.Append('\t');
+						text.Append(column.ColumnName);
+					}
+					Console.WriteLine(text.ToString());
+
 					text.Length = 0;
 					foreach (DataColumn column in table.Columns)
 					{
 						if (column.Ordinal > 0)
 							text.Append('\t');
-						if (row.IsNull(column) == false)
-							text.Append(Convert.ToString(row[column]));
+						text.Append(new String('=', column.ColumnName.Length));
 					}
 					Console.WriteLine(text.ToString());
-				}
-			}
-			catch (SQLiteException e)
-			{
-				Console.WriteLine(e.Message);
-			}
 
-			Console.WriteLine();
+					foreach (DataRow row in table.Rows)
+					{
+						text.Length = 0;
+						foreach (DataColumn column in table.Columns)
+						{
+							if (column.Ordinal > 0)
+								text.Append('\t');
+							if (row.IsNull(column) == false)
+								text.Append(Convert.ToString(row[column]));
+						}
+						Console.WriteLine(text.ToString());
+					}
+				}
+				catch (SQLiteException e)
+				{
+					Console.WriteLine(e.Message);
+				}
+
+				Console.WriteLine();
+			}
 		}
 
 	}

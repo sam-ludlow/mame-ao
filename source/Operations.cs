@@ -263,9 +263,7 @@ namespace Spludlow.MameAO
 
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
-			SQLiteConnection connection = new SQLiteConnection(connectionString);
-
-			Database.DatabaseFromXML(document, connection, dataSet);
+			Database.DatabaseFromXML(document, connectionString, dataSet);
 		}
 
 		//

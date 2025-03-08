@@ -4,6 +4,7 @@ using System.IO;
 using System.Data;
 
 using System.Data.SQLite;
+using System.Data.SqlClient;
 
 namespace Spludlow.MameAO
 {
@@ -231,7 +232,7 @@ namespace Spludlow.MameAO
 
 		private Dictionary<string, string> GetMachineDriverStatuses()
 		{
-			DataTable table = Database.ExecuteFill(Globals.Database._MachineConnection,
+			DataTable table = Database.ExecuteFill(Globals.Database._MachineConnectionString,
 				"SELECT machine.name, driver.status FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id");
 
 			Dictionary<string, string> result = new Dictionary<string, string>();
@@ -244,15 +245,15 @@ namespace Spludlow.MameAO
 
 		public void SetMachines(Dictionary<string, long[]> machineGenreIds)
 		{
-			DataTable infoTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT * FROM ao_info");
+			DataTable infoTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT * FROM ao_info");
 
 			if (infoTable.Columns.Contains("genre_version") == false)
 			{
-				Database.ExecuteNonQuery(Globals.Database._MachineConnection, "ALTER TABLE ao_info ADD COLUMN genre_version TEXT");
-				Database.ExecuteNonQuery(Globals.Database._MachineConnection, "UPDATE ao_info SET genre_version = '' WHERE ao_info_id = 1");
+				Database.ExecuteNonQuery(Globals.Database._MachineConnectionString, "ALTER TABLE ao_info ADD COLUMN genre_version TEXT");
+				Database.ExecuteNonQuery(Globals.Database._MachineConnectionString, "UPDATE ao_info SET genre_version = '' WHERE ao_info_id = 1");
 			}
 
-			infoTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT * FROM ao_info");
+			infoTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT * FROM ao_info");
 
 			string databaseVersion = (string)infoTable.Rows[0]["genre_version"];
 
@@ -261,56 +262,59 @@ namespace Spludlow.MameAO
 
 			Console.Write("Update Machines database with genre IDs ...");
 
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT * FROM machine WHERE machine_id = 0");
+			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT * FROM machine WHERE machine_id = 0");
 
 			if (machineTable.Columns.Contains("genre_id") == false)
-				Database.ExecuteNonQuery(Globals.Database._MachineConnection, "ALTER TABLE machine ADD COLUMN genre_id INTEGER");
+				Database.ExecuteNonQuery(Globals.Database._MachineConnectionString, "ALTER TABLE machine ADD COLUMN genre_id INTEGER");
 
-			Database.ExecuteNonQuery(Globals.Database._MachineConnection, "UPDATE machine SET genre_id = 0");
+			Database.ExecuteNonQuery(Globals.Database._MachineConnectionString, "UPDATE machine SET genre_id = 0");
 
-			machineTable = Database.ExecuteFill(Globals.Database._MachineConnection, "SELECT machine_id, name FROM machine");
+			machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, name FROM machine");
 
-			using (SQLiteCommand command = new SQLiteCommand("UPDATE machine SET genre_id = @genre_id WHERE machine_id = @machine_id", Globals.Database._MachineConnection))
+			using (SQLiteConnection connection = new SQLiteConnection(Globals.Database._MachineConnectionString))
 			{
-				command.Parameters.Add("@genre_id", DbType.Int64);
-				command.Parameters.Add("@machine_id", DbType.Int64);
-
-				Globals.Database._MachineConnection.Open();
-
-				SQLiteTransaction transaction = Globals.Database._MachineConnection.BeginTransaction();
-
-				try
+				using (SQLiteCommand command = new SQLiteCommand("UPDATE machine SET genre_id = @genre_id WHERE machine_id = @machine_id", connection))
 				{
-					foreach (DataRow machineRow in machineTable.Rows)
+					command.Parameters.Add("@genre_id", DbType.Int64);
+					command.Parameters.Add("@machine_id", DbType.Int64);
+
+					connection.Open();
+
+					SQLiteTransaction transaction = connection.BeginTransaction();
+
+					try
 					{
-						long machine_id = (long)machineRow["machine_id"];
-						string name = (string)machineRow["name"];
+						foreach (DataRow machineRow in machineTable.Rows)
+						{
+							long machine_id = (long)machineRow["machine_id"];
+							string name = (string)machineRow["name"];
 
-						if (machineGenreIds.ContainsKey(name) == false)
-							continue;
+							if (machineGenreIds.ContainsKey(name) == false)
+								continue;
 
-						long genre_id = machineGenreIds[name][1];
+							long genre_id = machineGenreIds[name][1];
 
-						command.Parameters["@genre_id"].Value = genre_id;
-						command.Parameters["@machine_id"].Value = machine_id;
+							command.Parameters["@genre_id"].Value = genre_id;
+							command.Parameters["@machine_id"].Value = machine_id;
 
-						command.ExecuteNonQuery();
+							command.ExecuteNonQuery();
+						}
+
+						transaction.Commit();
 					}
-
-					transaction.Commit();
-				}
-				catch
-				{
-					transaction.Rollback();
-					throw;
-				}
-				finally
-				{
-					Globals.Database._MachineConnection.Close();
+					catch
+					{
+						transaction.Rollback();
+						throw;
+					}
+					finally
+					{
+						connection.Close();
+					}
 				}
 			}
 
-			Database.ExecuteNonQuery(Globals.Database._MachineConnection, $"UPDATE ao_info SET genre_version = '{SHA1}' WHERE ao_info_id = 1");
+			Database.ExecuteNonQuery(Globals.Database._MachineConnectionString, $"UPDATE ao_info SET genre_version = '{SHA1}' WHERE ao_info_id = 1");
 
 			Console.WriteLine("...done");
 
