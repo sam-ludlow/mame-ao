@@ -45,6 +45,8 @@ namespace Spludlow.MameAO
 
 		public static Dictionary<string, string> Arguments = new Dictionary<string, string>();
 
+		public static Dictionary<string, string> Config = new Dictionary<string, string>();
+
 		public static string RootDirectory;
 		public static string TempDirectory;
 		public static string CacheDirectory;
@@ -163,7 +165,6 @@ namespace Spludlow.MameAO
 
 			Globals.Settings = new Settings();
 
-			Dictionary<string, string> config = new Dictionary<string, string>();
 			string configFilename = Path.Combine(Globals.RootDirectory, "_config.txt");
 			if (File.Exists(configFilename) == true)
 			{
@@ -174,12 +175,12 @@ namespace Spludlow.MameAO
 					{
 						string[] parts = line.Split('\t');
 						if (parts.Length == 2)
-							config.Add(parts[0], parts[1]);
+							Globals.Config.Add(parts[0], parts[1]);
 					}
 				}
 			}
 
-			Globals.MameArguments = config.ContainsKey("MameArguments") == true ? config["MameArguments"] : "";
+			Globals.MameArguments = Globals.Config.ContainsKey("MameArguments") == true ? Globals.Config["MameArguments"] : "";
 
 			//
 			// Fixes
@@ -223,7 +224,7 @@ namespace Spludlow.MameAO
 			// Bit Torrent
 			//
 
-			Globals.BitTorrentDirectory = config.ContainsKey("BitTorrentPath") == true ? config["BitTorrentPath"] : Path.Combine(Globals.RootDirectory, "_BT");
+			Globals.BitTorrentDirectory = Globals.Config.ContainsKey("BitTorrentPath") == true ? Globals.Config["BitTorrentPath"] : Path.Combine(Globals.RootDirectory, "_BT");
 			Directory.CreateDirectory(Globals.BitTorrentDirectory);
 
 			if (BitTorrent.IsInstalled() == true)
@@ -269,9 +270,9 @@ namespace Spludlow.MameAO
 			// Determine MAME version
 			//
 
-			if (config.ContainsKey("MameVersion") == true)
+			if (Globals.Config.ContainsKey("MameVersion") == true)
 			{
-				Globals.MameVersion = config["MameVersion"];
+				Globals.MameVersion = Globals.Config["MameVersion"];
 				Console.WriteLine($"MAME Version fixed: {Globals.MameVersion}");
 			}
 			else
@@ -329,11 +330,11 @@ namespace Spludlow.MameAO
 			// Hash Stores
 			//
 
-			string directory = config.ContainsKey("StorePathRom") == true ? config["StorePathRom"] : Path.Combine(Globals.RootDirectory, "_STORE");
+			string directory = Globals.Config.ContainsKey("StorePathRom") == true ? Globals.Config["StorePathRom"] : Path.Combine(Globals.RootDirectory, "_STORE");
 			Directory.CreateDirectory(directory);
 			Globals.RomHashStore = new HashStore(directory, Tools.SHA1HexFile);
 
-			directory = config.ContainsKey("StorePathDisk") == true ? config["StorePathDisk"] : Path.Combine(Globals.RootDirectory, "_STORE_DISK");
+			directory = Globals.Config.ContainsKey("StorePathDisk") == true ? Globals.Config["StorePathDisk"] : Path.Combine(Globals.RootDirectory, "_STORE_DISK");
 			Directory.CreateDirectory(directory);
 			Globals.DiskHashStore = new HashStore(directory, Globals.MameChdMan.Hash);
 

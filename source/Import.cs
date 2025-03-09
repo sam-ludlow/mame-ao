@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO.Compression;
 using System.IO;
+using System.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -179,7 +180,9 @@ namespace Spludlow.MameAO
 
 		public static void FetchSoftwareDisk()
 		{
-			List<string> ignoreListNames = new List<string>(new string[] { "psx", "saturn" });	//	Too big for now
+			List<string> ignoreListNames = new List<string>();
+			if (Globals.Config.ContainsKey("SoftwareListSkip") == true)
+				ignoreListNames.AddRange(Globals.Config["SoftwareListSkip"].Split(',').Select(item => item.Trim()));
 
 			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
 			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT software.software_id, software.softwarelist_id, software.name, software.description, software.cloneof FROM software ORDER BY software.name");
