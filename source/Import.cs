@@ -109,7 +109,7 @@ namespace Spludlow.MameAO
 					}
 
 					if (dontHaveCount != 0)
-						Place.PlaceMachineRoms(machine_name);
+						Place.PlaceMachineRoms(machine_name, false);
 				}
 			}
 		}
@@ -138,7 +138,7 @@ namespace Spludlow.MameAO
 				}
 
 				if (dontHaveCount != 0)
-					Place.PlaceMachineDisks(machine_name);
+					Place.PlaceMachineDisks(machine_name, false);
 			}
 		}
 
@@ -173,7 +173,7 @@ namespace Spludlow.MameAO
 					}
 
 					if (dontHaveCount != 0)
-						Place.PlaceSoftwareRoms(softwarelistRow, softwareRow);
+						Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, false);
 				}
 			}
 		}
@@ -216,7 +216,7 @@ namespace Spludlow.MameAO
 					}
 
 					if (dontHaveCount != 0)
-						Place.PlaceSoftwareDisks(softwarelistRow, softwareRow);
+						Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, false);
 				}
 			}
 		}

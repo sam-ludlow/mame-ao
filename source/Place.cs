@@ -32,8 +32,8 @@ namespace Spludlow.MameAO
 
 			int missingCount = 0;
 
-			missingCount += PlaceMachineRoms(machineName);
-			missingCount += PlaceMachineDisks(machineName);
+			missingCount += PlaceMachineRoms(machineName, true);
+			missingCount += PlaceMachineDisks(machineName, true);
 
 			if (softwareName != "")
 			{
@@ -92,8 +92,8 @@ namespace Spludlow.MameAO
 						{
 							if ((string)findSoftware["name"] == requiredSoftwareName)
 							{
-								missingCount += PlaceSoftwareRoms(softwarelist, findSoftware);
-								missingCount += PlaceSoftwareDisks(softwarelist, findSoftware);
+								missingCount += PlaceSoftwareRoms(softwarelist, findSoftware, true);
+								missingCount += PlaceSoftwareDisks(softwarelist, findSoftware, true);
 
 								++softwareFound;
 							}
@@ -140,7 +140,7 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 		}
 
-		public static int PlaceMachineRoms(string mainMachineName)
+		public static int PlaceMachineRoms(string mainMachineName, bool placeFiles)
 		{
 			int missingCount = 0;
 
@@ -183,9 +183,11 @@ namespace Spludlow.MameAO
 					}
 					else
 					{
-						string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", machineName);
-
-						missingCount += PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
+						if (placeFiles == true)
+						{
+							string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", machineName);
+							missingCount += PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
+						}
 					}
 				}
 			}
@@ -193,7 +195,7 @@ namespace Spludlow.MameAO
 			return missingCount;
 		}
 
-		public static int PlaceMachineDisks(string machineName)
+		public static int PlaceMachineDisks(string machineName, bool placeFiles)
 		{
 			DataRow machineRow = Globals.Database.GetMachine(machineName);
 
@@ -234,7 +236,10 @@ namespace Spludlow.MameAO
 
 			string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", machineName);
 
-			return PlaceAssetFiles(assetRows, Globals.DiskHashStore, targetDirectory, ".chd", info);
+			if (placeFiles == true)
+				return PlaceAssetFiles(assetRows, Globals.DiskHashStore, targetDirectory, ".chd", info);
+
+			return 0;
 		}
 
 		public static string[][] MachineDiskAvailableKeys(DataRow machineRow, DataRow diskRow)
@@ -326,7 +331,7 @@ namespace Spludlow.MameAO
 			return true;
 		}
 
-		public static int PlaceSoftwareRoms(DataRow softwareList, DataRow software)
+		public static int PlaceSoftwareRoms(DataRow softwareList, DataRow software, bool placeFiles)
 		{
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
@@ -374,10 +379,13 @@ namespace Spludlow.MameAO
 
 			string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", softwareListName, softwareName);
 
-			return PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
+			if (placeFiles == true)
+				return PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
+
+			return 0;
 		}
 
-		public static int PlaceSoftwareDisks(DataRow softwareList, DataRow software)
+		public static int PlaceSoftwareDisks(DataRow softwareList, DataRow software, bool placeFiles)
 		{
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
@@ -433,7 +441,10 @@ namespace Spludlow.MameAO
 
 			string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", softwareListName, softwareName);
 
-			return PlaceAssetFiles(assetRows, Globals.DiskHashStore, targetDirectory, ".chd", info);
+			if (placeFiles == true)
+				return PlaceAssetFiles(assetRows, Globals.DiskHashStore, targetDirectory, ".chd", info);
+
+			return 0;
 		}
 
 		public static ArchiveOrgFile MachineDiskAvailableSourceFile(DataRow machineRow, DataRow diskRow, ArchiveOrgItem sourceItem)
