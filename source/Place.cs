@@ -615,15 +615,21 @@ namespace Spludlow.MameAO
 		private static HashSet<string> FindAllMachines(string machineName)
 		{
 			HashSet<string> requiredMachines = new HashSet<string>();
-			FindAllMachines(machineName, requiredMachines);
+
+			DataRow machineRow = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found (FindAllMachines): ${machineName}");
+			if (machineRow.IsNull("cloneof") == false)
+				requiredMachines.Add((string)machineRow["cloneof"]);
+
+			FindAllMachinesWork(machineName, requiredMachines);
+
 			return requiredMachines;
 		}
-		private static void FindAllMachines(string machineName, HashSet<string> requiredMachines)
+		private static void FindAllMachinesWork(string machineName, HashSet<string> requiredMachines)
 		{
 			if (requiredMachines.Contains(machineName) == true)
 				return;
 
-			DataRow machineRow = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException("FindAllMachines machine not found: " + machineName);
+			DataRow machineRow = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found (FindAllMachinesWork): ${machineName}");
 
 			if ((long)machineRow["ao_rom_count"] > 0)
 				requiredMachines.Add(machineName);
@@ -631,10 +637,10 @@ namespace Spludlow.MameAO
 			string romof = machineRow.IsNull("romof") ? null : (string)machineRow["romof"];
 
 			if (romof != null)
-				FindAllMachines(romof, requiredMachines);
+				FindAllMachinesWork(romof, requiredMachines);
 
 			foreach (DataRow row in Globals.Database.GetMachineDeviceRefs(machineName))
-				FindAllMachines((string)row["name"], requiredMachines);
+				FindAllMachinesWork((string)row["name"], requiredMachines);
 		}
 
 	}
