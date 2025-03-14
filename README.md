@@ -331,7 +331,7 @@ See information on the GitHub Repos in use by MAME-AO by going to the About page
 ### BitTorrents
 Using BitTorrent is recommended, whoever maintains it is doing an excellent job of keeping it up to date. You can run the latest machines as soon as MAME is released. Archive.org is still used for Artwork & Samples.
 
-![MAME-AO About - DOME-BT Console](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/dome-bt-console.png.png)
+![MAME-AO About - DOME-BT Console](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/dome-bt-console.png)
 
 DOME-BT is a separate process that handles BitTorrent downloading.
 
