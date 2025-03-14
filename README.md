@@ -305,7 +305,7 @@ Assets (ROMs & CHDs) are downloaded to a "Hash Store". Uncompressed individual f
 
 Each MAME version is kept completely isolated, when a new version of MAME is used a fresh MAME directory is created. Previous versions are left in place, you can go back to them anytime, let’s say you have some saved state.
 
-When you select a machine MAME-AO will download the files from archive.org if they are not already in the Hash Store. When in the Hash Store the files are copied (or preferably linked if enabled) to the correct place in the MAME rom directory.
+When you select a machine MAME-AO will download if they are not already in the Hash Store. When in the Hash Store the files are copied (or preferably linked if enabled) to the correct place in the MAME rom directory.
 
 ### Data
 SQLite databases are generated from the MAME XML output, 2 databases machine & software. This uses quiet a bit of CPU & RAM but once done is quick to load next time. If MAME-AO or MAME have version bumps the database will be re-created.
@@ -328,18 +328,21 @@ See information on the GitHub Repos in use by MAME-AO by going to the About page
 
 ![MAME-AO About - GitHub Repos](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-about-github-repos.png)
 
+### BitTorrents
+Using BitTorrent is recommended, whoever maintains it is doing an excellent job of keeping it up to date. You can run the latest machines as soon as MAME is released. Archive.org is still used for Artwork & Samples.
+
+![MAME-AO About - DOME-BT Console](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/dome-bt-console.png.png)
+
+DOME-BT is a separate process that handles BitTorrent downloading.
+
 ### Archive.org Items
-Archive.org is used for downloading MAME assets of these types:
+Archive.org can be used for downloading MAME assets of these types:
 
 - Machine ROM
 - Machine DISK
 - Software ROM
-- Software DISK (uses many archive.org items)
+- Software DISK
 - Support (Artwork & Samples)
-
-Archive.org metadata is downloaded when needed and cached, used to know what’s available and the file sizes.
-
-All asset types have a single archive.org item with the exception of `Software Disks` these use multiple items on archive.org.
 
 See information on the Archive.org Items in use by MAME-AO by going to the About page. http://localhost:12380/about
 
