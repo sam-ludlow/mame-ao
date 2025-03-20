@@ -4,183 +4,85 @@
 	<meta charset="utf-8">
 	<meta name="viewport" content="width=device-width">
 
-	<style type="text/css">
-		body {
-			font-family: sans-serif;
-			font-size: small;
-			background-color: #c6eafb;
-		}
-
-		hr {
-			color: #00ADEF;
-			background-color: #00ADEF;
-			height: 6px;
-			border: none;
-			padding-left: 0px;
-		}
-
-		table {
-			border-collapse: collapse;
-			font-size: small;
-		}
-
-		th, td {
-			padding: 2px;
-			text-align: left;
-		}
-
-		table, th, td {
-			border: 1px solid black;
-		}
-
-		th {
-			background-color: #00ADEF;
-			color: white;
-		}
-
-		tr:nth-child(odd) {
-			background-color: #c6eafb;
-		}
-		tr:nth-child(even) {
-			background-color: #b1e2fa;
-		}
-
-		a.nav-off {
-			text-decoration: none;
-			color: #FFFFFF;
-		}
-
-		a.nav-on {
-			text-decoration: none;
-			color: #FFFF00;
-		}
-
-		td.nav-off {
-			text-decoration: none;
-			background-color: #1a75bc;
-			text-align: center;
-		}
-
-		td.nav-on {
-			text-decoration: none;
-			background-color: #00ADEF;
-			text-align: center;
-		}
-
-		td.fav-even {
-			background-color: #ffd700;
-		}
-		td.fav-odd {
-			background-color: #ffdf00;
-		}
-
-		td.good-even {
-			background-color: #90ee90;
-		}
-		td.good-odd {
-			background-color: #98fb98;
-		}
-
-		td.imperfect-even {
-			background-color: #fff000;
-		}
-		td.imperfect-odd {
-			background-color: #ffef00;
-		}
-
-		td.preliminary-even {
-			background-color: #fa8072;
-		}
-		td.preliminary-odd {
-			background-color: #f08080;
-		}
-
-		tr.clone-even {
-			background-color: #65c6f5;
-		}
-		tr.clone-odd {
-			background-color: #77ccf6;
-		}
-
-	</style>
+	<link rel="stylesheet" type="text/css" href="/styles.css" />
 
 	<script type="text/javascript">
 
 		const _rootMenu =
-		[{
-			text: 'MAME-AO',
-			title: 'MAME-AO',
-			href: '/',
-			menu: [
-				{
-					text: 'Machines',
-					title: 'Start Machines',
-					href: '/machines',
-				},
-				{
-					text: 'Genres',
-					title: 'Machines by Genre',
-					href: '/genres',
-				},
-				{
-					text: 'Saved State',
-					title: 'View saved state & Previous MAME versions',
-					href: '/saved',
-				},
-				{
-					text: 'Reporting',
-					title: 'Information Reporting',
-					href: '/reports',
-					menu: [
-						{
-							text: 'Run Reports',
-							title: 'Run Reports',
-							href: '/reports/run',
-						},
-						{
-							text: 'View Reports',
-							title: 'View Veports',
-							href: '/reports/view',
-						},
-					],
-				},
-				{
-					text: 'Store',
-					title: 'Hash Store Operations',
-					href: '/store',
-				},
-				{
-					text: 'Snaps',
-					title: 'Collect MAME snapshots into directory & Convert to SVG',
-					href: '/snaps',
-				},
-				{
-					text: 'Import',
-					title: 'Import ROM/CHD from directory',
-					href: '/import',
-				},
-				{
-					text: 'Export',
-					title: 'Export ROM/CHD standard MAME format',
-					href: '/export',
-				},
-				{
-					text: 'Settings',
-					title: 'Settings - User Preferences',
-					href: '/settings',
-				},
-				{
-					text: 'BitTorrent',
-					title: 'BitTorrent Client Information',
-					href: '/bittorrent',
-				},
-				{
-					text: 'About',
-					title: 'About & System Information',
-					href: '/about',
-				},
-			],
-		}];
+			[{
+				text: 'MAME-AO',
+				title: 'MAME-AO',
+				href: '/',
+				menu: [
+					{
+						text: 'Machines',
+						title: 'Start Machines',
+						href: '/machines',
+					},
+					{
+						text: 'Genres',
+						title: 'Machines by Genre',
+						href: '/genres',
+					},
+					{
+						text: 'Saved State',
+						title: 'View saved state & Previous MAME versions',
+						href: '/saved',
+					},
+					{
+						text: 'Reporting',
+						title: 'Information Reporting',
+						href: '/reports',
+						menu: [
+							{
+								text: 'Run Reports',
+								title: 'Run Reports',
+								href: '/reports/run',
+							},
+							{
+								text: 'View Reports',
+								title: 'View Veports',
+								href: '/reports/view',
+							},
+						],
+					},
+					{
+						text: 'Store',
+						title: 'Hash Store Operations',
+						href: '/store',
+					},
+					{
+						text: 'Snaps',
+						title: 'Collect MAME snapshots into directory & Convert to SVG',
+						href: '/snaps',
+					},
+					{
+						text: 'Import',
+						title: 'Import ROM/CHD from directory',
+						href: '/import',
+					},
+					{
+						text: 'Export',
+						title: 'Export ROM/CHD standard MAME format',
+						href: '/export',
+					},
+					{
+						text: 'Settings',
+						title: 'Settings - User Preferences',
+						href: '/settings',
+					},
+					{
+						text: 'BitTorrent',
+						title: 'BitTorrent Client Information',
+						href: '/bittorrent',
+					},
+					{
+						text: 'About',
+						title: 'About & System Information',
+						href: '/about',
+					},
+				],
+			}];
 
 		//
 		// Main
@@ -429,18 +331,18 @@
 			}
 
 			const routeFunction = {
-				'/saved':			saved,
-				'/reports/run':		runReports,
-				'/reports/view':	viewReports,
-				'/update':			update,
-				'/store':			storeOperations,
-				'/snaps':			collectSnaps,
-				'/import':			importFiles,
-				'/export':			exportFiles,
-				'/genres':			genres,
-				'/settings':		settings,
-				'/bittorrent':		bittorrent,
-				'/about':			about,
+				'/saved': saved,
+				'/reports/run': runReports,
+				'/reports/view': viewReports,
+				'/update': update,
+				'/store': storeOperations,
+				'/snaps': collectSnaps,
+				'/import': importFiles,
+				'/export': exportFiles,
+				'/genres': genres,
+				'/settings': settings,
+				'/bittorrent': bittorrent,
+				'/about': about,
 			}[_path];
 
 			if (routeFunction !== undefined)
@@ -1128,7 +1030,7 @@
 					html = '';
 
 				cell.innerHTML = html;
-			
+
 			});
 
 			canvas.appendChild(table);

@@ -14,32 +14,11 @@ namespace Spludlow.MameAO
 {
 	public class WebServer
 	{
-
 		private string _UIHTML;
+		private string _StyleSheet;
 
 		private readonly string MACHINE_IMAGE_URL = "https://mame.spludlow.co.uk/snap/machine/@machine.jpg";
-		//private readonly string MACHINE_IMAGE_URL = "https://raw.githubusercontent.com/AntoPISA/MAME_SnapTitles/main/snap/@machine.png";
-
 		private readonly string SOFTWARE_IMAGE_URL = "https://mame.spludlow.co.uk/snap/software/@softwarelist/@software.jpg";
-
-		private readonly byte[] _FavIcon = Convert.FromBase64String(@"
-			AAABAAEAEBAAAAAAGABoAwAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAMAAAAAAAAAAAAAAAAA
-			AAAAAAD0tgDzuQDzsgD2xgD99NT++OP++OX++OX/+OPA67QA6t3j6KL/9tr++OP9+OX9+OX0vQD0
-			vgD99dj///T/75P/6m7/6mv/6Wz/4ne+3G4A7Obg2EL/3F7/3Vv/32v84nnysAD99+P/9MThrQCV
-			aACCXQCCXQCgcgDyoQC9vwAA8PesvwCDyQB/ygDQswD/rQD0uwD//e/vsgBEMgAJDiUdGh8bGh8H
-			DCZzTADEwwAA8/8A8/8A8/8A8/8A8fjBwwD+/PX/1gC+hgAUFiLCjQDvrQDysACgdgAsGgyxtQAA
-			+P873pbetQDbtQAN5LcA79X//vv2uwDkogDQlwDoqADdoADlpwCRawAtGwuwtgAA9v7AvAD/qgD/
-			qQCpwgAA+f/+/PXztQD9tQCqfQAgHBwUFiIWFiIFCid8UgDAwwAA8PfXtgD3rQD7rAC+vQAA9//+
-			/PX4ugDYmwAbGR9cRgCZcQCRagCtfwD/swC9wQAA8PvUtwD5rQD8rAC9vQAA+P///fn+wgC2gwAX
-			FyHqqgD/xAD/xADcnwB8UwCytwAA9/+MywD/qAD/qAB10ToA9////fX7zwDYmAAeGx5vVACgdgCi
-			dwBRPgA2IQG5vAAA9v8A8f9z0URv0kkA9v9p2Vj76Jv977v7sgCQaQASEyITFCISEyIdGh+6fwDH
-			xQAA7uwg4a4A8/8A9P9U12/7swDzuQD//fn1wAD2rgDbngDUmQDTmQDhowD6swDqsQDSuADyrwDX
-			tgDVswD5sgD/7KDxrgD977/98MbzsAD3sAD4swD4swD2sgDyrwD0rgD5rQD0rwD3qQD5swD+8MD/
-			/vPxrADysAD+/fX75Y7ysgDxqwDyrgDyrwDyrwDyrwDyrgDxqgDztQD977n99+D0swDyrwDxqwDz
-			sgD//fn98sz0vwDyrgDxqwDxqgDxqwDyrwD1xQD9+OL+/PXysgD1rADyrwDyrwDxrQDztQD889D/
-			/fn989P75pT53mj76J399dv//fn87rjzswDyrADxrAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-		");
 
 		public WebServer()
 		{
@@ -49,6 +28,12 @@ namespace Spludlow.MameAO
 		public void RefreshAssets()
 		{
 			_UIHTML = File.ReadAllText(@"UI.html", Encoding.UTF8);
+
+			string styleSheetFilename = Path.Combine(Globals.RootDirectory, "_styles.css");
+			if (File.Exists(styleSheetFilename) == true)
+				_StyleSheet = File.ReadAllText(styleSheetFilename);
+			else
+				_StyleSheet = _DefaultStyleSheet;
 		}
 
 		public void StartListener()
@@ -106,6 +91,11 @@ namespace Spludlow.MameAO
 										case "/favicon.ico":
 											context.Response.Headers["Content-Type"] = "image/x-icon";
 											context.Response.OutputStream.Write(_FavIcon, 0, _FavIcon.Length);
+											break;
+
+										case "/styles.css":
+											context.Response.Headers["Content-Type"] = "text/css";
+											writer.WriteLine(_StyleSheet);
 											break;
 
 										default:
@@ -862,6 +852,124 @@ namespace Spludlow.MameAO
 			return json;
 		}
 
+		private readonly string _DefaultStyleSheet = @"
+
+			body {
+				font-family: sans-serif;
+				font-size: small;
+				background-color: #c6eafb;
+			}
+
+			hr {
+				color: #00ADEF;
+				background-color: #00ADEF;
+				height: 6px;
+				border: none;
+				padding-left: 0px;
+			}
+
+			table {
+				border-collapse: collapse;
+				font-size: small;
+			}
+
+			th, td {
+				padding: 2px;
+				text-align: left;
+			}
+
+			table, th, td {
+				border: 1px solid black;
+			}
+
+			th {
+				background-color: #00ADEF;
+				color: white;
+			}
+
+			tr:nth-child(odd) {
+				background-color: #c6eafb;
+			}
+			tr:nth-child(even) {
+				background-color: #b1e2fa;
+			}
+
+			a.nav-off {
+				text-decoration: none;
+				color: #FFFFFF;
+			}
+
+			a.nav-on {
+				text-decoration: none;
+				color: #FFFF00;
+			}
+
+			td.nav-off {
+				text-decoration: none;
+				background-color: #1a75bc;
+				text-align: center;
+			}
+
+			td.nav-on {
+				text-decoration: none;
+				background-color: #00ADEF;
+				text-align: center;
+			}
+
+			td.fav-even {
+				background-color: #ffd700;
+			}
+			td.fav-odd {
+				background-color: #ffdf00;
+			}
+
+			td.good-even {
+				background-color: #90ee90;
+			}
+			td.good-odd {
+				background-color: #98fb98;
+			}
+
+			td.imperfect-even {
+				background-color: #fff000;
+			}
+			td.imperfect-odd {
+				background-color: #ffef00;
+			}
+
+			td.preliminary-even {
+				background-color: #fa8072;
+			}
+			td.preliminary-odd {
+				background-color: #f08080;
+			}
+
+			tr.clone-even {
+				background-color: #65c6f5;
+			}
+			tr.clone-odd {
+				background-color: #77ccf6;
+			}
+		";
+
+		private readonly byte[] _FavIcon = Convert.FromBase64String(@"
+			AAABAAEAEBAAAAAAGABoAwAAFgAAACgAAAAQAAAAIAAAAAEAGAAAAAAAAAMAAAAAAAAAAAAAAAAA
+			AAAAAAD0tgDzuQDzsgD2xgD99NT++OP++OX++OX/+OPA67QA6t3j6KL/9tr++OP9+OX9+OX0vQD0
+			vgD99dj///T/75P/6m7/6mv/6Wz/4ne+3G4A7Obg2EL/3F7/3Vv/32v84nnysAD99+P/9MThrQCV
+			aACCXQCCXQCgcgDyoQC9vwAA8PesvwCDyQB/ygDQswD/rQD0uwD//e/vsgBEMgAJDiUdGh8bGh8H
+			DCZzTADEwwAA8/8A8/8A8/8A8/8A8fjBwwD+/PX/1gC+hgAUFiLCjQDvrQDysACgdgAsGgyxtQAA
+			+P873pbetQDbtQAN5LcA79X//vv2uwDkogDQlwDoqADdoADlpwCRawAtGwuwtgAA9v7AvAD/qgD/
+			qQCpwgAA+f/+/PXztQD9tQCqfQAgHBwUFiIWFiIFCid8UgDAwwAA8PfXtgD3rQD7rAC+vQAA9//+
+			/PX4ugDYmwAbGR9cRgCZcQCRagCtfwD/swC9wQAA8PvUtwD5rQD8rAC9vQAA+P///fn+wgC2gwAX
+			FyHqqgD/xAD/xADcnwB8UwCytwAA9/+MywD/qAD/qAB10ToA9////fX7zwDYmAAeGx5vVACgdgCi
+			dwBRPgA2IQG5vAAA9v8A8f9z0URv0kkA9v9p2Vj76Jv977v7sgCQaQASEyITFCISEyIdGh+6fwDH
+			xQAA7uwg4a4A8/8A9P9U12/7swDzuQD//fn1wAD2rgDbngDUmQDTmQDhowD6swDqsQDSuADyrwDX
+			tgDVswD5sgD/7KDxrgD977/98MbzsAD3sAD4swD4swD2sgDyrwD0rgD5rQD0rwD3qQD5swD+8MD/
+			/vPxrADysAD+/fX75Y7ysgDxqwDyrgDyrwDyrwDyrwDyrgDxqgDztQD977n99+D0swDyrwDxqwDz
+			sgD//fn98sz0vwDyrgDxqwDxqgDxqwDyrwD1xQD9+OL+/PXysgD1rADyrwDyrwDxrQDztQD889D/
+			/fn989P75pT53mj76J399dv//fn87rjzswDyrADxrAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+		");
 
 	}
 }
