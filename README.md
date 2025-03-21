@@ -333,7 +333,17 @@ Using BitTorrent is recommended, whoever maintains it is doing an excellent job 
 
 ![MAME-AO About - DOME-BT Console](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/dome-bt-console.png)
 
-DOME-BT is a separate process that handles BitTorrent downloading.
+DOME-BT is a separate process it acts like a normal BitTorrent client with its own directory to keep download files separate to MAME-AO.
+
+You can clear down DOME-BT by disabling it and then reenabling it from MAME-AO. This will recover disk space. The whole `_BT` directory is deleted.
+
+DOME-BT will automatically delete old MAME version torrent directories if they are not current. If you’re not too short on disk space, you can just leave it.
+
+DOME-BT will only download files requested. Once downloaded they are available to share with other BitTorrent users so you will get uploads.
+
+Please leave DOME-BT running, if possible, to "Kindly share with others what others so kindly shared with you!"
+
+There is a small web running on http://localhost:12381/ describing the API endpoints used by MAME-AO if you are interested.
 
 ### Archive.org Items
 Archive.org can be used for downloading MAME assets of these types:
