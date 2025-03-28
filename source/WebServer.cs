@@ -55,7 +55,6 @@ namespace Spludlow.MameAO
 					HttpListenerContext context = listener.GetContext();
 
 					context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-
 					context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
 
 					string path = context.Request.Url.AbsolutePath.ToLower();
@@ -309,7 +308,6 @@ namespace Spludlow.MameAO
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
 
-
 		public void _api_machine(HttpListenerContext context, StreamWriter writer)
 		{
 			string qs;
@@ -349,7 +347,6 @@ namespace Spludlow.MameAO
 
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
-
 
 		public void _api_software(HttpListenerContext context, StreamWriter writer)
 		{

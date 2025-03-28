@@ -151,30 +151,30 @@ namespace Spludlow.MameAO
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
 			foreach (DataRow softwarelistRow in softwarelistTable.Rows)
+				FetchSoftwareRom(softwarelistRow, softwareTable, romTable, false);
+
+		}
+		public static void FetchSoftwareRom(DataRow softwarelistRow, DataTable softwareTable, DataTable romTable, bool placeFiles)
+		{
+			long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
+
+			foreach (DataRow softwareRow in softwareTable.Select("softwarelist_id = " + softwarelist_id))
 			{
-				long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
-				string softwarelist_name = (string)softwarelistRow["name"];
+				long software_id = (long)softwareRow["software_id"];
 
-				foreach (DataRow softwareRow in softwareTable.Select("softwarelist_id = " + softwarelist_id))
+				int dontHaveCount = 0;
+
+				foreach (DataRow row in romTable.Select("software_id = " + software_id))
 				{
-					long software_id = (long)softwareRow["software_id"];
-					string software_name = (string)softwareRow["name"];
-					string software_description = (string)softwareRow["description"];
+					string sha1 = (string)row["sha1"];
+					string name = (string)row["name"];
 
-					int dontHaveCount = 0;
-
-					foreach (DataRow row in romTable.Select("software_id = " + software_id))
-					{
-						string sha1 = (string)row["sha1"];
-						string name = (string)row["name"];
-
-						if (Globals.RomHashStore.Exists(sha1) == false)
-							++dontHaveCount;
-					}
-
-					if (dontHaveCount != 0)
-						Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, false);
+					if (Globals.RomHashStore.Exists(sha1) == false)
+						++dontHaveCount;
 				}
+
+				if (dontHaveCount != 0)
+					Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, placeFiles);
 			}
 		}
 
@@ -192,32 +192,56 @@ namespace Spludlow.MameAO
 
 			foreach (DataRow softwarelistRow in softwarelistTable.Rows)
 			{
-				long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
 				string softwarelist_name = (string)softwarelistRow["name"];
 
 				if (ignoreListNames.Contains(softwarelist_name) == true)
 					continue;
 
-				foreach (DataRow softwareRow in softwareTable.Select("softwarelist_id = " + softwarelist_id))
+				FetchSoftwareDisk(softwarelistRow, softwareTable, diskTable, false);
+			}
+		}
+		public static void FetchSoftwareDisk(DataRow softwarelistRow, DataTable softwareTable, DataTable diskTable, bool placeFiles)
+		{
+			long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
+
+			foreach (DataRow softwareRow in softwareTable.Select("softwarelist_id = " + softwarelist_id))
+			{
+				long software_id = (long)softwareRow["software_id"];
+
+				int dontHaveCount = 0;
+
+				foreach (DataRow diskRow in diskTable.Select("software_id = " + software_id))
 				{
-					long software_id = (long)softwareRow["software_id"];
-					string software_name = (string)softwareRow["name"];
-					string software_description = (string)softwareRow["description"];
+					string name = (string)diskRow["name"];
+					string sha1 = (string)diskRow["sha1"];
 
-					int dontHaveCount = 0;
-
-					foreach (DataRow diskRow in diskTable.Select("software_id = " + software_id))
-					{
-						string name = (string)diskRow["name"];
-						string sha1 = (string)diskRow["sha1"];
-
-						if (Globals.DiskHashStore.Exists(sha1) == false)
-							++dontHaveCount;
-					}
-
-					if (dontHaveCount != 0)
-						Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, false);
+					if (Globals.DiskHashStore.Exists(sha1) == false)
+						++dontHaveCount;
 				}
+
+				if (dontHaveCount != 0)
+					Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, placeFiles);
+			}
+		}
+
+		public static void PlaceSoftwareList(string softwareListName)
+		{
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+				$"SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist WHERE (softwarelist.name = '{softwareListName}')");
+
+			if (softwarelistTable.Rows.Count != 1)
+				throw new ApplicationException($"Software List not found: {softwareListName}");
+
+			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT software.software_id, software.softwarelist_id, software.name, software.description, software.cloneof FROM software ORDER BY software.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT part.software_id, rom.name, rom.sha1 FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.sha1 IS NOT NULL)");
+			DataTable diskTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT part.software_id, disk.name, disk.sha1 FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.sha1 IS NOT NULL)");
+
+			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
+
+			foreach (DataRow softwarelistRow in softwarelistTable.Rows)
+			{
+				FetchSoftwareRom(softwarelistRow, softwareTable, romTable, true);
+				FetchSoftwareDisk(softwarelistRow, softwareTable, diskTable, true);
 			}
 		}
 

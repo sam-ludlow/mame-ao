@@ -127,6 +127,7 @@ There are also commands available they all start with a dot `.`
 - `.btx` - Remove the bit torrent client
 - `.test` - Perform asset place tests
 - `.fetch` - Fetch all required assets, used for maintaining full sets
+- `.software` - Fetch & Place a complete software list, you can have them all ready then load from inside MAME.
 
 ## Saved State and previous MAME versions
 Saved state somtimes does not work between MAME versions. If you have started something with saved state you may as well use the same MAME version.
