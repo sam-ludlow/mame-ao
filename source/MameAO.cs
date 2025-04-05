@@ -777,6 +777,10 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						Import.PlaceSoftwareList(parts[1]);
 						return;
 
+					case ".style":
+						Globals.WebServer.SaveStyle();
+						return;
+
 					default:
 						binFilename = Path.Combine(Globals.RootDirectory, machine.Substring(1), "mame.exe");
 

@@ -17,6 +17,8 @@ namespace Spludlow.MameAO
 		private string _UIHTML;
 		private string _StyleSheet;
 
+		private string _StyleSheetFilename = Path.Combine(Globals.RootDirectory, "_styles.css");
+
 		private readonly string MACHINE_IMAGE_URL = "https://mame.spludlow.co.uk/snap/machine/@machine.jpg";
 		private readonly string SOFTWARE_IMAGE_URL = "https://mame.spludlow.co.uk/snap/software/@softwarelist/@software.jpg";
 
@@ -29,11 +31,15 @@ namespace Spludlow.MameAO
 		{
 			_UIHTML = File.ReadAllText(@"UI.html", Encoding.UTF8);
 
-			string styleSheetFilename = Path.Combine(Globals.RootDirectory, "_styles.css");
-			if (File.Exists(styleSheetFilename) == true)
-				_StyleSheet = File.ReadAllText(styleSheetFilename);
+			if (File.Exists(_StyleSheetFilename) == true)
+				_StyleSheet = File.ReadAllText(_StyleSheetFilename);
 			else
 				_StyleSheet = _DefaultStyleSheet;
+		}
+
+		public void SaveStyle()
+		{
+			File.WriteAllText(_StyleSheetFilename, _StyleSheet, Encoding.UTF8);
 		}
 
 		public void StartListener()
@@ -855,6 +861,10 @@ namespace Spludlow.MameAO
 				font-family: sans-serif;
 				font-size: small;
 				background-color: #c6eafb;
+			}
+
+			body.busy {
+				background-color: #ffbf00;
 			}
 
 			hr {

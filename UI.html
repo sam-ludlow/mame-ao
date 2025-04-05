@@ -149,7 +149,7 @@
 
 			try {
 
-				document.body.style.backgroundColor = status.busy === true ? '#ffbf00' : '#c6eafb';
+				document.body.className = status.busy === true ? 'busy' : '';
 
 				const topRow = document.getElementById('nav').children[0].rows[0];
 
