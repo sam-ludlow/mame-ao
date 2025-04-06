@@ -158,24 +158,8 @@ namespace Spludlow.MameAO
 		{
 			long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
 
-			foreach (DataRow softwareRow in softwareTable.Select("softwarelist_id = " + softwarelist_id))
-			{
-				long software_id = (long)softwareRow["software_id"];
-
-				int dontHaveCount = 0;
-
-				foreach (DataRow row in romTable.Select("software_id = " + software_id))
-				{
-					string sha1 = (string)row["sha1"];
-					string name = (string)row["name"];
-
-					if (Globals.RomHashStore.Exists(sha1) == false)
-						++dontHaveCount;
-				}
-
-				if (dontHaveCount != 0)
-					Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, placeFiles);
-			}
+			foreach (DataRow softwareRow in softwareTable.Select($"softwarelist_id = {softwarelist_id}"))
+				Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, placeFiles);
 		}
 
 		public static void FetchSoftwareDisk()
@@ -204,24 +188,8 @@ namespace Spludlow.MameAO
 		{
 			long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
 
-			foreach (DataRow softwareRow in softwareTable.Select("softwarelist_id = " + softwarelist_id))
-			{
-				long software_id = (long)softwareRow["software_id"];
-
-				int dontHaveCount = 0;
-
-				foreach (DataRow diskRow in diskTable.Select("software_id = " + software_id))
-				{
-					string name = (string)diskRow["name"];
-					string sha1 = (string)diskRow["sha1"];
-
-					if (Globals.DiskHashStore.Exists(sha1) == false)
-						++dontHaveCount;
-				}
-
-				if (dontHaveCount != 0)
-					Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, placeFiles);
-			}
+			foreach (DataRow softwareRow in softwareTable.Select($"softwarelist_id = {softwarelist_id}"))
+				Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, placeFiles);
 		}
 
 		public static void PlaceSoftwareList(string softwareListName)
@@ -243,6 +211,9 @@ namespace Spludlow.MameAO
 				FetchSoftwareRom(softwarelistRow, softwareTable, romTable, true);
 				FetchSoftwareDisk(softwarelistRow, softwareTable, diskTable, true);
 			}
+
+			if (Globals.Settings.Options["PlaceReport"] == "Yes")
+				Globals.Reports.SaveHtmlReport(Globals.WorkerTaskReport, $"Place Assets Software List - {softwareListName}");
 		}
 
 	}

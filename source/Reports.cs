@@ -31,14 +31,14 @@ namespace Spludlow.MameAO
 
 		public static ReportGroup[] ReportGroups = new ReportGroup[] {
 			new ReportGroup(){
-				Key = "source-exists",
-				Text = "Exists on Archive.org",
-				Decription = "Check that files exist in the archive.org source metadata. Tests are NOT performed to check if ZIPs, ROMs, or CHDs are valid.",
-			},
-			new ReportGroup(){
 				Key = "available",
 				Text = "Available & Missing Machines & Software",
 				Decription = "Report on Machines & Software that are available, already downloaded & missing.",
+			},
+			new ReportGroup(){
+				Key = "source-exists",
+				Text = "Exists on Archive.org",
+				Decription = "Check that files exist in the archive.org source metadata. Tests are NOT performed to check if ZIPs, ROMs, or CHDs are valid.",
 			},
 			new ReportGroup(){
 				Key = "integrity",
@@ -48,6 +48,47 @@ namespace Spludlow.MameAO
 		};
 
 		public static ReportType[] ReportTypes = new ReportType[] {
+			
+			//
+
+			new ReportType(){
+				Key = "summary",
+				Group = "available",
+				Code = "AVSUM",
+				Text = "Summary",
+				Decription = "Summary of store completeness.",
+			},
+			new ReportType(){
+				Key = "software-rom-list",
+				Group = "available",
+				Code = "AVSRL",
+				Text = "Software ROM by List",
+				Decription = "Software ROM by List, view completeness of each software list.",
+			},
+			new ReportType(){
+				Key = "software-disk-list",
+				Group = "available",
+				Code = "AVSDL",
+				Text = "Software Disk by List",
+				Decription = "Software Disk by List, view completeness of each software list.",
+			},
+			new ReportType(){
+				Key = "machine",
+				Group = "available",
+				Code = "AVM",
+				Text = "Machines",
+				Decription = "Machine Available & Missing lists.",
+			},
+			new ReportType(){
+				Key = "software",
+				Group = "available",
+				Code = "AVS",
+				Text = "Software",
+				Decription = "Software Available & Missing lists.",
+			},
+
+			//
+
 			new ReportType(){
 				Key = "machine-rom",
 				Group = "source-exists",
@@ -91,34 +132,7 @@ namespace Spludlow.MameAO
 				Decription = "Check that all machine artwork exists.",
 			},
 
-			new ReportType(){
-				Key = "machine",
-				Group = "available",
-				Code = "AVM",
-				Text = "Machines",
-				Decription = "List Machines that are available to run and missing.",
-			},
-			new ReportType(){
-				Key = "software",
-				Group = "available",
-				Code = "AVS",
-				Text = "Software",
-				Decription = "List Software that is available to run and missing.",
-			},
-			new ReportType(){
-				Key = "summary",
-				Group = "available",
-				Code = "AVSUM",
-				Text = "Summary",
-				Decription = "Summary of all store completeness.",
-			},
-			new ReportType(){
-				Key = "software-disk-list",
-				Group = "available",
-				Code = "AVSDL",
-				Text = "Software Disk by List",
-				Decription = "Software Disk by List, view completeness of each disk software list.",
-			},
+			//
 
 			new ReportType(){
 				Key = "machine-softwarelists-exist",
@@ -1143,6 +1157,83 @@ namespace Spludlow.MameAO
 			SaveHtmlReport(table, "Summary of all store completeness");
 		}
 
+		public void Report_AVSRL()
+		{
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+				SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description, COUNT(rom.rom_id) AS rom_count
+				FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id
+				WHERE (rom.sha1 IS NOT NULL)
+				GROUP BY softwarelist.softwarelist_Id, softwarelist.name, softwarelist.description
+				ORDER BY softwarelist.name
+			");
+			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+				SELECT software.software_id, software.softwarelist_id, software.name, software.description, COUNT(rom.rom_Id) AS rom_count
+				FROM ((software INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id
+				WHERE (rom.sha1 IS NOT NULL)
+				GROUP BY software.software_Id, software.softwarelist_Id, software.name, software.description
+				ORDER BY software.softwarelist_id, software.name
+			");
+			DataTable romTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+				SELECT software.software_Id, software.softwarelist_id, rom.rom_id, rom.name, rom.size, rom.sha1
+				FROM ((software INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id
+				WHERE (rom.sha1 IS NOT NULL)
+				ORDER BY software.software_id, software.softwarelist_id, rom.name
+			");
+
+			DataTable resultTable = Tools.MakeDataTable("Software Lists",
+				"SoftwareList	Description	TotalRom	HaveRom		NeedRom	TotalBytes	TotalSize	HaveBytes	HaveSize	Complete	Machines",
+				"String			String		Int32		Int32		Int32	Int64		String		Int64		String		Decimal		String");
+
+			Dictionary<string, List<string>> softwareListMachines = GetSoftwareListMachines();
+
+			foreach (DataRow softwareListRow in softwarelistTable.Rows)
+			{
+				long softwarelist_id = (long)softwareListRow["softwarelist_id"];
+				string softwarelist_name = (string)softwareListRow["name"];
+				string softwarelist_description = (string)softwareListRow["description"];
+
+				DataRow[] romRows = romTable.Select($"softwarelist_id = {softwarelist_id}");
+
+				int totalRom = 0;
+				int haveRom = 0;
+				int needRom = 0;
+
+				long totalBytes = 0;
+				long haveBytes = 0;
+				long needBytes = 0;
+
+				foreach (DataRow romRow in romRows)
+				{
+					string sizeText = ((string)romRow["size"]).Trim().ToLower();
+					long size = sizeText.StartsWith("0x") == true ? Int64.Parse(sizeText.Substring(2), System.Globalization.NumberStyles.HexNumber) : Int64.Parse(sizeText);
+
+					string sha1 = (string)romRow["sha1"];
+
+					++totalRom;
+					totalBytes += size;
+
+					if (Globals.RomHashStore.Exists(sha1) == true)
+					{
+						++haveRom;
+						haveBytes += size;
+					}
+					else
+					{
+						++needRom;
+						needBytes += size;
+					}
+				}
+
+				decimal complete = (decimal)haveRom / totalRom * 100.0M;
+
+				string machines = softwareListMachines.ContainsKey(softwarelist_name) == true ? String.Join(", ", softwareListMachines[softwarelist_name]) : "";
+
+				resultTable.Rows.Add(softwarelist_name, softwarelist_description, totalRom, haveRom, needRom, totalBytes, Tools.DataSize(totalBytes), haveBytes, Tools.DataSize(haveBytes), Math.Round(complete, 3), machines);
+			}
+
+			SaveHtmlReport(resultTable, "Software ROM by List");
+		}
+
 		public void Report_AVSDL()
 		{
 			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
@@ -1165,22 +1256,11 @@ namespace Spludlow.MameAO
 				"WHERE (disk.sha1 IS NOT NULL) " +
 				"ORDER BY software.software_id, software.softwarelist_id, disk.name");
 
-			DataTable listMachineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString,
-				"SELECT softwarelist.name, machine.name FROM machine INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id ORDER BY softwarelist.name, machine.name");
-
 			DataTable resultTable = Tools.MakeDataTable("Software Lists",
 				"SoftwareList	Description	DiskCount	DiskHave	DiskNeed	DiskDup	HaveBytes	HaveSize	Complete	ProjectedBytes	ProjectedSize	Machines",
 				"String			String		Int32		Int32		Int32		Int32	Int64		String		Decimal		Int64			String			String");
 
-			Dictionary<string, List<string>> softwareListMachines = new Dictionary<string, List<string>>();
-			foreach (DataRow row in listMachineTable.Rows)
-			{
-				string softwarelist = (string)row[0];
-				string machine = (string)row[1];
-				if (softwareListMachines.ContainsKey(softwarelist) == false)
-					softwareListMachines.Add(softwarelist, new List<string>());
-				softwareListMachines[softwarelist].Add(machine);
-			}
+			Dictionary<string, List<string>> softwareListMachines = GetSoftwareListMachines();
 
 			foreach (DataRow softwareListRow in softwarelistTable.Rows)
 			{
@@ -1223,8 +1303,26 @@ namespace Spludlow.MameAO
 				resultTable.Rows.Add(softwarelist_name, softwarelist_description, diskCount, foundCount, missingCount, dupCount, foundBytes, Tools.DataSize(foundBytes), Math.Round(complete, 3), projectedBytes, Tools.DataSize(projectedBytes), machines);
 			}
 
+			SaveHtmlReport(resultTable, "Software Disk by List");
+		}
 
-			this.SaveHtmlReport(resultTable, "Software Disk by List");
+		public static Dictionary<string, List<string>> GetSoftwareListMachines()
+		{
+			DataTable listMachineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, @"
+				SELECT softwarelist.name, machine.name FROM machine INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id ORDER BY softwarelist.name, machine.name
+			");
+
+			Dictionary<string, List<string>> softwareListMachines = new Dictionary<string, List<string>>();
+			foreach (DataRow row in listMachineTable.Rows)
+			{
+				string softwarelist = (string)row[0];
+				string machine = (string)row[1];
+				if (softwareListMachines.ContainsKey(softwarelist) == false)
+					softwareListMachines.Add(softwarelist, new List<string>());
+				softwareListMachines[softwarelist].Add(machine);
+			}
+
+			return softwareListMachines;
 		}
 
 		public void Report_IMSLM()

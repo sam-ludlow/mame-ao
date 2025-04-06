@@ -119,7 +119,7 @@ There are also commands available they all start with a dot `.`
 - `.svg` - Convert bitmaps to SVG, [see SVG section](#svg)
 - `.what` - View current MAME whatsnew.txt in default browser.
 - `.ui` - Launch the UI in default browser.
-- `.r` - Reload `UI.html` usfull when developing the UI.
+- `.r` - Reload `UI.html` & `_styles.css` usfull when developing the UI.
 - `.dbm` - Machine database SQL query
 - `.dbs` - Software database SQL query
 - `.creds` - Enter archive.org credentials, If you press `ENTER` twice your auth cookie will be deleted.
@@ -128,6 +128,7 @@ There are also commands available they all start with a dot `.`
 - `.test` - Perform asset place tests
 - `.fetch` - Fetch all required assets, used for maintaining full sets
 - `.software` - Fetch & Place a complete software list, you can have them all ready then load from inside MAME.
+- `.style` - Write file `_styles.css` so you can modify UI stlyes, use command `.r` to refresh changes.
 
 ## Saved State and previous MAME versions
 Saved state somtimes does not work between MAME versions. If you have started something with saved state you may as well use the same MAME version.

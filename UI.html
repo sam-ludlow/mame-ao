@@ -480,6 +480,14 @@
 
 				switch (columnDef.columnName) {
 
+					case 'state':
+						cell.innerHTML = `<a href="${_info.bit_torrent_url}/api/files?hash=${result.hash}&priority=Highest" target="_blank">${value}</a>`;
+						break;
+
+					case 'file_count':
+						cell.innerHTML = `<a href="${_info.bit_torrent_url}/api/files?hash=${result.hash}" target="_blank">${value}</a>`;
+						break;
+
 					default:
 						cell.innerHTML = value;
 						break;
