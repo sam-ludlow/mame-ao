@@ -400,6 +400,46 @@ namespace Spludlow.MameAO
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
+		public string GetSoftwareMediaInterface(DataRow software)
+		{
+			long software_id = (long)software["software_id"];
+			DataTable table = ExecuteFill(_SoftwareConnectionString, $"SELECT * FROM part WHERE software_id = {software_id}");
+
+			string mediaInterface = null;
+
+			foreach (DataRow row in table.Rows)
+			{
+				string mediaInt = (string)row["interface"];
+
+				if (mediaInterface == null)
+					mediaInterface = mediaInt;
+				else
+					if (mediaInterface != mediaInt)
+						Console.WriteLine($"!!! Mixed Media Interface software_id:{software_id}, {mediaInterface}, {mediaInt}");
+			}
+
+			return mediaInterface;
+		}
+		public DataRow[] GetMachineDeviceInstances(string machine_name, string device_interface)
+		{
+			using (SQLiteConnection connection = new SQLiteConnection(_MachineConnectionString))
+			{
+				string commandText = @"
+					SELECT device.*, instance.* FROM (machine INNER JOIN device ON machine.machine_id = device.machine_id) INNER JOIN instance ON device.device_id = instance.device_id
+					WHERE (machine.name = @machine_name) AND (device.interface = @device_interface)
+					ORDER BY device.type, device.tag, instance.name
+				";
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+				{
+					command.Parameters.AddWithValue("@machine_name", machine_name);
+					command.Parameters.AddWithValue("@device_interface", device_interface);
+
+					return ExecuteFill(command).Rows.Cast<DataRow>().ToArray();
+				}
+			}
+		}
+
+
 		public DataQueryProfile GetDataQueryProfile(string key)
 		{
 			DataQueryProfile found = null;

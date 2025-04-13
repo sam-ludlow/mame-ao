@@ -58,7 +58,24 @@ namespace Spludlow.MameAO
 					{
 						if ((string)findSoftware["name"] == softwareName)
 						{
-							// Does this need to be recursive ?
+							// Find the software's media interface
+							string mediaInterface = Globals.Database.GetSoftwareMediaInterface(findSoftware);
+							if (mediaInterface != null)
+							{
+								DataRow[] deviceInstances = Globals.Database.GetMachineDeviceInstances(machineName, mediaInterface);
+								Console.WriteLine($">>> Media Interface: {mediaInterface}, {deviceInstances.Length}");
+								foreach (DataRow deviceInstance in deviceInstances)
+								{
+									Console.WriteLine($">>>> device Instance: {(string)deviceInstance["type"]}, {(string)deviceInstance["tag"]}, {(string)deviceInstance["name"]}");
+								}
+
+							}
+							else
+							{
+								Console.WriteLine($"!!! Can't find Media Interface: {(string)findSoftware["name"]}");
+							}
+
+							// Add other required software - Does this need to be recursive ?
 							foreach (DataRow sharedFeat in Globals.Database.GetSoftwareSharedFeats(findSoftware))
 							{
 								if ((string)sharedFeat["name"] == "requirement")
@@ -556,7 +573,7 @@ namespace Spludlow.MameAO
 
 				foreach (string filename in Directory.GetFiles(extractDirectory, "*", SearchOption.AllDirectories))
 				{
-					string subPathName = filename.Substring(extractDirectory.Length);
+					string subPathName = filename.Substring(extractDirectory.Length + 1);
 					string sha1 = Globals.RomHashStore.Hash(filename);
 					bool required = Globals.Database._AllSHA1s.Contains(sha1);
 					bool imported = false;
