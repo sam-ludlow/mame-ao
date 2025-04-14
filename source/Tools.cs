@@ -140,7 +140,6 @@ namespace Spludlow.MameAO
 			string filename = Path.GetTempFileName();
 			File.WriteAllText(filename, text, Encoding.UTF8);
 			Process.Start("notepad.exe", filename);
-			Environment.Exit(0);
 		}
 
 		public static string TextTable(DataTable table)

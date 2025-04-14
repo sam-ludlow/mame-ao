@@ -439,7 +439,6 @@ namespace Spludlow.MameAO
 			}
 		}
 
-
 		public DataQueryProfile GetDataQueryProfile(string key)
 		{
 			DataQueryProfile found = null;
