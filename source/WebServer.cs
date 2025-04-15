@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
-using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -389,33 +388,6 @@ namespace Spludlow.MameAO
 				favorites_machine = favorites_machine.Trim();
 
 			DataRow[] rows = Globals.Database.GetSoftwareListsSoftware(softwarelist, offset, limit, search, favorites_machine);
-
-			if (rows.Length > 0)
-			{
-				rows[0].Table.Columns.Add("media_interface", typeof(string));
-
-				DataTable partTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, 
-					$"SELECT [part].[software_id], [part].[name], [part].[interface] FROM [part] WHERE [software_id] IN ({String.Join(", ", rows.Select(r => (long)r["software_id"]))})");
-
-				foreach (DataRow row in rows)
-				{
-					long software_id = (long)row["software_id"];
-
-					string media_interface = null;
-					foreach (DataRow partRow in partTable.Select($"software_id = {software_id}"))
-					{
-						string currentInterface = (string)partRow["interface"];
-						if (media_interface == null)
-							media_interface = currentInterface;
-						else
-							if (media_interface != currentInterface)
-								Console.WriteLine($"!!! Mixed Media Interface software_id:{software_id}, {media_interface}, {currentInterface}");
-					}
-
-					if (media_interface != null)
-						row["media_interface"] = media_interface;
-				}
-			}
 
 			JArray results = new JArray();
 

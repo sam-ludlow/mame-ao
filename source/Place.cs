@@ -58,24 +58,7 @@ namespace Spludlow.MameAO
 					{
 						if ((string)findSoftware["name"] == softwareName)
 						{
-							// Find the software's media interface
-							string mediaInterface = Globals.Database.GetSoftwareMediaInterface(findSoftware);
-							if (mediaInterface != null)
-							{
-								DataRow[] deviceInstances = Globals.Database.GetMachineDeviceInstances(machineName, mediaInterface);
-								Console.WriteLine($">>> Media Interface: {mediaInterface}, {deviceInstances.Length}");
-								foreach (DataRow deviceInstance in deviceInstances)
-								{
-									Console.WriteLine($">>>> device Instance: {(string)deviceInstance["type"]}, {(string)deviceInstance["tag"]}, {(string)deviceInstance["name"]}");
-								}
-
-							}
-							else
-							{
-								Console.WriteLine($"!!! Can't find Media Interface: {(string)findSoftware["name"]}");
-							}
-
-							// Add other required software - Does this need to be recursive ?
+							// Does this need to be recursive ?
 							foreach (DataRow sharedFeat in Globals.Database.GetSoftwareSharedFeats(findSoftware))
 							{
 								if ((string)sharedFeat["name"] == "requirement")
@@ -120,9 +103,6 @@ namespace Spludlow.MameAO
 
 				if (softwareFound == 0)
 					throw new ApplicationException($"Did not find software: {machineName}, {softwareName}");
-
-				if (softwareFound > 1)
-					Console.WriteLine("!!! Warning more than one software found, not sure which MAME will use. This can happern if the same name apears in different lists e.g. disk & cassette.");
 			}
 
 			Globals.Samples.PlaceAssets(machine);

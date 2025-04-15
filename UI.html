@@ -1266,6 +1266,9 @@
 				{ heading: 'supported', columnName: 'supported' },
 			];
 
+			if (_path.endsWith('/@fav') === true)
+				columnDefs.push({ heading: 'software list', columnName: 'softwarelist_name' });
+
 			const table = document.createElement('table');
 			table.style = 'width:100%;';
 
@@ -1273,7 +1276,7 @@
 
 				switch (columnDef.columnName) {
 					case 'ao_image':
-						cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${machineData.name} ${result.name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
+						cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${machineData.name} ${result.name}@${result.softwarelist_name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
 						break;
 
 					case 'name':

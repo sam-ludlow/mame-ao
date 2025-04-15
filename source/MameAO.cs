@@ -824,7 +824,24 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			}
 			else
 			{
+				string softwareList = null;
+				if (software.Contains("@") == true)
+				{
+					string[] softParts = software.Split('@');
+					software = softParts[0];
+					softwareList = softParts[1];
+				}
+
 				Place.PlaceAssets(machine, software);
+
+				if (softwareList != null)
+				{
+					string media = Globals.Database.GetSoftwareMedia(machine, softwareList, software);
+
+					if (media != null)
+						software = $"-{media} {software}";
+				}
+
 				Globals.PhoneHome.Ready();
 				Mame.RunMame(binFilename, machine + " " + software + " " + arguments);
 			}

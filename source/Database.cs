@@ -400,31 +400,50 @@ namespace Spludlow.MameAO
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
-		public string GetSoftwareMediaInterface(DataRow software)
+		public string GetSoftwareMedia(string machine_name, string softwarelist_name, string software_name)
 		{
-			long software_id = (long)software["software_id"];
-			DataTable table = ExecuteFill(_SoftwareConnectionString, $"SELECT * FROM part WHERE software_id = {software_id}");
+			string commandText = @"
+				SELECT [part].[name], [part].[interface]
+				FROM ([softwarelist] INNER JOIN [software] ON [softwarelist].softwarelist_id = [software].softwarelist_id) INNER JOIN [part] ON [software].software_id = [part].software_id
+				WHERE (([softwarelist].[name] = @softwarelist_name) AND ([software].[name] = @software_name))
+				ORDER BY [part].[name]
+			";
 
-			string mediaInterface = null;
-
-			foreach (DataRow row in table.Rows)
+			DataTable table;
+			using (SQLiteConnection connection = new SQLiteConnection(_SoftwareConnectionString))
 			{
-				string mediaInt = (string)row["interface"];
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+				{
+					command.Parameters.AddWithValue("@softwarelist_name", softwarelist_name);
+					command.Parameters.AddWithValue("@software_name", software_name);
 
-				if (mediaInterface == null)
-					mediaInterface = mediaInt;
-				else
-					if (mediaInterface != mediaInt)
-						Console.WriteLine($"!!! Mixed Media Interface software_id:{software_id}, {mediaInterface}, {mediaInt}");
+					table = ExecuteFill(command);
+				}
 			}
 
-			return mediaInterface;
-		}
-		public DataRow[] GetMachineDeviceInstances(string machine_name, string device_interface)
-		{
+			if (table.Rows.Count == 0)
+			{
+				Console.WriteLine($"!!! Can't find Software Media Interface, list:{softwarelist_name}, soft:{software_name}");
+				return null;
+			}
+
+			string mediaInterface = null;
+			foreach (DataRow row in table.Rows)
+			{
+				string currentInterface = (string)row["interface"];
+
+				if (mediaInterface == null)
+					mediaInterface = currentInterface;
+				else
+					if (mediaInterface != currentInterface)
+						Console.WriteLine($"!!! Mixed Software Media Interface, list:{softwarelist_name}, soft:{software_name}, {mediaInterface}, {currentInterface}");
+			}
+
+			Console.WriteLine($"Software Interface:	{mediaInterface}");
+
 			using (SQLiteConnection connection = new SQLiteConnection(_MachineConnectionString))
 			{
-				string commandText = @"
+				commandText = @"
 					SELECT device.*, instance.* FROM (machine INNER JOIN device ON machine.machine_id = device.machine_id) INNER JOIN instance ON device.device_id = instance.device_id
 					WHERE (machine.name = @machine_name) AND (device.interface = @device_interface)
 					ORDER BY device.type, device.tag, instance.name
@@ -432,11 +451,23 @@ namespace Spludlow.MameAO
 				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 				{
 					command.Parameters.AddWithValue("@machine_name", machine_name);
-					command.Parameters.AddWithValue("@device_interface", device_interface);
+					command.Parameters.AddWithValue("@device_interface", mediaInterface);
 
-					return ExecuteFill(command).Rows.Cast<DataRow>().ToArray();
+					table = ExecuteFill(command);
 				}
 			}
+
+			if (table.Rows.Count == 0)
+			{
+				Console.WriteLine($"!!! Can't find Machine Device Instances, machine_name:{machine_name}, mediaInterface:{mediaInterface}");
+				return null;
+			}
+
+			string[] names = table.Rows.Cast<DataRow>().Select(r => (string)r["name"]).ToArray();
+
+			Console.WriteLine($"Machine Media:	{names[0]}	({String.Join(", ", names)})");
+
+			return names[0];
 		}
 
 		public DataQueryProfile GetDataQueryProfile(string key)
