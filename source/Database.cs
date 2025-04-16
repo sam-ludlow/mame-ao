@@ -416,7 +416,6 @@ namespace Spludlow.MameAO
 				{
 					command.Parameters.AddWithValue("@softwarelist_name", softwarelist_name);
 					command.Parameters.AddWithValue("@software_name", software_name);
-
 					table = ExecuteFill(command);
 				}
 			}
@@ -445,25 +444,32 @@ namespace Spludlow.MameAO
 			{
 				commandText = @"
 					SELECT device.*, instance.* FROM (machine INNER JOIN device ON machine.machine_id = device.machine_id) INNER JOIN instance ON device.device_id = instance.device_id
-					WHERE (machine.name = @machine_name) AND (device.interface = @device_interface)
+					WHERE (machine.name = @machine_name)
 					ORDER BY device.type, device.tag, instance.name
 				";
 				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 				{
 					command.Parameters.AddWithValue("@machine_name", machine_name);
-					command.Parameters.AddWithValue("@device_interface", mediaInterface);
-
 					table = ExecuteFill(command);
 				}
 			}
 
-			if (table.Rows.Count == 0)
+			List<string> names = new List<string>();
+			foreach (DataRow row in table.Rows)
+			{
+				if (row.IsNull("interface") == true)
+					continue;
+
+				List<string> interfaces = new List<string>(((string)row["interface"]).Split(',').Select(name => name.Trim()));
+				if (interfaces.Contains(mediaInterface) == true)
+					names.Add((string)row["name"]);
+			}
+
+			if (names.Count == 0)
 			{
 				Console.WriteLine($"!!! Can't find Machine Device Instances, machine_name:{machine_name}, mediaInterface:{mediaInterface}");
 				return null;
 			}
-
-			string[] names = table.Rows.Cast<DataRow>().Select(r => (string)r["name"]).ToArray();
 
 			Console.WriteLine($"Machine Media:	{names[0]}	({String.Join(", ", names)})");
 
