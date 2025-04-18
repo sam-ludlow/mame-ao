@@ -41,9 +41,9 @@ namespace Spludlow.MameAO
 				Decription = "Check that files exist in the archive.org source metadata. Tests are NOT performed to check if ZIPs, ROMs, or CHDs are valid.",
 			},
 			new ReportGroup(){
-				Key = "integrity",
-				Text = "MAME Data Integrity",
-				Decription = "Report on various aspects of MAME Data Integrity.",
+				Key = "interesting",
+				Text = "Interesting MAME Data",
+				Decription = "Report on interesting things of MAME Data.",
 			},
 		};
 
@@ -136,17 +136,24 @@ namespace Spludlow.MameAO
 
 			new ReportType(){
 				Key = "machine-softwarelists-exist",
-				Group = "integrity",
+				Group = "interesting",
 				Code = "IMSLM",
 				Text = "Machine Lists Missing",
 				Decription = "Machines Software Lists Missing.",
 			},
 			new ReportType(){
 				Key = "softwarelists-without-machines",
-				Group = "integrity",
+				Group = "interesting",
 				Code = "ISLWM",
 				Text = "Software Lists no Machines",
 				Decription = "Software Lists without Machines.",
+			},
+			new ReportType(){
+				Key = "software-shared-features",
+				Group = "interesting",
+				Code = "ISSF",
+				Text = "Software Shared Features",
+				Decription = "Software with Shared Features.",
 			},
 
 		};
@@ -1350,7 +1357,7 @@ namespace Spludlow.MameAO
 			DataSet dataSet = new DataSet();
 			dataSet.Tables.Add(table);
 
-			this.SaveHtmlReport(dataSet, "Machines Software Lists Missing");
+			SaveHtmlReport(dataSet, "Machines Software Lists Missing");
 		}
 
 		public void Report_ISLWM()
@@ -1404,9 +1411,37 @@ namespace Spludlow.MameAO
 			table.TableName = "MAME hash directory";
 			dataSet.Tables.Add(table);
 
-			this.SaveHtmlReport(dataSet, "Software Lists without Machines");
-
+			SaveHtmlReport(dataSet, "Software Lists without Machines");
 		}
 
+		public void Report_ISSF()
+		{
+			DataTable table = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+				SELECT softwarelist.softwarelist_id, softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description,
+				software.software_id, software.name AS software_name, software.description AS software_description,
+				sharedfeat.name, sharedfeat.value
+				FROM (softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN sharedfeat ON software.software_id = sharedfeat.software_id
+				ORDER BY softwarelist.name, software.name, sharedfeat.name, sharedfeat.value
+			");
+
+			DataSet dataSet = new DataSet();
+
+			foreach (string sharedfeatName in table.Rows.Cast<DataRow>().Select(row => (string)row["name"]).Distinct().OrderBy(name => name))
+			{
+				DataView view = new DataView(table);
+				view.RowFilter = $"[name] = '{sharedfeatName}'";
+				DataTable viewTable = table.Clone();
+				foreach (DataRowView rowView in view)
+					viewTable.ImportRow(rowView.Row);
+				viewTable.TableName = sharedfeatName;
+				dataSet.Tables.Add(viewTable);
+			}
+
+			SaveHtmlReport(dataSet, "Software with Shared Features");
+
+			table = dataSet.Tables["requirement"];
+			table.DataSet.Tables.Remove(table);
+			SaveHtmlReport(table, "Software with Shared Features (requirement)");
+		}
 	}
 }
