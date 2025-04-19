@@ -155,6 +155,13 @@ namespace Spludlow.MameAO
 				Text = "Software Shared Features",
 				Decription = "Software with Shared Features.",
 			},
+			new ReportType(){
+				Key = "software-mixed-media",
+				Group = "interesting",
+				Code = "ISMM",
+				Text = "Software Mixed Media",
+				Decription = "Software with Mixed Media.",
+			},
 
 		};
 
@@ -1442,6 +1449,41 @@ namespace Spludlow.MameAO
 			table = dataSet.Tables["requirement"];
 			table.DataSet.Tables.Remove(table);
 			SaveHtmlReport(table, "Software with Shared Features (requirement)");
+		}
+
+		public void Report_ISMM()
+		{
+			DataTable table = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+				SELECT softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description,
+				software.software_id, software.name, software.cloneof, software.description
+				FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id
+				ORDER BY softwarelist.name, software.name;
+			");
+			DataTable partTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+				SELECT part.* FROM part ORDER BY part.software_id, part.name, part.interface;
+			");
+
+			table.Columns.Add("interface_count", typeof(int));
+			table.Columns.Add("interfaces", typeof(string));
+
+			foreach (DataRow softwareRow in table.Rows)
+			{
+				long software_id = (long)softwareRow["software_id"];
+				DataRow[] partRows = partTable.Select($"software_id = {software_id}");
+
+				var interfaces = partRows.Select(row => (string)row["interface"]).Distinct();
+
+				softwareRow["interface_count"] = interfaces.Count();
+				softwareRow["interfaces"] = String.Join(", ", interfaces);
+			}
+
+			DataView view = new DataView(table);
+			view.RowFilter = $"[interface_count] <> 1";
+			DataTable viewTable = table.Clone();
+			foreach (DataRowView rowView in view)
+				viewTable.ImportRow(rowView.Row);
+
+			SaveHtmlReport(viewTable, "Software with Mixed Media");
 		}
 	}
 }

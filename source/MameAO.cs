@@ -815,9 +815,6 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			machine = machine.ToLower().Trim();
 			software = software.ToLower().Trim();
 
-			if (Globals.Settings.Options["Cheats"] == "Yes")
-				arguments += " -cheat";
-
 			if (machine.StartsWith(".") == true)
 			{
 				Mame.RunMame(binFilename, arguments);
@@ -841,6 +838,9 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 					if (media != null)
 						software = $"-{media} {software}";
 				}
+
+				if (Globals.Settings.Options["Cheats"] == "Yes")
+					arguments += " -cheat";
 
 				Globals.PhoneHome.Ready();
 				Mame.RunMame(binFilename, machine + " " + software + " " + arguments);
