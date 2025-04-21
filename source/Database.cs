@@ -400,6 +400,79 @@ namespace Spludlow.MameAO
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
+		public string GetRequiredMedia(string machine_name, string softwareList, string software, Place.PlaceInfo info)
+		{
+			if (info.RequiredSoftwareNames.Length == 1)
+				return $"-{GetSoftwareMedia(machine_name, softwareList, software)} {software}";
+
+			DataTable table;
+			string commandText = @"
+				SELECT softwarelist.name, softwarelist.status
+				FROM machine INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id
+				WHERE (machine.name = @machine_name)
+				ORDER BY softwarelist.name;
+			";
+			using (SQLiteConnection connection = new SQLiteConnection(_MachineConnectionString))
+			{
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+				{
+					command.Parameters.AddWithValue("@machine_name", machine_name);
+					table = ExecuteFill(command);
+				}
+			}
+			var softwareListNames = table.Rows.Cast<DataRow>().Select(row => (string)row["name"]);
+
+			List<string> mediaSoftwares = new List<string>();
+
+			for (int index = info.RequiredSoftwareNames.Length - 1; index >= 0; --index)
+			{
+				string requiredSoftwareName = info.RequiredSoftwareNames[index];
+
+				List<string> shortNames = new List<string>();
+
+				foreach (string softwareListName in softwareListNames)
+				{
+					commandText = @"
+						SELECT part.name, part.interface
+						FROM (softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id
+						WHERE ((softwarelist.name = @softwarelist_name) AND (software.name = @software_name))
+						ORDER BY part.name;
+					";
+					using (SQLiteConnection connection = new SQLiteConnection(_SoftwareConnectionString))
+					{
+						using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+						{
+							command.Parameters.AddWithValue("@softwarelist_name", softwareListName);
+							command.Parameters.AddWithValue("@software_name", requiredSoftwareName);
+							table = ExecuteFill(command);
+						}
+					}
+
+					foreach (string partName in table.Rows.Cast<DataRow>().Select(row => (string)row["name"]))
+					{
+						string shortName = partName;
+						while (Char.IsDigit(shortName[shortName.Length - 1]) == true)
+							shortName = shortName.Substring(0, shortName.Length - 1);
+
+						//
+						// Special Logic ???
+						//
+
+						if (shortName.StartsWith("cass") == true)
+							shortName = "cass";
+
+						if (shortNames.Contains(shortName) == false)
+							shortNames.Add(shortName);
+					}
+				}
+
+				foreach (string shortName in shortNames)
+					mediaSoftwares.Add($"-{shortName} {requiredSoftwareName}");
+			}
+
+			return String.Join(" ", mediaSoftwares);
+		}
+
 		public string GetSoftwareMedia(string machine_name, string softwarelist_name, string software_name)
 		{
 			string commandText = @"

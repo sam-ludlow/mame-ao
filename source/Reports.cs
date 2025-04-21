@@ -1431,6 +1431,25 @@ namespace Spludlow.MameAO
 				ORDER BY softwarelist.name, software.name, sharedfeat.name, sharedfeat.value
 			");
 
+			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+				SELECT softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description, software.name AS software_name, software.description AS software_description
+				FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id
+				ORDER BY softwarelist.name, software.name;
+			");
+			softwareTable.PrimaryKey = new DataColumn[] { softwareTable.Columns["softwarelist_name"], softwareTable.Columns["software_name"] };
+
+			DataTable machineSoftwareListTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, @"
+				SELECT machine.name AS machine_name, softwarelist.name AS softwarelist_name, softwarelist.status
+				FROM machine INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id
+				ORDER BY machine.name, softwarelist.name, softwarelist.status DESC;
+			");
+
+			DataTable softwarePartTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+				SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, part.name AS part_name, part.interface
+				FROM (softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id
+				ORDER BY softwarelist.name, software.name, part.name;
+			");
+
 			DataSet dataSet = new DataSet();
 
 			foreach (string sharedfeatName in table.Rows.Cast<DataRow>().Select(row => (string)row["name"]).Distinct().OrderBy(name => name))
@@ -1448,6 +1467,87 @@ namespace Spludlow.MameAO
 
 			table = dataSet.Tables["requirement"];
 			table.DataSet.Tables.Remove(table);
+
+			table.Columns.Add("machine_names", typeof(string));
+			table.Columns.Add("part_names", typeof(string));
+			table.Columns.Add("short_names", typeof(string));
+
+			table.Columns.Add("require_softwarelist_name", typeof(string));
+			table.Columns.Add("require_softwarelist_description", typeof(string));
+			table.Columns.Add("require_software_name", typeof(string));
+			table.Columns.Add("require_software_description", typeof(string));
+
+			foreach (DataRow row in table.Rows)
+			{
+				string[] parts = ((string)row["value"]).Split(':');
+
+				string require_softwarelist_name = null;
+				string require_software_name = parts[parts.Length - 1];
+				if (parts.Length > 1)
+				{
+					require_softwarelist_name = parts[0];
+					if (softwareTable.Rows.Find(new object[] { require_softwarelist_name, require_software_name }) == null)
+						require_softwarelist_name = null;
+				}
+
+				List<string> softwareLists = new List<string>();
+
+				if (require_softwarelist_name == null)
+				{
+					string softwarelist_name = (string)row["softwarelist_name"];
+
+					var machineNames = machineSoftwareListTable.Select($"[softwarelist_name] = '{softwarelist_name}' AND [status] = 'original'").Cast<DataRow>().Select(r => (string)r["machine_name"]);
+
+					row["machine_names"] = String.Join(", ", machineNames);
+
+					foreach (string machineName in machineNames)
+					{
+						foreach (DataRow machineSoftwareListRow in machineSoftwareListTable.Select($"[machine_name] = '{machineName}'"))
+						{
+							string listName = (string)machineSoftwareListRow["softwarelist_name"];
+
+							if (softwareLists.Contains(listName) == false)
+								softwareLists.Add(listName);
+						}
+					}
+				}
+				else
+				{
+					softwareLists.Add(require_softwarelist_name);
+				}
+
+				row["require_softwarelist_name"] = String.Join(", ", softwareLists);
+				row["require_softwarelist_description"] = null;
+				row["require_software_name"] = require_software_name;
+				row["require_software_description"] = null;
+
+				List<string> partNames = new List<string>();
+				List<string> shortNames = new List<string>();
+				foreach (string softwareList in softwareLists)
+				{
+					DataRow softwareRow = softwareTable.Rows.Find(new object[] { softwareList, require_software_name });
+					if (softwareRow != null)
+					{
+						DataRow[] partRows = softwarePartTable.Select($"softwarelist_name = '{softwareList}' AND software_name = '{require_software_name}'");
+
+						foreach (string partName in partRows.Select(r => (string)r["part_name"]))
+						{
+							partNames.Add($"{softwareList}/{require_software_name}:{partName}");
+
+							string shortName = partName;
+							while (Char.IsDigit(shortName[shortName.Length - 1]) == true)
+								shortName = shortName.Substring(0, shortName.Length - 1);
+
+							if (shortNames.Contains(shortName) == false)
+								shortNames.Add(shortName);
+						}
+					}
+				}
+
+				row["part_names"] = String.Join(", ", partNames);
+				row["short_names"] = String.Join(", ", shortNames);
+			}
+
 			SaveHtmlReport(table, "Software with Shared Features (requirement)");
 		}
 

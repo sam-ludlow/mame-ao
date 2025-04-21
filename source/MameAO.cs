@@ -829,21 +829,16 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 					softwareList = softParts[1];
 				}
 
-				Place.PlaceAssets(machine, software);
+				Place.PlaceInfo info = Place.PlaceAssets(machine, software);
 
 				if (softwareList != null)
-				{
-					string media = Globals.Database.GetSoftwareMedia(machine, softwareList, software);
-
-					if (media != null)
-						software = $"-{media} {software}";
-				}
+					software = Globals.Database.GetRequiredMedia(machine, softwareList, software, info);
 
 				if (Globals.Settings.Options["Cheats"] == "Yes")
 					arguments += " -cheat";
 
 				Globals.PhoneHome.Ready();
-				Mame.RunMame(binFilename, machine + " " + software + " " + arguments);
+				Mame.RunMame(binFilename, $"{machine} {software} {arguments}");
 			}
 		}
 

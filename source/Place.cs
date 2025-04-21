@@ -3,12 +3,18 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 
 namespace Spludlow.MameAO
 {
 	public class Place
 	{
-		public static void PlaceAssets(string machineName, string softwareName)
+		public class PlaceInfo
+		{
+			public string[] RequiredSoftwareNames;
+		}
+
+		public static PlaceInfo PlaceAssets(string machineName, string softwareName)
 		{
 			Tools.ConsoleHeading(1, "Asset Acquisition");
 			Console.WriteLine();
@@ -23,7 +29,7 @@ namespace Spludlow.MameAO
 					""
 				});
 
-				return;
+				return null;
 			}
 
 			DataRow machine = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: {machineName}");
@@ -35,12 +41,13 @@ namespace Spludlow.MameAO
 			missingCount += PlaceMachineRoms(machineName, true);
 			missingCount += PlaceMachineDisks(machineName, true);
 
+			List<string> requiredSoftwareNames = new List<string>();
 			if (softwareName != "")
 			{
 				DataRow[] softwarelists = Globals.Database.GetMachineSoftwareLists(machine);
 				int softwareFound = 0;
 
-				HashSet<string> requiredSoftwareNames = new HashSet<string>(new string[] { softwareName });
+				requiredSoftwareNames.Add(softwareName);
 
 				foreach (DataRow machineSoftwarelist in softwarelists)
 				{
@@ -67,7 +74,8 @@ namespace Spludlow.MameAO
 									string[] valueParts = ((string)sharedFeat["value"]).Split(new char[] { ':' });
 									string value = valueParts[valueParts.Length - 1];
 
-									requiredSoftwareNames.Add(value);
+									if (requiredSoftwareNames.Contains(value) == false)
+										requiredSoftwareNames.Add(value);
 								}
 							}
 						}
@@ -135,6 +143,11 @@ namespace Spludlow.MameAO
 				Console.WriteLine($"Feature issue:  {Tools.DataRowValue(feature, "type")} {Tools.DataRowValue(feature, "status")} {Tools.DataRowValue(feature, "overall")}");
 
 			Console.WriteLine();
+
+			PlaceInfo info = new PlaceInfo();
+			info.RequiredSoftwareNames = requiredSoftwareNames.ToArray();
+
+			return info;
 		}
 
 		public static int PlaceMachineRoms(string mainMachineName, bool placeFiles)
