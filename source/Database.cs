@@ -299,6 +299,53 @@ namespace Spludlow.MameAO
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
+		public DataRow GetSoftware(DataRow softwarelist, string software_name)
+		{
+			long softwarelist_id = (long)softwarelist["softwarelist_id"];
+
+			DataTable table;
+			using (SQLiteConnection connection = new SQLiteConnection(_SoftwareConnectionString))
+			{
+				string commandText = @"SELECT * FROM software WHERE softwarelist_id = @softwarelist_id AND software.name = @software_name";
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+				{
+					command.Parameters.AddWithValue("@softwarelist_id", softwarelist_id);
+					command.Parameters.AddWithValue("@software_name", software_name);
+					table = ExecuteFill(command);
+				}
+			}
+
+			if (table.Rows.Count == 0)
+				return null;
+
+			return table.Rows[0];
+		}
+
+		public DataRow GetSoftware(string softwarelist_name, string software_name)
+		{
+			DataTable table;
+			using (SQLiteConnection connection = new SQLiteConnection(_SoftwareConnectionString))
+			{
+				string commandText = @"
+					SELECT software.* FROM softwarelist
+					INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id
+					WHERE ((softwarelist.name = @softwarelist_name) AND (software.name = @software_name))
+				";
+
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+				{
+					command.Parameters.AddWithValue("@softwarelist_name", softwarelist_name);
+					command.Parameters.AddWithValue("@software_name", software_name);
+					table = ExecuteFill(command);
+				}
+			}
+
+			if (table.Rows.Count == 0)
+				return null;
+
+			return table.Rows[0];
+		}
+
 		public DataRow[] GetSoftwareListsSoftware(string softwareListName, int offset, int limit, string search, string favorites_machine)
 		{
 			string commandText = "SELECT software.*, softwarelist.name AS softwarelist_name, COUNT() OVER() AS ao_total FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id " +
@@ -400,77 +447,84 @@ namespace Spludlow.MameAO
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
-		public string GetRequiredMedia(string machine_name, string softwareList, string software, Place.PlaceInfo info)
+		public DataRow[] GetSoftwareParts(string softwarelist_name, string software_name)
 		{
-			if (info.RequiredSoftwareNames.Length == 1)
-				return $"-{GetSoftwareMedia(machine_name, softwareList, software)} {software}";
+			string commandText = @"
+				SELECT part.*
+				FROM (softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id
+				WHERE (softwarelist.name = @softwarelist_name AND software.name = @software_name)";
 
 			DataTable table;
-			string commandText = @"
-				SELECT softwarelist.name, softwarelist.status
-				FROM machine INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id
-				WHERE (machine.name = @machine_name)
-				ORDER BY softwarelist.name;
-			";
-			using (SQLiteConnection connection = new SQLiteConnection(_MachineConnectionString))
+			using (SQLiteConnection connection = new SQLiteConnection(_SoftwareConnectionString))
 			{
 				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 				{
-					command.Parameters.AddWithValue("@machine_name", machine_name);
+					command.Parameters.AddWithValue("@softwarelist_name", softwarelist_name);
+					command.Parameters.AddWithValue("@software_name", software_name);
+
 					table = ExecuteFill(command);
 				}
 			}
-			var softwareListNames = table.Rows.Cast<DataRow>().Select(row => (string)row["name"]);
 
-			List<string> mediaSoftwares = new List<string>();
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
 
-			for (int index = info.RequiredSoftwareNames.Length - 1; index >= 0; --index)
+		public string GetRequiredMedia(string machine_name, string softwarelist_name, string software_name)
+		{
+			DataRow softwareListRow = GetSoftwareList(softwarelist_name) ?? throw new ApplicationException($"GetRequiredMedia Software List not found: {softwarelist_name}");
+			DataRow softwareRow = GetSoftware(softwareListRow, software_name) ?? throw new ApplicationException($"GetRequiredMedia Software not found: {software_name}");
+
+			List<string> results = new List<string>();
+
+			foreach (DataRow sharedFeatRow in GetSoftwareSharedFeats(softwareRow))
 			{
-				string requiredSoftwareName = info.RequiredSoftwareNames[index];
+				if ((string)sharedFeatRow["name"] != "requirement")
+					continue;
 
-				List<string> shortNames = new List<string>();
+				string[] valueParts = ((string)sharedFeatRow["value"]).Split(':');
 
-				foreach (string softwareListName in softwareListNames)
+				string require_softwarelist_name = null;
+				string require_software_name = valueParts[valueParts.Length - 1];
+				if (valueParts.Length > 1)
 				{
-					commandText = @"
-						SELECT part.name, part.interface
-						FROM (softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id
-						WHERE ((softwarelist.name = @softwarelist_name) AND (software.name = @software_name))
-						ORDER BY part.name;
-					";
-					using (SQLiteConnection connection = new SQLiteConnection(_SoftwareConnectionString))
+					require_softwarelist_name = valueParts[0];
+
+					if (GetSoftware(require_softwarelist_name, require_software_name) == null)
+						require_softwarelist_name = null;
+				}
+
+				if (require_softwarelist_name == null && GetSoftware(softwarelist_name, require_software_name) != null)
+					require_softwarelist_name = softwarelist_name;
+
+				if (require_softwarelist_name == null)
+				{
+					DataRow machineRow = GetMachine(machine_name);
+					foreach (DataRow machineSoftwareListRow in GetMachineSoftwareLists(machineRow))
 					{
-						using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+						string machineSoftwareList = (string)machineSoftwareListRow["name"];
+
+						if (GetSoftware(machineSoftwareList, require_software_name) != null)
 						{
-							command.Parameters.AddWithValue("@softwarelist_name", softwareListName);
-							command.Parameters.AddWithValue("@software_name", requiredSoftwareName);
-							table = ExecuteFill(command);
+							if (require_softwarelist_name == null)
+								require_softwarelist_name = machineSoftwareList;
+							else
+								Console.WriteLine($"!!! Multiple software lists for sharedfeat.value (using first found): {machine_name}, {softwarelist_name}, {software_name} => {machineSoftwareList}, {require_software_name}");
 						}
-					}
-
-					foreach (string partName in table.Rows.Cast<DataRow>().Select(row => (string)row["name"]))
-					{
-						string shortName = partName;
-						while (Char.IsDigit(shortName[shortName.Length - 1]) == true)
-							shortName = shortName.Substring(0, shortName.Length - 1);
-
-						//
-						// Special Logic ???
-						//
-
-						if (shortName.StartsWith("cass") == true)
-							shortName = "cass";
-
-						if (shortNames.Contains(shortName) == false)
-							shortNames.Add(shortName);
 					}
 				}
 
-				foreach (string shortName in shortNames)
-					mediaSoftwares.Add($"-{shortName} {requiredSoftwareName}");
+				if (require_softwarelist_name == null)
+				{
+					Console.WriteLine($"!!! Not found Software list for sharedfeat.value: {machine_name}, {softwarelist_name}, {software_name} => {valueParts[0]}, {valueParts[1]}");
+					continue;
+				}
+
+				results.Add(GetSoftwareMedia(machine_name, require_softwarelist_name, require_software_name));
 			}
 
-			return String.Join(" ", mediaSoftwares);
+			results.Add(GetSoftwareMedia(machine_name, softwarelist_name, software_name));
+
+			return String.Join(" ", results);
 		}
 
 		public string GetSoftwareMedia(string machine_name, string softwarelist_name, string software_name)
@@ -478,7 +532,7 @@ namespace Spludlow.MameAO
 			string commandText = @"
 				SELECT [part].[name], [part].[interface]
 				FROM ([softwarelist] INNER JOIN [software] ON [softwarelist].softwarelist_id = [software].softwarelist_id) INNER JOIN [part] ON [software].software_id = [part].software_id
-				WHERE (([softwarelist].[name] = @softwarelist_name) AND ([software].[name] = @software_name))
+				WHERE (([softwarelist].[name] = @softwarelist_name) AND ([software].[name] = @software_name) AND ([part].[interface] IS NOT NULL))
 				ORDER BY [part].[name]
 			";
 
@@ -495,29 +549,17 @@ namespace Spludlow.MameAO
 
 			if (table.Rows.Count == 0)
 			{
-				Console.WriteLine($"!!! Can't find Software Media Interface, list:{softwarelist_name}, soft:{software_name}");
-				return null;
+				Console.WriteLine($"!!! Can't find Software Media Interfaces, list:{softwarelist_name}, soft:{software_name}");
+				return software_name;
 			}
 
-			string mediaInterface = null;
-			foreach (DataRow row in table.Rows)
-			{
-				string currentInterface = (string)row["interface"];
-
-				if (mediaInterface == null)
-					mediaInterface = currentInterface;
-				else
-					if (mediaInterface != currentInterface)
-						Console.WriteLine($"!!! Mixed Software Media Interface, list:{softwarelist_name}, soft:{software_name}, {mediaInterface}, {currentInterface}");
-			}
-
-			Console.WriteLine($"Software Interface:	{mediaInterface}");
+			var softwareMediaInterfaces = table.Rows.Cast<DataRow>().Select(r => (string)r["interface"]);
 
 			using (SQLiteConnection connection = new SQLiteConnection(_MachineConnectionString))
 			{
 				commandText = @"
 					SELECT device.*, instance.* FROM (machine INNER JOIN device ON machine.machine_id = device.machine_id) INNER JOIN instance ON device.device_id = instance.device_id
-					WHERE (machine.name = @machine_name)
+					WHERE (machine.name = @machine_name AND [device].[interface] IS NOT NULL)
 					ORDER BY device.type, device.tag, instance.name
 				";
 				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
@@ -527,26 +569,41 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			List<string> names = new List<string>();
+			Dictionary<string, List<string>> machineInterfaceBriefnames = new Dictionary<string, List<string>>();
+
 			foreach (DataRow row in table.Rows)
 			{
-				if (row.IsNull("interface") == true)
-					continue;
+				string device_interface = (string)row["interface"];
+				string instance_briefname = (string)row["briefname"];
 
-				List<string> interfaces = new List<string>(((string)row["interface"]).Split(',').Select(name => name.Trim()));
-				if (interfaces.Contains(mediaInterface) == true)
-					names.Add((string)row["name"]);
+				if (machineInterfaceBriefnames.ContainsKey(device_interface) == false)
+					machineInterfaceBriefnames.Add(device_interface, new List<string>());
+
+				machineInterfaceBriefnames[device_interface].Add(instance_briefname);
 			}
 
-			if (names.Count == 0)
+			List<string> results = new List<string>();
+
+			foreach (string mediaInterface in softwareMediaInterfaces)
 			{
-				Console.WriteLine($"!!! Can't find Machine Device Instances, machine_name:{machine_name}, mediaInterface:{mediaInterface}");
-				return null;
+				if (machineInterfaceBriefnames.ContainsKey(mediaInterface) == true)
+				{
+					List<string> names = machineInterfaceBriefnames[mediaInterface];
+					if (names.Count > 0)
+					{
+						results.Add($"-{names[0]} {software_name}");
+						names.RemoveAt(0);
+					}
+				}
 			}
 
-			Console.WriteLine($"Machine Media:	{names[0]}	({String.Join(", ", names)})");
+			if (results.Count == 0)
+			{
+				Console.WriteLine($"!!! Can't find Machine Device Instances: {machine_name}, {softwarelist_name}, {software_name}");
+				return software_name;
+			}
 
-			return names[0];
+			return String.Join(" ", results);
 		}
 
 		public DataQueryProfile GetDataQueryProfile(string key)

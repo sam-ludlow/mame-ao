@@ -829,10 +829,10 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 					softwareList = softParts[1];
 				}
 
-				Place.PlaceInfo info = Place.PlaceAssets(machine, software);
+				Place.PlaceAssets(machine, software);
 
 				if (softwareList != null)
-					software = Globals.Database.GetRequiredMedia(machine, softwareList, software, info);
+					software = Globals.Database.GetRequiredMedia(machine, softwareList, software);
 
 				if (Globals.Settings.Options["Cheats"] == "Yes")
 					arguments += " -cheat";

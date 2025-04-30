@@ -1468,6 +1468,8 @@ namespace Spludlow.MameAO
 			table = dataSet.Tables["requirement"];
 			table.DataSet.Tables.Remove(table);
 
+			table.Columns.Add("status", typeof(string));
+
 			table.Columns.Add("machine_names", typeof(string));
 			table.Columns.Add("part_names", typeof(string));
 			table.Columns.Add("short_names", typeof(string));
@@ -1479,6 +1481,9 @@ namespace Spludlow.MameAO
 
 			foreach (DataRow row in table.Rows)
 			{
+				string software_name = (string)row["software_name"];
+				string softwarelist_name = (string)row["softwarelist_name"];
+
 				string[] parts = ((string)row["value"]).Split(':');
 
 				string require_softwarelist_name = null;
@@ -1487,65 +1492,106 @@ namespace Spludlow.MameAO
 				{
 					require_softwarelist_name = parts[0];
 					if (softwareTable.Rows.Find(new object[] { require_softwarelist_name, require_software_name }) == null)
+					{
+						Console.WriteLine($"!!! Could not find required software from sharedfeat.value (ignoring list): {software_name}, {softwarelist_name} => {require_softwarelist_name}, {require_software_name}");
 						require_softwarelist_name = null;
+					}
 				}
 
-				List<string> softwareLists = new List<string>();
+				DataRow requireSoftwareRow;
 
-				if (require_softwarelist_name == null)
+				if (require_softwarelist_name != null)
 				{
-					string softwarelist_name = (string)row["softwarelist_name"];
+					requireSoftwareRow = softwareTable.Rows.Find(new object[] { require_softwarelist_name, require_software_name });
 
+					if (requireSoftwareRow != null)
+						row["status"] = "- Found with 2 part value";
+					else
+						row["status"] = "NOT Found with 2 part value";	//	<<< dont hapern - becuase of above
+				}
+				else
+				{
+					requireSoftwareRow = softwareTable.Rows.Find(new object[] { softwarelist_name, require_software_name });
+
+					if (requireSoftwareRow != null)
+						row["status"] = "- Found with 1 part value in current software list";
+					else
+						row["status"] = "NOT Found with 1 part value in current software list";
+				}
+
+				if (requireSoftwareRow == null)
+				{
 					var machineNames = machineSoftwareListTable.Select($"[softwarelist_name] = '{softwarelist_name}' AND [status] = 'original'").Cast<DataRow>().Select(r => (string)r["machine_name"]);
 
 					row["machine_names"] = String.Join(", ", machineNames);
 
-					foreach (string machineName in machineNames)
+					List<string> allMachineSoftwareLists = new List<string>();
+					foreach (string machineName in machineNames)	//	Will have machine name when placing
 					{
-						foreach (DataRow machineSoftwareListRow in machineSoftwareListTable.Select($"[machine_name] = '{machineName}'"))
+						foreach (string listName in machineSoftwareListTable.Select($"[machine_name] = '{machineName}'").Cast<DataRow>().Select(r => (string)r["softwarelist_name"]))
 						{
-							string listName = (string)machineSoftwareListRow["softwarelist_name"];
-
-							if (softwareLists.Contains(listName) == false)
-								softwareLists.Add(listName);
+							if (allMachineSoftwareLists.Contains(listName) ==  false)
+								allMachineSoftwareLists.Add(listName);
 						}
 					}
-				}
-				else
-				{
-					softwareLists.Add(require_softwarelist_name);
+
+					List<DataRow> foundRequireSoftwareRows = new List<DataRow>();
+					foreach (string listName in allMachineSoftwareLists)
+					{
+						requireSoftwareRow = softwareTable.Rows.Find(new object[] { listName, require_software_name });
+						if (requireSoftwareRow != null)
+							foundRequireSoftwareRows.Add(requireSoftwareRow);
+					}
+
+					// Assume first only affects pce/tg16 will have the machine at place time anyway
+					requireSoftwareRow = null;
+					if (foundRequireSoftwareRows.Count > 0)
+						requireSoftwareRow = foundRequireSoftwareRows[0];
+
+					row["status"] = $"count:{foundRequireSoftwareRows.Count}";
+
+
+					row["require_softwarelist_name"] = String.Join(", ", foundRequireSoftwareRows.Select(r => $"{(string)r["softwarelist_name"]}:{(string)r["software_name"]}"));
+
 				}
 
-				row["require_softwarelist_name"] = String.Join(", ", softwareLists);
-				row["require_softwarelist_description"] = null;
-				row["require_software_name"] = require_software_name;
-				row["require_software_description"] = null;
+				if (requireSoftwareRow == null)
+				{
+					row["status"] = "NOT FOUND";
+					continue;
+				}
+				row["status"] = "";
+
+				row["require_softwarelist_name"] = (string)requireSoftwareRow["softwarelist_name"];
+				row["require_softwarelist_description"] = (string)requireSoftwareRow["softwarelist_description"];
+				row["require_software_name"] = (string)requireSoftwareRow["software_name"];
+				row["require_software_description"] = (string)requireSoftwareRow["software_description"];
+
+				require_softwarelist_name = (string)requireSoftwareRow["softwarelist_name"];
 
 				List<string> partNames = new List<string>();
 				List<string> shortNames = new List<string>();
-				foreach (string softwareList in softwareLists)
+
+				DataRow[] partRows = softwarePartTable.Select($"softwarelist_name = '{require_softwarelist_name}' AND software_name = '{require_software_name}'");
+
+				foreach (string partName in partRows.Select(r => (string)r["part_name"]))
 				{
-					DataRow softwareRow = softwareTable.Rows.Find(new object[] { softwareList, require_software_name });
-					if (softwareRow != null)
-					{
-						DataRow[] partRows = softwarePartTable.Select($"softwarelist_name = '{softwareList}' AND software_name = '{require_software_name}'");
+					string shortName = partName;
+					while (Char.IsDigit(shortName[shortName.Length - 1]) == true)
+						shortName = shortName.Substring(0, shortName.Length - 1);
 
-						foreach (string partName in partRows.Select(r => (string)r["part_name"]))
-						{
-							partNames.Add($"{softwareList}/{require_software_name}:{partName}");
+					partNames.Add($"{require_softwarelist_name}/{require_software_name}/{partName}/{shortName}");
 
-							string shortName = partName;
-							while (Char.IsDigit(shortName[shortName.Length - 1]) == true)
-								shortName = shortName.Substring(0, shortName.Length - 1);
-
-							if (shortNames.Contains(shortName) == false)
-								shortNames.Add(shortName);
-						}
-					}
+					if (shortNames.Contains(shortName) == false)
+						shortNames.Add(shortName);
 				}
 
 				row["part_names"] = String.Join(", ", partNames);
 				row["short_names"] = String.Join(", ", shortNames);
+
+				if (shortNames.Count > 1)
+					row["status"] = "MIXED";
+
 			}
 
 			SaveHtmlReport(table, "Software with Shared Features (requirement)");

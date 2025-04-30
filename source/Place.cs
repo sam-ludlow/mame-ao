@@ -3,18 +3,12 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
 
 namespace Spludlow.MameAO
 {
 	public class Place
 	{
-		public class PlaceInfo
-		{
-			public string[] RequiredSoftwareNames;
-		}
-
-		public static PlaceInfo PlaceAssets(string machineName, string softwareName)
+		public static void PlaceAssets(string machineName, string softwareName)
 		{
 			Tools.ConsoleHeading(1, "Asset Acquisition");
 			Console.WriteLine();
@@ -29,7 +23,7 @@ namespace Spludlow.MameAO
 					""
 				});
 
-				return null;
+				return;
 			}
 
 			DataRow machine = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: {machineName}");
@@ -41,42 +35,38 @@ namespace Spludlow.MameAO
 			missingCount += PlaceMachineRoms(machineName, true);
 			missingCount += PlaceMachineDisks(machineName, true);
 
-			List<string> requiredSoftwareNames = new List<string>();
 			if (softwareName != "")
 			{
+				List<string> requiredSoftwareNames = new List<string>(new string[] { softwareName });
+
 				DataRow[] softwarelists = Globals.Database.GetMachineSoftwareLists(machine);
 				int softwareFound = 0;
-
-				requiredSoftwareNames.Add(softwareName);
 
 				foreach (DataRow machineSoftwarelist in softwarelists)
 				{
 					string softwarelistName = (string)machineSoftwarelist["name"];
 
-					DataRow softwarelist = Globals.Database.GetSoftwareList(softwarelistName);
-
-					if (softwarelist == null)
+					DataRow softwarelistRow = Globals.Database.GetSoftwareList(softwarelistName);
+					if (softwarelistRow == null)
 					{
 						Console.WriteLine($"!!! MAME DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
 						continue;
 					}
 
-					foreach (DataRow findSoftware in Globals.Database.GetSoftwareListsSoftware(softwarelist))
+					DataRow softwareRow = Globals.Database.GetSoftware(softwarelistRow, softwareName);
+					if (softwareRow != null)
 					{
-						if ((string)findSoftware["name"] == softwareName)
+						// Does this need to be recursive ?
+						foreach (DataRow sharedFeat in Globals.Database.GetSoftwareSharedFeats(softwareRow))
 						{
-							// Does this need to be recursive ?
-							foreach (DataRow sharedFeat in Globals.Database.GetSoftwareSharedFeats(findSoftware))
+							if ((string)sharedFeat["name"] == "requirement")
 							{
-								if ((string)sharedFeat["name"] == "requirement")
-								{
-									// some don't have 2 parts
-									string[] valueParts = ((string)sharedFeat["value"]).Split(new char[] { ':' });
-									string value = valueParts[valueParts.Length - 1];
+								string[] valueParts = ((string)sharedFeat["value"]).Split(':');
 
-									if (requiredSoftwareNames.Contains(value) == false)
-										requiredSoftwareNames.Add(value);
-								}
+								string requirementSoftware = valueParts[valueParts.Length - 1];
+
+								if (requiredSoftwareNames.Contains(requirementSoftware) == false)
+									requiredSoftwareNames.Add(requirementSoftware);
 							}
 						}
 					}
@@ -143,11 +133,6 @@ namespace Spludlow.MameAO
 				Console.WriteLine($"Feature issue:  {Tools.DataRowValue(feature, "type")} {Tools.DataRowValue(feature, "status")} {Tools.DataRowValue(feature, "overall")}");
 
 			Console.WriteLine();
-
-			PlaceInfo info = new PlaceInfo();
-			info.RequiredSoftwareNames = requiredSoftwareNames.ToArray();
-
-			return info;
 		}
 
 		public static int PlaceMachineRoms(string mainMachineName, bool placeFiles)

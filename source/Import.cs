@@ -95,14 +95,12 @@ namespace Spludlow.MameAO
 				{
 					long machine_id = (long)machineRow["machine_id"];
 					string machine_name = (string)machineRow["name"];
-					string machine_description = (string)machineRow["description"];
 
 					int dontHaveCount = 0;
 
 					foreach (DataRow row in romTable.Select("machine_id = " + machine_id))
 					{
 						string sha1 = (string)row["sha1"];
-						string name = (string)row["name"];
 
 						if (Globals.RomHashStore.Exists(sha1) == false)
 							++dontHaveCount;
@@ -124,14 +122,12 @@ namespace Spludlow.MameAO
 			{
 				long machine_id = (long)machineRow["machine_id"];
 				string machine_name = (string)machineRow["name"];
-				string machine_description = (string)machineRow["description"];
 
 				int dontHaveCount = 0;
 
 				foreach (DataRow row in diskTable.Select("machine_id = " + machine_id))
 				{
 					string sha1 = (string)row["sha1"];
-					string name = (string)row["name"];
 
 					if (Globals.DiskHashStore.Exists(sha1) == false)
 						++dontHaveCount;
@@ -151,15 +147,24 @@ namespace Spludlow.MameAO
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
 			foreach (DataRow softwarelistRow in softwarelistTable.Rows)
-				FetchSoftwareRom(softwarelistRow, softwareTable, romTable, false);
+			{
+				long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
+				foreach (DataRow softwareRow in softwareTable.Select($"softwarelist_id = {softwarelist_id}"))
+				{
+					int dontHaveCount = 0;
 
-		}
-		public static void FetchSoftwareRom(DataRow softwarelistRow, DataTable softwareTable, DataTable romTable, bool placeFiles)
-		{
-			long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
+					long software_id = (long)softwareRow["software_id"];
+					foreach (DataRow romRow in romTable.Select($"software_id = {software_id}"))
+					{
+						string sha1 = (string)romRow["sha1"];
+						if (Globals.RomHashStore.Exists(sha1) == false)
+							++dontHaveCount;
+					}
 
-			foreach (DataRow softwareRow in softwareTable.Select($"softwarelist_id = {softwarelist_id}"))
-				Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, placeFiles);
+					if (dontHaveCount != 0)
+						Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, false);
+				}
+			}
 		}
 
 		public static void FetchSoftwareDisk()
@@ -181,15 +186,23 @@ namespace Spludlow.MameAO
 				if (ignoreListNames.Contains(softwarelist_name) == true)
 					continue;
 
-				FetchSoftwareDisk(softwarelistRow, softwareTable, diskTable, false);
-			}
-		}
-		public static void FetchSoftwareDisk(DataRow softwarelistRow, DataTable softwareTable, DataTable diskTable, bool placeFiles)
-		{
-			long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
+				long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
+				foreach (DataRow softwareRow in softwareTable.Select($"softwarelist_id = {softwarelist_id}"))
+				{
+					int dontHaveCount = 0;
 
-			foreach (DataRow softwareRow in softwareTable.Select($"softwarelist_id = {softwarelist_id}"))
-				Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, placeFiles);
+					long software_id = (long)softwareRow["software_id"];
+					foreach (DataRow diskRow in diskTable.Select($"software_id = {software_id}"))
+					{
+						string sha1 = (string)diskRow["sha1"];
+						if (Globals.DiskHashStore.Exists(sha1) == false)
+							++dontHaveCount;
+					}
+
+					if (dontHaveCount > 0)
+						Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, false);
+				}
+			}
 		}
 
 		public static void PlaceSoftwareList(string softwareListName)
@@ -208,8 +221,13 @@ namespace Spludlow.MameAO
 
 			foreach (DataRow softwarelistRow in softwarelistTable.Rows)
 			{
-				FetchSoftwareRom(softwarelistRow, softwareTable, romTable, true);
-				FetchSoftwareDisk(softwarelistRow, softwareTable, diskTable, true);
+				long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
+
+				foreach (DataRow softwareRow in softwareTable.Select($"softwarelist_id = {softwarelist_id}"))
+				{
+					Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, true);
+					Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, true);
+				}
 			}
 
 			if (Globals.Settings.Options["PlaceReport"] == "Yes")
