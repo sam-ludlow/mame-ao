@@ -300,6 +300,21 @@ Create HTML payloads for machine, softwarelist, and software.
 
 `mame-ao.exe OPERATION=MAME_MSSQL_PAYLOADS_HTML DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"`
 
+### Get TOSEC
+Download and extract the TOSEC XML.
+
+`mame-ao.exe OPERATION=GET_TOSEC VERSION=0 DIRECTORY="C:\My TOSEC Data"`
+
+### TOSEC SQLIte
+Convert TOSEC XML to SQLite database.
+
+`mame-ao.exe OPERATION=MAKE_TOSEC_SQLITE VERSION=0 DIRECTORY="C:\My TOSEC Data"`
+
+### TOSEC Microsoft SQL
+Convert TOSEC XML to Microsoft SQL.
+
+`mame-ao.exe OPERATION=MAKE_TOSEC_MSSQL VERSION=0 DIRECTORY="C:\My TOSEC Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAME="TOSEC"`
+
 ## Internal Workings
 
 ### Overall
