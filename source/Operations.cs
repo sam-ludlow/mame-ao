@@ -1,13 +1,13 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SQLite;
 using System.Data.SqlClient;
 using System.IO;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 using System.Linq;
+using System.IO.Compression;
 
 using Newtonsoft.Json;
 
@@ -67,6 +67,24 @@ namespace Spludlow.MameAO
 					ValidateRequiredParameters(parameters, new string[] { "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
 					exitCode = MakeMSSQLPayloadHtml(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					break;
+
+				case "GET_TOSEC":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
+
+					exitCode = GetTosec(parameters["DIRECTORY"], parameters["VERSION"]);
+					break;
+
+				case "MAKE_TOSEC_SQLITE":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
+
+					exitCode = MakeTosecSQLite(parameters["DIRECTORY"], parameters["VERSION"]);
+					break;
+
+				case "MAKE_TOSEC_MSSQL":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAME" });
+
+					exitCode = MakeTosecMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAME"]);
 					break;
 
 				default:
@@ -263,7 +281,7 @@ namespace Spludlow.MameAO
 
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
-			Database.DatabaseFromXML(document, connectionString, dataSet);
+			Database.DatabaseFromXML(document.Name.LocalName, connectionString, dataSet);
 		}
 
 		//
@@ -291,16 +309,18 @@ namespace Spludlow.MameAO
 				string sourceXmlFilename = xmlFilenames[index];
 				string targetDatabaseName = databaseNamesEach[index].Trim();
 
-				XML2MSSQL(sourceXmlFilename, serverConnectionString, targetDatabaseName);
+				XElement document = XElement.Load(sourceXmlFilename);
+				DataSet dataSet = new DataSet();
+				ReadXML.ImportXMLWork(document, dataSet, null, null);
 
-				GC.Collect();
+				DataSet2MSSQL(dataSet, serverConnectionString, targetDatabaseName);
+
+				MakeForeignKeys(serverConnectionString, targetDatabaseName);
 			}
-
-			MakeForeignKeys(serverConnectionString, databaseNames);
 
 			return 0;
 		}
-		public static void XML2MSSQL(string xmlFilename, string serverConnectionString, string databaseName)
+		public static void DataSet2MSSQL(DataSet dataSet, string serverConnectionString, string databaseName)
 		{
 			SqlConnection targetConnection = new SqlConnection(serverConnectionString);
 
@@ -310,12 +330,6 @@ namespace Spludlow.MameAO
 			Database.ExecuteNonQuery(targetConnection, $"CREATE DATABASE[{databaseName}]");
 
 			targetConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';");
-
-			XElement document = XElement.Load(xmlFilename);
-
-			DataSet dataSet = new DataSet();
-
-			ReadXML.ImportXMLWork(document, dataSet, null, null);
 
 			foreach (DataTable table in dataSet.Tables)
 			{
@@ -360,43 +374,33 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static int MakeForeignKeys(string serverConnectionString, string databaseNames)
+		public static int MakeForeignKeys(string serverConnectionString, string databaseName)
 		{
-			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' });
-			for (int index = 0; index < databaseNamesEach.Length; ++index)
-				databaseNamesEach[index] = databaseNamesEach[index].Trim();
-
-			if (databaseNamesEach.Length != 2)
-				throw new ApplicationException("database names must be 2 parts comma delimited");
-
-			foreach (string databaseName in databaseNamesEach)
+			using (var connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
 			{
-				using (var connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+				DataTable table = Database.ExecuteFill(connection, "SELECT * FROM INFORMATION_SCHEMA.COLUMNS");
+
+				foreach (DataRow row in table.Rows)
 				{
-					DataTable table = Database.ExecuteFill(connection, "SELECT * FROM INFORMATION_SCHEMA.COLUMNS");
+					string TABLE_NAME = (string)row["TABLE_NAME"];
+					string COLUMN_NAME = (string)row["COLUMN_NAME"];
+					int ORDINAL_POSITION = (int)row["ORDINAL_POSITION"];
+					string DATA_TYPE = (string)row["DATA_TYPE"];
 
-					foreach (DataRow row in table.Rows)
+					if (ORDINAL_POSITION > 1 && COLUMN_NAME.EndsWith("_id") && DATA_TYPE == "bigint")
 					{
-						string TABLE_NAME = (string)row["TABLE_NAME"];
-						string COLUMN_NAME = (string)row["COLUMN_NAME"];
-						int ORDINAL_POSITION = (int)row["ORDINAL_POSITION"];
-						string DATA_TYPE = (string)row["DATA_TYPE"];
+						string parentTableName = COLUMN_NAME.Substring(0, COLUMN_NAME.Length - 3);
 
-						if (ORDINAL_POSITION > 1 && COLUMN_NAME.EndsWith("_id") && DATA_TYPE == "bigint")
-						{
-							string parentTableName = COLUMN_NAME.Substring(0, COLUMN_NAME.Length - 3);
+						string commandText =
+							$"ALTER TABLE [{TABLE_NAME}] ADD CONSTRAINT [FK_{parentTableName}_{TABLE_NAME}] FOREIGN KEY ([{COLUMN_NAME}]) REFERENCES [{parentTableName}] ([{COLUMN_NAME}])";
 
-							string commandText =
-								$"ALTER TABLE [{TABLE_NAME}] ADD CONSTRAINT [FK_{parentTableName}_{TABLE_NAME}] FOREIGN KEY ([{COLUMN_NAME}]) REFERENCES [{parentTableName}] ([{COLUMN_NAME}])";
+						Console.WriteLine(commandText);
+						Database.ExecuteNonQuery(connection, commandText);
 
-							Console.WriteLine(commandText);
-							Database.ExecuteNonQuery(connection, commandText);
+						commandText = $"CREATE INDEX [IX_{TABLE_NAME}_{COLUMN_NAME}] ON [{TABLE_NAME}] ([{COLUMN_NAME}])";
 
-							commandText = $"CREATE INDEX [IX_{TABLE_NAME}_{COLUMN_NAME}] ON [{TABLE_NAME}] ([{COLUMN_NAME}])";
-
-							Console.WriteLine(commandText);
-							Database.ExecuteNonQuery(connection, commandText);
-						}
+						Console.WriteLine(commandText);
+						Database.ExecuteNonQuery(connection, commandText);
 					}
 				}
 			}
@@ -1345,6 +1349,266 @@ namespace Spludlow.MameAO
 				connection.Close();
 			}
 
+		}
+
+		public static int GetTosec(string directory, string version)
+		{
+			string url = "https://www.tosecdev.org/downloads/category/22-datfiles";
+			string html = Tools.Query(url);
+			
+			string find;
+			int index;
+
+			SortedDictionary<string, string> downloadPageUrls = new SortedDictionary<string, string>();
+
+			using (StringReader reader  = new StringReader(html))
+			{
+				string line;
+				while ((line = reader.ReadLine()) != null)
+				{
+					line = line.Trim();
+					if (line.Length == 0)
+						continue;
+
+					find = "<div class=\"pd-subcategory\"><a href=\"";
+
+					index = line.IndexOf(find);
+					if (index != -1)
+					{
+						line = line.Substring(index + find.Length);
+
+						index = line.IndexOf("\"");
+						if (index != -1)
+						{
+							line = line.Substring(0, index);
+
+							index = line.LastIndexOf("/");
+							if (index != -1)
+							{
+								string key = line.Substring(index + 1);
+								index = key.IndexOf("-");
+								key = key.Substring(index + 1);
+
+								downloadPageUrls.Add(key, new Uri(new Uri(url), line).AbsoluteUri);
+							}
+						}
+					}
+				}
+			}
+
+			if (downloadPageUrls.Count == 0)
+				throw new ApplicationException("Did not find any TOSEC links.");
+
+			if (version == "0")
+				version = downloadPageUrls.Keys.Last();
+
+			if (downloadPageUrls.ContainsKey(version) == false)
+				throw new ApplicationException($"Did not find TOSEC version: {version}");
+
+			directory = Path.Combine(directory, version);
+			Directory.CreateDirectory(directory);
+
+			if (Directory.Exists(Path.Combine(directory, "TOSEC")) == true)
+				return 0;
+
+			url = downloadPageUrls[version];
+			html = Tools.Query(url);
+
+			find = "<a class=\"btn btn-success\" href=\"";
+			index = html.IndexOf(find);
+			html = html.Substring(index + find.Length);
+
+			index = html.IndexOf("\"");
+			html = html.Substring(0, index);
+
+			url = new Uri(new Uri(url), html).AbsoluteUri;
+
+			using (TempDirectory tempDir = new TempDirectory())
+			{
+				string zipFilename = Path.Combine(tempDir.Path, "tosec.zip");
+
+				Console.Write($"Downloading {url} {zipFilename} ...");
+				Tools.Download(url, zipFilename, 1);
+				Console.WriteLine("...done");
+
+				Console.Write($"Extract ZIP {zipFilename} {directory} ...");
+				ZipFile.ExtractToDirectory(zipFilename, directory);
+				Console.WriteLine("...done");
+			}
+
+			return 1;
+		}
+
+		public static int MakeTosecSQLite(string directory, string version)
+		{
+			if (version == "0")
+				version = TosecGetLatestDownloadedVersion(directory);
+
+			directory = Path.Combine(directory, version);
+
+			string sqlLiteFilename = Path.Combine(directory, "_tosec.sqlite");
+
+			if (File.Exists(sqlLiteFilename) == true)
+				return 0;
+
+			DataSet dataSet = TosecDataSet(directory);
+
+			string connectionString = $"Data Source='{sqlLiteFilename}';datetimeformat=CurrentCulture;";
+
+			Console.Write($"Creating SQLite database {sqlLiteFilename} ...");
+			Database.DatabaseFromXML("tosec", connectionString, dataSet);
+			Console.WriteLine("... done");
+
+			return 1;
+		}
+
+		public static int MakeTosecMSSQL(string directory, string version, string serverConnectionString, string databaseName)
+		{
+			if (version == "0")
+				version = TosecGetLatestDownloadedVersion(directory);
+
+			directory = Path.Combine(directory, version);
+
+			DataSet dataSet = TosecDataSet(directory);
+
+			DataSet2MSSQL(dataSet, serverConnectionString, databaseName);
+
+			MakeForeignKeys(serverConnectionString, databaseName);
+
+			return 0;
+		}
+
+		public static DataSet TosecDataSet(string directory)
+		{
+			DataSet dataSet = new DataSet();
+
+			string[] categories = new string[] { "TOSEC", "TOSEC-ISO", "TOSEC-PIX" };
+
+			foreach (string category in categories)
+			{
+				string groupDirectory = Path.Combine(directory, category);
+
+				foreach (string filename in Directory.GetFiles(groupDirectory, "*.dat"))
+				{
+					string name = Path.GetFileNameWithoutExtension(filename);
+
+					int index;
+
+					index = name.LastIndexOf("(");
+					if (index == -2)
+						throw new ApplicationException("No last index of open bracket");
+
+					string fileVersion = name.Substring(index).Trim(new char[] { '(', ')' });
+					name = name.Substring(0, index).Trim();
+
+					Console.WriteLine($"{category}\t{name}\t{fileVersion}");
+
+					XElement document = XElement.Load(filename);
+					DataSet fileDataSet = new DataSet();
+					ReadXML.ImportXMLWork(document, fileDataSet, null, null);
+
+					TosecMoveHeader(fileDataSet);
+
+					foreach (DataTable table in dataSet.Tables)
+						foreach (DataColumn column in table.Columns)
+							column.AutoIncrement = false;
+
+					TosecMergeDataSet(fileDataSet, dataSet);
+				}
+			}
+
+			return dataSet;
+		}
+
+		public static string TosecGetLatestDownloadedVersion(string directory)
+		{
+			List<string> versions = new List<string>();
+
+			foreach (string versionDirectory in Directory.GetDirectories(directory))
+				versions.Add(Path.GetFileName(versionDirectory));
+
+			if (versions.Count == 0)
+				throw new ApplicationException($"No TOSEC versions found in '{directory}'.");
+
+			versions.Sort();
+
+			return versions[versions.Count - 1];
+		}
+
+		public static void TosecMoveHeader(DataSet dataSet)
+		{
+			DataTable headerTable = dataSet.Tables["header"];
+			DataTable datafileTable = dataSet.Tables["datafile"];
+
+			if (headerTable == null || headerTable.Rows.Count != 1)
+				throw new ApplicationException("Did not find one headerTable row");
+
+			if (datafileTable == null || datafileTable.Rows.Count != 1)
+				throw new ApplicationException("Did not find one datafileTable row");
+
+			foreach (DataColumn column in headerTable.Columns)
+			{
+				if (column.ColumnName.EndsWith("_id") == true)
+					continue;
+
+				if (datafileTable.Columns.Contains(column.ColumnName) == false)
+					datafileTable.Columns.Add(column.ColumnName, typeof(string));
+
+				datafileTable.Rows[0][column.ColumnName] = headerTable.Rows[0][column.ColumnName];
+			}
+
+			dataSet.Tables.Remove("header");
+		}
+
+		public static void TosecMergeDataSet(DataSet sourceDataSet, DataSet targetDataSet)
+		{
+			foreach (DataTable sourceTable in sourceDataSet.Tables)
+			{
+				sourceTable.PrimaryKey = new DataColumn[0];
+
+				DataTable targetTable = null;
+				if (targetDataSet.Tables.Contains(sourceTable.TableName) == false)
+				{
+					targetTable = new DataTable(sourceTable.TableName);
+					targetDataSet.Tables.Add(targetTable);
+				}
+				else
+				{
+					targetTable = targetDataSet.Tables[sourceTable.TableName];
+				}
+
+				foreach (DataColumn column in sourceTable.Columns)
+				{
+					column.Unique = false;
+
+					if (targetTable.Columns.Contains(column.ColumnName) == false)
+					{
+						DataColumn targetColumn = targetTable.Columns.Add(column.ColumnName, column.DataType);
+						targetColumn.Unique = false;
+					}
+				}
+			}
+
+			Dictionary<string, long> addIds = new Dictionary<string, long>();
+			foreach (DataTable sourceTable in sourceDataSet.Tables)
+				addIds.Add(sourceTable.TableName + "_id", targetDataSet.Tables[sourceTable.TableName].Rows.Count);
+
+			foreach (DataTable sourceTable in sourceDataSet.Tables)
+			{
+				foreach (DataColumn column in sourceTable.Columns)
+				{
+					if (column.ColumnName.EndsWith("_id") == false)
+						continue;
+
+					foreach (DataRow row in sourceTable.Rows)
+						row[column] = (long)row[column] + addIds[column.ColumnName];
+				}
+
+				DataTable targetTable = targetDataSet.Tables[sourceTable.TableName];
+
+				foreach (DataRow row in sourceTable.Rows)
+					targetTable.ImportRow(row);
+			}
 		}
 
 		public static void ReportRelations(DataSet dataSet)

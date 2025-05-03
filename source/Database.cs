@@ -761,15 +761,15 @@ namespace Spludlow.MameAO
 			AddDataExtras(dataSet, document.Name.LocalName, assemblyVersion);
 			Console.WriteLine("...done.");
 
-			DatabaseFromXML(document, connectionString, dataSet);
+			DatabaseFromXML(document.Name.LocalName, connectionString, dataSet);
 
 			return connectionString;
 		}
-		public static void DatabaseFromXML(XElement document, string connectionString, DataSet dataSet)
+		public static void DatabaseFromXML(string name, string connectionString, DataSet dataSet)
 		{
 			using (SQLiteConnection connection = new SQLiteConnection(connectionString))
 			{
-				Console.Write($"Creating SQLite {document.Name.LocalName} ...");
+				Console.Write($"Creating SQLite {name} ...");
 				connection.Open();
 				try
 				{
@@ -841,7 +841,7 @@ namespace Spludlow.MameAO
 						}
 					}
 
-					if (document.Name.LocalName == "mame")
+					if (name == "mame")
 					{
 						foreach (string commandText in new string[] {
 						"CREATE INDEX machine_name_index ON machine(name);"
@@ -850,7 +850,7 @@ namespace Spludlow.MameAO
 								command.ExecuteNonQuery();
 					}
 
-					if (document.Name.LocalName == "softwarelists")
+					if (name == "softwarelists")
 					{
 
 					}
