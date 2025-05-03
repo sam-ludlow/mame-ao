@@ -254,12 +254,12 @@ Create a text file in the MAME-AO root directory `_api-auth.txt` and put in your
 
 Use the command `.upload`
 
-## MAME Data Operations
-MAME-AO has the capability to perform various MAME Data operations by passing command line options when starting the program, it will exit immediately when finished.
+## MAME & TOSEC Data Operations
+MAME-AO has the capability to perform various MAME & TOSEC Data operations by passing command line options when starting the program, it will exit immediately when finished.
 
-These may be used for generating data sets in various formats, you could use it for data processing pipelines for example automatically updating a database when MAME is updated.
+These may be used for generating data sets in various formats, you could use it for data processing pipelines or just for looking at the data.
 
-You have to get MAME first, all the data formats require XML to start with. If the operation has already been performed (file already exists) nothing will hapern.
+![MAME-AO Data Operations](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-data-operations.png)
 
 You can specify a specific version e.g. `VERSION=0250` or use `VERSION=0` to mean the latest avaialable.
 
@@ -270,37 +270,37 @@ If a new version is found the processes exit code will be set to 1.
 
 `mame-ao.exe OPERATION=GET_MAME VERSION=0 DIRECTORY="C:\My MAME Data"`
 
-### XML
+### MAME XML
 The native format output from the MAME binary, you need this first.
 
 `mame-ao.exe OPERATION=MAKE_XML VERSION=0 DIRECTORY="C:\My MAME Data"`
 
-### JSON
+### MAME JSON
 Convert XML to JSON.
 
 `mame-ao.exe OPERATION=MAKE_JSON VERSION=0 DIRECTORY="C:\My MAME Data"`
 
-### SQLite
+### MAME SQLite
 Convert XML to SQLite.
 
 `mame-ao.exe OPERATION=MAKE_SQLITE VERSION=0 DIRECTORY="C:\My MAME Data"`
 
-### Microsoft SQL
+### MAME Microsoft SQL
 Convert XML to Microsoft SQL.
 
 `mame-ao.exe OPERATION=MAKE_MSSQL VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"`
 
-### Microsoft SQL - Make Payload Tables (XML & JSON)
+### MAME Microsoft SQL - Make Payload Tables (XML & JSON)
 Create payload tables for machine, softwarelist, and software. Create XML & JSON payloads.
 
 `mame-ao.exe OPERATION=MAME_MSSQL_PAYLOADS VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"`
 
-### Microsoft SQL - Make HTML Payloads
+### MAME Microsoft SQL - Make HTML Payloads
 Create HTML payloads for machine, softwarelist, and software.
 
 `mame-ao.exe OPERATION=MAME_MSSQL_PAYLOADS_HTML DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"`
 
-### Get TOSEC
+### TOSEC XML
 Download and extract the TOSEC XML.
 
 `mame-ao.exe OPERATION=GET_TOSEC VERSION=0 DIRECTORY="C:\My TOSEC Data"`
