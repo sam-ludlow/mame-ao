@@ -87,6 +87,12 @@ namespace Spludlow.MameAO
 					exitCode = MakeTosecMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAME"]);
 					break;
 
+				case "GET_HBMAME":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
+
+					exitCode = GetHbMame(parameters["DIRECTORY"], parameters["VERSION"]);
+					break;
+
 				default:
 					throw new ApplicationException($"Unknown Operation {parameters["OPERATION"]}");
 			}
@@ -1495,7 +1501,7 @@ namespace Spludlow.MameAO
 					int index;
 
 					index = name.LastIndexOf("(");
-					if (index == -2)
+					if (index == -1)
 						throw new ApplicationException("No last index of open bracket");
 
 					string fileVersion = name.Substring(index).Trim(new char[] { '(', ')' });
@@ -1609,6 +1615,63 @@ namespace Spludlow.MameAO
 				foreach (DataRow row in sourceTable.Rows)
 					targetTable.ImportRow(row);
 			}
+		}
+
+		public static int GetHbMame(string directory, string version)
+		{
+			string url = "https://hbmame.1emulation.com/";
+			string html = Tools.Query(url);
+
+			string downloadUrl = null;
+
+			string find = "<a href=\"";
+			int index = 0;
+			while ((index = html.IndexOf(find, index)) != -1)
+			{
+				int endIndex = html.IndexOf("\"", index + find.Length);
+				if (endIndex == -1)
+					break;
+
+				string link = html.Substring(index + find.Length, endIndex - index - find.Length);
+				if (link.StartsWith("hbmame") == true && link.Contains("ui") == false && link.EndsWith(".7z") == true)
+				{
+					if (downloadUrl == null)
+						downloadUrl = new Uri(new Uri(url), link).AbsoluteUri;
+					else
+						throw new ApplicationException("Found more dowload links than expected");
+				}
+
+				index = endIndex;
+			}
+
+			if (downloadUrl == null)
+				throw new ApplicationException("Did not find download link");
+
+			//
+			// TODO: version
+			//
+			version = "0.245.24";
+
+			directory = Path.Combine(directory, version);
+			Directory.CreateDirectory(directory);
+
+			if (File.Exists(Path.Combine(directory, "hbmame.exe")) == true)
+				return 0;
+
+			using (TempDirectory tempDir = new TempDirectory())
+			{
+				string archiveFilename = Path.Combine(tempDir.Path, "hbmame.7z");
+
+				Console.Write($"Downloading {downloadUrl} {archiveFilename} ...");
+				Tools.Download(downloadUrl, archiveFilename, 1);
+				Console.WriteLine("...done");
+
+				Console.Write($"Extract 7-Zip {archiveFilename} {directory} ...");
+				Tools.ExtractToDirectory7Zip(archiveFilename, directory);
+				Console.WriteLine("...done");
+			}
+
+			return 1;
 		}
 
 		public static void ReportRelations(DataSet dataSet)

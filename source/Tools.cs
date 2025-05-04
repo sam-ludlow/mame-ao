@@ -609,6 +609,45 @@ namespace Spludlow.MameAO
 				}
 			}
 		}
+
+		public static void ExtractToDirectory7Zip(string sourceFilename, string targetDirectory)
+		{
+			string programFilename = @"C:\Program Files\7-Zip\7z.exe";
+
+			if (File.Exists(programFilename) == false)
+				throw new ApplicationException($"7-Zip Program required: {programFilename}");
+
+			string arguments = $"x -y -o\"{targetDirectory}\" \"{sourceFilename}\"";
+
+			ProcessStartInfo startInfo = new ProcessStartInfo(programFilename)
+			{
+				Arguments = arguments,
+				WorkingDirectory = targetDirectory,
+				UseShellExecute = false,
+				RedirectStandardOutput = true,
+				RedirectStandardError = true,
+				StandardOutputEncoding = Encoding.UTF8,
+			};
+
+			using (Process process = new Process())
+			{
+				process.StartInfo = startInfo;
+
+				process.OutputDataReceived += new DataReceivedEventHandler((sender, e) => Console.WriteLine(e.Data));
+				process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) => Console.WriteLine(e.Data));
+
+				process.Start();
+				process.BeginOutputReadLine();
+				process.BeginErrorReadLine();
+				process.WaitForExit();
+
+				Console.WriteLine($"Z-Zip exit code: {process.ExitCode}");
+
+				if (process.ExitCode != 0)
+					throw new ApplicationException($"Z-Zip Extract bad exit code: {process.ExitCode}");
+			}
+		}
+
 	}
 
 	public class TempDirectory : IDisposable
