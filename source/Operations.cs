@@ -8,13 +8,14 @@ using System.Xml;
 using System.Xml.Linq;
 using System.Linq;
 using System.IO.Compression;
+using System.Diagnostics;
 
 using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
 {
 	/// <summary>
-	/// Operations - Used for MAME data processing pipelines
+	/// Operations - Used for data processing pipelines
 	/// </summary>
 	public class Operations
 	{
@@ -109,6 +110,30 @@ namespace Spludlow.MameAO
 					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
 					exitCode = MakeHbMameMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					break;
+
+				case "GET_FBNEO":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
+
+					exitCode = GetFBNeo(parameters["DIRECTORY"], parameters["VERSION"]);
+					break;
+
+				case "MAKE_FBNEO_XML":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
+
+					exitCode = MakeFBNeoXML(parameters["DIRECTORY"], parameters["VERSION"]);
+					break;
+
+				case "MAKE_FBNEO_SQLITE":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
+
+					exitCode = MakeFBNeoSQLite(parameters["DIRECTORY"], parameters["VERSION"]);
+					break;
+
+				case "MAKE_FBNEO_MSSQL":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAME" });
+
+					exitCode = MakeFBNeoMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAME"]);
 					break;
 
 				default:
@@ -1531,13 +1556,13 @@ namespace Spludlow.MameAO
 					DataSet fileDataSet = new DataSet();
 					ReadXML.ImportXMLWork(document, fileDataSet, null, null);
 
-					TosecMoveHeader(fileDataSet);
+					DataFileMoveHeader(fileDataSet);
 
 					foreach (DataTable table in dataSet.Tables)
 						foreach (DataColumn column in table.Columns)
 							column.AutoIncrement = false;
 
-					TosecMergeDataSet(fileDataSet, dataSet);
+					DataFileMergeDataSet(fileDataSet, dataSet);
 				}
 			}
 
@@ -1559,7 +1584,7 @@ namespace Spludlow.MameAO
 			return versions[versions.Count - 1];
 		}
 
-		public static void TosecMoveHeader(DataSet dataSet)
+		public static void DataFileMoveHeader(DataSet dataSet)
 		{
 			DataTable headerTable = dataSet.Tables["header"];
 			DataTable datafileTable = dataSet.Tables["datafile"];
@@ -1584,7 +1609,7 @@ namespace Spludlow.MameAO
 			dataSet.Tables.Remove("header");
 		}
 
-		public static void TosecMergeDataSet(DataSet sourceDataSet, DataSet targetDataSet)
+		public static void DataFileMergeDataSet(DataSet sourceDataSet, DataSet targetDataSet)
 		{
 			foreach (DataTable sourceTable in sourceDataSet.Tables)
 			{
@@ -1832,6 +1857,202 @@ namespace Spludlow.MameAO
 			Console.WriteLine($"HBMAME Version: {version}");
 
 			return version;
+		}
+
+		public static int GetFBNeo(string directory, string version)
+		{
+			dynamic releases = JsonConvert.DeserializeObject<dynamic>(Tools.Query("https://api.github.com/repos/finalburnneo/FBNeo/releases"));
+
+			string downloadUrl = null;
+			version = null;
+
+			foreach (dynamic release in releases)
+			{
+				if ((string)release.name == "nightly builds")
+				{
+					version = ((DateTime)release.published_at).ToString("s").Replace(":", "-");
+
+					foreach (dynamic asset in release.assets)
+					{
+						if ((string)asset.name == "windows-x86_64.zip")
+							downloadUrl = (string)asset.browser_download_url;
+					}
+				}
+			}
+
+			if (downloadUrl == null)
+				throw new ApplicationException("Did not find download asset");
+
+			directory = Path.Combine(directory, version);
+			Directory.CreateDirectory(directory);
+
+			if (File.Exists(Path.Combine(directory, "fbneo64.exe")) == true)
+				return 0;
+
+			using (TempDirectory tempDir = new TempDirectory())
+			{
+				string archiveFilename = Path.Combine(tempDir.Path, "fbneo.zip");
+
+				Console.Write($"Downloading {downloadUrl} {archiveFilename} ...");
+				Tools.Download(downloadUrl, archiveFilename, 1);
+				Console.WriteLine("...done");
+
+				Console.Write($"Extract 7-Zip {archiveFilename} {directory} ...");
+				ZipFile.ExtractToDirectory(archiveFilename, directory);
+				Console.WriteLine("...done");
+			}
+
+			return 1;
+		}
+
+		public static int MakeFBNeoXML(string directory, string version)
+		{
+			if (version == "0")
+				version = FBNeoGetLatestDownloadedVersion(directory);
+
+			directory = Path.Combine(directory, version);
+
+			string iniFileData = $"nIniVersion 0x7FFFFF{Environment.NewLine}bSkipStartupCheck 1{Environment.NewLine}";
+			string configDirectory = Path.Combine(directory, "config");
+			Directory.CreateDirectory(configDirectory);
+			File.WriteAllText(Path.Combine(configDirectory, "fbneo64.ini"), iniFileData);
+
+			//	https://github.com/finalburnneo/FBNeo/blob/master/src/burner/win32/main.cpp
+
+			string[] systems = new string[] { "arcade", "channelf", "coleco", "fds", "gg", "md", "msx", "neogeo", "nes", "ngp", "pce", "sg1000", "sgx", "sms", "snes", "spectrum", "tg16" };
+
+			foreach (string system in  systems)
+			{
+				string arguments = system == "arcade" ? "-listinfo" : $"-listinfo{system}only";
+
+				StringBuilder output = new StringBuilder();
+
+				ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(directory, "fbneo64.exe"))
+				{
+					Arguments = arguments,
+					WorkingDirectory = directory,
+					UseShellExecute = false,
+					RedirectStandardOutput = true,
+					RedirectStandardError = true,
+					StandardOutputEncoding = Encoding.UTF8,
+				};
+
+				using (Process process = new Process())
+				{
+					process.StartInfo = startInfo;
+
+					process.OutputDataReceived += new DataReceivedEventHandler((sender, e) => output.AppendLine(e.Data));
+					process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) => Console.WriteLine(e.Data));
+
+					process.Start();
+					process.BeginOutputReadLine();
+					process.BeginErrorReadLine();
+					process.WaitForExit();
+
+					if (process.ExitCode != 0)
+						throw new ApplicationException($"FBNeo Extract bad exit code: {process.ExitCode}");
+				}
+
+				string filename = Path.Combine(directory, $"_{system}.xml");
+				File.WriteAllText(filename, output.ToString(), Encoding.UTF8);
+			}
+
+			return 1;
+		}
+
+		public static int MakeFBNeoSQLite(string directory, string version)
+		{
+			if (version == "0")
+				version = FBNeoGetLatestDownloadedVersion(directory);
+
+			directory = Path.Combine(directory, version);
+
+			string sqlLiteFilename = Path.Combine(directory, "_fbneo.sqlite");
+
+			if (File.Exists(sqlLiteFilename) == true)
+				return 0;
+
+			DataSet dataSet = FBNeoDataSet(directory);
+
+			string connectionString = $"Data Source='{sqlLiteFilename}';datetimeformat=CurrentCulture;";
+
+			Console.Write($"Creating SQLite database {sqlLiteFilename} ...");
+			Database.DatabaseFromXML("fbneo", connectionString, dataSet);
+			Console.WriteLine("... done");
+
+			return 1;
+		}
+
+		public static int MakeFBNeoMSSQL(string directory, string version, string serverConnectionString, string databaseName)
+		{
+			if (version == "0")
+				version = FBNeoGetLatestDownloadedVersion(directory);
+
+			directory = Path.Combine(directory, version);
+
+			DataSet dataSet = FBNeoDataSet(directory);
+
+			DataSet2MSSQL(dataSet, serverConnectionString, databaseName);
+
+			MakeForeignKeys(serverConnectionString, databaseName);
+
+			return 0;
+		}
+
+		public static DataSet FBNeoDataSet(string directory)
+		{
+			DataSet dataSet = new DataSet();
+
+			foreach (string filename in Directory.GetFiles(directory, "*.xml"))
+			{
+				string name = Path.GetFileNameWithoutExtension(filename);
+				if (name.StartsWith("_") == false)
+					continue;
+				name = name.Substring(1);
+
+				Console.WriteLine(name);
+
+				XElement document = XElement.Load(filename);
+
+				XElement clrmamepro = document.Element("header").Element("clrmamepro");
+				if (clrmamepro != null)
+					clrmamepro.Remove();
+
+				DataSet fileDataSet = new DataSet();
+				ReadXML.ImportXMLWork(document, fileDataSet, null, null);
+
+				DataFileMoveHeader(fileDataSet);
+
+				foreach (DataTable table in dataSet.Tables)
+					foreach (DataColumn column in table.Columns)
+						column.AutoIncrement = false;
+
+				DataFileMergeDataSet(fileDataSet, dataSet);
+			}
+
+			return dataSet;
+		}
+
+		public static string FBNeoGetLatestDownloadedVersion(string directory)
+		{
+			List<string> versions = new List<string>();
+
+			foreach (string versionDirectory in Directory.GetDirectories(directory))
+			{
+				string version = Path.GetFileName(versionDirectory);
+
+				if (File.Exists(Path.Combine(versionDirectory, "fbneo64.exe")) == false)
+					continue;
+
+				versions.Add(version);
+			}
+
+			if (versions.Count == 0)
+				throw new ApplicationException($"No FBNeo versions found in '{directory}'.");
+
+			versions.Sort();
+
+			return versions.Last();
 		}
 
 		public static void ReportRelations(DataSet dataSet)

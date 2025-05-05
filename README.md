@@ -335,6 +335,26 @@ Convert HBMAME XML to Microsoft SQL.
 
 `mame-ao.exe OPERATION=MAKE_HBMAME_MSSQL VERSION=0 DIRECTORY="C:\My HBMAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="HBMAME-Machine, HBMAME-Software"`
 
+### Get FBNeo
+Download and extract FBNeo, needed to extract the XML.
+
+`mame-ao.exe OPERATION=GET_FBNEO VERSION=0 DIRECTORY="C:\My FBNeo Data"`
+
+### FBNeo XML
+Extract XML from FBNeo.
+
+`mame-ao.exe OPERATION=MAKE_FBNEO_XML VERSION=0 DIRECTORY="C:\My FBNeo Data"`
+
+### FBNeo SQLIte
+Convert FBNeo XML to SQLite database.
+
+`mame-ao.exe OPERATION=MAKE_FBNEO_SQLITE VERSION=0 DIRECTORY="C:\My FBNeo Data"`
+
+### FBNeo Microsoft SQL
+Convert FBNeo XML to Microsoft SQL.
+
+`mame-ao.exe OPERATION=MAKE_FBNEO_MSSQL VERSION=0 DIRECTORY="C:\My FBNeo Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAME="FBNeo"`
+
 ## Internal Workings
 
 ### Overall
