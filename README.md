@@ -254,8 +254,8 @@ Create a text file in the MAME-AO root directory `_api-auth.txt` and put in your
 
 Use the command `.upload`
 
-## MAME & TOSEC Data Operations
-MAME-AO has the capability to perform various MAME & TOSEC Data operations by passing command line options when starting the program, it will exit immediately when finished.
+## Data Operations (MAME, HBMAME, TOSEC, FBNeo)
+MAME-AO has the capability to perform various Data operations by passing command line options when starting the program, it will exit immediately when finished.
 
 These may be used for generating data sets in various formats, you could use it for data processing pipelines or just for looking at the data.
 
@@ -314,6 +314,26 @@ Convert TOSEC XML to SQLite database.
 Convert TOSEC XML to Microsoft SQL.
 
 `mame-ao.exe OPERATION=MAKE_TOSEC_MSSQL VERSION=0 DIRECTORY="C:\My TOSEC Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAME="TOSEC"`
+
+### Get HBMAME
+Download and extract HBMAME, needed to extract the XML.
+
+`mame-ao.exe OPERATION=GET_HBMAME VERSION=0 DIRECTORY="C:\My HBMAME Data"`
+
+### HBMAME XML
+Extract XML from HBMAME.
+
+`mame-ao.exe OPERATION=MAKE_HBMAME_XML VERSION=0 DIRECTORY="C:\My HBMAME Data"`
+
+### HBMAME SQLIte
+Convert HBMAME XML to SQLite database.
+
+`mame-ao.exe OPERATION=MAKE_HBMAME_SQLITE VERSION=0 DIRECTORY="C:\My HBMAME Data"`
+
+### HBMAME Microsoft SQL
+Convert HBMAME XML to Microsoft SQL.
+
+`mame-ao.exe OPERATION=MAKE_HBMAME_MSSQL VERSION=0 DIRECTORY="C:\My HBMAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="HBMAME-Machine, HBMAME-Software"`
 
 ## Internal Workings
 

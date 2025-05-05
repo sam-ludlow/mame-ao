@@ -93,6 +93,24 @@ namespace Spludlow.MameAO
 					exitCode = GetHbMame(parameters["DIRECTORY"], parameters["VERSION"]);
 					break;
 
+				case "MAKE_HBMAME_XML":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
+
+					exitCode = MakeHbMameXML(parameters["DIRECTORY"], parameters["VERSION"]);
+					break;
+
+				case "MAKE_HBMAME_SQLITE":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
+
+					exitCode = MakeHbMameSQLite(parameters["DIRECTORY"], parameters["VERSION"]);
+					break;
+
+				case "MAKE_HBMAME_MSSQL":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
+
+					exitCode = MakeHbMameMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					break;
+
 				default:
 					throw new ApplicationException($"Unknown Operation {parameters["OPERATION"]}");
 			}
@@ -298,11 +316,11 @@ namespace Spludlow.MameAO
 			if (version == "0")
 				version = GetLatestDownloadedVersion(directory);
 
-			string versionDirectory = Path.Combine(directory, version);
+			directory = Path.Combine(directory, version);
 
 			string[] xmlFilenames = new string[] {
-				Path.Combine(versionDirectory, "_machine.xml"),
-				Path.Combine(versionDirectory, "_software.xml"),
+				Path.Combine(directory, "_machine.xml"),
+				Path.Combine(directory, "_software.xml"),
 			};
 
 			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' });
@@ -1647,10 +1665,7 @@ namespace Spludlow.MameAO
 			if (downloadUrl == null)
 				throw new ApplicationException("Did not find download link");
 
-			//
-			// TODO: version
-			//
-			version = "0.245.24";
+			version = HbMameVersion(html);
 
 			directory = Path.Combine(directory, version);
 			Directory.CreateDirectory(directory);
@@ -1672,6 +1687,151 @@ namespace Spludlow.MameAO
 			}
 
 			return 1;
+		}
+
+		public static int MakeHbMameXML(string directory, string version)
+		{
+			if (version == "0")
+				version = HbMameGetLatestDownloadedVersion(directory);
+
+			directory = Path.Combine(directory, version);
+
+			string exeFilename = Path.Combine(directory, "hbmame.exe");
+
+			string machineXmlFilename = Path.Combine(directory, "_machine.xml");
+			string softwareXmlFilename = Path.Combine(directory, "_software.xml");
+
+			if (File.Exists(machineXmlFilename) == false)
+				Mame.ExtractXML(exeFilename, machineXmlFilename, "-listxml");
+
+			if (File.Exists(softwareXmlFilename) == false)
+				Mame.ExtractXML(exeFilename, softwareXmlFilename, "-listsoftware");
+
+			return 0;
+		}
+
+		public static int MakeHbMameSQLite(string directory, string version)
+		{
+			if (version == "0")
+				version = HbMameGetLatestDownloadedVersion(directory);
+
+			string versionDirectory = Path.Combine(directory, version);
+
+			string machineSqlLiteFilename = Path.Combine(versionDirectory, "_machine.sqlite");
+			string softwareSqlLiteFilename = Path.Combine(versionDirectory, "_software.sqlite");
+
+			string machineXmlFilename = Path.Combine(versionDirectory, "_machine.xml");
+			string softwareXmlFilename = Path.Combine(versionDirectory, "_software.xml");
+
+			if (File.Exists(machineSqlLiteFilename) == false)
+			{
+				XML2SQLite(machineXmlFilename, machineSqlLiteFilename);
+				GC.Collect();
+			}
+
+			if (File.Exists(softwareSqlLiteFilename) == false)
+			{
+				XML2SQLite(softwareXmlFilename, softwareSqlLiteFilename);
+				GC.Collect();
+			}
+
+			return 0;
+		}
+
+		public static int MakeHbMameMSSQL(string directory, string version, string serverConnectionString, string databaseNames)
+		{
+			if (version == "0")
+				version = HbMameGetLatestDownloadedVersion(directory);
+
+			directory = Path.Combine(directory, version);
+
+			string[] xmlFilenames = new string[] {
+				Path.Combine(directory, "_machine.xml"),
+				Path.Combine(directory, "_software.xml"),
+			};
+
+			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' });
+
+			if (databaseNamesEach.Length != 2)
+				throw new ApplicationException("database names must be 2 parts comma delimited");
+
+			for (int index = 0; index < 2; ++index)
+			{
+				string sourceXmlFilename = xmlFilenames[index];
+				string targetDatabaseName = databaseNamesEach[index].Trim();
+
+				XElement document = XElement.Load(sourceXmlFilename);
+				DataSet dataSet = new DataSet();
+				ReadXML.ImportXMLWork(document, dataSet, null, null);
+
+				DataSet2MSSQL(dataSet, serverConnectionString, targetDatabaseName);
+
+				MakeForeignKeys(serverConnectionString, targetDatabaseName);
+			}
+
+			return 0;
+		}
+
+		public static string HbMameVersion(string html)
+		{
+			string version = null;
+
+			string find = "HBMAME 0.";
+			int index = 0;
+			while ((index = html.IndexOf(find, index)) != -1)
+			{
+				int endIndex = html.IndexOf("(", index + find.Length);
+				if (endIndex == -1)
+					break;
+
+				string text = html.Substring(index + find.Length, endIndex - index - find.Length);
+				if (version == null)
+					version = "0." + text.Trim();
+				else
+					throw new ApplicationException("Found more versions than expected");
+
+				index = endIndex;
+			}
+
+			if (version == null)
+				throw new ApplicationException("Did not find version");
+
+			Console.WriteLine($"HBMAME Version: {version}");
+
+			return version;
+		}
+
+		public static string HbMameGetLatestDownloadedVersion(string directory)
+		{
+			SortedDictionary<int, string> versions = new SortedDictionary<int, string>();
+			string version;
+
+			foreach (string versionDirectory in Directory.GetDirectories(directory))
+			{
+				version = Path.GetFileName(versionDirectory);
+
+				if (version.StartsWith("0.") == false)
+					continue;
+
+				if (File.Exists(Path.Combine(versionDirectory, "hbmame.exe")) == false)
+					continue;
+
+				string[] parts = version.Split('.');
+
+				if (parts.Length != 3)
+					continue;
+
+				versions.Add(Int32.Parse(parts[2]), version);
+			}
+
+			if (versions.Count == 0)
+				throw new ApplicationException($"No MAME versions found in '{directory}'.");
+
+			version = versions[versions.Keys.Last()];
+
+			Console.WriteLine($"HBMAME Version: {version}");
+
+			return version;
 		}
 
 		public static void ReportRelations(DataSet dataSet)
