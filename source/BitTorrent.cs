@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
@@ -8,6 +9,7 @@ using System.Threading;
 using System.Web;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -163,6 +165,26 @@ namespace Spludlow.MameAO
 			}
 
 			Globals.BitTorrentAvailable = true;
+		}
+
+		public static Dictionary<ItemType, string> TorrentHashes()
+		{
+			Dictionary<ItemType, string> result = new Dictionary<ItemType, string>();
+
+			dynamic info = JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/info"));
+
+			foreach (dynamic mangent in info.magnets)
+			{
+				ItemType type = (ItemType) Enum.Parse(typeof(ItemType), (string)mangent.type);
+				result.Add(type, (string)mangent.hash);
+			}
+
+			return result;
+		}
+
+		public static JArray Files(string hash)
+		{
+			return JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/files?hash={hash}"));
 		}
 
 		public static BitTorrentFile MachineRom(string machine)

@@ -13,6 +13,15 @@ using System.Net;
 
 namespace Spludlow.MameAO
 {
+	public enum ItemType
+	{
+		MachineRom,
+		MachineDisk,
+		SoftwareRom,
+		SoftwareDisk,
+		Support,
+	};
+
 	public static class Globals
 	{
 		public class TaskInfo

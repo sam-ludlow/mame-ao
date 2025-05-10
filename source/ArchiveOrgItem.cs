@@ -12,15 +12,6 @@ using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
 {
-	public enum ItemType
-	{
-		MachineRom,
-		MachineDisk,
-		SoftwareRom,
-		SoftwareDisk,
-		Support,
-	};
-
 	public class ArchiveOrgAuth
 	{
 		public static string CacheFilename;

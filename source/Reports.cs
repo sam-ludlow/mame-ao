@@ -9,6 +9,8 @@ using System.Text;
 using System.Xml.Linq;
 using System.Net;
 
+using Newtonsoft.Json.Linq;
+
 namespace Spludlow.MameAO
 {
 	public class Reports
@@ -89,6 +91,13 @@ namespace Spludlow.MameAO
 
 			//
 
+			new ReportType(){
+				Key = "torrent",
+				Group = "source-exists",
+				Code = "SET",
+				Text = "BitTorrent Exists",
+				Decription = "Check files exist on BitTorrent and provide sizes.",
+			},
 			new ReportType(){
 				Key = "machine-rom",
 				Group = "source-exists",
@@ -458,6 +467,78 @@ namespace Spludlow.MameAO
 			Console.WriteLine(text.ToString());
 		}
 
+		public void Report_SET()
+		{
+			DataSet dataSet = new DataSet();
+
+			DataTable softwareListTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT softwarelist.name, softwarelist.description FROM softwarelist");
+			softwareListTable.PrimaryKey = new DataColumn[] { softwareListTable.Columns["name"] };
+
+			DataTable totalsTable = Tools.MakeDataTable("Totals",
+				"Type	Hash	FileCount	Size	SizeText",
+				"String	String	Int32		Int64	String");
+			dataSet.Tables.Add(totalsTable);
+
+			var torrentHashes = BitTorrent.TorrentHashes();
+
+			foreach (ItemType type in torrentHashes.Keys)
+			{
+				string hash = torrentHashes[type];
+
+				JArray files = BitTorrent.Files(hash);
+
+				long totalSize = 0;
+
+				foreach (dynamic file in files)
+				{
+					long length = (long)file.length;
+					totalSize += length;
+				}
+
+				totalsTable.Rows.Add(type.ToString(), hash, files.Count, totalSize, Tools.DataSize(totalSize));
+
+				switch (type)
+				{
+					case ItemType.SoftwareRom:
+					case ItemType.SoftwareDisk:
+
+						SortedDictionary<string, long[]> lists = new SortedDictionary<string, long[]>();
+
+						foreach (dynamic file in files)
+						{
+							string path = (string)file.path;
+							long length = (long)file.length;
+
+							string[] pathsParts = path.Split('\\');
+
+							string listName = pathsParts[0];
+
+							if (lists.ContainsKey(listName) == false)
+								lists.Add(listName, new long[2]);
+
+							lists[listName][0] += 1;
+							lists[listName][1] += length;
+						}
+
+						DataTable table = Tools.MakeDataTable($"{type} Totals",
+							"Name	Description	FileCount	Size	SizeText",
+							"String	String		String		String	String");
+
+						foreach (string listName in lists.Keys)
+						{
+							DataRow listRow = softwareListTable.Rows.Find(listName);
+							string description = listRow != null ? (string)listRow["description"] : "";
+
+							table.Rows.Add(listName, description, lists[listName][0], lists[listName][1], Tools.DataSize(lists[listName][1]));
+						}
+						dataSet.Tables.Add(table);
+
+						break;
+				}
+			}
+
+			SaveHtmlReport(dataSet, "BitTorrent Exists");
+		}
 		public void Report_SEMR()
 		{
 			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
@@ -521,7 +602,7 @@ namespace Spludlow.MameAO
 
 		public void Report_SEMD()
 		{
-			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineDisk][0];	//	TODO: Support many
+			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineDisk][0];
 
 			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, name, description, romof FROM machine ORDER BY machine.name");
 			DataTable diskTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
