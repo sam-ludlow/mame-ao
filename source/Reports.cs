@@ -39,8 +39,8 @@ namespace Spludlow.MameAO
 			},
 			new ReportGroup(){
 				Key = "source-exists",
-				Text = "Exists on Archive.org",
-				Decription = "Check that files exist in the archive.org source metadata. Tests are NOT performed to check if ZIPs, ROMs, or CHDs are valid.",
+				Text = "Assets Exists on BitTorrent & Archive.org",
+				Decription = "Check that files exist in asset source. Tests are NOT performed to check if ZIPs, ROMs, or CHDs are valid.",
 			},
 			new ReportGroup(){
 				Key = "interesting",
@@ -522,7 +522,7 @@ namespace Spludlow.MameAO
 
 						DataTable table = Tools.MakeDataTable($"{type} Totals",
 							"Name	Description	FileCount	Size	SizeText",
-							"String	String		String		String	String");
+							"String	String		String		Int64	String");
 
 						foreach (string listName in lists.Keys)
 						{
@@ -531,7 +531,10 @@ namespace Spludlow.MameAO
 
 							table.Rows.Add(listName, description, lists[listName][0], lists[listName][1], Tools.DataSize(lists[listName][1]));
 						}
-						dataSet.Tables.Add(table);
+
+						DataView view = new DataView(table);
+						view.Sort = "Size DESC";
+						dataSet.Tables.Add(Tools.DataTableFromView(view, table.TableName));
 
 						break;
 				}
@@ -573,29 +576,19 @@ namespace Spludlow.MameAO
 			}
 
 			DataSet dataSet = new DataSet();
-
 			DataView view;
-			DataTable viewTable;
 
 			view = new DataView(table)
 			{
 				RowFilter = "Status = 'MISSING'"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "Missing in Source";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "Missing in Source"));
 
 			view = new DataView(table)
 			{
 				RowFilter = "Status = ''"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "Available in Source";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "Available in Source"));
 
 			SaveHtmlReport(dataSet, "Source Exists Machine Rom");
 		}
@@ -644,29 +637,19 @@ namespace Spludlow.MameAO
 			}
 
 			DataSet dataSet = new DataSet();
-
 			DataView view;
-			DataTable viewTable;
 
 			view = new DataView(table)
 			{
 				RowFilter = "Status = 'MISSING'"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "Missing in Source";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "Missing in Source"));
 
 			view = new DataView(table)
 			{
 				RowFilter = "Status = ''"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "Available in Source";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "Source Exists Machine Disk"));
 
 			SaveHtmlReport(dataSet, "Source Exists Machine Disk");
 		}
@@ -708,29 +691,19 @@ namespace Spludlow.MameAO
 			}
 
 			DataSet dataSet = new DataSet();
-
 			DataView view;
-			DataTable viewTable;
 
 			view = new DataView(table)
 			{
 				RowFilter = "Status = 'MISSING'"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "Missing in Source";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "Missing in Source"));
 
 			view = new DataView(table)
 			{
 				RowFilter = "Status = ''"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "Available in Source";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "Source Exists Software Rom"));
 
 			SaveHtmlReport(dataSet, "Source Exists Software Rom");
 		}
@@ -791,29 +764,19 @@ namespace Spludlow.MameAO
 			}
 
 			DataSet dataSet = new DataSet();
-
 			DataView view;
-			DataTable viewTable;
 
 			view = new DataView(table)
 			{
 				RowFilter = "Status = 'MISSING'"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "Missing in Source";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "Missing in Source"));
 
 			view = new DataView(table)
 			{
 				RowFilter = "Status = ''"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "Available in Source";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "Available in Source"));
 
 			SaveHtmlReport(dataSet, "Source Exists Software Disk");
 		}
@@ -940,7 +903,6 @@ namespace Spludlow.MameAO
 				foreach (DataTable table in dataSet.Tables)
 				{
 					DataView view;
-					DataTable viewTable;
 
 					if (pass == 0)
 					{
@@ -948,11 +910,7 @@ namespace Spludlow.MameAO
 						{
 							RowFilter = "Status <> ''"
 						};
-						viewTable = table.Clone();
-						foreach (DataRowView rowView in view)
-							viewTable.ImportRow(rowView.Row);
-						viewTable.TableName = $"{table.TableName} Bad Status";
-						resultDataSet.Tables.Add(viewTable);
+						resultDataSet.Tables.Add(Tools.DataTableFromView(view, $"{table.TableName} Bad Status"));
 					}
 					else
 					{
@@ -960,11 +918,7 @@ namespace Spludlow.MameAO
 						{
 							RowFilter = "Status = ''"
 						};
-						viewTable = table.Clone();
-						foreach (DataRowView rowView in view)
-							viewTable.ImportRow(rowView.Row);
-						viewTable.TableName = table.TableName;
-						resultDataSet.Tables.Add(viewTable);
+						resultDataSet.Tables.Add(Tools.DataTableFromView(view, table.TableName));
 					}
 				}
 			}
@@ -1017,7 +971,6 @@ namespace Spludlow.MameAO
 
 			DataSet dataSet;
 			DataView view;
-			DataTable viewTable;
 
 			dataSet = new DataSet();
 
@@ -1025,23 +978,16 @@ namespace Spludlow.MameAO
 			{
 				RowFilter = "DiskCount > 0 AND Complete = 1"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "With DISK";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "With DISK"));
 
 			view = new DataView(table)
 			{
 				RowFilter = "DiskCount = 0 AND Complete = 1"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "Without DISK";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "Without DISK"));
 
 			SaveHtmlReport(dataSet, "Avaliable Machine ROM and DISK");
+
 
 			dataSet = new DataSet();
 
@@ -1049,21 +995,13 @@ namespace Spludlow.MameAO
 			{
 				RowFilter = "DiskCount > 0 AND Complete = 0"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "Missing With DISK";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "Missing With DISK"));
 
 			view = new DataView(table)
 			{
 				RowFilter = "DiskCount = 0 AND Complete = 0"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "Missing Without DISK";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "Missing Without DISK"));
 
 			SaveHtmlReport(dataSet, "Missing Machine ROM and DISK");
 		}
@@ -1133,7 +1071,6 @@ namespace Spludlow.MameAO
 
 			DataSet dataSet;
 			DataView view;
-			DataTable viewTable;
 
 			dataSet = new DataSet();
 
@@ -1141,23 +1078,16 @@ namespace Spludlow.MameAO
 			{
 				RowFilter = "DiskCount > 0 AND Complete = 1"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "DISK Software";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "DISK Software"));
 
 			view = new DataView(table)
 			{
 				RowFilter = "DiskCount = 0 AND Complete = 1"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "ROM Software";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "ROM Software"));
 
 			SaveHtmlReport(dataSet, "Avaliable Software ROM and DISK");
+
 
 			dataSet = new DataSet();
 
@@ -1165,21 +1095,13 @@ namespace Spludlow.MameAO
 			{
 				RowFilter = "DiskCount > 0 AND Complete = 0"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "DISK Software";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "DISK Software"));
 
 			view = new DataView(table)
 			{
 				RowFilter = "DiskCount = 0 AND Complete = 0"
 			};
-			viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
-			viewTable.TableName = "ROM Software";
-			dataSet.Tables.Add(viewTable);
+			dataSet.Tables.Add(Tools.DataTableFromView(view, "ROM Software"));
 
 			SaveHtmlReport(dataSet, "Missing Software ROM and DISK");
 		}
@@ -1537,11 +1459,7 @@ namespace Spludlow.MameAO
 			{
 				DataView view = new DataView(table);
 				view.RowFilter = $"[name] = '{sharedfeatName}'";
-				DataTable viewTable = table.Clone();
-				foreach (DataRowView rowView in view)
-					viewTable.ImportRow(rowView.Row);
-				viewTable.TableName = sharedfeatName;
-				dataSet.Tables.Add(viewTable);
+				dataSet.Tables.Add(Tools.DataTableFromView(view, sharedfeatName));
 			}
 
 			SaveHtmlReport(dataSet, "Software with Shared Features");
@@ -1706,9 +1624,8 @@ namespace Spludlow.MameAO
 
 			DataView view = new DataView(table);
 			view.RowFilter = $"[interface_count] <> 1";
-			DataTable viewTable = table.Clone();
-			foreach (DataRowView rowView in view)
-				viewTable.ImportRow(rowView.Row);
+
+			DataTable viewTable = Tools.DataTableFromView(view, table.TableName);
 
 			SaveHtmlReport(viewTable, "Software with Mixed Media");
 		}

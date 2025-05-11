@@ -987,7 +987,10 @@ namespace Spludlow.MameAO
 			try
 			{
 				using (SqlCommand command = new SqlCommand(commandText, connection))
+				{
+					command.CommandTimeout = 15 * 60;
 					return command.ExecuteNonQuery();
+				}
 			}
 			finally
 			{

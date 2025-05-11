@@ -774,8 +774,15 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 								Import.FetchSoftwareDisk();
 								break;
 
+							case "*":
+								Import.FetchMachineRom();
+								Import.FetchMachineDisk();
+								Import.FetchSoftwareRom();
+								Import.FetchSoftwareDisk();
+								break;
+
 							default:
-								throw new ApplicationException("Upload Unknown type not (MR, MD, SR, SD).");
+								throw new ApplicationException("Upload Unknown type not (MR, MD, SR, SD, *).");
 
 						}
 						return;

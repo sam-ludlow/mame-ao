@@ -42,6 +42,15 @@ namespace Spludlow.MameAO
 			return (string)row[columnName];
 		}
 
+		public static DataTable DataTableFromView(DataView view, string tableName)
+		{
+			DataTable table = view.Table.Clone();
+			table.TableName = tableName;
+			foreach (DataRowView rowView in view)
+				table.ImportRow(rowView.Row);
+			return table;
+		}
+
 		public static void ConsoleRule(int head)
 		{
 			Console.WriteLine(new String(_HeadingChars[head], Console.WindowWidth - 1));
