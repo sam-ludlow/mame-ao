@@ -237,6 +237,9 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			Globals.BitTorrentDirectory = Globals.Config.ContainsKey("BitTorrentPath") == true ? Globals.Config["BitTorrentPath"] : Path.Combine(Globals.RootDirectory, "_BT");
 			Directory.CreateDirectory(Globals.BitTorrentDirectory);
 
+			if (Globals.Config.ContainsKey("BitTorrentRestartMinutes") == true)
+				BitTorrent.RestartLimit = TimeSpan.FromMinutes(Double.Parse(Globals.Config["BitTorrentRestartMinutes"]));
+
 			if (BitTorrent.IsInstalled() == true)
 				BitTorrent.Initialize();
 
@@ -742,6 +745,14 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 					case ".btx":
 						BitTorrent.Remove();
 						Tools.ConsoleHeading(1, "To use with archive.org enter the command '.creds' if you have not already entered your credentials");
+						return;
+
+					case ".btr":
+						BitTorrent.Restart();
+						return;
+
+					case ".bts":
+						BitTorrent.Stop();
 						return;
 
 					case ".creds":

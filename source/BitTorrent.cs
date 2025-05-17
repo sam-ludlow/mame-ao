@@ -29,6 +29,8 @@ namespace Spludlow.MameAO
 	{
 		public static string ClientUrl = "http://localhost:12381";
 
+		public static TimeSpan RestartLimit = TimeSpan.FromMinutes(5);
+
 		public static dynamic DomeInfo()
 		{
 			try
@@ -147,24 +149,75 @@ namespace Spludlow.MameAO
 					Console.WriteLine("...done");
 				}
 
-				Console.Write("Starting DOME-BT...");
-				ProcessStartInfo startInfo = new ProcessStartInfo(exeFilename)
-				{
-					WorkingDirectory = Globals.BitTorrentDirectory,
-					UseShellExecute = true,
-				};
-				using (Process process = new Process())
-				{
-					process.StartInfo = startInfo;
-					process.Start();
-
-					if (process.HasExited == true)
-						throw new ApplicationException($"DOME-BT exited imediatly after starting {process.ExitCode}.");
-				}
-				Console.WriteLine("...done");
+				Start();
 			}
 
 			Globals.BitTorrentAvailable = true;
+		}
+
+		public static void Restart()
+		{
+			Stop();
+			Start();
+
+			Console.Write("Waiting for DOME-BT to be ready ...");
+
+			bool ready = false;
+			do {
+
+				Thread.Sleep(5000);
+
+				dynamic info = JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/info"));
+
+				Console.Write(".");
+
+				if (info.ready_minutes != null)
+					ready = true;
+
+			} while (ready == false);
+
+			Console.WriteLine("...done");
+		}
+
+		public static void Start()
+		{
+			string exeFilename = Path.Combine(Globals.BitTorrentDirectory, "dome-bt.exe");
+
+			Console.Write("Starting DOME-BT...");
+			ProcessStartInfo startInfo = new ProcessStartInfo(exeFilename)
+			{
+				WorkingDirectory = Globals.BitTorrentDirectory,
+				UseShellExecute = true,
+			};
+			using (Process process = new Process())
+			{
+				process.StartInfo = startInfo;
+				process.Start();
+
+				if (process.HasExited == true)
+					throw new ApplicationException($"DOME-BT exited imediatly after starting {process.ExitCode}.");
+			}
+			Console.WriteLine("...done");
+		}
+
+		public static void Stop()
+		{
+			dynamic info = DomeInfo();
+
+			if (info != null)
+			{
+				Console.WriteLine("Asking DOME-BT to stop");
+				Tools.Query($"{ClientUrl}/api/stop");
+
+				int pid = (int)info.pid;
+
+				Console.Write("Waiting for DOME-BT to stop ...");
+				using (Process startingProcess = Process.GetProcessById(pid))
+				{
+					startingProcess.WaitForExit();
+				}
+				Console.WriteLine("...done");
+			}
 		}
 
 		public static Dictionary<ItemType, string> TorrentHashes()
@@ -209,8 +262,11 @@ namespace Spludlow.MameAO
 
 		public static BitTorrentFile Download(string apiUrl)
 		{
-			lock (Globals.WorkerTaskInfo)
-				Globals.WorkerTaskInfo.BytesTotal = 100;
+			long expectedSize = -1;
+
+			float percent_complete_previous = -1.0f;
+
+			DateTime changeTime = DateTime.Now;
 
 			while (true)
 			{
@@ -228,17 +284,43 @@ namespace Spludlow.MameAO
 						throw e;
 				}
 
-				//long expectedSize = (long)fileInfo.length;	do the maths
+				if (expectedSize == -1)
+				{
+					expectedSize = (long)fileInfo.length;
+					lock (Globals.WorkerTaskInfo)
+						Globals.WorkerTaskInfo.BytesTotal = expectedSize;
+				}
 
 				float percent_complete = (float)fileInfo.percent_complete;
 
 				lock (Globals.WorkerTaskInfo)
-					Globals.WorkerTaskInfo.BytesCurrent = (long)percent_complete;
+					Globals.WorkerTaskInfo.BytesCurrent = (long)(expectedSize / 100.0 * (long)percent_complete);
 
-				Console.WriteLine($"Torrent:\t{DateTime.Now}\t{(long)fileInfo.length}\t{percent_complete}\t{apiUrl}");
+				TimeSpan waitSpan = DateTime.Now - changeTime;
+
+				Console.WriteLine($"Torrent:\t{DateTime.Now}\t{(long)fileInfo.length}\t{percent_complete}\t{Math.Round(waitSpan.TotalSeconds, 0)}/{RestartLimit.TotalSeconds}\t{apiUrl}");
 
 				if (percent_complete == 100.0f)
 					return new BitTorrentFile((string)fileInfo.filename, (long)fileInfo.length);
+
+				if (percent_complete == percent_complete_previous)
+				{
+					if (waitSpan > RestartLimit)
+					{
+						Tools.ConsoleHeading(2, new string[] {
+							"DOME-BT is not downloading. Restarting it.",
+							"",
+							"Sometimes there aren't enough Seeders connected, a restart may help."
+						});
+						Restart();
+						changeTime = DateTime.Now;
+					}
+				}
+				else
+				{
+					changeTime = DateTime.Now;
+				}
+				percent_complete_previous = percent_complete;
 
 				Thread.Sleep(5000);
 			}

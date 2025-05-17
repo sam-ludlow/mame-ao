@@ -125,6 +125,8 @@ There are also commands available they all start with a dot `.`
 - `.creds` - Enter archive.org credentials, If you press `ENTER` twice your auth cookie will be deleted.
 - `.bt` - Enable the bit torrent client
 - `.btx` - Remove the bit torrent client
+- `.btr` - Restart the bit torrent client
+- `.bts` - Stop the bit torrent client
 - `.test` - Perform asset place tests
 - `.fetch` - Fetch all required assets, used for maintaining full sets
 - `.software` - Fetch & Place a complete software list, you can have them all ready then load from inside MAME.
@@ -242,6 +244,7 @@ You can set certain advanced configuration options in the file `_config.txt`, ea
 - `MameArguments` - Pass arguments to MAME e.g. `-window`
 - `MameVersion` - Run MAME-AO on a fixed MAME version. If you have an old CPU you are stuck with `0273`
 - `SoftwareListSkip` - Skip these software lists when running `.fetch` command for software disks, comma delimited e.g. `psx, saturn, dc`
+- `BitTorrentRestartMinutes` - Minutes to wait to restart DOME-BT if it has not downloaded the required asset
 
 ## Archive.org Upload
 MAME-AO can be used to upload files to archive.org items, for people serious about software preservation.
