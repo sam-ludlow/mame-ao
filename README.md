@@ -101,36 +101,54 @@ You can configure optional settings from the UI page http://localhost:12380/sett
 
 ![MAME-AO Settings](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-settings.png)
 
+## Configuration
+You can set advanced configuration options using the file `_config.txt`, each line should be `KEY	VALUE` (TAB separator).
+
+| Name | Description | Default | Example |
+| ------------- | ------------- | --- | --- |
+| StorePathRom | Override default ROM Store directory | `_STORE` | `StorePathRom	E:\STORE_ROM` |
+| StorePathDisk | Override default DISK Store directory | `_STORE_DISK` | `StorePathDisk	D:\STORE_DISK` |
+| BitTorrentPath | Override default Bit Torrent directory | `_BT` | `BitTorrentPath	D:\DOME_BT` |
+| MameArguments | Pass additional arguments to MAME |  | `MameArguments	-window` |
+| MameVersion | Run MAME-AO on a fixed MAME version (for old CPUs use this example) | | `MameVersion	0262` |
+| SoftwareListSkip | Skip these software lists when running `.fetch` command for software disks, comma delimited | | `SoftwareListSkip	psx, saturn, dc` |
+| BitTorrentRestartMinutes | Minutes to wait until restarting DOME-BT if no asset data has downloaded | `5` | `BitTorrentRestartMinutes	2.5` |
+
+MAME-AO must be restarted for changes to `_config.txt` to take affect.
+
 ## MAME-AO Shell
 From the shell you can enter the machine name and maybe a software name.
 
 There are also commands available they all start with a dot `.`
-- `.`	- Run current MAME without a machine (start MAME UI) you can also pass arguments to MAME
-- `.0123` - Run a previous version of MAME, you can still pass the machine and software but MAME-AO will not place assets in previous versions, you are better off not passing the machine and use the MAME UI with the available filter.
-- `.readme` - Show the mame-ao README on github.com
-- `.list` - Show all saved state across all MAME versions, previous MAME versions will also be listed even without saved state.
-- `.up` - Self update MAME-AO to the latest on GitHub
-- `.upany` - Self update MAME-AO anyway even if up to date, this can be used to clear the Windows Defender warning on first install.
-- `.report` - Run reports, [see reports section](#reports)
-- `.import` - Run the import function, [see import section](#import)
-- `.export` - Run the export function, [see export section](#export)
-- `.snap` - Run the snapshot collection function, [see snapshots section](#snapshots)
-- `.valid` - Validate the hash store, [see validate store section](#validate-store)
-- `.svg` - Convert bitmaps to SVG, [see SVG section](#svg)
-- `.what` - View current MAME whatsnew.txt in default browser.
-- `.ui` - Launch the UI in default browser.
-- `.r` - Reload `UI.html` & `_styles.css` usfull when developing the UI.
-- `.dbm` - Machine database SQL query
-- `.dbs` - Software database SQL query
-- `.creds` - Enter archive.org credentials, If you press `ENTER` twice your auth cookie will be deleted.
-- `.bt` - Enable the bit torrent client
-- `.btx` - Remove the bit torrent client
-- `.btr` - Restart the bit torrent client
-- `.bts` - Stop the bit torrent client
-- `.test` - Perform asset place tests
-- `.fetch` - Fetch all required assets, used for maintaining full sets
-- `.software` - Fetch & Place a complete software list, you can have them all ready then load from inside MAME.
-- `.style` - Write file `_styles.css` so you can modify UI stlyes, use command `.r` to refresh changes.
+
+|Command|Description|Example|
+|:----|:----|:----|
+|.|Run MAME directly without placing files, use it start MAME's built in UI or pass arguments to MAME|. `a2600 -cart et`|
+|.0000|Run a previous version of MAME directly , without placing files, useful for going back to saved state from previous sessions |`.0123 gaunt2`|
+|.bt|Enable the bit torrent client|`.bt`|
+|.btr|Restart the bit torrent client|`.btr`|
+|.bts|Stop the bit torrent client|`.bts`|
+|.btx|Remove the bit torrent client|`.btx`|
+|.creds|Enter archive.org credentials, If you press `ENTER` twice your auth cookie will be deleted.|`.creds`|
+|.dbm|Machine database SQL query|`.dbm SELECT rom.* FROM machine INNER JOIN rom ON machine.machine_id = rom.machine_id WHERE machine.name = 'mrdo'`|
+|.dbs|Software database SQL query|`.dbs SELECT softwarelist.* FROM softwarelist ORDER BY softwarelist.name`|
+|.export|Run the export function, [see export section](#export)|`.export mr C:\EXPORT`|
+|.fetch|Fetch all required assets, used for maintaining full sets|`.fetch sr`|
+|.import|Run the import function, [see import section](#import)|`.import C:\IMPORT`|
+|.list|List saved state and previous MAME versions|`.list`|
+|.r|Reload `UI.html` & `_styles.css` usfull when developing the UI|`.r`|
+|.readme|Show the mame-ao README on github.com|`.readme`|
+|.report|Run reports, [see reports section](#reports)|`.report avsum`|
+|.snap|Run the snapshot collection function, [see snapshots section](#snapshots)|`.snap C:\snaps`|
+|.software|Fetch & Place a complete software list, you can have them all ready then load from inside MAME.|`.software bbcb_flop`|
+|.style|Write file `_styles.css` so you can modify UI stlyes, use command `.r` to refresh changes.|`.style`|
+|.svg|Convert bitmaps to SVG, [see SVG section](#svg)|`.svg C:\snaps\file.png`|
+|.test|Perform asset place tests|`.test everything 100`|
+|.ui|Launch the UI in default browser|`.ui`|
+|.up|Self update MAME-AO to the latest on GitHub|`.up`|
+|.upany|Self update MAME-AO anyway even if up to date, this can be used to clear the Windows Defender warning on first install.|`.upany`|
+|.valid|Validate the hash store, [see validate store section](#validate-store)|`.valid rom`|
+|.what|View current MAME whatsnew.txt in default browser.|`.what`|
 
 ## Saved State and previous MAME versions
 Saved state somtimes does not work between MAME versions. If you have started something with saved state you may as well use the same MAME version.
@@ -234,28 +252,6 @@ Options available on the UI settings page
 - `Yes` Send data
 - `Yes Verbose` Send data and show payload in console.
 - `No` Do not send data.
-
-## Configuration
-You can set certain advanced configuration options in the file `_config.txt`, each line should be `KEY	VALUE` (TAB separator).
-
-- `StorePathRom` - Override default ROM Store directory
-- `StorePathDisk` - Override default DISK Store directory
-- `BitTorrentPath` - Override default Bit Torrent directory
-- `MameArguments` - Pass arguments to MAME e.g. `-window`
-- `MameVersion` - Run MAME-AO on a fixed MAME version. If you have an old CPU you are stuck with `0273`
-- `SoftwareListSkip` - Skip these software lists when running `.fetch` command for software disks, comma delimited e.g. `psx, saturn, dc`
-- `BitTorrentRestartMinutes` - Minutes to wait to restart DOME-BT if it has not downloaded the required asset
-
-## Archive.org Upload
-MAME-AO can be used to upload files to archive.org items, for people serious about software preservation.
-
-Obtain your API Key from here https://archive.org/account/s3.php
-
-Create a text file in the MAME-AO root directory `_api-auth.txt` and put in your API key details in this format:
-
-`LOW <Your_S3_access_key>:<Your_S3_secret_key>`
-
-Use the command `.upload`
 
 ## Data Operations (MAME, HBMAME, TOSEC, FBNeo)
 MAME-AO has the capability to perform various Data operations by passing command line options when starting the program, it will exit immediately when finished.
