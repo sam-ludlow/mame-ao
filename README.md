@@ -117,7 +117,14 @@ You can set advanced configuration options using the file `_config.txt`, each li
 MAME-AO must be restarted for changes to `_config.txt` to take affect.
 
 ## MAME-AO Shell
-From the shell you can enter the machine name and maybe a software name.
+From the shell you can enter the short machine name, other options are available for software.
+
+|Command|Description|Example|
+|:----|:----|:----|
+| \<machine\> | Start machine | `mrdo` |
+| \<machine\> \<arguments\> | With all place commands you can put arguments at the end | `mrdo -window` |
+| \<machine\> \<software\> | Start machine with software | `a2600 et` |
+| \<machine\> \<software\>@\<software list\> | Start machine with software, specify software list for correct media | `cpc464p barb2@gx4000` |
 
 There are also commands available they all start with a dot `.`
 
