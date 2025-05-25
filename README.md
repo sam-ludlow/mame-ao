@@ -106,13 +106,13 @@ You can set advanced configuration options using the file `_config.txt`, each li
 
 | Name | Description | Default | Example |
 | ------------- | ------------- | --- | --- |
-| StorePathRom | Override default ROM Store directory | `_STORE` | `StorePathRom	E:\STORE_ROM` |
-| StorePathDisk | Override default DISK Store directory | `_STORE_DISK` | `StorePathDisk	D:\STORE_DISK` |
-| BitTorrentPath | Override default Bit Torrent directory | `_BT` | `BitTorrentPath	D:\DOME_BT` |
+| StorePathRom | Override default ROM Store directory | _STORE | `StorePathRom	E:\STORE_ROM` |
+| StorePathDisk | Override default DISK Store directory | _STORE_DISK | `StorePathDisk	D:\STORE_DISK` |
+| BitTorrentPath | Override default Bit Torrent directory | _BT | `BitTorrentPath	D:\DOME_BT` |
 | MameArguments | Pass additional arguments to MAME |  | `MameArguments	-window` |
-| MameVersion | Run MAME-AO on a fixed MAME version (for old CPUs use this example) | | `MameVersion	0262` |
+| MameVersion | Run MAME-AO on a fixed MAME version (for old CPUs use this example) | | `MameVersion	0273` |
 | SoftwareListSkip | Skip these software lists when running `.fetch` command for software disks, comma delimited | | `SoftwareListSkip	psx, saturn, dc` |
-| BitTorrentRestartMinutes | Minutes to wait until restarting DOME-BT if no asset data has downloaded | `5` | `BitTorrentRestartMinutes	2.5` |
+| BitTorrentRestartMinutes | Minutes to wait until restarting DOME-BT if no asset data has downloaded | 5 | `BitTorrentRestartMinutes	2.5` |
 
 MAME-AO must be restarted for changes to `_config.txt` to take affect.
 
@@ -123,7 +123,7 @@ There are also commands available they all start with a dot `.`
 
 |Command|Description|Example|
 |:----|:----|:----|
-|.|Run MAME directly without placing files, use it start MAME's built in UI or pass arguments to MAME|. `a2600 -cart et`|
+|.|Run MAME directly without placing files, use it start MAME's built in UI or pass arguments to MAME|`. a2600 -cart et`|
 |.0000|Run a previous version of MAME directly , without placing files, useful for going back to saved state from previous sessions |`.0123 gaunt2`|
 |.bt|Enable the bit torrent client|`.bt`|
 |.btr|Restart the bit torrent client|`.btr`|
