@@ -70,31 +70,22 @@ You should use a joystick but you will need a few keyboard commands. Full keyboa
 
 ![MAME-AO Real Man's Joystick](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-joystick.png)
 
-- Player 1 Coin Up: `5`
-- Player 1 Start: `1`
-
-NOTE: Other players continue along, coin: `5`, `6`, `7`, `8` start: `1`, `2`, `3`, `4`
-
-- Player 1 Joystick: `Cursor keys`
-- Player 1 Button 1: `Left Ctrl`
-- Player 1 Button 2: `Left Alt`
-- Player 1 Button 3: `Spacebar`
-
-- Main Menu - `TAB`
-- Pause - `P`
-
-- Service Mode: `F2`
-
-- Save Saved State: `F6`
-- Load Saved State: `F7`
-
-NOTE: When saving state you have to then press another key or button to name the save, so you can have several.
-
-- Snap Screen: `F12`
-
-- Exit MAME: `ESC`
-
-- Keyboard UI controls OR full keyboard : `Scroll Lock`
+|Key|Description|
+|:----|:----|
+| 5 6 7 8 | Coin Up Player 1-4 |
+| 1 2 3 4 | Start Player 1-4 |
+| Cursor keys | Player 1 Joystick |
+| Left Ctrl | Player 1 Button 1 |
+| Left Alt | Player 1 Button 2 |
+| Space bar | Player 1 Button 3 |
+| Tab | Configuration menu |
+| F1 | Memory Reset |
+| F2 | Service Mode |
+| F6 | Create Saved State |
+| F7 | Load Saved State |
+| F12 | Snap the screen |
+| Escape | Exit MAME |
+| Scroll Lock | Keyboard UI controls OR full keyboard |
 
 ## Settings - User Preferences
 You can configure optional settings from the UI page http://localhost:12380/settings
