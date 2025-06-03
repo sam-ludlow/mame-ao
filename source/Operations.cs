@@ -1061,7 +1061,7 @@ namespace Spludlow.MameAO
 							}
 						}
 
-						command.Parameters["@title"].Value = $"{(string)machineRow["description"]} - mame machine";
+						command.Parameters["@title"].Value = $"{(string)machineRow["description"]} - mame ({version}) machine";
 						command.Parameters["@html"].Value = html.ToString();
 						command.Parameters["@machine_name"].Value = machine_name;
 
@@ -1145,7 +1145,7 @@ namespace Spludlow.MameAO
 					"String	String"
 				);
 
-				foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Rows)
+				foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Select(null, "description"))
 				{
 					long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
 					string softwarelist_name = (string)softwarelistRow["name"];
@@ -1366,7 +1366,7 @@ namespace Spludlow.MameAO
 									DataRow detailRow = machineDetailTable.Rows.Find(name);
 									string description = detailRow != null ? (string)detailRow["description"] : "not found";
 
-									machinesTable.Rows.Add($"<a href=\"/mame/machine/{name}\">{name}</a>", $"<a href=\"#\" onclick=\"mameAO('{name} {software_name}'); return false\">{description}</a>");
+									machinesTable.Rows.Add($"<a href=\"/mame/machine/{name}\">{name}</a>", $"<a href=\"#\" onclick=\"mameAO('{name} {software_name}@{softwarelist_name}'); return false\">{description}</a>");
 								}
 
 								html.AppendLine("<hr />");
