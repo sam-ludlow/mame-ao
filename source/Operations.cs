@@ -1151,10 +1151,7 @@ namespace Spludlow.MameAO
 					string softwarelist_name = (string)softwarelistRow["name"];
 					string softwarelist_description = (string)softwarelistRow["description"];
 
-					//if (softwarelist_name != "a800")
-					//	continue;
-
-					//if (softwarelist_name != "spectrum_flop_opus")
+					//if (softwarelist_name != "x68k_flop" && softwarelist_name != "amiga_cd")
 					//	continue;
 
 					DataRow[] softwareRows = dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}");
@@ -1242,109 +1239,102 @@ namespace Spludlow.MameAO
 							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["sharedfeat"], rows, null));
 						}
 
-						foreach (DataRow partRow in dataSet.Tables["part"].Select($"software_id = {software_id}"))
+						DataRow[] partRows = dataSet.Tables["part"].Select($"software_id = {software_id}");
+						if (partRows.Length > 0)
 						{
-							long part_id = (long)partRow["part_id"];
-							string part_name = (string)partRow["name"];
-							string part_interface = (string)partRow["interface"];
+							// part, feature
+							DataTable table = Tools.MakeDataTable(
+								"part_name	part_interface	feature_name	feature_value",
+								"String		String			String			String"
+							);
 
-							rows = dataSet.Tables["feature"].Select($"part_id = {part_id}");
-							if (rows.Length > 0)
+							foreach (DataRow partRow in partRows)
 							{
-								DataTable table = Tools.MakeDataTable(
-									"part_name	part_interface	feature_name	feature_value",
-									"String		String			String			String"
-								);
-								foreach (DataRow row in rows)
-									table.Rows.Add(part_name, part_interface, row["name"], row["value"]);
+								long part_id = (long)partRow["part_id"];
+								string part_name = (string)partRow["name"];
+								string part_interface = (string)partRow["interface"];
 
-								html.AppendLine("<hr />");	//	!!!!!!!!!!!! dont always get feature hr is bad
+								foreach (DataRow featureRow in dataSet.Tables["feature"].Select($"part_id = {part_id}"))
+									table.Rows.Add(part_name, part_interface, featureRow["name"], featureRow["value"]);
+							}
+							if (table.Rows.Count > 0)
+							{
+								html.AppendLine("<hr />");
 								html.AppendLine("<h2>part, feature</h2>");
 								html.AppendLine(Reports.MakeHtmlTable(table, null));
 							}
 
-							rows = dataSet.Tables["dataarea"].Select($"part_id = {part_id}");
-							if (rows.Length > 0)
+							// part, dataarea, rom
+							table = Tools.MakeDataTable(
+								"part_name	part_interface	dataarea_name	dataarea_size	dataarea_databits	dataarea_endian",
+								"String		String			String			String			String				String"
+							);
+							foreach (DataColumn column in dataSet.Tables["rom"].Columns)
+								if (column.ColumnName.EndsWith("_id") == false)
+									table.Columns.Add(column.ColumnName, typeof(string));
+
+							foreach (DataRow partRow in partRows)
 							{
-								foreach (DataRow row in rows)
+								long part_id = (long)partRow["part_id"];
+								string part_name = (string)partRow["name"];
+								string part_interface = (string)partRow["interface"];
+
+								foreach (DataRow dataareaRow in dataSet.Tables["dataarea"].Select($"part_id = {part_id}"))
 								{
-									long dataarea_id = (long)row["dataarea_id"];
+									long dataarea_id = (long)dataareaRow["dataarea_id"];
 
-									romTable.Clear();
-
-									DataRow[] romRows = dataSet.Tables["rom"].Select($"dataarea_id = {dataarea_id}");
-
-									if (romRows.Length == 0)
+									foreach (DataRow romRow in dataSet.Tables["rom"].Select($"dataarea_id = {dataarea_id}"))
 									{
-										DataRow targetRow = romTable.NewRow();
-
-										foreach (DataColumn column in dataSet.Tables["dataarea"].Columns)
-											if (column.ColumnName.EndsWith("_id") == false)
-												targetRow["data_" + column.ColumnName] = row[column.ColumnName];
-
-										romTable.Rows.Add(targetRow);
-									}
-									foreach (DataRow romRow in romRows)
-									{
-										DataRow targetRow = romTable.NewRow();
-
-										foreach (DataColumn column in dataSet.Tables["dataarea"].Columns)
-											if (column.ColumnName.EndsWith("_id") == false)
-												targetRow["data_" + column.ColumnName] = row[column.ColumnName];
+										DataRow row = table.Rows.Add(part_name, part_interface,
+											(string)dataareaRow["name"], (string)dataareaRow["size"], (string)dataareaRow["databits"], (string)dataareaRow["endian"]);
 
 										foreach (DataColumn column in dataSet.Tables["rom"].Columns)
 											if (column.ColumnName.EndsWith("_id") == false)
-												targetRow[column.ColumnName] = romRow[column.ColumnName];
-
-										romTable.Rows.Add(targetRow);
+												row[column.ColumnName] = romRow[column.ColumnName];
 									}
-
-									html.AppendLine("<hr class='px2' />");
-									html.AppendLine("<h2>dataarea, rom</h2>");
-									html.AppendLine(Reports.MakeHtmlTable(romTable, null));
 								}
 							}
-
-							rows = dataSet.Tables["diskarea"].Select($"part_id = {part_id}");
-							if (rows.Length > 0)
+							if (table.Rows.Count > 0)
 							{
-								foreach (DataRow row in rows)
+								html.AppendLine("<hr />");
+								html.AppendLine("<h2>part, dataarea, rom</h2>");
+								html.AppendLine(Reports.MakeHtmlTable(table, null));
+							}
+
+							// part, diskarea, disk
+							table = Tools.MakeDataTable(
+								"part_name	part_interface	diskarea_name",
+								"String		String			String"
+							);
+							foreach (DataColumn column in dataSet.Tables["disk"].Columns)
+								if (column.ColumnName.EndsWith("_id") == false)
+									table.Columns.Add(column.ColumnName, typeof(string));
+
+							foreach (DataRow partRow in partRows)
+							{
+								long part_id = (long)partRow["part_id"];
+								string part_name = (string)partRow["name"];
+								string part_interface = (string)partRow["interface"];
+
+								foreach (DataRow diskareaRow in dataSet.Tables["diskarea"].Select($"part_id = {part_id}"))
 								{
-									long diskarea_id = (long)row["diskarea_id"];
+									long diskarea_id = (long)diskareaRow["diskarea_id"];
 
-									diskTable.Clear();
-
-									DataRow[] diskRows = dataSet.Tables["disk"].Select($"diskarea_id = {diskarea_id}");
-
-									if (diskRows.Length == 0)
+									foreach (DataRow diskRow in dataSet.Tables["disk"].Select($"diskarea_id = {diskarea_id}"))
 									{
-										DataRow targetRow = diskTable.NewRow();
-
-										foreach (DataColumn column in dataSet.Tables["diskarea"].Columns)
-											if (column.ColumnName.EndsWith("_id") == false)
-												targetRow["data_" + column.ColumnName] = row[column.ColumnName];
-
-										diskTable.Rows.Add(targetRow);
-									}
-									foreach (DataRow diskRow in diskRows)
-									{
-										DataRow targetRow = diskTable.NewRow();
-
-										foreach (DataColumn column in dataSet.Tables["diskarea"].Columns)
-											if (column.ColumnName.EndsWith("_id") == false)
-												targetRow["data_" + column.ColumnName] = row[column.ColumnName];
-
+										DataRow row = table.Rows.Add(part_name, part_interface, (string)diskareaRow["name"]);
+										
 										foreach (DataColumn column in dataSet.Tables["disk"].Columns)
 											if (column.ColumnName.EndsWith("_id") == false)
-												targetRow[column.ColumnName] = diskRow[column.ColumnName];
-
-										diskTable.Rows.Add(targetRow);
+												row[column.ColumnName] = diskRow[column.ColumnName];
 									}
-
-									html.AppendLine("<hr class='px2' />");
-									html.AppendLine("<h2>diskarea, disk</h2>");
-									html.AppendLine(Reports.MakeHtmlTable(diskTable, null));
 								}
+							}
+							if (table.Rows.Count > 0)
+							{
+								html.AppendLine("<hr />");
+								html.AppendLine("<h2>part, diskarea, disk</h2>");
+								html.AppendLine(Reports.MakeHtmlTable(table, null));
 							}
 						}
 
