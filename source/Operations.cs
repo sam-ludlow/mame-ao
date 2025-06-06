@@ -812,7 +812,7 @@ namespace Spludlow.MameAO
 						long machine_id = (long)machineRow["machine_id"];
 						string machine_name = (string)machineRow["name"];
 
-						//if (machine_name != "software_list")
+						//if (machine_name != "bbcb")
 						//	continue;
 
 						StringBuilder html = new StringBuilder();
@@ -897,6 +897,73 @@ namespace Spludlow.MameAO
 							}
 
 							html.AppendLine(Reports.MakeHtmlTable(table, null));
+						}
+
+						DataRow[] deviceRows = dataSet.Tables["device"].Select("machine_id = " + machine_id);
+						if (deviceRows.Length > 0)
+						{
+							//	device, instance
+							DataTable table = new DataTable();
+							foreach (DataTable columnTable in new DataTable[] { dataSet.Tables["device"], dataSet.Tables["instance"] })
+								foreach (DataColumn column in columnTable.Columns)
+									if (column.ColumnName.EndsWith("_id") == false)
+										table.Columns.Add(column.ColumnName, typeof(string));
+
+							foreach (DataRow deviceRow in deviceRows)
+							{
+								long device_id = (long)deviceRow["device_id"];
+
+								DataRow[] instanceRows = dataSet.Tables["instance"].Select("device_id = " + device_id);
+								foreach (DataRow instanceRow in instanceRows)
+								{
+									DataRow row = table.NewRow();
+									foreach (DataColumn column in deviceRow.Table.Columns)
+										if (column.ColumnName.EndsWith("_id") == false)
+											row[column.ColumnName] = deviceRow[column.ColumnName];
+
+									foreach (DataColumn column in instanceRow.Table.Columns)
+										if (column.ColumnName.EndsWith("_id") == false)
+											row[column.ColumnName] = instanceRow[column.ColumnName];
+									table.Rows.Add(row);
+								}
+							}
+
+							if (table.Rows.Count > 0)
+							{
+								html.AppendLine("<hr />");
+								html.AppendLine("<h2>device, instance</h2>");
+								html.AppendLine(Reports.MakeHtmlTable(table, null));
+							}
+
+							//	device, extension
+							table = new DataTable();
+							foreach (DataColumn column in dataSet.Tables["device"].Columns)
+								if (column.ColumnName.EndsWith("_id") == false)
+									table.Columns.Add(column.ColumnName, typeof(string));
+							table.Columns.Add("extension_names", typeof(string));
+
+							foreach (DataRow deviceRow in deviceRows)
+							{
+								long device_id = (long)deviceRow["device_id"];
+
+								DataRow[] extensionRows = dataSet.Tables["extension"].Select("device_id = " + device_id);
+
+								DataRow row = table.NewRow();
+								foreach (DataColumn column in deviceRow.Table.Columns)
+									if (column.ColumnName.EndsWith("_id") == false)
+										row[column.ColumnName] = deviceRow[column.ColumnName];
+
+								row["extension_names"] = String.Join(", ", extensionRows.Select(r => (string)r["name"]));
+
+								table.Rows.Add(row);
+							}
+
+							if (table.Rows.Count > 0)
+							{
+								html.AppendLine("<hr />");
+								html.AppendLine("<h2>device, extension</h2>");
+								html.AppendLine(Reports.MakeHtmlTable(table, null));
+							}
 						}
 
 						//
