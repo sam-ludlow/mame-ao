@@ -573,13 +573,15 @@ namespace Spludlow.MameAO
 
 			foreach (DataRow row in table.Rows)
 			{
-				string device_interface = (string)row["interface"];
 				string instance_briefname = (string)row["briefname"];
 
-				if (machineInterfaceBriefnames.ContainsKey(device_interface) == false)
-					machineInterfaceBriefnames.Add(device_interface, new List<string>());
+				foreach (string device_interface in ((string)row["interface"]).Split(',').Select(i => i.Trim()))
+				{
+					if (machineInterfaceBriefnames.ContainsKey(device_interface) == false)
+						machineInterfaceBriefnames.Add(device_interface, new List<string>());
 
-				machineInterfaceBriefnames[device_interface].Add(instance_briefname);
+					machineInterfaceBriefnames[device_interface].Add(instance_briefname);
+				}
 			}
 
 			List<string> results = new List<string>();
