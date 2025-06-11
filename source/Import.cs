@@ -205,7 +205,7 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static void PlaceSoftwareList(string softwareListName)
+		public static DataSet PlaceSoftwareList(string softwareListName, bool placeFiles)
 		{
 			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
 				$"SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist WHERE (softwarelist.name = '{softwareListName}')");
@@ -225,13 +225,26 @@ namespace Spludlow.MameAO
 
 				foreach (DataRow softwareRow in softwareTable.Select($"softwarelist_id = {softwarelist_id}"))
 				{
-					Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, true);
-					Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, true);
+					Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, placeFiles);
+					Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, placeFiles);
 				}
 			}
 
 			if (Globals.Settings.Options["PlaceReport"] == "Yes")
 				Globals.Reports.SaveHtmlReport(Globals.WorkerTaskReport, $"Place Assets Software List - {softwareListName}");
+
+			DataSet dataSet = new DataSet();
+
+			DataTable[] tables = new DataTable[] { softwarelistTable, softwareTable, romTable, diskTable };
+			string[] names = new string[] { "softwarelist", "software", "rom", "disk" };
+			for (int index = 0; index < tables.Length; ++index)
+			{
+				DataTable table = tables[index];
+				table.TableName = names[index];
+				dataSet.Tables.Add(table);
+			}
+
+			return dataSet;
 		}
 
 	}

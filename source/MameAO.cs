@@ -801,7 +801,14 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 					case ".software":
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <software list name>");
-						Import.PlaceSoftwareList(parts[1]);
+						Import.PlaceSoftwareList(parts[1], true);
+						return;
+
+					case ".softname":
+					case ".softnamed":
+						if (parts.Length != 3)
+							throw new ApplicationException($"Usage: {parts[0]} <software list name> <target directory>");
+						Export.SoftwareListNamedExport(parts[1], parts[2], parts[0].EndsWith("d"));
 						return;
 
 					case ".style":

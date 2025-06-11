@@ -138,7 +138,9 @@ There are also commands available they all start with a dot `.`
 |.readme|Show the mame-ao README on github.com|`.readme`|
 |.report|Run reports, [see reports section](#reports)|`.report avsum`|
 |.snap|Run the snapshot collection function, [see snapshots section](#snapshots)|`.snap C:\snaps`|
-|.software|Fetch & Place a complete software list, you can have them all ready then load from inside MAME.|`.software bbcb_flop`|
+|.softname|Fetch & Export complete software list with friendly filenames, usefull for outside MAME|`.softname electron_cart C:\EXPORT`|
+|.softnamed|Fetch & Export complete software list with friendly filenames in directories, usefull for outside MAME|`.softnamed c64_cart C:\EXPORT`|
+|.software|Fetch & Place complete software list, you can have them all ready then load inside MAME.|`.software bbcb_flop`|
 |.style|Write file `_styles.css` so you can modify UI stlyes, use command `.r` to refresh changes.|`.style`|
 |.svg|Convert bitmaps to SVG, [see SVG section](#svg)|`.svg C:\snaps\file.png`|
 |.test|Perform asset place tests|`.test everything 100`|

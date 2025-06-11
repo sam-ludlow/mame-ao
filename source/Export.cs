@@ -505,5 +505,57 @@ namespace Spludlow.MameAO
 			Globals.Reports.SaveHtmlReport(manifestTable, title);
 		}
 
+		public static void SoftwareListNamedExport(string softwareListName, string directory, bool useDirectories)
+		{
+			Directory.CreateDirectory(directory);
+
+			DataSet dataSet = Import.PlaceSoftwareList(softwareListName, false);
+
+			foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Rows)
+			{
+				long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
+
+				foreach (DataRow softwareRow in dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}"))
+				{
+					string softwareDescription = (string)softwareRow["description"];
+					long software_id = (long)softwareRow["software_id"];
+
+					string softwareDirectory = Path.Combine(directory, Tools.ValidFileName(softwareDescription));
+
+					if (useDirectories == true)
+						Directory.CreateDirectory(softwareDirectory);
+
+					HashStore[] hashStores = new HashStore[] { Globals.RomHashStore, Globals.DiskHashStore };
+					DataTable[] dataTables = new DataTable[] { dataSet.Tables["rom"], dataSet.Tables["disk"] };
+
+					for (int index = 0; index < hashStores.Length; ++index)
+					{
+						HashStore hashStore = hashStores[index];
+						DataTable table = dataTables[index];
+						string extention = index == 0 ? "" : ".chd";
+
+						foreach (DataRow row in table.Select($"software_id = {software_id}"))
+						{
+							string sha1 = (string)row["sha1"];
+
+							if (hashStore.Exists(sha1) == false)
+								continue;
+
+							string filename;
+
+							if (useDirectories == true)
+								filename = Path.Combine(softwareDirectory, Tools.ValidFileName((string)row["name"]) + extention);
+							else
+								filename = Path.Combine(directory, Tools.ValidFileName(softwareDescription) + "_" + Tools.ValidFileName((string)row["name"]) + extention);
+
+							Console.WriteLine(filename);
+
+							File.Copy(hashStore.Filename(sha1), filename, true);
+						}
+					}
+				}
+			}
+		}
+
 	}
 }
