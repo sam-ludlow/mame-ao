@@ -240,7 +240,10 @@ namespace Spludlow.MameAO
 				Mame.ExtractXML(exeFilename, machineXmlFilename, "-listxml");
 
 			if (File.Exists(softwareXmlFilename) == false)
+			{
 				Mame.ExtractXML(exeFilename, softwareXmlFilename, "-listsoftware");
+				ReadXML.CombineHashSoftwareLists(softwareXmlFilename);
+			}
 
 			return 0;
 		}
@@ -1787,7 +1790,10 @@ namespace Spludlow.MameAO
 				Mame.ExtractXML(exeFilename, machineXmlFilename, "-listxml");
 
 			if (File.Exists(softwareXmlFilename) == false)
+			{
 				Mame.ExtractXML(exeFilename, softwareXmlFilename, "-listsoftware");
+				ReadXML.CombineHashSoftwareLists(softwareXmlFilename);
+			}
 
 			return 0;
 		}

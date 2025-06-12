@@ -63,7 +63,7 @@
 					},
 					{
 						text: 'Export',
-						title: 'Export ROM/CHD standard MAME format',
+						title: 'Export ROM/CHD for use outside MAME-AO',
 						href: '/export',
 					},
 					{
@@ -858,17 +858,41 @@
 			const canvas = getCanvas();
 
 			let html = '';
-			html += '<p>Copy and paste the directory path to export to here.</p>';
-			html += '<select id="exportType"><option value="*">Everything</option><option value="MR">Machine ROM</option><option value="MD">Machine DISK</option><option value="SR">Software ROM</option><option value="SD">Software DISK</option></select><br /><br />';
-			html += '<input id="directory" type="text" value="" style="width:480px;" /><br />';
-			html += '<button type="submit" onclick="runCommand(\'.export \' + exportType.value + \' \' + directory.value); return false;">Start Export</button><br />';
-			html += '<p>A report will pop up in the browser when finished. Look at the console shell to check progress.</p>';
+
+			html += '<h2>Target directory</h2>';
+			html += '<p>Copy and paste the directory path to here.</p>';
+			html += '<input id="directory" type="text" value="" style="width:480px;" />';
+			html += '<p>When finished a report will pop up. Check the console to view progress.</p>';
+
+			html += '<hr />';
+
+			html += '<h2>Standard MAME format (split set)</h2>';
+			html += '<p>Export everything currently in the store.</p>';
+			html += '<p><select id="exportType"><option value="*">Everything</option><option value="MR">Machine ROM</option><option value="MD">Machine DISK</option><option value="SR">Software ROM</option><option value="SD">Software DISK</option></select></p>';
+			html += '<button type="submit" onclick="runCommand(\'.export \' + exportType.value + \' \' + directory.value); return false;">Start</button>';
+
+			html += '<hr />';
+
+			html += '<h2>Fetch complete software lists with friendly names</h2>';
+			html += '<p>Complete software list will be downloaded and exported to directory using friendly filenames.</p>';
+			html += '<p><select id="selectList"></select></p>';
+			html += '<p><input type="checkbox" id="inputUseDirs">Use directories for each software</input></p>';
+			html += '<button type="submit" onclick="runCommand(\'.softname\' + (inputUseDirs.checked ? \'d\' : \'\') + \' \' + selectList.value + \' \' + directory.value); return false;">Start</button>';
 
 			const div = document.createElement('div');
 			div.innerHTML = html;
 			canvas.appendChild(div);
-
+			
 			document.getElementById('directory').focus();
+
+			const softwarelistData = await fetchJson('/api/softwarelists');
+			const selectList = document.getElementById('selectList')
+			softwarelistData.results.forEach((softwareList) => {
+				const option = document.createElement('option');
+				option.setAttribute('value', softwareList.name);
+				option.text = `${softwareList.description} (${softwareList.name})`;
+				selectList.appendChild(option);
+			});
 		}
 
 		//

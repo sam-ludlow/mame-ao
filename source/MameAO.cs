@@ -387,6 +387,10 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 				Console.Write($"Extracting MAME software XML {softwareXmlFilename} ...");
 				Mame.ExtractXML(binFilename, softwareXmlFilename, "-listsoftware");
 				Console.WriteLine("...done.");
+
+				Console.Write($"Combine software XML with hash directory {softwareXmlFilename} ...");
+				ReadXML.CombineHashSoftwareLists(softwareXmlFilename);
+				Console.WriteLine("...done.");
 			}
 
 			string softwareDatabaseFilename = Path.Combine(Globals.MameDirectory, "_software.sqlite");

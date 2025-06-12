@@ -422,6 +422,11 @@ namespace Spludlow.MameAO
 			return table.Rows[0];
 		}
 
+		public DataTable GetSoftwareLists()
+		{
+			return ExecuteFill(_SoftwareConnectionString, $"SELECT * FROM [softwarelist] ORDER BY [description]");
+		}
+
 		public DataRow[] GetSoftwareRoms(DataRow software)
 		{
 			long software_id = (long)software["software_id"];

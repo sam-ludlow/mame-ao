@@ -62,6 +62,7 @@ namespace Spludlow.MameAO
 
 					context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
 					context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
+					context.Response.Headers["Cache-Control"] = "max-age=60";
 
 					string path = context.Request.Url.AbsolutePath.ToLower();
 
@@ -409,6 +410,23 @@ namespace Spludlow.MameAO
 			json.offset = offset;
 			json.limit = limit;
 			json.total = rows.Length == 0 ? 0 : (long)rows[0]["ao_total"];
+			json.count = results.Count;
+			json.results = results;
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+		public void _api_softwarelists(HttpListenerContext context, StreamWriter writer)
+		{
+			JArray results = new JArray();
+
+			foreach (DataRow row in Globals.Database.GetSoftwareLists().Rows)
+				results.Add(RowToJson(row));
+
+			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = results.Count;
 			json.count = results.Count;
 			json.results = results;
 

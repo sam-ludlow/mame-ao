@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace Spludlow.MameAO
@@ -73,8 +74,6 @@ namespace Spludlow.MameAO
 					break;
 
 				case "softwarelists":
-					CombineHashSoftwareLists(document);
-
 					ImportXMLWork(document, dataSet, null, RequiredSoftwareTables);
 					break;
 
@@ -153,17 +152,41 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static void CombineHashSoftwareLists(XElement document)
+		public static void CombineHashSoftwareLists(string xmlFilename)
 		{
-			string hashDirectory = Path.Combine(Globals.MameDirectory, "hash");
+			string hashDirectory = Path.Combine(Path.GetDirectoryName(xmlFilename), "hash");
+			string tempFilename = xmlFilename + ".tmp";
 
-			HashSet<string> softwareListNames = new HashSet<string>(document.Elements("softwarelist").Select(element => element.Attribute("name").Value));
+			XmlDocument xmlDocument = new XmlDocument();
+			xmlDocument.Load(xmlFilename);
+
+			HashSet<string> softwareListNames = new HashSet<string>(xmlDocument.GetElementsByTagName("softwarelist").Cast<XmlNode>().Select(node => node.Attributes["name"].Value));
+
+			XmlNode softwarelistsNode = xmlDocument.GetElementsByTagName("softwarelists").Cast<XmlNode>().Single();
 
 			foreach (string filename in Directory.GetFiles(hashDirectory, "*.xml"))
 			{
-				if (softwareListNames.Contains(Path.GetFileNameWithoutExtension(filename)) == false)
-					document.Add(XElement.Load(filename));
+				string softwareListName = Path.GetFileNameWithoutExtension(filename);
+
+				if (softwareListNames.Contains(softwareListName) == false)
+				{
+					Console.Write(softwareListName + ".");
+
+					XmlDocument hashDocument = new XmlDocument();
+					hashDocument.Load(filename);
+
+					foreach (XmlNode sourceNode in hashDocument.GetElementsByTagName("softwarelist"))
+					{
+						XmlNode targetNode = softwarelistsNode.OwnerDocument.ImportNode(sourceNode, true);
+						softwarelistsNode.AppendChild(targetNode);
+					}
+				}
 			}
+
+			xmlDocument.Save(tempFilename);
+
+			File.Delete(xmlFilename);
+			File.Move(tempFilename, xmlFilename);
 		}
 	}
 }
