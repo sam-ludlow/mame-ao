@@ -62,7 +62,6 @@ namespace Spludlow.MameAO
 
 					context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
 					context.Response.Headers["Content-Type"] = "application/json; charset=utf-8";
-					context.Response.Headers["Cache-Control"] = "max-age=60";
 
 					string path = context.Request.Url.AbsolutePath.ToLower();
 
@@ -97,10 +96,12 @@ namespace Spludlow.MameAO
 										case "/favicon.ico":
 											context.Response.Headers["Content-Type"] = "image/x-icon";
 											context.Response.OutputStream.Write(_FavIcon, 0, _FavIcon.Length);
+											context.Response.Headers["Cache-Control"] = "max-age=60";
 											break;
 
 										case "/styles.css":
 											context.Response.Headers["Content-Type"] = "text/css";
+											context.Response.Headers["Cache-Control"] = "max-age=60";
 											writer.WriteLine(_StyleSheet);
 											break;
 

@@ -659,6 +659,68 @@ namespace Spludlow.MameAO
 
 	}
 
+	public class LineArguments
+	{
+		public string Line;
+		public string First = null;
+
+		public LineArguments(string line)
+		{
+			Line = line.Trim();
+
+			if (line.Length == 0)
+				return;
+
+			int index = line.IndexOf(' ');
+			if (index == -1)
+				First = line;
+			else
+				First = line.Substring(0, index);
+		}
+
+		public string[] Arguments(int expectedCount)
+		{
+			return Arguments(expectedCount, false);
+		}
+
+		public string[] Arguments(int expectedCount, bool lastHyphen)
+		{
+			if (Line.Length == 0)
+				return new string[] { };
+
+			List<string> arguments = new List<string>();
+
+			int currentIndex = 0;
+			bool done = false;
+			while (done == false)
+			{
+				int nextIndex = Line.IndexOf(' ', currentIndex + 1);
+				if (nextIndex != -1 && (nextIndex + 1) < Line.Length)
+					++nextIndex;
+
+				string part;
+				if (nextIndex == -1 || (expectedCount > 0 && arguments.Count == (expectedCount - 1)) || (lastHyphen == true && Line[currentIndex] == '-'))
+				{
+					part = Line.Substring(currentIndex);
+					done = true;
+				}
+				else
+				{
+					part = Line.Substring(currentIndex, nextIndex - currentIndex);
+				}
+
+				part = part.Trim();
+
+				if (part.Length > 0)
+					arguments.Add(part);
+
+				currentIndex = nextIndex;
+			}
+
+			return arguments.ToArray();
+		}
+	}
+
 	public class TempDirectory : IDisposable
 	{
 		private readonly string _LockFilePath;

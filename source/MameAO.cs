@@ -531,34 +531,27 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 		{
 			string binFilename = Path.Combine(Globals.MameDirectory, "mame.exe");
 
-			string machine;
+			LineArguments args = new LineArguments(line);
+
+			string machine = "";
 			string software = "";
 			string arguments = "";
 
-			string[] parts = line.Split(new char[] { ' ' });
+			string[] parts;
 
-			machine = parts[0];
-
-			if (machine.StartsWith(".") == true)
+			if (args.First.StartsWith(".") == true)
 			{
-				switch (machine)
+				switch (args.First)
 				{
-					case ".":
-						if (parts.Length > 1)
-							arguments = String.Join(" ", parts.Skip(1));
-						break;
-
 					case ".list":
 						ListSavedState();
 						return;
 
 					case ".import":
-						if (parts.Length < 2)
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <source directory>");
-
-						arguments = String.Join(" ", parts.Skip(1));
-
-						Import.ImportDirectory(arguments);
+						Import.ImportDirectory(parts[1]);
 						return;
 
 					case ".up":
@@ -571,11 +564,12 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 					case ".favm":
 					case ".favmx":
+						parts = args.Arguments(2);
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <Machine Name>");
 
 						machine = parts[1].ToLower();
-						
+
 						Favorites.ValidateFavorite(machine, null, null);
 
 						if (parts[0].EndsWith("x") == true)
@@ -587,6 +581,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 					case ".favs":
 					case ".favsx":
+						parts = args.Arguments(4);
 						if (parts.Length != 4)
 							throw new ApplicationException($"Usage: {parts[0]} <Machine Name> <List Name> <Software Name>");
 
@@ -604,10 +599,11 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						return;
 
 					case ".export":
-						if (parts.Length < 3)
+						parts = args.Arguments(3);
+						if (parts.Length != 3)
 							throw new ApplicationException($"Usage: {parts[0]} <type: MR, MD, SR, SD, *> <target directory>");
 
-						arguments = String.Join(" ", parts.Skip(2));
+						arguments = parts[2];
 
 						if (Directory.Exists(arguments) == false)
 							throw new ApplicationException($"Export directory does not exist: \"{arguments}\".");
@@ -641,6 +637,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						return;
 
 					case ".report":
+						parts = args.Arguments(2);
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <Report Code>" + Environment.NewLine + Environment.NewLine +
 								String.Join(Environment.NewLine, Globals.Reports.ReportTypeText()) + Environment.NewLine
@@ -651,17 +648,19 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						return;
 
 					case ".snap":
-						if (parts.Length < 2)
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <target directory>");
 
-						Mame.CollectSnaps(Globals.RootDirectory, String.Join(" ", parts.Skip(1)), Globals.Reports);
+						Mame.CollectSnaps(Globals.RootDirectory, parts[1], Globals.Reports);
 						return;
 
 					case ".svg":
-						if (parts.Length < 2)
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <filename or directory>");
 
-						Tools.Bitmap2SVG(String.Join(" ", parts.Skip(1)));
+						Tools.Bitmap2SVG(parts[1]);
 						return;
 
 					case ".ui":
@@ -677,6 +676,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						return;
 
 					case ".valid":
+						parts = args.Arguments(2);
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <rom, disk>");
 
@@ -700,6 +700,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						return;
 
 					case ".set":
+						parts = args.Arguments(3);
 						if (parts.Length != 3)
 							throw new ApplicationException($"Usage: {parts[0]} <key> <value>");
 						Globals.Settings.Set(parts[1], parts[2]);
@@ -707,13 +708,15 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 					case ".dbm":
 					case ".dbs":
-						if (parts.Length == 1)
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <command text>");
 
-						Database.ConsoleQuery(parts[0].Substring(3), String.Join(" ", parts.Skip(1)));
+						Database.ConsoleQuery(parts[0].Substring(3), parts[1]);
 						return;
 
 					case ".upload":
+						parts = args.Arguments(5);
 						if (parts.Length != 4 && parts.Length != 5)
 							throw new ApplicationException($"Usage: {parts[0]} <type> <archive.org item name> <batch size> [asset name]");
 
@@ -731,11 +734,11 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 							default:
 								throw new ApplicationException("Upload Unknown type not (MR, MD, SR, SD).");
-
 						}
 						return;
 
 					case ".aodel":
+						parts = args.Arguments(3);
 						if (parts.Length != 3)
 							throw new ApplicationException($"Usage: {parts[0]} <archive.org item name> <filename>");
 
@@ -765,12 +768,14 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						return;
 
 					case ".test":
+						parts = args.Arguments(3);
 						if (parts.Length != 3)
 							throw new ApplicationException($"Usage: {parts[0]} <profile> <count>");
 						Test.Run(parts[1], Int32.Parse(parts[2]));
 						return;
 
 					case ".fetch":
+						parts = args.Arguments(2);
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <type>");
 
@@ -803,6 +808,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						return;
 
 					case ".software":
+						parts = args.Arguments(2);
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <software list name>");
 						Import.PlaceSoftwareList(parts[1], true);
@@ -810,6 +816,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 					case ".softname":
 					case ".softnamed":
+						parts = args.Arguments(3);
 						if (parts.Length != 3)
 							throw new ApplicationException($"Usage: {parts[0]} <software list name> <target directory>");
 						Export.SoftwareListNamedExport(parts[1], parts[2], parts[0].EndsWith("d"));
@@ -819,41 +826,48 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						Globals.WebServer.SaveStyle();
 						return;
 
+					case ".":
+						parts = args.Arguments(2);
+						if (parts.Length > 1)
+							arguments = parts[1];
+						break;
+
 					default:
-						binFilename = Path.Combine(Globals.RootDirectory, machine.Substring(1), "mame.exe");
+						parts = args.Arguments(2);
+						if (parts.Length > 1)
+							arguments = parts[1];
+
+						binFilename = Path.Combine(Globals.RootDirectory, parts[0].Substring(1), "mame.exe");
 
 						if (File.Exists(binFilename) == false)
-							throw new ApplicationException($"Unknown command: {machine}");
-
-						machine = ".";
-
-						if (parts.Length > 1)
-							arguments = String.Join(" ", parts.Skip(1));
+							throw new ApplicationException("Unknown command");
 						break;
 				}
 			}
 			else
 			{
-				if (parts.Length >= 2)
+				parts = args.Arguments(3, true);
+
+				machine = parts[0];
+
+				if (parts[parts.Length - 1][0] == '-')
 				{
-					if (parts[1].StartsWith("-") == false)
-					{
+					arguments = parts[parts.Length - 1];
+					if (parts.Length == 3)
 						software = parts[1];
 
-						if (parts.Length > 2)
-							arguments = String.Join(" ", parts.Skip(2));
-					}
-					else
-					{
-						arguments = String.Join(" ", parts.Skip(1));
-					}
+				}
+				else
+				{
+					if (parts.Length == 2)
+						software = parts[1];
 				}
 			}
 
-			machine = machine.ToLower().Trim();
-			software = software.ToLower().Trim();
+			machine = machine.ToLower();
+			software = software.ToLower();
 
-			if (machine.StartsWith(".") == true)
+			if (machine == "")
 			{
 				Mame.RunMame(binFilename, arguments);
 			}
