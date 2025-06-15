@@ -987,6 +987,19 @@ namespace Spludlow.MameAO
 			}
 
 		}
+		public static object ExecuteScalar(SqlCommand command)
+		{
+			command.Connection.Open();
+			try
+			{
+				return command.ExecuteScalar();
+			}
+			finally
+			{
+				command.Connection.Close();
+			}
+
+		}
 
 		public static int ExecuteNonQuery(SqlConnection connection, string commandText)
 		{
@@ -1043,6 +1056,20 @@ namespace Spludlow.MameAO
 				result.Add((string)row["TABLE_NAME"]);
 
 			return result.ToArray();
+		}
+
+		public static bool TableExists(SqlConnection connection, string tableName)
+		{
+			using (SqlCommand command = new SqlCommand("SELECT TABLE_NAME FROM INFORMATION_SCHEMA.TABLES WHERE (TABLE_TYPE='BASE TABLE' AND TABLE_NAME=@TABLE_NAME)", connection))
+			{
+				command.Parameters.AddWithValue("@TABLE_NAME", tableName);
+				object obj = ExecuteScalar(command);
+
+				if (obj == null || obj is DBNull)
+					return false;
+
+				return true;
+			}
 		}
 
 		public static void ConsoleQuery(string database, string commandText)

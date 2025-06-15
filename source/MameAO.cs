@@ -345,11 +345,15 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			string directory = Globals.Config.ContainsKey("StorePathRom") == true ? Globals.Config["StorePathRom"] : Path.Combine(Globals.RootDirectory, "_STORE");
 			Directory.CreateDirectory(directory);
+			Console.Write($"Loading Hash Store {directory} ...");
 			Globals.RomHashStore = new HashStore(directory, Tools.SHA1HexFile);
+			Console.WriteLine("...done.");
 
 			directory = Globals.Config.ContainsKey("StorePathDisk") == true ? Globals.Config["StorePathDisk"] : Path.Combine(Globals.RootDirectory, "_STORE_DISK");
 			Directory.CreateDirectory(directory);
+			Console.Write($"Loading Hash Store {directory} ...");
 			Globals.DiskHashStore = new HashStore(directory, Globals.MameChdMan.Hash);
+			Console.WriteLine("...done.");
 
 			//
 			// Database

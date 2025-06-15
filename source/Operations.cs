@@ -67,7 +67,7 @@ namespace Spludlow.MameAO
 				case "MAME_MSSQL_PAYLOADS_HTML":
 					ValidateRequiredParameters(parameters, new string[] { "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
-					exitCode = MakeMSSQLPayloadHtml(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					exitCode = MakeMSSQLPayloadHtml(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"], "mame");
 					break;
 
 				case "GET_TOSEC":
@@ -110,6 +110,18 @@ namespace Spludlow.MameAO
 					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
 
 					exitCode = MakeHbMameMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+					break;
+
+				case "MAME_HBMAME_MSSQL_PAYLOADS":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
+
+					exitCode = MakeHbMameMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"], Globals.AssemblyVersion);
+					break;
+
+				case "MAME_HBMAME_MSSQL_PAYLOADS_HTML":
+					ValidateRequiredParameters(parameters, new string[] { "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
+
+					exitCode = MakeMSSQLPayloadHtml(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"], "hbmame");
 					break;
 
 				case "GET_FBNEO":
@@ -543,7 +555,7 @@ namespace Spludlow.MameAO
 
 						int machineCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM machine");
 						int romCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
-						int diskCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM disk");
+						int diskCount = Database.TableExists(connection, "disk") == true ? (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM disk") : 0;
 
 						info = $"MAME: {version} - Released: {exeTime} - Machines: {machineCount} - rom: {romCount} - disk: {diskCount}";
 						break;
@@ -553,7 +565,7 @@ namespace Spludlow.MameAO
 						int softwarelistCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM softwarelist");
 						int softwareCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM software");
 						int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
-						int softDiskCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM disk");
+						int softDiskCount = Database.TableExists(connection, "disk") == true ? (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM disk") : 0;
 
 						info = $"MAME: {version} - Released: {exeTime} - Lists: {softwarelistCount} - Software: {softwareCount} - rom: {softRomCount} - disk: {softDiskCount}";
 						break;
@@ -700,7 +712,7 @@ namespace Spludlow.MameAO
 		// HTML
 		//
 
-		public static int MakeMSSQLPayloadHtml(string serverConnectionString, string databaseNames)
+		public static int MakeMSSQLPayloadHtml(string serverConnectionString, string databaseNames, string dataSetName)
 		{
 			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' });
 			for (int index = 0; index < databaseNamesEach.Length; ++index)
@@ -711,7 +723,7 @@ namespace Spludlow.MameAO
 				MakeMSSQLPayloadHtmlMachine(machineConnection);
 
 				using (SqlConnection softwareConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNamesEach[1]}';"))
-					MakeMSSQLPayloadHtmlSoftware(softwareConnection, machineConnection);
+					MakeMSSQLPayloadHtmlSoftware(softwareConnection, machineConnection, dataSetName);
 			}
 
 			return 0;
@@ -825,6 +837,9 @@ namespace Spludlow.MameAO
 						//
 						foreach (string tableName in simpleTableNames)
 						{
+							if (dataSet.Tables.Contains(tableName) == false)
+								continue;
+
 							DataTable sourceTable = dataSet.Tables[tableName];
 
 							DataRow[] rows = sourceTable.Select("machine_id = " + machine_id);
@@ -1075,12 +1090,15 @@ namespace Spludlow.MameAO
 
 								html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["configuration"], new[] { configurationRow }, null));
 
-								DataRow[] conflocationRows = dataSet.Tables["conflocation"].Select("configuration_id = " + configuration_id);
-								if (conflocationRows.Length > 0)
+								if (dataSet.Tables.Contains("conflocation") == true)
 								{
-									html.AppendLine("<h4>location</h4>");
+									DataRow[] conflocationRows = dataSet.Tables["conflocation"].Select("configuration_id = " + configuration_id);
+									if (conflocationRows.Length > 0)
+									{
+										html.AppendLine("<h4>location</h4>");
 
-									html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["conflocation"], conflocationRows, null));
+										html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["conflocation"], conflocationRows, null));
+									}
 								}
 
 								DataRow[] confsettingRows = dataSet.Tables["confsetting"].Select("configuration_id = " + configuration_id);
@@ -1146,7 +1164,7 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static void MakeMSSQLPayloadHtmlSoftware(SqlConnection connection, SqlConnection machineConnection)
+		public static void MakeMSSQLPayloadHtmlSoftware(SqlConnection connection, SqlConnection machineConnection, string dataSetName)
 		{
 			DataSet dataSet = new DataSet();
 
@@ -1203,12 +1221,15 @@ namespace Spludlow.MameAO
 						romTable.Columns.Add(column.ColumnName);
 
 				DataTable diskTable = new DataTable();
-				foreach (DataColumn column in dataSet.Tables["diskarea"].Columns)
-					if (column.ColumnName.EndsWith("_id") == false)
-						diskTable.Columns.Add("data_" + column.ColumnName);
-				foreach (DataColumn column in dataSet.Tables["disk"].Columns)
-					if (column.ColumnName.EndsWith("_id") == false)
-						diskTable.Columns.Add(column.ColumnName);
+				if (dataSet.Tables.Contains("diskarea") == true)
+				{
+					foreach (DataColumn column in dataSet.Tables["diskarea"].Columns)
+						if (column.ColumnName.EndsWith("_id") == false)
+							diskTable.Columns.Add("data_" + column.ColumnName);
+					foreach (DataColumn column in dataSet.Tables["disk"].Columns)
+						if (column.ColumnName.EndsWith("_id") == false)
+							diskTable.Columns.Add(column.ColumnName);
+				}
 
 				DataTable listTable = Tools.MakeDataTable(
 					"name	description",
@@ -1245,16 +1266,16 @@ namespace Spludlow.MameAO
 						softwareTable.ImportRow(softwareRow);
 						DataRow row = softwareTable.Rows[softwareTable.Rows.Count - 1];
 						string value = (string)row["name"];
-						row["name"] = $"<a href=\"/mame/software/{softwarelist_name}/{value}\">{value}</a>";
-						if (row.IsNull("cloneof") == false)
+						row["name"] = $"<a href=\"/{dataSetName}/software/{softwarelist_name}/{value}\">{value}</a>";
+						if (softwareTable.Columns.Contains("cloneof") == true && row.IsNull("cloneof") == false)
 						{
 							value = (string)row["cloneof"];
-							row["cloneof"] = $"<a href=\"/mame/software/{softwarelist_name}/{value}\">{value}</a>";
+							row["cloneof"] = $"<a href=\"/{dataSetName}/software/{softwarelist_name}/{value}\">{value}</a>";
 						}
 					}
 					html.AppendLine(Reports.MakeHtmlTable(softwareTable, null));
 
-					listTable.Rows.Add($"<a href=\"/mame/software/{softwarelist_name}\">{softwarelist_name}</a>", softwarelist_description);
+					listTable.Rows.Add($"<a href=\"/{dataSetName}/software/{softwarelist_name}\">{softwarelist_name}</a>", softwarelist_description);
 
 					softwarelistCommand.Parameters["@title"].Value = $"{softwarelist_description} - mame ({version}) software list";
 					softwarelistCommand.Parameters["@html"].Value = html.ToString();
@@ -1266,17 +1287,17 @@ namespace Spludlow.MameAO
 					// Software
 					//
 
-					softwarelistRow["name"] = $"<a href=\"/mame/software/{softwarelist_name}\">{softwarelist_name}</a>";
+					softwarelistRow["name"] = $"<a href=\"/{dataSetName}/software/{softwarelist_name}\">{softwarelist_name}</a>";
 
 					foreach (DataRow softwareRow in softwareRows)
 					{
 						long software_id = (long)softwareRow["software_id"];
 						string software_name = (string)softwareRow["name"];
 
-						if (softwareRow.IsNull("cloneof") == false)
+						if (softwareTable.Columns.Contains("cloneof") == true && softwareRow.IsNull("cloneof") == false)
 						{
 							string value = (string)softwareRow["cloneof"];
-							softwareRow["cloneof"] = $"<a href=\"/mame/software/{softwarelist_name}/{value}\">{value}</a>";
+							softwareRow["cloneof"] = $"<a href=\"/{dataSetName}/software/{softwarelist_name}/{value}\">{value}</a>";
 						}
 
 						html = new StringBuilder();
@@ -1293,45 +1314,56 @@ namespace Spludlow.MameAO
 
 						DataRow[] rows;
 
-						rows = dataSet.Tables["info"].Select($"software_id = {software_id}");
-						if (rows.Length > 0)
+						if (dataSet.Tables.Contains("info") == true)
 						{
-							html.AppendLine("<hr />");
-							html.AppendLine("<h2>info</h2>");
-							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["info"], rows, null));
+							rows = dataSet.Tables["info"].Select($"software_id = {software_id}");
+							if (rows.Length > 0)
+							{
+								html.AppendLine("<hr />");
+								html.AppendLine("<h2>info</h2>");
+								html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["info"], rows, null));
+							}
 						}
 
-						rows = dataSet.Tables["sharedfeat"].Select($"software_id = {software_id}");
-						if (rows.Length > 0)
+						if (dataSet.Tables.Contains("sharedfeat") == true)
 						{
-							html.AppendLine("<hr />");
-							html.AppendLine("<h2>sharedfeat</h2>");
-							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["sharedfeat"], rows, null));
+							rows = dataSet.Tables["sharedfeat"].Select($"software_id = {software_id}");
+							if (rows.Length > 0)
+							{
+								html.AppendLine("<hr />");
+								html.AppendLine("<h2>sharedfeat</h2>");
+								html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["sharedfeat"], rows, null));
+							}
 						}
 
 						DataRow[] partRows = dataSet.Tables["part"].Select($"software_id = {software_id}");
 						if (partRows.Length > 0)
 						{
+							DataTable table;
+
 							// part, feature
-							DataTable table = Tools.MakeDataTable(
-								"part_name	part_interface	feature_name	feature_value",
-								"String		String			String			String"
-							);
-
-							foreach (DataRow partRow in partRows)
+							if (dataSet.Tables.Contains("feature") == true)
 							{
-								long part_id = (long)partRow["part_id"];
-								string part_name = (string)partRow["name"];
-								string part_interface = (string)partRow["interface"];
+								table = Tools.MakeDataTable(
+									"part_name	part_interface	feature_name	feature_value",
+									"String		String			String			String"
+								);
 
-								foreach (DataRow featureRow in dataSet.Tables["feature"].Select($"part_id = {part_id}"))
-									table.Rows.Add(part_name, part_interface, featureRow["name"], featureRow["value"]);
-							}
-							if (table.Rows.Count > 0)
-							{
-								html.AppendLine("<hr />");
-								html.AppendLine("<h2>part, feature</h2>");
-								html.AppendLine(Reports.MakeHtmlTable(table, null));
+								foreach (DataRow partRow in partRows)
+								{
+									long part_id = (long)partRow["part_id"];
+									string part_name = (string)partRow["name"];
+									string part_interface = (string)partRow["interface"];
+
+									foreach (DataRow featureRow in dataSet.Tables["feature"].Select($"part_id = {part_id}"))
+										table.Rows.Add(part_name, part_interface, featureRow["name"], featureRow["value"]);
+								}
+								if (table.Rows.Count > 0)
+								{
+									html.AppendLine("<hr />");
+									html.AppendLine("<h2>part, feature</h2>");
+									html.AppendLine(Reports.MakeHtmlTable(table, null));
+								}
 							}
 
 							// part, dataarea, rom
@@ -1372,39 +1404,42 @@ namespace Spludlow.MameAO
 							}
 
 							// part, diskarea, disk
-							table = Tools.MakeDataTable(
-								"part_name	part_interface	diskarea_name",
-								"String		String			String"
-							);
-							foreach (DataColumn column in dataSet.Tables["disk"].Columns)
-								if (column.ColumnName.EndsWith("_id") == false)
-									table.Columns.Add(column.ColumnName, typeof(string));
-
-							foreach (DataRow partRow in partRows)
+							if (dataSet.Tables.Contains("disk") == true)
 							{
-								long part_id = (long)partRow["part_id"];
-								string part_name = (string)partRow["name"];
-								string part_interface = (string)partRow["interface"];
+								table = Tools.MakeDataTable(
+									"part_name	part_interface	diskarea_name",
+									"String		String			String"
+								);
+								foreach (DataColumn column in dataSet.Tables["disk"].Columns)
+									if (column.ColumnName.EndsWith("_id") == false)
+										table.Columns.Add(column.ColumnName, typeof(string));
 
-								foreach (DataRow diskareaRow in dataSet.Tables["diskarea"].Select($"part_id = {part_id}"))
+								foreach (DataRow partRow in partRows)
 								{
-									long diskarea_id = (long)diskareaRow["diskarea_id"];
+									long part_id = (long)partRow["part_id"];
+									string part_name = (string)partRow["name"];
+									string part_interface = (string)partRow["interface"];
 
-									foreach (DataRow diskRow in dataSet.Tables["disk"].Select($"diskarea_id = {diskarea_id}"))
+									foreach (DataRow diskareaRow in dataSet.Tables["diskarea"].Select($"part_id = {part_id}"))
 									{
-										DataRow row = table.Rows.Add(part_name, part_interface, (string)diskareaRow["name"]);
-										
-										foreach (DataColumn column in dataSet.Tables["disk"].Columns)
-											if (column.ColumnName.EndsWith("_id") == false)
-												row[column.ColumnName] = diskRow[column.ColumnName];
+										long diskarea_id = (long)diskareaRow["diskarea_id"];
+
+										foreach (DataRow diskRow in dataSet.Tables["disk"].Select($"diskarea_id = {diskarea_id}"))
+										{
+											DataRow row = table.Rows.Add(part_name, part_interface, (string)diskareaRow["name"]);
+
+											foreach (DataColumn column in dataSet.Tables["disk"].Columns)
+												if (column.ColumnName.EndsWith("_id") == false)
+													row[column.ColumnName] = diskRow[column.ColumnName];
+										}
 									}
 								}
-							}
-							if (table.Rows.Count > 0)
-							{
-								html.AppendLine("<hr />");
-								html.AppendLine("<h2>part, diskarea, disk</h2>");
-								html.AppendLine(Reports.MakeHtmlTable(table, null));
+								if (table.Rows.Count > 0)
+								{
+									html.AppendLine("<hr />");
+									html.AppendLine("<h2>part, diskarea, disk</h2>");
+									html.AppendLine(Reports.MakeHtmlTable(table, null));
+								}
 							}
 						}
 
@@ -1426,7 +1461,7 @@ namespace Spludlow.MameAO
 									DataRow detailRow = machineDetailTable.Rows.Find(name);
 									string description = detailRow != null ? (string)detailRow["description"] : "not found";
 
-									machinesTable.Rows.Add($"<a href=\"/mame/machine/{name}\">{name}</a>", $"<a href=\"#\" onclick=\"mameAO('{name} {software_name}@{softwarelist_name}'); return false\">{description}</a>");
+									machinesTable.Rows.Add($"<a href=\"/{dataSetName}/machine/{name}\">{name}</a>", $"<a href=\"#\" onclick=\"mameAO('{name} {software_name}@{softwarelist_name}'); return false\">{description}</a>");
 								}
 
 								html.AppendLine("<hr />");
@@ -1856,6 +1891,49 @@ namespace Spludlow.MameAO
 
 				MakeForeignKeys(serverConnectionString, targetDatabaseName);
 			}
+
+			return 0;
+		}
+
+		public static int MakeHbMameMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseNames, string assemblyVersion)
+		{
+			if (version == "0")
+				version = HbMameGetLatestDownloadedVersion(directory);
+
+			string versionDirectory = Path.Combine(directory, version);
+
+			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' });
+
+			if (databaseNamesEach.Length != 2)
+				throw new ApplicationException("database names must be 2 parts comma delimited");
+
+			for (int index = 0; index < databaseNamesEach.Length; ++index)
+				databaseNamesEach[index] = databaseNamesEach[index].Trim();
+
+			string databaseName;
+			string xmlFilename;
+
+			//
+			// machine
+			//
+
+			databaseName = databaseNamesEach[0];
+			xmlFilename = Path.Combine(versionDirectory, "_machine.xml");
+
+			MakeMSSQLPayloadsInfoTable(version, serverConnectionString, databaseNamesEach[0], "hbmame", "machine", assemblyVersion, versionDirectory);
+
+			MakeMSSQLPayloadsMachine(xmlFilename, serverConnectionString, databaseName);
+
+			//
+			// software
+			//
+
+			databaseName = databaseNamesEach[1];
+			xmlFilename = Path.Combine(versionDirectory, "_software.xml");
+
+			MakeMSSQLPayloadsInfoTable(version, serverConnectionString, databaseNamesEach[1], "hbmame", "software", assemblyVersion, versionDirectory);
+
+			MakeMSSQLPayloadsSoftware(xmlFilename, serverConnectionString, databaseName);
 
 			return 0;
 		}
