@@ -793,6 +793,7 @@ namespace Spludlow.MameAO
 
 			DataRow metaRow = dataSet.Tables["_metadata"].Rows[0];
 
+			string datasetName = (string)metaRow["dataset"];
 			string version = (string)metaRow["version"];
 
 			string[] simpleTableNames = new string[] {
@@ -862,24 +863,38 @@ namespace Spludlow.MameAO
 										{
 											string value = (string)targetRow["sourcefile"];
 
-											string baseUrl = $"https://github.com/mamedev/mame/blob/mame{version}/src";
+											string baseUrl;
+											switch (datasetName)
+											{
+												case "mame":
+													baseUrl = $"https://github.com/mamedev/mame/blob/mame{version}/src";
 
-											if (value.Split(new char[] { '/' }).Length == 2 && value.StartsWith("emu/") == false)
-												value = $"<a href=\"{baseUrl}/mame/{value}\" target=\"_blank\">{value}</a>";
-											else
-												value = $"<a href=\"{baseUrl}/{value}\" target=\"_blank\">{value}</a>";
+													if (value.Split(new char[] { '/' }).Length == 2 && value.StartsWith("emu/") == false)
+														value = $"<a href=\"{baseUrl}/{datasetName}/{value}\" target=\"_blank\">{value}</a>";
+													else
+														value = $"<a href=\"{baseUrl}/{value}\" target=\"_blank\">{value}</a>";
+													break;
+												case "hbmame":
+													baseUrl = $"https://github.com/Robbbert/hbmame/blob/tag{version.Substring(2).Replace(".", "")}/src/hbmame/drivers";
+
+													value = $"<a href=\"{baseUrl}/{value}\" target=\"_blank\">{value}</a>";
+													break;
+
+												default:
+													throw new ApplicationException($"Unknown dataset: {datasetName}");
+											}
 
 											targetRow["sourcefile"] = value;
 										}
 										if (targetRow.IsNull("romof") == false)
 										{
 											string value = (string)targetRow["romof"];
-											targetRow["romof"] = $"<a href=\"/mame/machine/{value}\">{value}</a>";
+											targetRow["romof"] = $"<a href=\"/{datasetName}/machine/{value}\">{value}</a>";
 										}
 										if (targetRow.IsNull("cloneof") == false)
 										{
 											string value = (string)targetRow["cloneof"];
-											targetRow["cloneof"] = $"<a href=\"/mame/machine/{value}\">{value}</a>";
+											targetRow["cloneof"] = $"<a href=\"/{datasetName}/machine/{value}\">{value}</a>";
 										}
 										break;
 
@@ -887,7 +902,7 @@ namespace Spludlow.MameAO
 										if (targetRow.IsNull("name") == false)
 										{
 											string value = (string)targetRow["name"];
-											targetRow["name"] = $"<a href=\"/mame/machine/{value}\">{value}</a>";
+											targetRow["name"] = $"<a href=\"/{datasetName}/machine/{value}\">{value}</a>";
 										}
 										break;
 
@@ -896,7 +911,7 @@ namespace Spludlow.MameAO
 										if (targetRow.IsNull("name") == false)
 										{
 											string value = (string)targetRow["name"];
-											targetRow["name"] = $"<a href=\"/mame/software/{value}\">{value}</a>";
+											targetRow["name"] = $"<a href=\"/{datasetName}/software/{value}\">{value}</a>";
 										}
 										break;
 								}
@@ -1063,7 +1078,7 @@ namespace Spludlow.MameAO
 									if (row.IsNull("slotoption_devname") == false)
 									{
 										string value = (string)row["slotoption_devname"];
-										row["slotoption_devname"] = $"<a href=\"/mame/machine/{value}\">{value}</a>";
+										row["slotoption_devname"] = $"<a href=\"/{datasetName}/machine/{value}\">{value}</a>";
 									}
 								}
 							}
