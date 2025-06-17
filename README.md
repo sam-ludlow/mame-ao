@@ -253,7 +253,7 @@ Options available on the UI settings page
 - `Yes Verbose` Send data and show payload in console.
 - `No` Do not send data.
 
-## Data Operations (MAME, HBMAME, TOSEC, FBNeo)
+## Data Operations
 MAME-AO has the capability to perform various Data operations by passing command line options when starting the program, it will exit immediately when finished.
 
 These may be used for generating data sets in various formats, you could use it for data processing pipelines or just for looking at the data.
