@@ -88,6 +88,12 @@ namespace Spludlow.MameAO
 					exitCode = MakeTosecMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAME"]);
 					break;
 
+				case "MAKE_TOSEC_MSSQL_PAYLOADS":
+					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAME" });
+
+					exitCode = MakeTosecMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAME"], Globals.AssemblyVersion);
+					break;
+
 				case "GET_HBMAME":
 					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
 
@@ -1768,6 +1774,48 @@ namespace Spludlow.MameAO
 				foreach (DataRow row in sourceTable.Rows)
 					targetTable.ImportRow(row);
 			}
+		}
+
+		public static int MakeTosecMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName, string assemblyVersion)
+		{
+			if (version == "0")
+				version = TosecGetLatestDownloadedVersion(directory);
+
+			string versionDirectory = Path.Combine(directory, version);
+
+			DataTable table = new DataTable("tosec_payload");
+			table.Columns.Add("key_1", typeof(string));
+			table.Columns.Add("title", typeof(string));
+			table.Columns.Add("xml", typeof(string));
+			table.Columns.Add("json", typeof(string));
+			table.Columns.Add("html", typeof(string));
+
+			string title = $"TOSEC Data Files ({version})";
+
+			DataTable datafileTable;
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+				datafileTable = Database.ExecuteFill(connection, "SELECT datafile.[name], datafile.description, datafile.category, datafile.version, datafile.author FROM datafile ORDER BY datafile.category, datafile.[name]");
+
+			StringBuilder html = new StringBuilder();
+
+			foreach (string category in new string[] { "TOSEC", "TOSEC-ISO", "TOSEC-PIX" })
+			{
+				html.AppendLine($"<h2>{category}</h2>");
+
+				html.AppendLine("<table>");
+				html.AppendLine("<tr><th>Name</th><th>Version</th><th>Author</th></tr>");
+
+				foreach (DataRow row in datafileTable.Select($"category = '{category}'"))
+					html.AppendLine($"<tr><td>{(string)row["name"]}</td><td>{(string)row["version"]}</td><td>{(string)row["author"]}</td></tr>");
+
+				html.AppendLine("</table>");
+			}
+
+			table.Rows.Add("1", title, "", "", html.ToString());
+
+			MakeMSSQLPayloadsInsert(table, serverConnectionString, databaseName, new string[] { "key_1" });
+
+			return 0;
 		}
 
 		public static int GetHbMame(string directory, string version)
