@@ -1783,37 +1783,39 @@ namespace Spludlow.MameAO
 
 			string versionDirectory = Path.Combine(directory, version);
 
-			DataTable table = new DataTable("tosec_payload");
-			table.Columns.Add("key_1", typeof(string));
+			DataTable table = new DataTable("category_payload");
+			table.Columns.Add("category", typeof(string));
 			table.Columns.Add("title", typeof(string));
 			table.Columns.Add("xml", typeof(string));
 			table.Columns.Add("json", typeof(string));
 			table.Columns.Add("html", typeof(string));
 
-			string title = $"TOSEC Data Files ({version})";
-
-			DataTable datafileTable;
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
-				datafileTable = Database.ExecuteFill(connection, "SELECT datafile.[name], datafile.description, datafile.category, datafile.version, datafile.author FROM datafile ORDER BY datafile.category, datafile.[name]");
-
-			StringBuilder html = new StringBuilder();
-
-			foreach (string category in new string[] { "TOSEC", "TOSEC-ISO", "TOSEC-PIX" })
 			{
-				html.AppendLine($"<h2>{category}</h2>");
+				foreach (string category in new string[] { "TOSEC", "TOSEC-ISO", "TOSEC-PIX" })
+				{
+					DataTable datafileTable = Database.ExecuteFill(connection,
+						$"SELECT datafile.[name], datafile.description, datafile.category, datafile.version, datafile.author FROM datafile WHERE (datafile.category = '{category}') ORDER BY datafile.[name]");
 
-				html.AppendLine("<table>");
-				html.AppendLine("<tr><th>Name</th><th>Version</th><th>Author</th></tr>");
+					string title = $"TOSEC Data Files ({category} {version})";
 
-				foreach (DataRow row in datafileTable.Select($"category = '{category}'"))
-					html.AppendLine($"<tr><td>{(string)row["name"]}</td><td>{(string)row["version"]}</td><td>{(string)row["author"]}</td></tr>");
+					StringBuilder html = new StringBuilder();
 
-				html.AppendLine("</table>");
+					html.AppendLine($"<h2>{category}</h2>");
+
+					html.AppendLine("<table>");
+					html.AppendLine("<tr><th>Name</th><th>Version</th></tr>");
+
+					foreach (DataRow row in datafileTable.Select($"category = '{category}'"))
+						html.AppendLine($"<tr><td>{(string)row["name"]}</td><td>{(string)row["version"]}</td></tr>");
+
+					html.AppendLine("</table>");
+
+					table.Rows.Add(category.ToLower(), title, "", "", html.ToString());
+				}
 			}
 
-			table.Rows.Add("1", title, "", "", html.ToString());
-
-			MakeMSSQLPayloadsInsert(table, serverConnectionString, databaseName, new string[] { "key_1" });
+			MakeMSSQLPayloadsInsert(table, serverConnectionString, databaseName, new string[] { "category" });
 
 			return 0;
 		}
