@@ -256,6 +256,8 @@ Options available on the UI settings page
 ## Data Operations
 MAME-AO has the capability to perform various Data operations by passing command line options when starting the program, it will exit immediately when finished.
 
+These are used by our sister project `Spludlow Data Web` located at https://data.spludlow.co.uk/
+
 These may be used for generating data sets in various formats, you could use it for data processing pipelines or just for looking at the data.
 
 ![MAME-AO Data Operations](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-data-operations.png)
