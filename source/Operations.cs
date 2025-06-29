@@ -2,13 +2,13 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Diagnostics;
 using System.IO;
+using System.IO.Compression;
+using System.Linq;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-using System.Linq;
-using System.IO.Compression;
-using System.Diagnostics;
 
 using Newtonsoft.Json;
 
@@ -527,17 +527,13 @@ namespace Spludlow.MameAO
 			return 0;
 		}
 
-		public static void MakeMSSQLPayloadsInfoTable(string version, string serverConnectionString, string databaseName, string dataSetName, string subSetName, string assemblyVersion, string versionDirectory)
+		public static DataTable CreateMetaDataTable(string serverConnectionString, string databaseName)
 		{
-			string agent = $"mame-ao/{assemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
-
-			string exePath = Path.Combine(versionDirectory, "mame.exe");
-			string exeTime = File.GetLastWriteTime(exePath).ToString("s");
-
+			string tableName = "_metadata";
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
 			{
 				string[] columnDefs = new string[] {
-					"[_metadata_id] BIGINT NOT NULL PRIMARY KEY",
+					$"[{tableName}_id] BIGINT NOT NULL PRIMARY KEY",
 					"[dataset] NVARCHAR(1024) NOT NULL",
 					"[subset] NVARCHAR(1024) NOT NULL",
 					"[version] NVARCHAR(1024) NOT NULL",
@@ -545,11 +541,28 @@ namespace Spludlow.MameAO
 					"[processed] DATETIME NOT NULL",
 					"[agent] NVARCHAR(1024) NOT NULL",
 				};
-				string commandText = $"CREATE TABLE [_metadata] ({String.Join(", ", columnDefs)});";
+				string commandText = $"CREATE TABLE [{tableName}] ({String.Join(", ", columnDefs)});";
 
 				Console.WriteLine(commandText);
 				Database.ExecuteNonQuery(connection, commandText);
 
+				DataTable table = Database.ExecuteFill(connection, $"SELECT * FROM [{tableName}] WHERE ({tableName}_id = -1)");
+				table.TableName = tableName;
+				return table;
+			}
+		}
+
+		public static void MakeMSSQLPayloadsInfoTable(string version, string serverConnectionString, string databaseName, string dataSetName, string subSetName, string assemblyVersion, string versionDirectory)
+		{
+			string agent = $"mame-ao/{assemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
+
+			string exePath = Path.Combine(versionDirectory, "mame.exe");
+			string exeTime = File.GetLastWriteTime(exePath).ToString("s");
+
+			CreateMetaDataTable(serverConnectionString, databaseName);
+
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			{
 				DataTable table = Database.ExecuteFill(connection, "SELECT * FROM [_metadata]");
 				table.TableName = "_metadata";
 
@@ -1781,9 +1794,27 @@ namespace Spludlow.MameAO
 			if (version == "0")
 				version = TosecGetLatestDownloadedVersion(directory);
 
+			string agent = $"mame-ao/{assemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
+
 			string versionDirectory = Path.Combine(directory, version);
 
-			DataTable table = new DataTable("category_payload");
+			DataTable table;
+
+			table = CreateMetaDataTable(serverConnectionString, databaseName);
+
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			{
+				int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
+				int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
+				int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
+
+				string info = $"TOSEC: {version} - Datafiles: {datafileCount} - Games: {gameCount} - rom: {softRomCount}";
+
+				table.Rows.Add(1L, "tosec", "", version, info, DateTime.Now, agent);
+				Database.BulkInsert(connection, table);
+			}
+
+			table = new DataTable("category_payload");
 			table.Columns.Add("category", typeof(string));
 			table.Columns.Add("title", typeof(string));
 			table.Columns.Add("xml", typeof(string));
