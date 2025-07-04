@@ -1362,12 +1362,7 @@ namespace Spludlow.MameAO
 					table.ImportRow(machineListRow);
 			}
 
-			table.TableName = "Machines with Missing Lists";
-
-			DataSet dataSet = new DataSet();
-			dataSet.Tables.Add(table);
-
-			SaveHtmlReport(dataSet, "Machines Software Lists Missing");
+			SaveHtmlReport(table, "Machine's Software Lists Missing");
 		}
 
 		public void Report_ISLWM()
@@ -1380,48 +1375,17 @@ namespace Spludlow.MameAO
 
 			machinesListsTable.PrimaryKey = new DataColumn[] { machinesListsTable.Columns["name"] };
 
-			DataSet dataSet = new DataSet();
-			DataTable table;
-			
-			table = softwareListsTable.Clone();
+			DataTable table = softwareListsTable.Clone();
 
-			XElement mameOutputDocument = XElement.Load(Path.Combine(Globals.MameDirectory, "_software.xml"));
-
-			foreach (XElement listElement in mameOutputDocument.Elements("softwarelist"))
+			foreach (DataRow softwareListRow in softwareListsTable.Rows)
 			{
-				string name = listElement.Attribute("name").Value;
+				string name = (string)softwareListRow["name"];
 
 				if (machinesListsTable.Rows.Find(name) == null)
-					table.Rows.Add(name, listElement.Attribute("description").Value);
+					table.Rows.Add(name, (string)softwareListRow["description"]);
 			}
 
-			table.TableName = "MAME -listsoftware output";
-			dataSet.Tables.Add(table);
-
-
-			table = softwareListsTable.Clone();
-
-			foreach (string filename in Directory.GetFiles(Path.Combine(Globals.MameDirectory, "hash"), "*.xml"))
-			{
-				string name = Path.GetFileNameWithoutExtension(filename);
-
-				if (machinesListsTable.Rows.Find(name) != null)
-					continue;
-
-				XElement document = XElement.Load(filename);
-
-				string rootElementName = document.Name.LocalName;
-
-				if (rootElementName != "softwarelist")
-					continue;
-
-				table.Rows.Add(document.Attribute("name").Value ?? "", document.Attribute("description").Value ?? "");
-			}
-
-			table.TableName = "MAME hash directory";
-			dataSet.Tables.Add(table);
-
-			SaveHtmlReport(dataSet, "Software Lists without Machines");
+			SaveHtmlReport(table, "Software Lists without Machines");
 		}
 
 		public void Report_ISSF()

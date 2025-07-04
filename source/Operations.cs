@@ -14,9 +14,6 @@ using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
 {
-	/// <summary>
-	/// Operations - Used for data processing pipelines
-	/// </summary>
 	public class Operations
 	{
 
@@ -26,141 +23,120 @@ namespace Spludlow.MameAO
 
 			DateTime timeStart = DateTime.Now;
 
-			switch (parameters["OPERATION"])
+			switch (parameters["operation"])
 			{
-				case "GET_MAME":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = GetMame(parameters["DIRECTORY"], parameters["VERSION"]);
+				//
+				//	MAME
+				//
+				case "mame-get":
+					exitCode = GetMame(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAKE_XML":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = MakeXML(parameters["DIRECTORY"], parameters["VERSION"]);
+				case "mame-xml":
+					exitCode = MakeXML(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAKE_JSON":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = MakeJSON(parameters["DIRECTORY"], parameters["VERSION"]);
+				case "mame-json":
+					exitCode = MakeJSON(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAKE_SQLITE":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = MakeSQLite(parameters["DIRECTORY"], parameters["VERSION"]);
+				case "mame-sqlite":
+					exitCode = MakeSQLite(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAKE_MSSQL":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
-
-					exitCode = MakeMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+				case "mame-mssql":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					exitCode = MakeMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
 					break;
 
-				case "MAME_MSSQL_PAYLOADS":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
-
-					exitCode = MakeMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"], Globals.AssemblyVersion);
+				case "mame-mssql-payload":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					exitCode = MakeMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"], Globals.AssemblyVersion);
 					break;
 
-				case "MAME_MSSQL_PAYLOADS_HTML":
-					ValidateRequiredParameters(parameters, new string[] { "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
-
-					exitCode = MakeMSSQLPayloadHtml(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"], "mame");
+				case "mame-mssql-payload-html":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					exitCode = MakeMSSQLPayloadHtml(parameters["server"], parameters["names"], "mame");
 					break;
 
-				case "GET_TOSEC":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = GetTosec(parameters["DIRECTORY"], parameters["VERSION"]);
+				//
+				// HBMAME
+				//
+				case "hbmame-get":
+					exitCode = GetHbMame(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAKE_TOSEC_SQLITE":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = MakeTosecSQLite(parameters["DIRECTORY"], parameters["VERSION"]);
+				case "hbmame-xml":
+					exitCode = MakeHbMameXML(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAKE_TOSEC_MSSQL":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAME" });
-
-					exitCode = MakeTosecMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAME"]);
+				case "hbmame-sqlite":
+					exitCode = MakeHbMameSQLite(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAKE_TOSEC_MSSQL_PAYLOADS":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAME" });
-
-					exitCode = MakeTosecMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAME"], Globals.AssemblyVersion);
+				case "hbmame-mssql":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					exitCode = MakeHbMameMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
 					break;
 
-				case "GET_HBMAME":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = GetHbMame(parameters["DIRECTORY"], parameters["VERSION"]);
+				case "hbmame-mssql-payload":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					exitCode = MakeHbMameMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"], Globals.AssemblyVersion);
 					break;
 
-				case "MAKE_HBMAME_XML":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = MakeHbMameXML(parameters["DIRECTORY"], parameters["VERSION"]);
+				case "hbmame-mssql-payload-html":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					exitCode = MakeMSSQLPayloadHtml(parameters["server"], parameters["names"], "hbmame");
 					break;
 
-				case "MAKE_HBMAME_SQLITE":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = MakeHbMameSQLite(parameters["DIRECTORY"], parameters["VERSION"]);
+				//
+				// TOSEC
+				//
+				case "tosec-get":
+					exitCode = GetTosec(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAKE_HBMAME_MSSQL":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
-
-					exitCode = MakeHbMameMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"]);
+				case "tosec-sqlite":
+					exitCode = MakeTosecSQLite(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAME_HBMAME_MSSQL_PAYLOADS":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
-
-					exitCode = MakeHbMameMSSQLPayloads(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"], Globals.AssemblyVersion);
+				case "tosec-mssql":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					exitCode = MakeTosecMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
 					break;
 
-				case "MAME_HBMAME_MSSQL_PAYLOADS_HTML":
-					ValidateRequiredParameters(parameters, new string[] { "MSSQL_SERVER", "MSSQL_TARGET_NAMES" });
-
-					exitCode = MakeMSSQLPayloadHtml(parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAMES"], "hbmame");
+				case "tosec-mssql-payload":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					exitCode = MakeTosecMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"], Globals.AssemblyVersion);
 					break;
 
-				case "GET_FBNEO":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = GetFBNeo(parameters["DIRECTORY"], parameters["VERSION"]);
+				//
+				// FBNeo
+				//
+				case "fbneo-get":
+					exitCode = GetFBNeo(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAKE_FBNEO_XML":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = MakeFBNeoXML(parameters["DIRECTORY"], parameters["VERSION"]);
+				case "fbneo-xml":
+					exitCode = MakeFBNeoXML(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAKE_FBNEO_SQLITE":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION" });
-
-					exitCode = MakeFBNeoSQLite(parameters["DIRECTORY"], parameters["VERSION"]);
+				case "fbneo-sqlite":
+					exitCode = MakeFBNeoSQLite(parameters["directory"], parameters["version"]);
 					break;
 
-				case "MAKE_FBNEO_MSSQL":
-					ValidateRequiredParameters(parameters, new string[] { "VERSION", "MSSQL_SERVER", "MSSQL_TARGET_NAME" });
-
-					exitCode = MakeFBNeoMSSQL(parameters["DIRECTORY"], parameters["VERSION"], parameters["MSSQL_SERVER"], parameters["MSSQL_TARGET_NAME"]);
+				case "fbneo-mssql":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					exitCode = MakeFBNeoMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
 					break;
 
 				default:
-					throw new ApplicationException($"Unknown Operation {parameters["OPERATION"]}");
+					throw new ApplicationException($"Unknown Operation {parameters["operation"]}");
 			}
 
 			TimeSpan timeTook = DateTime.Now - timeStart;
 
-			Console.WriteLine($"Operation '{parameters["OPERATION"]}' took: {Math.Round(timeTook.TotalSeconds, 0)} seconds");
+			Console.WriteLine($"Operation '{parameters["operation"]}' took: {Math.Round(timeTook.TotalSeconds, 0)} seconds");
 
 			return exitCode;
 		}

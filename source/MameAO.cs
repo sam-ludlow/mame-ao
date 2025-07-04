@@ -52,8 +52,6 @@ namespace Spludlow.MameAO
 		public static HttpClient HttpClient;
 		public static string AuthCookie = null;
 
-		public static Dictionary<string, string> Arguments = new Dictionary<string, string>();
-
 		public static Dictionary<string, string> Config = new Dictionary<string, string>();
 
 		public static string RootDirectory;
@@ -127,9 +125,9 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 		[DllImport("user32.dll", EntryPoint = "FindWindow", SetLastError = true)]
 		static extern IntPtr FindWindowByCaption(IntPtr zeroOnly, string lpWindowName);
 
-		public MameAOProcessor()
+		public MameAOProcessor(string rootDirectory)
 		{
-			Globals.RootDirectory = Globals.Arguments["DIRECTORY"];
+			Globals.RootDirectory = rootDirectory;
 			Directory.CreateDirectory(Globals.RootDirectory);
 
 			Globals.TempDirectory = Path.Combine(Globals.RootDirectory, "_TEMP");

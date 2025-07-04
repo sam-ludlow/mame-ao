@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Spludlow.MameAO
 {
@@ -6,26 +7,36 @@ namespace Spludlow.MameAO
 	{
 		static int Main(string[] args)
 		{
+			if (args.Length > 0 && args[0].Contains("=") == false)
+				args[0] = $"operation={args[0]}";
+
+			Dictionary<string, string> arguments = new Dictionary<string, string>();
+
 			foreach (string arg in args)
 			{
 				int index = arg.IndexOf('=');
 				if (index == -1)
-					throw new ApplicationException("Bad argument, expecting KEY=VALUE, " + arg);
+					throw new ApplicationException($"Bad argument, expecting key=value: {arg}");
 
-				Globals.Arguments.Add(arg.Substring(0, index).ToUpper(), arg.Substring(index + 1));
+				arguments.Add(arg.Substring(0, index).ToLower().Trim(), arg.Substring(index + 1).Trim());
 			}
 
-			if (Globals.Arguments.ContainsKey("DIRECTORY") == false)
-				Globals.Arguments.Add("DIRECTORY", Environment.CurrentDirectory);
+			if (arguments.ContainsKey("directory") == false)
+				arguments.Add("directory", Environment.CurrentDirectory);
 
-			MameAOProcessor proc = new MameAOProcessor();
+			MameAOProcessor proc = new MameAOProcessor(arguments["directory"]);
 
-			if (Globals.Arguments.ContainsKey("OPERATION") == true)
-				return Operations.ProcessOperation(Globals.Arguments);
-
-			if (Globals.Arguments.ContainsKey("UPDATE") == true)
+			if (arguments.ContainsKey("operation") == true)
 			{
-				SelfUpdate.Update(Int32.Parse(Globals.Arguments["UPDATE"]));
+				if (arguments.ContainsKey("version") == false)
+					arguments.Add("version", "0");
+
+				return Operations.ProcessOperation(arguments);
+			}
+
+			if (arguments.ContainsKey("update") == true)
+			{
+				SelfUpdate.Update(Int32.Parse(arguments["update"]));
 				return 0;
 			}
 

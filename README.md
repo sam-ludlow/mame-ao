@@ -262,99 +262,46 @@ These may be used for generating data sets in various formats, you could use it 
 
 ![MAME-AO Data Operations](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-data-operations.png)
 
-You can specify a specific version e.g. `VERSION=0250` or use `VERSION=0` to mean the latest avaialable.
+You can specify a specific version e.g.`version=0250` otherwise the latest will be used.
 
-### Get MAME
-Download and extract the MAME binaries from GitHub, needed to extract the XML.
+For `get` operations if a new version if found the exit code will be set to 1.
 
-If a new version is found the processes exit code will be set to 1.
+### MAME
+|Operation|Description|Example|
+|:----|:----|:----|
+| mame-get | Download and extract MAME binaries. | `mame-ao.exe mame-get directory="C:\ao-data\mame"` |
+| mame-xml | Extract XML from MAME. | `mame-ao.exe mame-xml directory="C:\ao-data\mame"` |
+| mame-json | Convert XML to JSON. | `mame-ao.exe mame-json directory="C:\ao-data\mame"` |
+| mame-sqlite | Convert XML to SQLite. | `mame-ao.exe mame-sqlite directory="C:\ao-data\mame"` |
+| mame-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe mame-mssql directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
+| mame-mssql-payload | Create web payload tables. | `mame-ao.exe mame-mssql-payload directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
+| mame-mssql-payload-html | Create web HTML payloads. | `mame-ao.exe mame-mssql-payload-html directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
 
-`mame-ao.exe OPERATION=GET_MAME VERSION=0 DIRECTORY="C:\My MAME Data"`
+### HBMAME
+|Operation|Description|Example|
+|:----|:----|:----|
+| hbmame-get | Download and extract HBMAME binaries. | `mame-ao.exe hbmame-get directory="C:\ao-data\hbmame"` |
+| hbmame-xml | Extract XML from HBMAME. | `mame-ao.exe hbmame-xml directory="C:\ao-data\hbmame"` |
+| hbmame-sqlite | Convert XML to SQLite. | `mame-ao.exe hbmame-sqlite directory="C:\ao-data\hbmame"` |
+| hbmame-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe hbmame-mssql directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
+| hbmame-mssql-payload | Create web payload tables. | `mame-ao.exe hbmame-mssql-payload directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
+| hbmame-mssql-payload-html | Create web HTML payloads. | `mame-ao.exe hbmame-mssql-payload-html directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
 
-### MAME XML
-The native format output from the MAME binary, you need this first.
+### TOSEC
+|Operation|Description|Example|
+|:----|:----|:----|
+| tosec-get | Download TOSEC and extract XML. | `mame-ao.exe tosec-get directory="C:\ao-data\tosec"` |
+| tosec-sqlite | Convert XML to SQLite. | `mame-ao.exe tosec-sqlite directory="C:\ao-data\tosec"` |
+| tosec-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe tosec-mssql directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
+| tosec-mssql-payload | Create web payload tables. | `mame-ao.exe tosec-mssql-payload directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
 
-`mame-ao.exe OPERATION=MAKE_XML VERSION=0 DIRECTORY="C:\My MAME Data"`
-
-### MAME JSON
-Convert XML to JSON.
-
-`mame-ao.exe OPERATION=MAKE_JSON VERSION=0 DIRECTORY="C:\My MAME Data"`
-
-### MAME SQLite
-Convert XML to SQLite.
-
-`mame-ao.exe OPERATION=MAKE_SQLITE VERSION=0 DIRECTORY="C:\My MAME Data"`
-
-### MAME Microsoft SQL
-Convert XML to Microsoft SQL.
-
-`mame-ao.exe OPERATION=MAKE_MSSQL VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"`
-
-### MAME Microsoft SQL - Make Payload Tables (XML & JSON)
-Create payload tables for machine, softwarelist, and software. Create XML & JSON payloads.
-
-`mame-ao.exe OPERATION=MAME_MSSQL_PAYLOADS VERSION=0 DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"`
-
-### MAME Microsoft SQL - Make HTML Payloads
-Create HTML payloads for machine, softwarelist, and software.
-
-`mame-ao.exe OPERATION=MAME_MSSQL_PAYLOADS_HTML DIRECTORY="C:\My MAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="MameAoMachine, MameAoSoftware"`
-
-### TOSEC XML
-Download and extract the TOSEC XML.
-
-`mame-ao.exe OPERATION=GET_TOSEC VERSION=0 DIRECTORY="C:\My TOSEC Data"`
-
-### TOSEC SQLIte
-Convert TOSEC XML to SQLite database.
-
-`mame-ao.exe OPERATION=MAKE_TOSEC_SQLITE VERSION=0 DIRECTORY="C:\My TOSEC Data"`
-
-### TOSEC Microsoft SQL
-Convert TOSEC XML to Microsoft SQL.
-
-`mame-ao.exe OPERATION=MAKE_TOSEC_MSSQL VERSION=0 DIRECTORY="C:\My TOSEC Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAME="TOSEC"`
-
-### Get HBMAME
-Download and extract HBMAME, needed to extract the XML.
-
-`mame-ao.exe OPERATION=GET_HBMAME VERSION=0 DIRECTORY="C:\My HBMAME Data"`
-
-### HBMAME XML
-Extract XML from HBMAME.
-
-`mame-ao.exe OPERATION=MAKE_HBMAME_XML VERSION=0 DIRECTORY="C:\My HBMAME Data"`
-
-### HBMAME SQLIte
-Convert HBMAME XML to SQLite database.
-
-`mame-ao.exe OPERATION=MAKE_HBMAME_SQLITE VERSION=0 DIRECTORY="C:\My HBMAME Data"`
-
-### HBMAME Microsoft SQL
-Convert HBMAME XML to Microsoft SQL.
-
-`mame-ao.exe OPERATION=MAKE_HBMAME_MSSQL VERSION=0 DIRECTORY="C:\My HBMAME Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAMES="HBMAME-Machine, HBMAME-Software"`
-
-### Get FBNeo
-Download and extract FBNeo, needed to extract the XML.
-
-`mame-ao.exe OPERATION=GET_FBNEO VERSION=0 DIRECTORY="C:\My FBNeo Data"`
-
-### FBNeo XML
-Extract XML from FBNeo.
-
-`mame-ao.exe OPERATION=MAKE_FBNEO_XML VERSION=0 DIRECTORY="C:\My FBNeo Data"`
-
-### FBNeo SQLIte
-Convert FBNeo XML to SQLite database.
-
-`mame-ao.exe OPERATION=MAKE_FBNEO_SQLITE VERSION=0 DIRECTORY="C:\My FBNeo Data"`
-
-### FBNeo Microsoft SQL
-Convert FBNeo XML to Microsoft SQL.
-
-`mame-ao.exe OPERATION=MAKE_FBNEO_MSSQL VERSION=0 DIRECTORY="C:\My FBNeo Data" MSSQL_SERVER="Data Source='MYSERVER';Integrated Security=True;TrustServerCertificate=True;" MSSQL_TARGET_NAME="FBNeo"`
+### FBNeo
+|Operation|Description|Example|
+|:----|:----|:----|
+| fbneo-get | Download and extract FBNeo binaries. | `mame-ao.exe fbneo-get directory="C:\ao-data\fbneo"` |
+| fbneo-xml | Extract XML from FBNeo. | `mame-ao.exe fbneo-xml directory="C:\ao-data\fbneo"` |
+| fbneo-sqlite | Convert XML to SQLite. | `mame-ao.exe fbneo-sqlite directory="C:\ao-data\fbneo"` |
+| fbneo-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe fbneo-mssql directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
 
 ## Internal Workings
 

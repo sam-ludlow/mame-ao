@@ -420,11 +420,16 @@ namespace Spludlow.MameAO
 					requestTask.Wait();
 					HttpResponseMessage responseMessage = requestTask.Result;
 
-					responseMessage.EnsureSuccessStatusCode();
-
 					Task<string> responseMessageTask = responseMessage.Content.ReadAsStringAsync();
 					responseMessageTask.Wait();
 					string responseBody = responseMessageTask.Result;
+
+					if (responseMessage.IsSuccessStatusCode == false && responseMessage.StatusCode != HttpStatusCode.NotFound)
+					{
+						Tools.ConsoleHeading(1, $"HTTP Request Error, StatusCode: {responseMessage.StatusCode}");
+						Console.WriteLine(responseBody);
+					}
+					responseMessage.EnsureSuccessStatusCode();
 
 					return responseBody;
 				}

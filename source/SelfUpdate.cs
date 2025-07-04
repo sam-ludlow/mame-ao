@@ -50,7 +50,7 @@ namespace Spludlow.MameAO
 				ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(updateDirectory, "mame-ao.exe"))
 				{
 					WorkingDirectory = Globals.RootDirectory,
-					Arguments = $"UPDATE={pid} DIRECTORY=\"{Globals.RootDirectory}\"",
+					Arguments = $"update={pid} directory=\"{Globals.RootDirectory}\"",
 					UseShellExecute = true,
 				};
 
