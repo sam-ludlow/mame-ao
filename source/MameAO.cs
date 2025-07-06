@@ -92,6 +92,8 @@ namespace Spludlow.MameAO
 		public static DataSet WorkerTaskReport;
 
 		public static PhoneHome PhoneHome;
+
+		public static HbMame HbMame;
 	}
 
 	public class MameAOProcessor
@@ -828,6 +830,11 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						Globals.WebServer.SaveStyle();
 						return;
 
+					case ".hb":
+						Globals.HbMame = new HbMame(Path.Combine(Globals.RootDirectory, "hbmame"));
+						Globals.HbMame.Initialize();
+						return;
+
 					case ".":
 						parts = args.Arguments(2);
 						if (parts.Length > 1)
@@ -875,24 +882,64 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			}
 			else
 			{
+				string system = "mame";
+				if (machine.Contains("@") == true)
+				{
+					string[] atParts = machine.Split('@');
+					machine = atParts[0];
+					system = atParts[1];
+				}
+
 				string softwareList = null;
 				if (software.Contains("@") == true)
 				{
-					string[] softParts = software.Split('@');
-					software = softParts[0];
-					softwareList = softParts[1];
+					string[] atParts = software.Split('@');
+					software = atParts[0];
+					softwareList = atParts[1];
 				}
 
-				Place.PlaceAssets(machine, software);
+				switch (system)
+				{
+					case "mame":
+						Place.PlaceAssets(machine, software);
 
-				if (softwareList != null)
-					software = Globals.Database.GetRequiredMedia(machine, softwareList, software);
+						if (softwareList != null)
+							software = Globals.Database.GetRequiredMedia(machine, softwareList, software);
 
-				if (Globals.Settings.Options["Cheats"] == "Yes")
-					arguments += " -cheat";
+						if (Globals.Settings.Options["Cheats"] == "Yes")
+							arguments += " -cheat";
 
-				Globals.PhoneHome.Ready();
-				Mame.RunMame(binFilename, $"{machine} {software} {arguments}");
+						Globals.PhoneHome.Ready();
+						Mame.RunMame(binFilename, $"{machine} {software} {arguments}");
+						break;
+
+					case "hbmame":
+						if (Globals.HbMame == null || Globals.HbMame.Version == null)
+							throw new ApplicationException("HB Not initilized");
+
+						//	all hashes....
+
+						//	dev-ref cache.....
+
+						string[] saveConString = new string[] { Globals.Database._MachineConnectionString, Globals.Database._SoftwareConnectionString };
+
+						try
+						{
+							Globals.Database._MachineConnectionString = $"Data Source='{Path.Combine(Globals.HbMame.DirectoryExe, "_machine.sqlite")}';datetimeformat=CurrentCulture;";
+							Globals.Database._SoftwareConnectionString = $"Data Source='{Path.Combine(Globals.HbMame.DirectoryExe, "_software.sqlite")}';datetimeformat=CurrentCulture;";
+
+							//Place.PlaceAssets(machine, software);
+						}
+						finally
+						{
+							Globals.Database._MachineConnectionString = saveConString[0];
+							Globals.Database._SoftwareConnectionString = saveConString[1];
+						}
+						break;
+
+					default:
+						throw new ApplicationException($"Unknown system: {system}");
+				}
 			}
 		}
 

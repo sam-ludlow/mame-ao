@@ -65,6 +65,7 @@
     <Compile Include="source\Genre.cs" />
     <Compile Include="source\GitHubRepo.cs" />
     <Compile Include="source\HashStore.cs" />
+    <Compile Include="source\HbMame.cs" />
     <Compile Include="source\Import.cs" />
     <Compile Include="source\Mame.cs" />
     <Compile Include="source\MameAO.cs" />
