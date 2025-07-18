@@ -4,11 +4,11 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Reflection;
 using System.Text;
-using System.Xml.Linq;
-using System.Net;
 
+using System.Data.SQLite;
 using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
@@ -170,6 +170,13 @@ namespace Spludlow.MameAO
 				Code = "ISMM",
 				Text = "Software Mixed Media",
 				Decription = "Software with Mixed Media.",
+			},
+			new ReportType(){
+				Key = "silly-names",
+				Group = "interesting",
+				Code = "SILLY",
+				Text = "Silly Names",
+				Decription = "ROM & DISK Silly Names.",
 			},
 
 		};
@@ -1592,6 +1599,76 @@ namespace Spludlow.MameAO
 			DataTable viewTable = Tools.DataTableFromView(view, table.TableName);
 
 			SaveHtmlReport(viewTable, "Software with Mixed Media");
+		}
+
+		public void Report_SILLY()
+		{
+			string[][] details = new string[][] {
+				new string[] {
+					"Machine ROM",
+					Globals.Database._MachineConnectionString,
+					"SELECT machine.name AS machine_name, rom.name FROM machine INNER JOIN rom ON machine.machine_id = rom.machine_id WHERE (rom.name IS NOT NULL) ORDER BY machine.name, rom.name",
+				},
+				new string[] {
+					"Machine DISK",
+					Globals.Database._MachineConnectionString,
+					"SELECT machine.name AS machine_name, disk.name FROM machine INNER JOIN DISK ON machine.machine_id = disk.machine_id WHERE (disk.name IS NOT NULL) ORDER BY machine.name, disk.name",
+				},
+				new string[] {
+					"Software ROM",
+					Globals.Database._SoftwareConnectionString,
+					"SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, rom.name FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.name IS NOT NULL) ORDER BY softwarelist.name, software.name, rom.name",
+				},
+				new string[] {
+					"Software DISK",
+					Globals.Database._SoftwareConnectionString,
+					"SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, disk.name FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN DISK ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.name IS NOT NULL) ORDER BY softwarelist.name, software.name, disk.name",
+				},
+			};
+
+			DataSet dataSet = new DataSet();
+
+			foreach (string[] detail in details)
+			{
+				string title = detail[0];
+				string connectionString = detail[1];
+				string commandText = detail[2];
+
+				DataTable sourceTable;
+				using (SQLiteConnection connection = new SQLiteConnection(connectionString))
+				{
+					sourceTable = Database.ExecuteFill(connection, commandText);
+				}
+				DataTable table = sourceTable.Clone();
+				table.TableName = title;
+				table.Columns.Add("Issues", typeof(string));
+
+				foreach (DataRow row in sourceTable.Rows)
+				{
+					string name = (string)row["name"];
+
+					List<string> issues = new List<string>();
+
+					if (name.Length > 128)
+						issues.Add("Length");
+
+					if (Tools.IsASCII(name) == false)
+						issues.Add("ASCII");
+
+					if (Tools.ValidFileName(name) != name)
+						issues.Add("Name");
+
+					if (issues.Count > 0)
+					{
+						table.ImportRow(row);
+						table.Rows[table.Rows.Count - 1]["Issues"] = String.Join(", ", issues);
+					}
+				}
+
+				dataSet.Tables.Add(table);
+			}
+
+			SaveHtmlReport(dataSet, "Silly Names");
 		}
 	}
 }

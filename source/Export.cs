@@ -507,6 +507,8 @@ namespace Spludlow.MameAO
 
 		public static void SoftwareListNamedExport(string softwareListName, string directory, bool useDirectories)
 		{
+			directory = @"\\?\" + directory;
+
 			Directory.CreateDirectory(directory);
 
 			DataSet dataSet = Import.PlaceSoftwareList(softwareListName, false);

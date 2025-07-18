@@ -315,7 +315,7 @@ namespace Spludlow.MameAO
 			if (sha1 != expectedSha1)
 				Console.WriteLine($"!!! Unexpected downloaded CHD SHA1. It's wrong in the source and will not work. expect:{expectedSha1} actual:{sha1}");
 
-			bool required = Globals.Database._AllSHA1s.Contains(sha1);
+			bool required = Globals.AllSHA1.Contains(sha1);
 			bool imported = false;
 
 			if (required == true)
@@ -553,7 +553,7 @@ namespace Spludlow.MameAO
 				{
 					string subPathName = filename.Substring(extractDirectory.Length + 1);
 					string sha1 = Globals.RomHashStore.Hash(filename);
-					bool required = Globals.Database._AllSHA1s.Contains(sha1);
+					bool required = Globals.AllSHA1.Contains(sha1);
 					bool imported = false;
 
 					if (required == true)

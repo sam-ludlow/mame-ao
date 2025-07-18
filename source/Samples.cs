@@ -51,7 +51,7 @@ namespace Spludlow.MameAO
 			foreach (DataRow row in DataSet.Tables["rom"].Rows)
 			{
 				if (row.IsNull("sha1") == false)
-					Globals.Database._AllSHA1s.Add((string)row["sha1"]);
+					Globals.AllSHA1.Add((string)row["sha1"]);
 			}
 
 			Console.WriteLine($"Version:\t{Version}");

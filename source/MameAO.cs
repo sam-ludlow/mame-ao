@@ -75,6 +75,8 @@ namespace Spludlow.MameAO
 		public static HashStore RomHashStore;
 		public static HashStore DiskHashStore;
 
+		public static HashSet<string> AllSHA1 = new HashSet<string>();
+
 		public static MameAOProcessor AO;
 
 		public static Artwork Artwork;
@@ -830,6 +832,10 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						Globals.WebServer.SaveStyle();
 						return;
 
+					case ".accdb":
+						LinkMsAccess();
+						return;
+
 					case ".hb":
 						Globals.HbMame = new HbMame(Path.Combine(Globals.RootDirectory, "hbmame"));
 						Globals.HbMame.Initialize();
@@ -882,12 +888,12 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			}
 			else
 			{
-				string system = "mame";
+				string core = "mame";
 				if (machine.Contains("@") == true)
 				{
 					string[] atParts = machine.Split('@');
 					machine = atParts[0];
-					system = atParts[1];
+					core = atParts[1];
 				}
 
 				string softwareList = null;
@@ -898,7 +904,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 					softwareList = atParts[1];
 				}
 
-				switch (system)
+				switch (core)
 				{
 					case "mame":
 						Place.PlaceAssets(machine, software);
@@ -914,31 +920,10 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						break;
 
 					case "hbmame":
-						if (Globals.HbMame == null || Globals.HbMame.Version == null)
-							throw new ApplicationException("HB Not initilized");
-
-						//	all hashes....
-
-						//	dev-ref cache.....
-
-						string[] saveConString = new string[] { Globals.Database._MachineConnectionString, Globals.Database._SoftwareConnectionString };
-
-						try
-						{
-							Globals.Database._MachineConnectionString = $"Data Source='{Path.Combine(Globals.HbMame.DirectoryExe, "_machine.sqlite")}';datetimeformat=CurrentCulture;";
-							Globals.Database._SoftwareConnectionString = $"Data Source='{Path.Combine(Globals.HbMame.DirectoryExe, "_software.sqlite")}';datetimeformat=CurrentCulture;";
-
-							//Place.PlaceAssets(machine, software);
-						}
-						finally
-						{
-							Globals.Database._MachineConnectionString = saveConString[0];
-							Globals.Database._SoftwareConnectionString = saveConString[1];
-						}
 						break;
 
 					default:
-						throw new ApplicationException($"Unknown system: {system}");
+						throw new ApplicationException($"Unknown core: {core}");
 				}
 			}
 		}
@@ -972,6 +957,43 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 				Console.WriteLine(line.ToString());
 			}
 			Console.WriteLine();
+		}
+
+		public void LinkMsAccess()
+		{
+			string exeFilename = Path.Combine(Globals.RootDirectory, "access-linker.exe");
+
+			if (File.Exists(exeFilename) == false)
+				throw new ApplicationException($"Access Linker not found: {exeFilename}, install from here: https://github.com/sam-ludlow/access-linker/releases/latest");
+
+			Version version = AssemblyName.GetAssemblyName(exeFilename).Version;
+			string localVersion = $"{version.Major}.{version.Minor}";
+
+			Tools.ConsoleHeading(1, new string[] { $"Create MS Access databases linked to SQLite", exeFilename, localVersion });
+
+			foreach (string filename in Directory.GetFiles(Globals.MameDirectory, "*.sqlite"))
+			{
+				string targetFilename = filename + ".accdb";
+
+				ProcessStartInfo startInfo = new ProcessStartInfo(exeFilename)
+				{
+					Arguments = $"access-link-new filename=\"{targetFilename}\" odbc=\"{filename}\"",
+					UseShellExecute = false,
+				};
+
+				using (Process process = new Process())
+				{
+					process.StartInfo = startInfo;
+
+					process.Start();
+					process.WaitForExit();
+
+					if (process.ExitCode != 0)
+						throw new ApplicationException("access-linker.exe Bad exit code");
+				}
+
+				Tools.ConsoleHeading(2, new string[] { "MS Access linked database created", filename, "=>", targetFilename });
+			}
 		}
 	}
 }

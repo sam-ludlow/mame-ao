@@ -24,7 +24,7 @@ namespace Spludlow.MameAO
 				"String		String	String	String"
 			);
 
-			ImportDirectory(importDirectory, Globals.Database._AllSHA1s, reportTable);
+			ImportDirectory(importDirectory, Globals.AllSHA1, reportTable);
 
 			Globals.Reports.SaveHtmlReport(reportTable, "Import Directory");
 		}

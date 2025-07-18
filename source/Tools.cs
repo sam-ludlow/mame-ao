@@ -279,6 +279,16 @@ namespace Spludlow.MameAO
 			return sb.ToString();
 		}
 
+		public static bool IsASCII(string text)
+		{
+			foreach (char c in text)
+			{
+				if (c > 127)
+					return false;
+			}
+			return true;
+		}
+
 		public static string SHA1HexFile(string filename)
 		{
 			using (FileStream stream = File.OpenRead(filename))

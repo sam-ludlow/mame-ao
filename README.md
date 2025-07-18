@@ -79,7 +79,6 @@ You should use a joystick but you will need a few keyboard commands. Full keyboa
 | Left Alt | Player 1 Button 2 |
 | Space bar | Player 1 Button 3 |
 | Tab | Configuration menu |
-| F1 | Memory Reset |
 | F2 | Service Mode |
 | F6 | Create Saved State |
 | F7 | Load Saved State |
@@ -123,6 +122,7 @@ There are also commands available they all start with a dot `.`
 |:----|:----|:----|
 |.|Run MAME directly without placing files, use it start MAME's built in UI or pass arguments to MAME|`. a2600 -cart et`|
 |.0000|Run a previous version of MAME directly , without placing files, useful for going back to saved state from previous sessions |`.0123 gaunt2`|
+|.accdb|Create MS Access databases (machine & software) linked to SQLite, usfull for looking at MAME-AO data|`.accdb`|
 |.bt|Enable the bit torrent client|`.bt`|
 |.btr|Restart the bit torrent client|`.btr`|
 |.bts|Stop the bit torrent client|`.bts`|

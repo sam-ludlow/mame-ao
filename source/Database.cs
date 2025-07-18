@@ -118,8 +118,6 @@ namespace Spludlow.MameAO
 		private Dictionary<string, DataRow[]> _DevicesRefs;
 		private DataTable _SoftwarelistTable;
 
-		public HashSet<string> _AllSHA1s;
-
 		public Database()
 		{
 		}
@@ -144,7 +142,9 @@ namespace Spludlow.MameAO
 
 				_DevicesRefs.Add(machineName, rows);
 			}
-			
+
+			AddAllSHA1(Globals.AllSHA1, _MachineConnectionString);
+
 			Console.WriteLine("...done");
 		}
 
@@ -158,11 +158,22 @@ namespace Spludlow.MameAO
 			_SoftwarelistTable = ExecuteFill(_SoftwareConnectionString, "SELECT name, description FROM softwarelist");
 			_SoftwarelistTable.PrimaryKey = new DataColumn[] { _SoftwarelistTable.Columns["name"] };
 
-			Console.WriteLine("...done");
+			AddAllSHA1(Globals.AllSHA1, _SoftwareConnectionString);
 
-			Console.Write("Getting all database SHA1s...");
-			_AllSHA1s = GetAllSHA1s();
-			Console.WriteLine("...done.");
+			Console.WriteLine("...done");
+		}
+
+		public void AddAllSHA1(HashSet<string> hashSet, string connectionString)
+		{
+			using (SQLiteConnection connection = new SQLiteConnection(connectionString))
+			{
+				foreach (string tableName in new string[] { "rom", "disk" })
+				{
+					DataTable table = ExecuteFill(connection, $"SELECT [sha1] FROM [{tableName}] WHERE [sha1] IS NOT NULL");
+					foreach (DataRow row in table.Rows)
+						hashSet.Add((string)row["sha1"]);
+				}
+			}
 		}
 
 		public static void AddDataExtras(DataSet dataSet, string name, string assemblyVersion)
@@ -709,26 +720,6 @@ namespace Spludlow.MameAO
 			Globals.Favorites.AddColumnMachines(table, "name", "favorite");
 
 			return table;
-		}
-
-		public HashSet<string> GetAllSHA1s()
-		{
-			HashSet<string> result = new HashSet<string>();
-
-			foreach (string connectionString in new string[] { _MachineConnectionString, _SoftwareConnectionString })
-			{
-				using (SQLiteConnection connection = new SQLiteConnection(connectionString))
-				{
-					foreach (string tableName in new string[] { "rom", "disk" })
-					{
-						DataTable table = ExecuteFill(connection, $"SELECT [sha1] FROM [{tableName}] WHERE [sha1] IS NOT NULL");
-						foreach (DataRow row in table.Rows)
-							result.Add((string)row["sha1"]);
-					}
-				}
-			}
-			
-			return result;
 		}
 
 		public static string DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)
