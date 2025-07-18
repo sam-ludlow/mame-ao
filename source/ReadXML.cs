@@ -10,7 +10,7 @@ namespace Spludlow.MameAO
 {
 	public class ReadXML
 	{
-		private static readonly HashSet<string> RequiredMachineTables = new HashSet<string>(new string[] {
+		public static readonly HashSet<string> RequiredMachineTables = new HashSet<string>(new string[] {
 			"mame",
 			"machine",
 			"rom",
@@ -47,7 +47,7 @@ namespace Spludlow.MameAO
 			//"conflocation",
 		});
 
-		private static readonly HashSet<string> RequiredSoftwareTables = new HashSet<string>(new string[] {
+		public static readonly HashSet<string> RequiredSoftwareTables = new HashSet<string>(new string[] {
 			"softwarelists",
 			"softwarelist",
 			"software",

@@ -95,7 +95,7 @@ namespace Spludlow.MameAO
 
 		public static PhoneHome PhoneHome;
 
-		public static HbMame HbMame;
+		public static ICore Core = null;
 	}
 
 	public class MameAOProcessor
@@ -280,6 +280,12 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			Globals.ArchiveOrgItems.Add(ItemType.Support, new ArchiveOrgItem[] {
 				new ArchiveOrgItem("mame-support", "Support/", null),
 			});
+
+			//
+			// NEW MAME
+			//
+
+			//Cores.EnableCore("mame", Globals.Config.ContainsKey("MameVersion") == true ? Globals.Config["MameVersion"] : null);
 
 			//
 			// Determine MAME version
@@ -836,9 +842,12 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						LinkMsAccess();
 						return;
 
-					case ".hb":
-						Globals.HbMame = new HbMame(Path.Combine(Globals.RootDirectory, "hbmame"));
-						Globals.HbMame.Initialize();
+					case ".core":
+						parts = args.Arguments(2);
+						if (parts.Length != 2 && parts.Length != 3)
+							throw new ApplicationException($"Usage: {parts[0]} <core name> [version]");
+
+						Cores.EnableCore(parts[1], parts.Length == 3 ? parts[2] : null);
 						return;
 
 					case ".":
@@ -971,7 +980,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			Tools.ConsoleHeading(1, new string[] { $"Create MS Access databases linked to SQLite", exeFilename, localVersion });
 
-			foreach (string filename in Directory.GetFiles(Globals.MameDirectory, "*.sqlite"))
+			foreach (string filename in Directory.GetFiles(Globals.Core != null ? Globals.Core.Directory : Globals.MameDirectory, "*.sqlite"))
 			{
 				string targetFilename = filename + ".accdb";
 
