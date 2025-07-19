@@ -915,7 +915,7 @@ namespace Spludlow.MameAO
 							if (tableName == "machine")
 							{
 								html.AppendLine("<br />");
-								html.AppendLine($"<div><h2 style=\"display:inline;\">machine</h2> &bull; <a href=\"{machine_name}.xml\">XML</a> &bull; <a href=\"{machine_name}.json\">JSON</a> &bull; <a href=\"#\" onclick=\"mameAO('{machine_name}'); return false\">AO</a></div>");
+								html.AppendLine($"<div><h2 style=\"display:inline;\">machine</h2> &bull; <a href=\"{machine_name}.xml\">XML</a> &bull; <a href=\"{machine_name}.json\">JSON</a> &bull; <a href=\"#\" onclick=\"mameAO('{machine_name}@{datasetName}'); return false\">AO</a></div>");
 								html.AppendLine("<br />");
 							}
 							else
@@ -1471,7 +1471,7 @@ namespace Spludlow.MameAO
 									DataRow detailRow = machineDetailTable.Rows.Find(name);
 									string description = detailRow != null ? (string)detailRow["description"] : "not found";
 
-									machinesTable.Rows.Add($"<a href=\"/{dataSetName}/machine/{name}\">{name}</a>", $"<a href=\"#\" onclick=\"mameAO('{name} {software_name}@{softwarelist_name}'); return false\">{description}</a>");
+									machinesTable.Rows.Add($"<a href=\"/{dataSetName}/machine/{name}\">{name}</a>", $"<a href=\"#\" onclick=\"mameAO('{name}@{dataSetName} {software_name}@{softwarelist_name}'); return false\">{description}</a>");
 								}
 
 								html.AppendLine("<hr />");

@@ -205,5 +205,16 @@ namespace Spludlow.MameAO
 
 
 
+		DataRow ICore.GetMachine(string machine_name)
+		{
+			return Cores.GetMachine(_ConnectionStringMachine, machine_name);
+		}
+
+		DataRow[] ICore.GetMachineRoms(DataRow machine)
+		{
+			return Cores.GetMachineRoms(_ConnectionStringMachine, machine);
+		}
+
+
 	}
 }

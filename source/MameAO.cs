@@ -929,6 +929,11 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						break;
 
 					case "hbmame":
+						
+						Cores.EnableCore(core, null);
+
+						Place.PlaceAssetsCore(Globals.Core, machine, software);
+						
 						break;
 
 					default:

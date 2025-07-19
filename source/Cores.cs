@@ -16,20 +16,29 @@ namespace Spludlow.MameAO
 		string Name { get; }
 		string Version { get; }
 		string Directory { get; }
+
 		void Initialize(string directory, string version);
 		int Get();
 		void Xml();
 		void SQLiteAo();
+		void AllSHA1(HashSet<string> hashSet);
+
 		void SQLite();
 		void MSSql();
 		void MSSqlHtml();
 		void MSSqlPayload();
-		void AllSHA1(HashSet<string> hashSet);
+
+		DataRow GetMachine(string machine_name);
+
+		DataRow[] GetMachineRoms(DataRow machine);
 	}
 	public class Cores
 	{
 		public static void EnableCore(string name, string version)
 		{
+			if (Globals.Core != null && Globals.Core.Name == name)
+				return;
+
 			switch (name)
 			{
 				case "mame":
@@ -139,6 +148,8 @@ namespace Spludlow.MameAO
 			}
 		}
 
+
+		// TODO Finish !!!!!!!!1
 		public static void AddDataExtras(DataSet dataSet, string name, string assemblyVersion)	// xml ?
 		{
 			DataTable table = new DataTable("ao_info");
@@ -188,6 +199,21 @@ namespace Spludlow.MameAO
 			}
 
 
+		}
+
+
+		public static DataRow GetMachine(string connectionString, string name)
+		{
+			DataTable table = Database.ExecuteFill(connectionString, $"SELECT * FROM [machine] WHERE [name] = '{name}'");
+			if (table.Rows.Count == 0)
+				return null;
+			return table.Rows[0];
+		}
+
+		public static DataRow[] GetMachineRoms(string connectionString, DataRow machine)
+		{
+			DataTable table = Database.ExecuteFill(connectionString, $"SELECT * FROM [rom] WHERE [machine_id] = {(long)machine["machine_id"]} AND [sha1] IS NOT NULL");
+			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
 	}

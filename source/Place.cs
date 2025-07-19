@@ -8,6 +8,198 @@ namespace Spludlow.MameAO
 {
 	public class Place
 	{
+		public static void PlaceAssetsCore(ICore core, string machineName, string softwareName)
+		{
+			Tools.ConsoleHeading(1, "Asset Acquisition");
+			Console.WriteLine();
+
+			if (Globals.AuthCookie == null && Globals.BitTorrentAvailable == false)
+			{
+				Tools.ConsoleHeading(1, new string[] {
+					"IMPORTANT - You must do either of the following to dowdload assets",
+					"",
+					"1) : Archive.org - Enter the command: .creds",
+					"2) : BitTorrent  - Enter the command: .bt   ",
+					""
+				});
+
+				return;
+			}
+
+			DataRow machine = core.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: {machineName}");
+
+			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
+
+			int missingCount = 0;
+
+			missingCount += PlaceMachineRomsCore(core, machineName, true);
+			//missingCount += PlaceMachineDisks(machineName, true);
+
+			return;
+
+			if (softwareName != "")
+			{
+				List<string> requiredSoftwareNames = new List<string>(new string[] { softwareName });
+
+				DataRow[] softwarelists = Globals.Database.GetMachineSoftwareLists(machine);
+				int softwareFound = 0;
+
+				foreach (DataRow machineSoftwarelist in softwarelists)
+				{
+					string softwarelistName = (string)machineSoftwarelist["name"];
+
+					DataRow softwarelistRow = Globals.Database.GetSoftwareList(softwarelistName);
+					if (softwarelistRow == null)
+					{
+						Console.WriteLine($"!!! MAME DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
+						continue;
+					}
+
+					DataRow softwareRow = Globals.Database.GetSoftware(softwarelistRow, softwareName);
+					if (softwareRow != null)
+					{
+						// Does this need to be recursive ?
+						foreach (DataRow sharedFeat in Globals.Database.GetSoftwareSharedFeats(softwareRow))
+						{
+							if ((string)sharedFeat["name"] == "requirement")
+							{
+								string[] valueParts = ((string)sharedFeat["value"]).Split(':');
+
+								string requirementSoftware = valueParts[valueParts.Length - 1];
+
+								if (requiredSoftwareNames.Contains(requirementSoftware) == false)
+									requiredSoftwareNames.Add(requirementSoftware);
+							}
+						}
+					}
+				}
+
+				foreach (string requiredSoftwareName in requiredSoftwareNames)
+				{
+					foreach (DataRow machineSoftwarelist in softwarelists)
+					{
+						string softwarelistName = (string)machineSoftwarelist["name"];
+
+						DataRow softwarelist = Globals.Database.GetSoftwareList(softwarelistName);
+
+						if (softwarelist == null)
+						{
+							Console.WriteLine($"!!! MAME DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
+							continue;
+						}
+
+						foreach (DataRow findSoftware in Globals.Database.GetSoftwareListsSoftware(softwarelist))
+						{
+							if ((string)findSoftware["name"] == requiredSoftwareName)
+							{
+								missingCount += PlaceSoftwareRoms(softwarelist, findSoftware, true);
+								missingCount += PlaceSoftwareDisks(softwarelist, findSoftware, true);
+
+								++softwareFound;
+							}
+						}
+					}
+				}
+
+				if (softwareFound == 0)
+					throw new ApplicationException($"Did not find software: {machineName}, {softwareName}");
+			}
+
+			Globals.Samples.PlaceAssets(machine);
+			Globals.Artwork.PlaceAssets(machine);
+
+			Cheats.Place();
+
+			if (Globals.Settings.Options["PlaceReport"] == "Yes")
+				Globals.Reports.SaveHtmlReport(Globals.WorkerTaskReport, $"Place Assets {machineName} {softwareName}".Trim());
+
+			//
+			// Info
+			//
+			Tools.ConsoleHeading(1, new string[] {
+				"Machine Information",
+				"",
+				missingCount == 0 ? "Everything looks good to run MAME" : "!!! Missing ROM & Disk files. I doubt MAME will run !!!",
+			});
+			Console.WriteLine();
+
+			DataRow[] features = Globals.Database.GetMachineFeatures(machine);
+
+			Console.WriteLine($"Name:           {Tools.DataRowValue(machine, "name")}");
+			Console.WriteLine($"Description:    {Tools.DataRowValue(machine, "description")}");
+			Console.WriteLine($"Year:           {Tools.DataRowValue(machine, "year")}");
+			Console.WriteLine($"Manufacturer:   {Tools.DataRowValue(machine, "manufacturer")}");
+			Console.WriteLine($"Status:         {Tools.DataRowValue(machine, "ao_driver_status")}");
+
+			foreach (DataRow feature in features)
+				Console.WriteLine($"Feature issue:  {Tools.DataRowValue(feature, "type")} {Tools.DataRowValue(feature, "status")} {Tools.DataRowValue(feature, "overall")}");
+
+			Console.WriteLine();
+		}
+
+		public static int PlaceMachineRomsCore(ICore core, string mainMachineName, bool placeFiles)
+		{
+			int missingCount = 0;
+
+			DataRow mainMachine = core.GetMachine(mainMachineName) ?? throw new ApplicationException($"Machine not found: ${mainMachineName}");
+
+			DataRow[] mainAssetRows = core.GetMachineRoms(mainMachine);
+
+			return 0;
+
+			List<string> mainMachineNames = new List<string>(new string[] { mainMachineName });
+			if (mainMachine.IsNull("cloneof") == false)
+				mainMachineNames.Add((string)mainMachine["cloneof"]);
+
+			for (int pass = 0; pass < 2; ++pass)
+			{
+				foreach (string machineName in FindAllMachines(mainMachineName))
+				{
+					string[] info = new string[] { "machine rom", mainMachineName, machineName };
+
+					DataRow[] assetRows = mainAssetRows;
+					if (mainMachineNames.Contains(machineName) == false)
+						assetRows = Globals.Database.GetMachineRoms(Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: ${machineName}"));
+
+					if (pass == 0)
+					{
+						if (AssetsRequired(Globals.RomHashStore, assetRows, info) == true)
+						{
+							if (Globals.BitTorrentAvailable == false)
+							{
+								ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
+								ArchiveOrgFile file = item.GetFile(machineName);
+								if (file != null)
+									DownloadImportFiles(item.DownloadLink(file), file.size, info);
+							}
+							else
+							{
+								var btFile = BitTorrent.MachineRom(machineName);
+								if (btFile != null)
+									DownloadImportFiles(btFile.Filename, btFile.Length, info);
+							}
+						}
+					}
+					else
+					{
+						if (placeFiles == true)
+						{
+							string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", machineName);
+							missingCount += PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
+						}
+					}
+				}
+			}
+
+			return missingCount;
+		}
+
+
+
+
+
+
+
 		public static void PlaceAssets(string machineName, string softwareName)
 		{
 			Tools.ConsoleHeading(1, "Asset Acquisition");
