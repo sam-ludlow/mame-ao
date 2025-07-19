@@ -916,7 +916,10 @@ namespace Spludlow.MameAO
 		}
 		public static int ExecuteNonQuery(SQLiteConnection connection, string commandText)
 		{
-			connection.Open();
+			bool openClose = connection.State == ConnectionState.Closed;
+
+			if (openClose)
+				connection.Open();
 			try
 			{
 				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
@@ -924,7 +927,8 @@ namespace Spludlow.MameAO
 			}
 			finally
 			{
-				connection.Close();
+				if (openClose)
+					connection.Close();
 			}
 		}
 		public static DataTable ExecuteFill(string connectionString, string commandText)

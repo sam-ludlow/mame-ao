@@ -1,11 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Data.SQLite;
 using System.Drawing;
 using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
@@ -29,8 +32,10 @@ namespace Spludlow.MameAO
 		void MSSqlPayload();
 
 		DataRow GetMachine(string machine_name);
-
 		DataRow[] GetMachineRoms(DataRow machine);
+
+		HashSet<string> GetReferencedMachines(string machine_name);
+		DataRow[] GetMachineDeviceRefs(string machine_name);
 	}
 	public class Cores
 	{
@@ -106,6 +111,7 @@ namespace Spludlow.MameAO
 				XML2SQLite(softwareXmlFilename, softwareSqlLiteFilename, requiredSoftwareTables, assemblyVersion);
 				GC.Collect();
 			}
+
 		}
 
 		private static void XML2SQLite(string xmlFilename, string sqliteFilename, HashSet<string> tableNames, string assemblyVersion)
@@ -148,15 +154,47 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static void AddExtraAoData(string connectionStringMachine)
+		{
+			using (SQLiteConnection connection = new SQLiteConnection(connectionStringMachine))
+			{
+				connection.Open();
+				SQLiteTransaction transaction = null;
+				try
+				{
+					transaction = connection.BeginTransaction();
+
+					string[] columnNames = new string[] { "ao_rom_count", "ao_disk_count", "ao_softwarelist_count", "ao_input_coins" };
+					foreach (string columnName in columnNames)
+					{
+						Database.ExecuteNonQuery(connection, $"ALTER TABLE [machine] ADD COLUMN [{columnName}] INTEGER NULL");
+						Database.ExecuteNonQuery(connection, $"UPDATE [machine] SET [{columnName}] = 0");
+					}
+
+					Database.ExecuteNonQuery(connection, "ALTER TABLE [machine] ADD COLUMN [ao_driver_status] TEXT NULL");
+
+
+
+
+					transaction.Commit();
+				}
+				catch
+				{
+					transaction?.Rollback();
+					throw;
+				}
+				finally
+				{
+					connection.Close();
+				}
+			}
+		}
+
 
 		// TODO Finish !!!!!!!!1
 		public static void AddDataExtras(DataSet dataSet, string name, string assemblyVersion)	// xml ?
 		{
-			DataTable table = new DataTable("ao_info");
-			table.Columns.Add("ao_info_id", typeof(long));
-			table.Columns.Add("assembly_version", typeof(string));
-			table.Rows.Add(1L, assemblyVersion);
-			dataSet.Tables.Add(table);
+
 
 			if (name == "mame")
 			{
@@ -214,6 +252,38 @@ namespace Spludlow.MameAO
 		{
 			DataTable table = Database.ExecuteFill(connectionString, $"SELECT * FROM [rom] WHERE [machine_id] = {(long)machine["machine_id"]} AND [sha1] IS NOT NULL");
 			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
+
+		public static HashSet<string> GetReferencedMachines(ICore core, string machine_name)
+		{
+			HashSet<string> requiredMachines = new HashSet<string>();
+
+			DataRow machineRow = core.GetMachine(machine_name) ?? throw new ApplicationException($"Machine not found (GetReferencedMachines): ${machine_name}");
+			if (machineRow.IsNull("cloneof") == false)
+				requiredMachines.Add((string)machineRow["cloneof"]);
+
+			GetReferencedMachines(core, machine_name, requiredMachines);
+
+			return requiredMachines;
+		}
+		private static void GetReferencedMachines(ICore core, string machine_name, HashSet<string> requiredMachines)
+		{
+			if (requiredMachines.Contains(machine_name) == true)
+				return;
+
+			DataRow machineRow = core.GetMachine(machine_name) ?? throw new ApplicationException($"Machine not found (GetReferencedMachines): ${machine_name}");
+
+			if ((long)machineRow["ao_rom_count"] > 0)
+				requiredMachines.Add(machine_name);
+
+			string romof = machineRow.IsNull("romof") ? null : (string)machineRow["romof"];
+
+			if (romof != null)
+				GetReferencedMachines(core, romof, requiredMachines);
+
+			foreach (DataRow row in core.GetMachineDeviceRefs(machine_name))
+				GetReferencedMachines(core, (string)row["name"], requiredMachines);
 		}
 
 	}

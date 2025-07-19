@@ -145,21 +145,19 @@ namespace Spludlow.MameAO
 
 			DataRow[] mainAssetRows = core.GetMachineRoms(mainMachine);
 
-			return 0;
-
 			List<string> mainMachineNames = new List<string>(new string[] { mainMachineName });
 			if (mainMachine.IsNull("cloneof") == false)
 				mainMachineNames.Add((string)mainMachine["cloneof"]);
 
 			for (int pass = 0; pass < 2; ++pass)
 			{
-				foreach (string machineName in FindAllMachines(mainMachineName))
+				foreach (string machineName in core.GetReferencedMachines(mainMachineName))
 				{
 					string[] info = new string[] { "machine rom", mainMachineName, machineName };
 
 					DataRow[] assetRows = mainAssetRows;
 					if (mainMachineNames.Contains(machineName) == false)
-						assetRows = Globals.Database.GetMachineRoms(Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: ${machineName}"));
+						assetRows = core.GetMachineRoms(core.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: ${machineName}"));
 
 					if (pass == 0)
 					{

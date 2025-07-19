@@ -184,10 +184,39 @@ namespace Spludlow.MameAO
 
 			Tools.ConsoleHeading(1, new string[] { "SQLiteAo HBMAME", _Version, _CoreDirectory });
 
-			Cores.MakeSQLite(_CoreDirectory, ReadXML.RequiredMachineTables, ReadXML.RequiredSoftwareTables, false, null);
-
-
 			InitializeConnections();
+
+
+			Cores.MakeSQLite(_CoreDirectory, ReadXML.RequiredMachineTables, ReadXML.RequiredSoftwareTables, false, Globals.AssemblyVersion);
+
+			//
+			// AO bump check
+			//
+			using (SQLiteConnection connection = new SQLiteConnection(_ConnectionStringMachine))
+			{
+				string databaseAssemblyVersion = null;
+				if (Database.TableExists(connection, "ao_info") == true)
+				{
+					object obj = Database.ExecuteScalar(connection, "SELECT [assembly_version] FROM [ao_info] WHERE ([ao_info_id] = 1)");
+
+					if (obj == null || !(obj is string))
+						throw new ApplicationException("MAME ao_info bad table");
+
+					databaseAssemblyVersion = (string)obj;
+				}
+
+				if (databaseAssemblyVersion != Globals.AssemblyVersion)
+				{
+					Console.WriteLine("SQLite database from previous version re-creating.");
+					Cores.MakeSQLite(_CoreDirectory, ReadXML.RequiredMachineTables, ReadXML.RequiredSoftwareTables, true, Globals.AssemblyVersion);
+				}
+			}
+
+			//
+			// AO Extra Columns
+			//
+
+			Cores.AddExtraAoData(_ConnectionStringMachine);
 
 			//
 			// Cache machine device_ref to speed up machine dependancy resolution
@@ -206,6 +235,8 @@ namespace Spludlow.MameAO
 
 			foreach (DataRow row in Database.ExecuteFill(_ConnectionStringSoftware, "SELECT name, description FROM softwarelist").Rows)
 				_SoftwareListDescriptions.Add((string)row["name"], (string)row["description"]);
+
+
 		}
 
 		private void InitializeConnections()
@@ -257,7 +288,9 @@ namespace Spludlow.MameAO
 			return Cores.GetMachineRoms(_ConnectionStringMachine, machine);
 		}
 
+		HashSet<string> ICore.GetReferencedMachines(string machine_name) => Cores.GetReferencedMachines(this, machine_name);
 
+		DataRow[] ICore.GetMachineDeviceRefs(string machine_name) => _MachineDevicesRefs[machine_name];
 
 	}
 }
