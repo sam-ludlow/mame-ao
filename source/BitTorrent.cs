@@ -71,7 +71,7 @@ namespace Spludlow.MameAO
 			Console.Write("Removing DOME-BT...");
 			try
 			{
-				Directory.Delete(Globals.BitTorrentDirectory, true);
+				DeleteBitTorrentDirectory(Globals.BitTorrentDirectory);
 			}
 			catch (UnauthorizedAccessException e)
 			{
@@ -132,7 +132,7 @@ namespace Spludlow.MameAO
 
 					try
 					{
-						Directory.Delete(Globals.BitTorrentDirectory, true);
+						DeleteBitTorrentDirectory(Globals.BitTorrentDirectory);
 					}
 					catch (UnauthorizedAccessException e)
 					{
@@ -153,6 +153,25 @@ namespace Spludlow.MameAO
 			}
 
 			Globals.BitTorrentAvailable = true;
+		}
+
+		public static void DeleteBitTorrentDirectory(string directory)
+		{
+			if (Directory.Exists(directory) == false)
+				return;
+
+			List<string> keepFilenames = new List<string>(new string[] { "_config.txt" });
+
+			foreach (string filename in Directory.GetFiles(directory))
+			{
+				if (keepFilenames.Contains(Path.GetFileName(filename)) == true)
+					continue;
+
+				File.Delete(filename);
+			}
+
+			foreach (string subDirectory in Directory.GetDirectories(directory))
+				Directory.Delete(subDirectory, true);
 		}
 
 		public static void Restart()
