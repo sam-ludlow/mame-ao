@@ -263,6 +263,10 @@ namespace Spludlow.MameAO
 		{
 			return Download($"{ClientUrl}/api/file?machine={machine}");
 		}
+		public static BitTorrentFile MachineRom(string core, string machine)
+		{
+			return Download($"{ClientUrl}/api/file?core={core}&machine={machine}");
+		}
 
 		public static BitTorrentFile MachineDisk(string machine, string disk)
 		{
@@ -272,6 +276,11 @@ namespace Spludlow.MameAO
 		public static BitTorrentFile SoftwareRom(string list, string software)
 		{
 			return Download($"{ClientUrl}/api/file?list={list}&software={software}");
+		}
+
+		public static BitTorrentFile SoftwareRom(string core, string list, string software)
+		{
+			return Download($"{ClientUrl}/api/file?core={core}&list={list}&software={software}");
 		}
 
 		public static BitTorrentFile SoftwareDisk(string list, string software, string disk)

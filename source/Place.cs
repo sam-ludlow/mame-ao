@@ -35,30 +35,32 @@ namespace Spludlow.MameAO
 			missingCount += PlaceMachineRomsCore(core, machineName, true);
 			//missingCount += PlaceMachineDisks(machineName, true);
 
-			return;
-
 			if (softwareName != "")
 			{
 				List<string> requiredSoftwareNames = new List<string>(new string[] { softwareName });
 
-				DataRow[] softwarelists = Globals.Database.GetMachineSoftwareLists(machine);
+				DataRow[] softwarelists = core.GetMachineSoftwareLists(machine);
 				int softwareFound = 0;
 
 				foreach (DataRow machineSoftwarelist in softwarelists)
 				{
 					string softwarelistName = (string)machineSoftwarelist["name"];
 
-					DataRow softwarelistRow = Globals.Database.GetSoftwareList(softwarelistName);
+					DataRow softwarelistRow = core.GetSoftwareList(softwarelistName);
 					if (softwarelistRow == null)
 					{
 						Console.WriteLine($"!!! MAME DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
 						continue;
 					}
 
+					//
+					// TODO: finish cores in software
+					//
+
 					DataRow softwareRow = Globals.Database.GetSoftware(softwarelistRow, softwareName);
 					if (softwareRow != null)
 					{
-						// Does this need to be recursive ?
+						//Does this need to be recursive ?
 						foreach (DataRow sharedFeat in Globals.Database.GetSoftwareSharedFeats(softwareRow))
 						{
 							if ((string)sharedFeat["name"] == "requirement")
@@ -80,7 +82,7 @@ namespace Spludlow.MameAO
 					{
 						string softwarelistName = (string)machineSoftwarelist["name"];
 
-						DataRow softwarelist = Globals.Database.GetSoftwareList(softwarelistName);
+						DataRow softwarelist = core.GetSoftwareList(softwarelistName);
 
 						if (softwarelist == null)
 						{
@@ -165,6 +167,9 @@ namespace Spludlow.MameAO
 						{
 							if (Globals.BitTorrentAvailable == false)
 							{
+								if (core.Name != "mame")
+									throw new ApplicationException("Archive.org downloads are only support for MAME");
+
 								ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
 								ArchiveOrgFile file = item.GetFile(machineName);
 								if (file != null)
@@ -172,7 +177,7 @@ namespace Spludlow.MameAO
 							}
 							else
 							{
-								var btFile = BitTorrent.MachineRom(machineName);
+								var btFile = BitTorrent.MachineRom(core.Name, machineName);
 								if (btFile != null)
 									DownloadImportFiles(btFile.Filename, btFile.Length, info);
 							}
@@ -182,7 +187,7 @@ namespace Spludlow.MameAO
 					{
 						if (placeFiles == true)
 						{
-							string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", machineName);
+							string targetDirectory = Path.Combine(core.Directory, "roms", machineName);
 							missingCount += PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
 						}
 					}

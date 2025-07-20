@@ -76,7 +76,7 @@ namespace Spludlow.MameAO
 				arguments += " " + Globals.MameArguments;
 
 			Tools.ConsoleHeading(1, new string[] {
-				"Starting MAME",
+				"Starting CORE",
 				binFilename,
 				arguments,
 			});

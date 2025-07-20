@@ -724,7 +724,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <command text>");
 
-						Database.ConsoleQuery(parts[0].Substring(3), parts[1]);
+						Database.ConsoleQuery(Globals.Core, parts[0].Substring(3), parts[1]);
 						return;
 
 					case ".upload":
@@ -933,7 +933,9 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						Cores.EnableCore(core, null);
 
 						Place.PlaceAssetsCore(Globals.Core, machine, software);
-						
+
+						Mame.RunMame(Path.Combine(Globals.Core.Directory, $"{Globals.Core.Name}.exe"), $"{machine} {software} {arguments}");
+
 						break;
 
 					default:

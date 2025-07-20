@@ -16,6 +16,8 @@ namespace Spludlow.MameAO
 		string ICore.Version { get => _Version; }
 		string ICore.Directory { get => _CoreDirectory; }
 
+		string[] ICore.ConnectionStrings { get => new string[] { _ConnectionStringMachine, _ConnectionStringSoftware }; }
+
 		private string _RootDirectory = null;
 		private string _CoreDirectory = null;
 
@@ -172,7 +174,7 @@ namespace Spludlow.MameAO
 
 			Tools.ConsoleHeading(1, new string[] { "SQLite HBMAME", _Version, _CoreDirectory });
 
-			Cores.MakeSQLite(_CoreDirectory, null, null, false, null);
+			Cores.MakeSQLite(_CoreDirectory, null, null, false, null, null);
 		}
 
 		void ICore.SQLiteAo()
@@ -187,7 +189,7 @@ namespace Spludlow.MameAO
 			InitializeConnections();
 
 
-			Cores.MakeSQLite(_CoreDirectory, ReadXML.RequiredMachineTables, ReadXML.RequiredSoftwareTables, false, Globals.AssemblyVersion);
+			Cores.MakeSQLite(_CoreDirectory, ReadXML.RequiredMachineTables, ReadXML.RequiredSoftwareTables, false, Globals.AssemblyVersion, Cores.AddExtraAoData);
 
 			//
 			// AO bump check
@@ -208,15 +210,9 @@ namespace Spludlow.MameAO
 				if (databaseAssemblyVersion != Globals.AssemblyVersion)
 				{
 					Console.WriteLine("SQLite database from previous version re-creating.");
-					Cores.MakeSQLite(_CoreDirectory, ReadXML.RequiredMachineTables, ReadXML.RequiredSoftwareTables, true, Globals.AssemblyVersion);
+					Cores.MakeSQLite(_CoreDirectory, ReadXML.RequiredMachineTables, ReadXML.RequiredSoftwareTables, true, Globals.AssemblyVersion, Cores.AddExtraAoData);
 				}
 			}
-
-			//
-			// AO Extra Columns
-			//
-
-			Cores.AddExtraAoData(_ConnectionStringMachine);
 
 			//
 			// Cache machine device_ref to speed up machine dependancy resolution
@@ -287,6 +283,10 @@ namespace Spludlow.MameAO
 		{
 			return Cores.GetMachineRoms(_ConnectionStringMachine, machine);
 		}
+
+		DataRow[] ICore.GetMachineSoftwareLists(DataRow machine) => Cores.GetMachineSoftwareLists(_ConnectionStringMachine, machine, _SoftwareListDescriptions);
+
+		DataRow ICore.GetSoftwareList(string softwarelist_name) => Cores.GetSoftwareList(_ConnectionStringSoftware, softwarelist_name);
 
 		HashSet<string> ICore.GetReferencedMachines(string machine_name) => Cores.GetReferencedMachines(this, machine_name);
 

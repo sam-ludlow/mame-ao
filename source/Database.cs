@@ -1067,44 +1067,51 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static void ConsoleQuery(string database, string commandText)
+		public static void ConsoleQuery(ICore core, string database, string commandText)
 		{
-			using (SQLiteConnection connection = new SQLiteConnection(database == "m" ? Globals.Database._MachineConnectionString : Globals.Database._SoftwareConnectionString))
+			using (SQLiteConnection connection = new SQLiteConnection(database == "m" ? core.ConnectionStrings[0] : core.ConnectionStrings[1]))
 			{
 				try
 				{
-					DataTable table = ExecuteFill(connection, commandText);
-
-					StringBuilder text = new StringBuilder();
-
-					foreach (DataColumn column in table.Columns)
+					if (commandText.ToUpper().StartsWith("SELECT") == true)
 					{
-						if (column.Ordinal > 0)
-							text.Append('\t');
-						text.Append(column.ColumnName);
-					}
-					Console.WriteLine(text.ToString());
+						DataTable table = ExecuteFill(connection, commandText);
 
-					text.Length = 0;
-					foreach (DataColumn column in table.Columns)
-					{
-						if (column.Ordinal > 0)
-							text.Append('\t');
-						text.Append(new String('=', column.ColumnName.Length));
-					}
-					Console.WriteLine(text.ToString());
+						StringBuilder text = new StringBuilder();
 
-					foreach (DataRow row in table.Rows)
-					{
+						foreach (DataColumn column in table.Columns)
+						{
+							if (column.Ordinal > 0)
+								text.Append('\t');
+							text.Append(column.ColumnName);
+						}
+						Console.WriteLine(text.ToString());
+
 						text.Length = 0;
 						foreach (DataColumn column in table.Columns)
 						{
 							if (column.Ordinal > 0)
 								text.Append('\t');
-							if (row.IsNull(column) == false)
-								text.Append(Convert.ToString(row[column]));
+							text.Append(new String('=', column.ColumnName.Length));
 						}
 						Console.WriteLine(text.ToString());
+
+						foreach (DataRow row in table.Rows)
+						{
+							text.Length = 0;
+							foreach (DataColumn column in table.Columns)
+							{
+								if (column.Ordinal > 0)
+									text.Append('\t');
+								if (row.IsNull(column) == false)
+									text.Append(Convert.ToString(row[column]));
+							}
+							Console.WriteLine(text.ToString());
+						}
+					}
+					else
+					{
+						ExecuteNonQuery(connection, commandText);
 					}
 				}
 				catch (SQLiteException e)
