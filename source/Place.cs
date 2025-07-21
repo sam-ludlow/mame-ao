@@ -53,15 +53,11 @@ namespace Spludlow.MameAO
 						continue;
 					}
 
-					//
-					// TODO: finish cores in software
-					//
-
-					DataRow softwareRow = Globals.Database.GetSoftware(softwarelistRow, softwareName);
+					DataRow softwareRow = core.GetSoftware(softwarelistRow, softwareName);
 					if (softwareRow != null)
 					{
 						//Does this need to be recursive ?
-						foreach (DataRow sharedFeat in Globals.Database.GetSoftwareSharedFeats(softwareRow))
+						foreach (DataRow sharedFeat in core.GetSoftwareSharedFeats(softwareRow))
 						{
 							if ((string)sharedFeat["name"] == "requirement")
 							{
@@ -90,12 +86,12 @@ namespace Spludlow.MameAO
 							continue;
 						}
 
-						foreach (DataRow findSoftware in Globals.Database.GetSoftwareListsSoftware(softwarelist))
+						foreach (DataRow findSoftware in core.GetSoftwareListsSoftware(softwarelist))
 						{
 							if ((string)findSoftware["name"] == requiredSoftwareName)
 							{
-								missingCount += PlaceSoftwareRoms(softwarelist, findSoftware, true);
-								missingCount += PlaceSoftwareDisks(softwarelist, findSoftware, true);
+								missingCount += PlaceSoftwareRomsCore(core, softwarelist, findSoftware, true);
+								//missingCount += PlaceSoftwareDisks(softwarelist, findSoftware, true);
 
 								++softwareFound;
 							}
@@ -197,7 +193,59 @@ namespace Spludlow.MameAO
 			return missingCount;
 		}
 
+		public static int PlaceSoftwareRomsCore(ICore core, DataRow softwareList, DataRow software, bool placeFiles)
+		{
+			string softwareListName = (string)softwareList["name"];
+			string softwareName = (string)software["name"];
 
+			DataRow[] assetRows = core.GetSoftwareRoms(software);
+
+			string[] info = new string[] { "software rom", softwareListName, softwareName };
+
+			if (AssetsRequired(Globals.RomHashStore, assetRows, info) == true)
+			{
+				string requiredSoftwareName = softwareName;
+				string parentSoftwareName = software.Table.Columns.Contains("cloneof") == true ? Tools.DataRowValue(software, "cloneof") : null;
+				if (parentSoftwareName != null)
+					requiredSoftwareName = parentSoftwareName;
+
+				if (Globals.BitTorrentAvailable == false)
+				{
+					ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.SoftwareRom][0];
+					ArchiveOrgFile file = item.GetFile(softwareListName);
+					if (file == null)
+						return 0;
+
+					string listEnc = Uri.EscapeDataString(softwareListName);
+					string softEnc = Uri.EscapeDataString(requiredSoftwareName);
+
+					string url = item.DownloadLink(file) + "/@LIST@%2f@SOFTWARE@.zip";
+					url = url.Replace("@LIST@", listEnc);
+					url = url.Replace("@SOFTWARE@", softEnc);
+
+					Dictionary<string, long> softwareSizes = item.GetZipContentsSizes(file, softwareListName.Length + 1, 4);
+
+					if (softwareSizes == null)
+						throw new ApplicationException($"Can't get software sizes for Software ROM in list: {softwareListName}");
+
+					if (softwareSizes.ContainsKey(requiredSoftwareName) == true)
+						DownloadImportFiles(url, softwareSizes[requiredSoftwareName], info);
+				}
+				else
+				{
+					var btFile = BitTorrent.SoftwareRom(core.Name, softwareListName, requiredSoftwareName);
+					if (btFile != null)
+						DownloadImportFiles(btFile.Filename, btFile.Length, info);
+				}
+			}
+
+			string targetDirectory = Path.Combine(core.Directory, "roms", softwareListName, softwareName);
+
+			if (placeFiles == true)
+				return PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
+
+			return 0;
+		}
 
 
 

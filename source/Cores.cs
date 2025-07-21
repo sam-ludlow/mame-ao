@@ -1,16 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.Common;
-using System.Data.SQLite;
-using System.Drawing;
 using System.IO;
 using System.Linq;
-using System.Reflection;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
 using System.Xml.Linq;
+
+using System.Data.SQLite;
 
 namespace Spludlow.MameAO
 {
@@ -36,9 +31,12 @@ namespace Spludlow.MameAO
 		DataRow[] GetMachineRoms(DataRow machine);
 		DataRow[] GetMachineSoftwareLists(DataRow machine);
 		DataRow GetSoftwareList(string softwarelist_name);
-
 		HashSet<string> GetReferencedMachines(string machine_name);
 		DataRow[] GetMachineDeviceRefs(string machine_name);
+		DataRow GetSoftware(DataRow softwarelist, string software_name);
+		DataRow[] GetSoftwareSharedFeats(DataRow software);
+		DataRow[] GetSoftwareListsSoftware(DataRow softwarelist);
+		DataRow[] GetSoftwareRoms(DataRow software);
 	}
 	public class Cores
 	{
@@ -265,6 +263,54 @@ namespace Spludlow.MameAO
 
 			foreach (DataRow row in core.GetMachineDeviceRefs(machine_name))
 				GetReferencedMachines(core, (string)row["name"], requiredMachines);
+		}
+
+		public static DataRow GetSoftware(string connectionString, DataRow softwarelist, string software_name)
+		{
+			long softwarelist_id = (long)softwarelist["softwarelist_id"];
+
+			DataTable table;
+			using (SQLiteConnection connection = new SQLiteConnection(connectionString))
+			{
+				string commandText = @"SELECT * FROM software WHERE softwarelist_id = @softwarelist_id AND software.name = @software_name";
+				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+				{
+					command.Parameters.AddWithValue("@softwarelist_id", softwarelist_id);
+					command.Parameters.AddWithValue("@software_name", software_name);
+					table = Database.ExecuteFill(command);
+				}
+			}
+
+			if (table.Rows.Count == 0)
+				return null;
+
+			return table.Rows[0];
+		}
+
+		public static DataRow[] GetSoftwareSharedFeats(string connectionString, DataRow software)
+		{
+			using (SQLiteConnection connection = new SQLiteConnection(connectionString))
+				if (Database.TableExists(connection, "sharedfeat") == false)
+					return new DataRow[0];
+			long software_id = (long)software["software_id"];
+			DataTable table = Database.ExecuteFill(connectionString, $"SELECT * FROM sharedfeat WHERE software_id = {software_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
+		public static DataRow[] GetSoftwareListsSoftware(string connectionString, DataRow softwarelist)
+		{
+			long softwarelist_id = (long)softwarelist["softwarelist_id"];
+			DataTable table = Database.ExecuteFill(connectionString, $"SELECT * FROM software WHERE softwarelist_id = {softwarelist_id}");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
+
+		public static DataRow[] GetSoftwareRoms(string connectionString, DataRow software)
+		{
+			long software_id = (long)software["software_id"];
+			DataTable table = Database.ExecuteFill(connectionString,
+				"SELECT rom.* FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id " +
+				$"WHERE part.software_id = {software_id} AND rom.[name] IS NOT NULL AND rom.[sha1] IS NOT NULL");
+			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
 	}

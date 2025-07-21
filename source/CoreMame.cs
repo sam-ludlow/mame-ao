@@ -1,11 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SQLite;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+
+using System.Data.SQLite;
 using Newtonsoft.Json;
 
 namespace Spludlow.MameAO
@@ -212,15 +211,9 @@ namespace Spludlow.MameAO
 
 
 
-		DataRow ICore.GetMachine(string machine_name)
-		{
-			return Cores.GetMachine(_ConnectionStringMachine, machine_name);
-		}
+		DataRow ICore.GetMachine(string machine_name) => Cores.GetMachine(_ConnectionStringMachine, machine_name);
 
-		DataRow[] ICore.GetMachineRoms(DataRow machine)
-		{
-			return Cores.GetMachineRoms(_ConnectionStringMachine, machine);
-		}
+		DataRow[] ICore.GetMachineRoms(DataRow machine) => Cores.GetMachineRoms(_ConnectionStringMachine, machine);
 
 		DataRow[] ICore.GetMachineSoftwareLists(DataRow machine) => Cores.GetMachineSoftwareLists(_ConnectionStringMachine, machine, _SoftwareListDescriptions);
 
@@ -229,6 +222,14 @@ namespace Spludlow.MameAO
 		HashSet<string> ICore.GetReferencedMachines(string machine_name) => Cores.GetReferencedMachines(this, machine_name);
 
 		DataRow[] ICore.GetMachineDeviceRefs(string machine_name) => _MachineDevicesRefs[machine_name];
+
+		DataRow ICore.GetSoftware(DataRow softwarelist, string software_name) => Cores.GetSoftware(_ConnectionStringSoftware, softwarelist, software_name);
+
+		DataRow[] ICore.GetSoftwareSharedFeats(DataRow software) => Cores.GetSoftwareSharedFeats(_ConnectionStringSoftware, software);
+
+		DataRow[] ICore.GetSoftwareListsSoftware(DataRow softwarelist) => Cores.GetSoftwareListsSoftware(_ConnectionStringSoftware, softwarelist);
+
+		DataRow[] ICore.GetSoftwareRoms(DataRow software) => Cores.GetSoftwareRoms(_ConnectionStringSoftware, software);
 
 	}
 }
