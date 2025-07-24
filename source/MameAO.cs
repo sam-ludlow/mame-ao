@@ -60,10 +60,6 @@ namespace Spludlow.MameAO
 		public static string ReportDirectory;
 		public static string BitTorrentDirectory;
 
-		public static string MameDirectory;
-
-		public static string MameVersion;
-
 		public static string MameArguments = "";
 
 		public static bool LinkingEnabled = false;
@@ -80,7 +76,6 @@ namespace Spludlow.MameAO
 		public static MameAOProcessor AO;
 
 		public static Artwork Artwork;
-		public static Database Database;
 		public static Favorites Favorites;
 		public static Genre Genre;
 		public static MameChdMan MameChdMan;
@@ -260,92 +255,34 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			Globals.ArchiveOrgItems.Add(ItemType.MachineRom, new ArchiveOrgItem[] {
 				new ArchiveOrgItem("mame-merged", "mame-merged/", null),
 			});
-
 			// Machine DISK
 			Globals.ArchiveOrgItems.Add(ItemType.MachineDisk, new ArchiveOrgItem[] {
 				new ArchiveOrgItem("MAME_0.225_CHDs_merged", null, null),
 			});
-
 			// Software ROM
 			Globals.ArchiveOrgItems.Add(ItemType.SoftwareRom, new ArchiveOrgItem[] {
 				new ArchiveOrgItem("mame-sl", "mame-sl/", null),
 			});
-
 			// Software DISK
 			Globals.ArchiveOrgItems.Add(ItemType.SoftwareDisk, new ArchiveOrgItem[] {
 				new ArchiveOrgItem("mame-software-list-chds-2", null, "*"),
 			});
-
 			// Support (Artwork & Samples)
 			Globals.ArchiveOrgItems.Add(ItemType.Support, new ArchiveOrgItem[] {
 				new ArchiveOrgItem("mame-support", "Support/", null),
 			});
 
 			//
-			// NEW MAME
+			// Default Core MAME
 			//
 
-			//Cores.EnableCore("mame", Globals.Config.ContainsKey("MameVersion") == true ? Globals.Config["MameVersion"] : null);
-
-			//
-			// Determine MAME version
-			//
-
-			if (Globals.Config.ContainsKey("MameVersion") == true)
-			{
-				Globals.MameVersion = Globals.Config["MameVersion"];
-				Console.WriteLine($"MAME Version fixed: {Globals.MameVersion}");
-			}
-			else
-			{
-				Globals.MameVersion = Globals.GitHubRepos["mame"].tag_name.Substring(4);
-
-				if (Globals.MameVersion == null)
-					Globals.MameVersion = Mame.LatestLocal();
-
-				if (Globals.MameVersion == null)
-					throw new ApplicationException("Unable to determine MAME Version.");
-			}
-
-			Globals.MameVersion = Globals.MameVersion.Replace(".", "");
-			Globals.MameDirectory = Path.Combine(Globals.RootDirectory, Globals.MameVersion);
-			Directory.CreateDirectory(Globals.MameDirectory);
-
-			//
-			// MAME Binaries
-			//
-
-			string binUrl = Globals.GitHubRepos["mame"].UrlDetails + "/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
-			binUrl = binUrl.Replace("@VERSION@", Globals.MameVersion);
-
-			Tools.ConsoleHeading(2, new string[] {
-				$"MAME {Globals.MameVersion}",
-				binUrl,
-			});
-
-			string binCacheFilename = Path.Combine(Globals.MameDirectory, "_" + Path.GetFileName(binUrl));
-
-			string binFilename = Path.Combine(Globals.MameDirectory, "mame.exe");
-
-			if (File.Exists(binFilename) == false)
-			{
-				if (File.Exists(binCacheFilename) == false)
-				{
-					Console.Write($"Downloading MAME binaries {binUrl} ...");
-					Tools.Download(binUrl, binCacheFilename);
-					Console.WriteLine("...done.");
-				}
-
-				Console.Write($"Extracting MAME binaries {binFilename} ...");
-				Mame.RunSelfExtract(binCacheFilename);
-				Console.WriteLine("...done.");
-			}
+			Cores.EnableCore("mame", Globals.Config.ContainsKey("MameVersion") == true ? Globals.Config["MameVersion"] : null);
 
 			//
 			// CHD Manager
 			//
 
-			Globals.MameChdMan = new MameChdMan();
+			Globals.MameChdMan = new MameChdMan(Globals.Core.Directory);
 
 			//
 			// Hash Stores
@@ -364,67 +301,21 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			Console.WriteLine("...done.");
 
 			//
-			// Database
-			//
-
-			Globals.Database = new Database();
-
-			//
-			// MAME Machine XML & SQL
-			//
-
-			string machineXmlFilename = Path.Combine(Globals.MameDirectory, "_machine.xml");
-
-			if (File.Exists(machineXmlFilename) == false)
-			{
-				Console.Write($"Extracting MAME machine XML {machineXmlFilename} ...");
-				Mame.ExtractXML(binFilename, machineXmlFilename, "-listxml");
-				Console.WriteLine("...done.");
-			}
-
-			string machineDatabaseFilename = Path.Combine(Globals.MameDirectory, "_machine.sqlite");
-
-			Globals.Database.InitializeMachine(machineXmlFilename, machineDatabaseFilename, Globals.AssemblyVersion);
-
-			GC.Collect();
-
-			//
-			// MAME Software XML & SQL
-			//
-
-			string softwareXmlFilename = Path.Combine(Globals.MameDirectory, "_software.xml");
-
-			if (File.Exists(softwareXmlFilename) == false)
-			{
-				Console.Write($"Extracting MAME software XML {softwareXmlFilename} ...");
-				Mame.ExtractXML(binFilename, softwareXmlFilename, "-listsoftware");
-				Console.WriteLine("...done.");
-
-				Console.Write($"Combine software XML with hash directory {softwareXmlFilename} ...");
-				ReadXML.CombineHashSoftwareLists(softwareXmlFilename);
-				Console.WriteLine("...done.");
-			}
-
-			string softwareDatabaseFilename = Path.Combine(Globals.MameDirectory, "_software.sqlite");
-
-			Globals.Database.InitializeSoftware(softwareXmlFilename, softwareDatabaseFilename, Globals.AssemblyVersion);
-
-			GC.Collect();
-
-			//
 			// Bits & Bobs
 			//
 
 			ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
 
-			Globals.Reports = new Reports();
-			Globals.Favorites = new Favorites();
+			// !!!! These all need fixing !!!!!!
 
-			Globals.Artwork = new Artwork();
-			Globals.Samples = new Samples();
+			//Globals.Reports = new Reports();
+			//Globals.Favorites = new Favorites();
 
-			Globals.Genre = new Genre();
-			Globals.Genre.Initialize();
+			//Globals.Artwork = new Artwork();
+			//Globals.Samples = new Samples();
+
+			//Globals.Genre = new Genre();
+			//Globals.Genre.Initialize();
 
 			//
 			// New version Check
@@ -472,7 +363,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			while (true)
 			{
-				Console.Write($"MAME Shell ({Globals.MameVersion})> ");
+				Console.Write($"AO ({Globals.Core.Name} {Globals.Core.Version})> ");
 				string line = Console.ReadLine();
 				line = line.Trim();
 
@@ -541,15 +432,12 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 		public void RunLine(string line)
 		{
-			string binFilename = Path.Combine(Globals.MameDirectory, "mame.exe");
-
 			LineArguments args = new LineArguments(line);
+			string[] parts;
 
 			string machine = "";
 			string software = "";
 			string arguments = "";
-
-			string[] parts;
 
 			if (args.First.StartsWith(".") == true)
 			{
@@ -843,7 +731,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						return;
 
 					case ".core":
-						parts = args.Arguments(2);
+						parts = args.Arguments(3);
 						if (parts.Length != 2 && parts.Length != 3)
 							throw new ApplicationException($"Usage: {parts[0]} <core name> [version]");
 
@@ -851,104 +739,78 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						return;
 
 					case ".":
-						parts = args.Arguments(2);
-						if (parts.Length > 1)
-							arguments = parts[1];
-						break;
-
 					default:
 						parts = args.Arguments(2);
 						if (parts.Length > 1)
 							arguments = parts[1];
 
-						binFilename = Path.Combine(Globals.RootDirectory, parts[0].Substring(1), "mame.exe");
+						string version = args.First == "." ? Globals.Core.Version : args.First.Substring(1);
+
+						string binFilename = Path.Combine(Path.GetDirectoryName(Globals.Core.Directory), version, $"{Globals.Core.Name}.exe");
 
 						if (File.Exists(binFilename) == false)
-							throw new ApplicationException("Unknown command");
-						break;
+							throw new ApplicationException($"Unknow command or no such version: {binFilename}");
+
+						Mame.RunMame(binFilename, arguments);
+						return;
 				}
+			}
+
+			parts = args.Arguments(3, true);
+
+			machine = parts[0];
+
+			if (parts[parts.Length - 1][0] == '-')
+			{
+				arguments = parts[parts.Length - 1];
+				if (parts.Length == 3)
+					software = parts[1];
 			}
 			else
 			{
-				parts = args.Arguments(3, true);
-
-				machine = parts[0];
-
-				if (parts[parts.Length - 1][0] == '-')
-				{
-					arguments = parts[parts.Length - 1];
-					if (parts.Length == 3)
-						software = parts[1];
-
-				}
-				else
-				{
-					if (parts.Length == 2)
-						software = parts[1];
-				}
+				if (parts.Length == 2)
+					software = parts[1];
 			}
 
 			machine = machine.ToLower();
 			software = software.ToLower();
 
-			if (machine == "")
+			string core = Globals.Core.Name;
+			if (machine.Contains("@") == true)
 			{
-				Mame.RunMame(binFilename, arguments);
+				string[] atParts = machine.Split('@');
+				machine = atParts[0];
+				core = atParts[1];
 			}
-			else
+
+			string softwareList = null;
+			if (software.Contains("@") == true)
 			{
-				string core = "mame";
-				if (machine.Contains("@") == true)
-				{
-					string[] atParts = machine.Split('@');
-					machine = atParts[0];
-					core = atParts[1];
-				}
-
-				string softwareList = null;
-				if (software.Contains("@") == true)
-				{
-					string[] atParts = software.Split('@');
-					software = atParts[0];
-					softwareList = atParts[1];
-				}
-
-				switch (core)
-				{
-					case "mame":
-						Place.PlaceAssets(machine, software);
-
-						if (softwareList != null)
-							software = Globals.Database.GetRequiredMedia(machine, softwareList, software);
-
-						if (Globals.Settings.Options["Cheats"] == "Yes")
-							arguments += " -cheat";
-
-						Globals.PhoneHome.Ready();
-						Mame.RunMame(binFilename, $"{machine} {software} {arguments}");
-						break;
-
-					case "hbmame":
-						
-						Cores.EnableCore(core, null);
-
-						Place.PlaceAssetsCore(Globals.Core, machine, software);
-
-						Mame.RunMame(Path.Combine(Globals.Core.Directory, $"{Globals.Core.Name}.exe"), $"{machine} {software} {arguments}");
-
-						break;
-
-					default:
-						throw new ApplicationException($"Unknown core: {core}");
-				}
+				string[] atParts = software.Split('@');
+				software = atParts[0];
+				softwareList = atParts[1];
 			}
+
+			Cores.EnableCore(core, null);
+
+			Place.PlaceAssets(Globals.Core, machine, software);
+
+			if (softwareList != null)
+				software = Globals.Core.GetRequiredMedia(machine, softwareList, software);
+
+			//if (Globals.Settings.Options["Cheats"] == "Yes")
+			//	arguments += " -cheat";
+
+			//Globals.PhoneHome.Ready();
+
+			Mame.RunMame(Path.Combine(Globals.Core.Directory, $"{Globals.Core.Name}.exe"), $"{machine} {software} {arguments}");
 		}
 
 		public void ListSavedState()
 		{
 			Tools.ConsoleHeading(2, "Saved Games");
 
-			DataTable table = Mame.ListSavedState(Globals.RootDirectory, Globals.Database);
+			DataTable table = Mame.ListSavedState(Globals.Core);
 
 			StringBuilder line = new StringBuilder();
 
@@ -987,7 +849,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			Tools.ConsoleHeading(1, new string[] { $"Create MS Access databases linked to SQLite", exeFilename, localVersion });
 
-			foreach (string filename in Directory.GetFiles(Globals.Core != null ? Globals.Core.Directory : Globals.MameDirectory, "*.sqlite"))
+			foreach (string filename in Directory.GetFiles(Globals.Core.Directory, "*.sqlite"))
 			{
 				string targetFilename = filename + ".accdb";
 

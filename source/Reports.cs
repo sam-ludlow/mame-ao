@@ -290,7 +290,7 @@ namespace Spludlow.MameAO
 				html.AppendLine(MakeHtmlTable(table, "width:100%;"));
 			}
 
-			string footerInfo = $"MAME-AO {Globals.AssemblyVersion} - MAME {Globals.MameVersion} - {name}";
+			string footerInfo = $"MAME-AO {Globals.AssemblyVersion} - {Globals.Core.Name} {Globals.Core.Version} - {name}";
 
 			html.AppendLine("<hr />");
 			html.AppendLine($"<p style=\"width:100%;\">{footerInfo}<span style=\"float:right\"><a href=\"https://github.com/sam-ludlow/mame-ao\">Spludlow MAME-AO</a></span></p>");
@@ -478,7 +478,7 @@ namespace Spludlow.MameAO
 		{
 			DataSet dataSet = new DataSet();
 
-			DataTable softwareListTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT softwarelist.name, softwarelist.description FROM softwarelist");
+			DataTable softwareListTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT softwarelist.name, softwarelist.description FROM softwarelist");
 			softwareListTable.PrimaryKey = new DataColumn[] { softwareListTable.Columns["name"] };
 
 			DataTable totalsTable = Tools.MakeDataTable("Totals",
@@ -553,7 +553,7 @@ namespace Spludlow.MameAO
 		{
 			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
 
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString,
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0],
 				"SELECT machine_id, name, description, ao_rom_count FROM machine WHERE (ao_rom_count > 0 AND romof IS NULL) ORDER BY machine.name");
 
 			DataTable table = Tools.MakeDataTable(
@@ -604,8 +604,8 @@ namespace Spludlow.MameAO
 		{
 			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.MachineDisk][0];
 
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, name, description, romof FROM machine ORDER BY machine.name");
-			DataTable diskTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name, description, romof FROM machine ORDER BY machine.name");
+			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
 
 			DataTable table = Tools.MakeDataTable(
 				"Status	Machine	RomOf	Merge	Description	Name	SHA1	Filename	Size	FileSHA1	ModifiedTime",
@@ -627,7 +627,7 @@ namespace Spludlow.MameAO
 
 					DataRow row = table.Rows.Add("", machineName, romof, merge, machineDescription, diskName, sha1);
 
-					ArchiveOrgFile sourceFile = Place.MachineDiskAvailableSourceFile(machineRow, diskRow, sourceItem);
+					ArchiveOrgFile sourceFile = MachineDiskAvailableSourceFile(machineRow, diskRow, sourceItem);
 
 					if (sourceFile != null)
 					{
@@ -660,12 +660,47 @@ namespace Spludlow.MameAO
 
 			SaveHtmlReport(dataSet, "Source Exists Machine Disk");
 		}
+		private static ArchiveOrgFile MachineDiskAvailableSourceFile(DataRow machineRow, DataRow diskRow, ArchiveOrgItem sourceItem)
+		{
+			string machineName = Tools.DataRowValue(machineRow, "name");
+
+			string diskName = Tools.DataRowValue(diskRow, "name");
+			string merge = Tools.DataRowValue(diskRow, "merge");
+
+			List<string> machineNames = new List<string>(new string[] { machineName });
+
+			DataRow currentRow = machineRow;
+			while (currentRow.IsNull("romof") == false)
+			{
+				string romof = (string)currentRow["romof"];
+				machineNames.Add(romof);
+
+				currentRow = Globals.Core.GetMachine(romof);
+			}
+
+			string availableDiskName = diskName;
+
+			if (merge != null)
+				availableDiskName = merge;
+
+			foreach (string availableMachineName in machineNames)
+			{
+				string key = $"{availableMachineName}/{availableDiskName}";
+
+				ArchiveOrgFile file = sourceItem.GetFile(key);
+
+				if (file != null)
+					return file;
+			}
+
+			return null;
+		}
 
 		public void Report_SESR()
 		{
 			ArchiveOrgItem sourceItem = Globals.ArchiveOrgItems[ItemType.SoftwareRom][0];
 
-			DataTable softwareListTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable softwareListTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT softwarelist.name, softwarelist.description, Count(rom.rom_Id) AS rom_count " +
 				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id " +
 				"GROUP BY softwarelist.name, softwarelist.description ORDER BY softwarelist.name");
@@ -719,7 +754,7 @@ namespace Spludlow.MameAO
 		{
 			ArchiveOrgItem[] sourceItems = Globals.ArchiveOrgItems[ItemType.SoftwareDisk];
 
-			DataTable softwareDiskTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable softwareDiskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description, software.name AS software_name, software.description AS software_description, disk.name, disk.sha1, disk.status " +
 				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
 				"WHERE (disk.sha1 IS NOT NULL) ORDER BY softwarelist.name, software.name, disk.name");
@@ -794,7 +829,7 @@ namespace Spludlow.MameAO
 
 			DataSet dataSet = new DataSet();
 
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString,
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0],
 				"SELECT machine.name, machine.description, machine.sampleof FROM machine WHERE (machine.sampleof IS NOT NULL)");
 
 			Dictionary<string, List<string>> sampleMachines = new Dictionary<string, List<string>>();
@@ -935,9 +970,9 @@ namespace Spludlow.MameAO
 
 		public void Report_AVM()
 		{
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, name, description, romof, cloneof FROM machine ORDER BY machine.name");
-			DataTable romTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
-			DataTable diskTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name, description, romof, cloneof FROM machine ORDER BY machine.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
+			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
 
 			DataTable table = Tools.MakeDataTable(
 				"Status	Name	Description	Complete	RomCount	DiskCount	RomHave	DiskHave",
@@ -1015,21 +1050,21 @@ namespace Spludlow.MameAO
 
 		public void Report_AVS()
 		{
-			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
 
-			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable softwareTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT softwarelist.name AS softwarelist_name, software.name, software.description FROM softwarelist " +
 				"INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id ORDER BY softwarelist.name, software.name");
 
-			DataTable romTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, rom.sha1 " +
 				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) " +
 				"INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) " +
 				"INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id " +
 				"WHERE (rom.sha1 IS NOT NULL)");
 
-			DataTable diskTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, disk.sha1 " +
 				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) " +
 				"INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_Id = diskarea.part_Id) " +
@@ -1143,10 +1178,10 @@ namespace Spludlow.MameAO
 			Globals.Samples.Initialize();
 
 			HashSet<string>[] databaseHashes = new HashSet<string>[] {
-				new HashSet<string>(Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
-				new HashSet<string>(Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
-				new HashSet<string>(Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
-				new HashSet<string>(Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
+				new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
+				new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
+				new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
+				new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
 				new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.Artworks].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])),
 				new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.ArtworksAlt].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])),
 				new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.ArtworksWideScreen].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])),
@@ -1183,21 +1218,21 @@ namespace Spludlow.MameAO
 
 		public void Report_AVSRL()
 		{
-			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"
 				SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description, COUNT(rom.rom_id) AS rom_count
 				FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id
 				WHERE (rom.sha1 IS NOT NULL)
 				GROUP BY softwarelist.softwarelist_Id, softwarelist.name, softwarelist.description
 				ORDER BY softwarelist.name
 			");
-			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+			DataTable softwareTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"
 				SELECT software.software_id, software.softwarelist_id, software.name, software.description, COUNT(rom.rom_Id) AS rom_count
 				FROM ((software INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id
 				WHERE (rom.sha1 IS NOT NULL)
 				GROUP BY software.software_Id, software.softwarelist_Id, software.name, software.description
 				ORDER BY software.softwarelist_id, software.name
 			");
-			DataTable romTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"
 				SELECT software.software_Id, software.softwarelist_id, rom.rom_id, rom.name, rom.size, rom.sha1
 				FROM ((software INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id
 				WHERE (rom.sha1 IS NOT NULL)
@@ -1260,21 +1295,21 @@ namespace Spludlow.MameAO
 
 		public void Report_AVSDL()
 		{
-			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description, COUNT(disk.disk_id) AS disk_count " +
 				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
 				"WHERE (disk.sha1 IS NOT NULL) " +
 				"GROUP BY softwarelist.softwarelist_id, softwarelist.name, softwarelist.description " +
 				"ORDER BY softwarelist.name");
 
-			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable softwareTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT software.software_id, software.softwarelist_id, software.name, software.cloneof, software.description, COUNT(disk.disk_id) AS disk_count " +
 				"FROM ((software INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
 				"WHERE (disk.sha1 IS NOT NULL) " +
 				"GROUP BY software.software_id, software.softwarelist_id, software.name, software.cloneof, software.description " +
 				"ORDER BY software.softwarelist_id, software.name");
 
-			DataTable diskTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT software.software_id, software.softwarelist_id, disk.name, disk.sha1 " +
 				"FROM ((software INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
 				"WHERE (disk.sha1 IS NOT NULL) " +
@@ -1332,7 +1367,7 @@ namespace Spludlow.MameAO
 
 		public static Dictionary<string, List<string>> GetSoftwareListMachines()
 		{
-			DataTable listMachineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, @"
+			DataTable listMachineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], @"
 				SELECT softwarelist.name, machine.name FROM machine INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id ORDER BY softwarelist.name, machine.name
 			");
 
@@ -1351,10 +1386,10 @@ namespace Spludlow.MameAO
 
 		public void Report_IMSLM()
 		{
-			DataTable machineListsTable = Database.ExecuteFill(Globals.Database._MachineConnectionString,
+			DataTable machineListsTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0],
 				"SELECT machine.name AS machine_name, machine.description, softwarelist.name AS softwarelist_name FROM machine INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id ORDER BY machine.name, softwarelist.name");
 
-			DataTable softwareListsTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable softwareListsTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT softwarelist.name AS softwarelist_name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
 
 			softwareListsTable.PrimaryKey = new DataColumn[] { softwareListsTable.Columns["softwarelist_name"] };
@@ -1374,10 +1409,10 @@ namespace Spludlow.MameAO
 
 		public void Report_ISLWM()
 		{
-			DataTable softwareListsTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable softwareListsTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
 
-			DataTable machinesListsTable = Database.ExecuteFill(Globals.Database._MachineConnectionString,
+			DataTable machinesListsTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0],
 				"SELECT softwarelist.name FROM softwarelist GROUP BY softwarelist.name ORDER BY softwarelist.name");
 
 			machinesListsTable.PrimaryKey = new DataColumn[] { machinesListsTable.Columns["name"] };
@@ -1397,7 +1432,7 @@ namespace Spludlow.MameAO
 
 		public void Report_ISSF()
 		{
-			DataTable table = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+			DataTable table = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"
 				SELECT softwarelist.softwarelist_id, softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description,
 				software.software_id, software.name AS software_name, software.description AS software_description,
 				sharedfeat.name, sharedfeat.value
@@ -1405,20 +1440,20 @@ namespace Spludlow.MameAO
 				ORDER BY softwarelist.name, software.name, sharedfeat.name, sharedfeat.value
 			");
 
-			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+			DataTable softwareTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"
 				SELECT softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description, software.name AS software_name, software.description AS software_description
 				FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id
 				ORDER BY softwarelist.name, software.name;
 			");
 			softwareTable.PrimaryKey = new DataColumn[] { softwareTable.Columns["softwarelist_name"], softwareTable.Columns["software_name"] };
 
-			DataTable machineSoftwareListTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, @"
+			DataTable machineSoftwareListTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], @"
 				SELECT machine.name AS machine_name, softwarelist.name AS softwarelist_name, softwarelist.status
 				FROM machine INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id
 				ORDER BY machine.name, softwarelist.name, softwarelist.status DESC;
 			");
 
-			DataTable softwarePartTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+			DataTable softwarePartTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"
 				SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, part.name AS part_name, part.interface
 				FROM (softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id
 				ORDER BY softwarelist.name, software.name, part.name;
@@ -1569,13 +1604,13 @@ namespace Spludlow.MameAO
 
 		public void Report_ISMM()
 		{
-			DataTable table = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+			DataTable table = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"
 				SELECT softwarelist.name AS softwarelist_name, softwarelist.description AS softwarelist_description,
 				software.software_id, software.name, software.cloneof, software.description
 				FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id
 				ORDER BY softwarelist.name, software.name;
 			");
-			DataTable partTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, @"
+			DataTable partTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"
 				SELECT part.* FROM part ORDER BY part.software_id, part.name, part.interface;
 			");
 
@@ -1606,22 +1641,22 @@ namespace Spludlow.MameAO
 			string[][] details = new string[][] {
 				new string[] {
 					"Machine ROM",
-					Globals.Database._MachineConnectionString,
+					Globals.Core.ConnectionStrings[0],
 					"SELECT machine.name AS machine_name, rom.name FROM machine INNER JOIN rom ON machine.machine_id = rom.machine_id WHERE (rom.name IS NOT NULL) ORDER BY machine.name, rom.name",
 				},
 				new string[] {
 					"Machine DISK",
-					Globals.Database._MachineConnectionString,
+					Globals.Core.ConnectionStrings[0],
 					"SELECT machine.name AS machine_name, disk.name FROM machine INNER JOIN DISK ON machine.machine_id = disk.machine_id WHERE (disk.name IS NOT NULL) ORDER BY machine.name, disk.name",
 				},
 				new string[] {
 					"Software ROM",
-					Globals.Database._SoftwareConnectionString,
+					Globals.Core.ConnectionStrings[1],
 					"SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, rom.name FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.name IS NOT NULL) ORDER BY softwarelist.name, software.name, rom.name",
 				},
 				new string[] {
 					"Software DISK",
-					Globals.Database._SoftwareConnectionString,
+					Globals.Core.ConnectionStrings[1],
 					"SELECT softwarelist.name AS softwarelist_name, software.name AS software_name, disk.name FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN DISK ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.name IS NOT NULL) ORDER BY softwarelist.name, software.name, disk.name",
 				},
 			};

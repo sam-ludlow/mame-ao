@@ -232,7 +232,7 @@ namespace Spludlow.MameAO
 
 		private Dictionary<string, string> GetMachineDriverStatuses()
 		{
-			DataTable table = Database.ExecuteFill(Globals.Database._MachineConnectionString,
+			DataTable table = Database.ExecuteFill(Globals.Core.ConnectionStrings[0],
 				"SELECT machine.name, driver.status FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id");
 
 			Dictionary<string, string> result = new Dictionary<string, string>();
@@ -245,15 +245,15 @@ namespace Spludlow.MameAO
 
 		public void SetMachines(Dictionary<string, long[]> machineGenreIds)
 		{
-			DataTable infoTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT * FROM ao_info");
+			DataTable infoTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT * FROM ao_info");
 
 			if (infoTable.Columns.Contains("genre_version") == false)
 			{
-				Database.ExecuteNonQuery(Globals.Database._MachineConnectionString, "ALTER TABLE ao_info ADD COLUMN genre_version TEXT");
-				Database.ExecuteNonQuery(Globals.Database._MachineConnectionString, "UPDATE ao_info SET genre_version = '' WHERE ao_info_id = 1");
+				Database.ExecuteNonQuery(Globals.Core.ConnectionStrings[0], "ALTER TABLE ao_info ADD COLUMN genre_version TEXT");
+				Database.ExecuteNonQuery(Globals.Core.ConnectionStrings[0], "UPDATE ao_info SET genre_version = '' WHERE ao_info_id = 1");
 			}
 
-			infoTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT * FROM ao_info");
+			infoTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT * FROM ao_info");
 
 			string databaseVersion = (string)infoTable.Rows[0]["genre_version"];
 
@@ -262,16 +262,16 @@ namespace Spludlow.MameAO
 
 			Console.Write("Update Machines database with genre IDs ...");
 
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT * FROM machine WHERE machine_id = 0");
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT * FROM machine WHERE machine_id = 0");
 
 			if (machineTable.Columns.Contains("genre_id") == false)
-				Database.ExecuteNonQuery(Globals.Database._MachineConnectionString, "ALTER TABLE machine ADD COLUMN genre_id INTEGER");
+				Database.ExecuteNonQuery(Globals.Core.ConnectionStrings[0], "ALTER TABLE machine ADD COLUMN genre_id INTEGER");
 
-			Database.ExecuteNonQuery(Globals.Database._MachineConnectionString, "UPDATE machine SET genre_id = 0");
+			Database.ExecuteNonQuery(Globals.Core.ConnectionStrings[0], "UPDATE machine SET genre_id = 0");
 
-			machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, name FROM machine");
+			machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name FROM machine");
 
-			using (SQLiteConnection connection = new SQLiteConnection(Globals.Database._MachineConnectionString))
+			using (SQLiteConnection connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]))
 			{
 				using (SQLiteCommand command = new SQLiteCommand("UPDATE machine SET genre_id = @genre_id WHERE machine_id = @machine_id", connection))
 				{
@@ -314,7 +314,7 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			Database.ExecuteNonQuery(Globals.Database._MachineConnectionString, $"UPDATE ao_info SET genre_version = '{SHA1}' WHERE ao_info_id = 1");
+			Database.ExecuteNonQuery(Globals.Core.ConnectionStrings[0], $"UPDATE ao_info SET genre_version = '{SHA1}' WHERE ao_info_id = 1");
 
 			Console.WriteLine("...done");
 

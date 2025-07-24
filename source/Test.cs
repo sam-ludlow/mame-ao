@@ -9,9 +9,9 @@ namespace Spludlow.MameAO
 	{
 		public static void Run(string profile, int count)
 		{
-			Database.DataQueryProfile dataQueryProfile = Globals.Database.GetDataQueryProfile(profile);
+			Database.DataQueryProfile dataQueryProfile = Database.GetDataQueryProfileCore(profile);
 
-			DataTable table = Globals.Database.QueryMachine(dataQueryProfile.Key, 0, 0xfff, null);
+			DataTable table = Globals.Core.QueryMachines(dataQueryProfile, 0, 0xfff, null);
 
 			if (count == 0 || count > table.Rows.Count)
 				count = table.Rows.Count;
@@ -31,15 +31,15 @@ namespace Spludlow.MameAO
 
 				if (softwarelist_count > 0)
 				{
-					DataRow[] softwareListRows = Globals.Database.GetMachineSoftwareLists(Globals.Database.GetMachine(machine_name));
+					DataRow[] softwareListRows = Globals.Core.GetMachineSoftwareLists(Globals.Core.GetMachine(machine_name));
 
 					string softwareListName = (string)softwareListRows[random.Next(softwareListRows.Length)]["name"];
 
-					DataRow softwareListRow = Globals.Database.GetSoftwareList(softwareListName);
+					DataRow softwareListRow = Globals.Core.GetSoftwareList(softwareListName);
 
 					if (softwareListRow != null)
 					{
-						DataRow[] softwareRows = Globals.Database.GetSoftwareListsSoftware(softwareListRow);
+						DataRow[] softwareRows = Globals.Core.GetSoftwareListsSoftware(softwareListRow);
 
 						DataRow softwareRow = softwareRows[random.Next(softwareRows.Length)];
 
@@ -60,7 +60,7 @@ namespace Spludlow.MameAO
 					arguments,
 					$"Remaining tests {count}, Remaining rows {table.Rows.Count}" });
 
-				Place.PlaceAssets(machine_name, software);
+				Place.PlaceAssets(Globals.Core, machine_name, software);
 
 				int exitCode = RunMame(arguments);
 
@@ -70,7 +70,7 @@ namespace Spludlow.MameAO
 
 		public static int RunMame(string arguments)
 		{
-			string binFilename = Path.Combine(Globals.MameDirectory, "mame.exe");
+			string binFilename = Path.Combine(Globals.Core.Directory, $"{Globals.Core.Name}.exe");
 
 			ProcessStartInfo startInfo = new ProcessStartInfo(binFilename)
 			{

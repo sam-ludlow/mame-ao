@@ -16,7 +16,7 @@ namespace Spludlow.MameAO
 
 		public Samples()
 		{
-			MameSamplesDirectory = Path.Combine(Globals.MameDirectory, "samples");
+			MameSamplesDirectory = Path.Combine(Globals.Core.Directory, "samples");
 		}
 
 		public void Initialize()
@@ -80,7 +80,7 @@ namespace Spludlow.MameAO
 			if (machineRow.IsNull("sampleof") == true)
 				return;
 
-			string[] sampleNames = Globals.Database.GetMachineSamples(machineRow).Select(row => (string)row["name"]).ToArray();
+			string[] sampleNames = Globals.Core.GetMachineSamples(machineRow).Select(row => (string)row["name"]).ToArray();
 
 			if (sampleNames.Length == 0)
 				return;

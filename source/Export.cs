@@ -143,8 +143,8 @@ namespace Spludlow.MameAO
 
 		public static void MachineRoms(string targetDirectory)
 		{
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
-			DataTable romTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
 
 			string manifestFilename = Path.Combine(targetDirectory, "_mame-ao-manifest-machine-rom.txt");
 			string title = "Export Machine ROM";
@@ -245,8 +245,8 @@ namespace Spludlow.MameAO
 
 		public static void MachineDisks(string targetDirectory)
 		{
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
-			DataTable diskTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
+			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
 
 			string manifestFilename = Path.Combine(targetDirectory, "_mame-ao-manifest-machine-disk.txt");
 			string title = "Export Machine DISK";
@@ -322,9 +322,9 @@ namespace Spludlow.MameAO
 
 		public static void SoftwareRoms(string targetDirectory)
 		{
-			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
-			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT software.software_id, software.softwarelist_id, software.name, software.description FROM software ORDER BY software.name");
-			DataTable romTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT part.software_id, rom.name, rom.sha1 FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.sha1 IS NOT NULL)");
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
+			DataTable softwareTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT software.software_id, software.softwarelist_id, software.name, software.description FROM software ORDER BY software.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT part.software_id, rom.name, rom.sha1 FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.sha1 IS NOT NULL)");
 
 			string manifestFilename = Path.Combine(targetDirectory, "_mame-ao-manifest-software-rom.txt");
 			string title = "Export Software ROM";
@@ -426,9 +426,9 @@ namespace Spludlow.MameAO
 
 		public static void SoftwareDisks(string targetDirectory)
 		{
-			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
-			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT software.software_id, software.softwarelist_id, software.name, software.description FROM software ORDER BY software.name");
-			DataTable diskTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT part.software_id, disk.name, disk.sha1 FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.sha1 IS NOT NULL)");
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
+			DataTable softwareTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT software.software_id, software.softwarelist_id, software.name, software.description FROM software ORDER BY software.name");
+			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT part.software_id, disk.name, disk.sha1 FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.sha1 IS NOT NULL)");
 
 			string manifestFilename = Path.Combine(targetDirectory, "_mame-ao-manifest-software-disk.txt");
 			string title = "Export Software DISK";

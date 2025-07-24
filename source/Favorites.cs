@@ -227,13 +227,13 @@ namespace Spludlow.MameAO
 
 		public static void ValidateFavorite(string machine, string list, string software)
 		{
-			DataRow machineRow = Globals.Database.GetMachine(machine) ?? throw new ApplicationException($"Machine not found: {machine}.");
+			DataRow machineRow = Globals.Core.GetMachine(machine) ?? throw new ApplicationException($"Machine not found: {machine}.");
 
 			if (list == null)
 				return;
 
 			DataRow machineListRow = null;
-			foreach (DataRow row in Globals.Database.GetMachineSoftwareLists(machineRow))
+			foreach (DataRow row in Globals.Core.GetMachineSoftwareLists(machineRow))
 			{
 				if (list == (string)row["name"])
 					machineListRow = row;
@@ -242,10 +242,10 @@ namespace Spludlow.MameAO
 			if (machineListRow == null)
 				throw new ApplicationException($"Machine does not have that software list: {machine}, {list}");
 
-			DataRow softwareListRow = Globals.Database.GetSoftwareList(list) ?? throw new ApplicationException($"Software list not found: {list}");
+			DataRow softwareListRow = Globals.Core.GetSoftwareList(list) ?? throw new ApplicationException($"Software list not found: {list}");
 
 			DataRow softwareRow = null;
-			foreach (DataRow row in Globals.Database.GetSoftwareListsSoftware(softwareListRow))
+			foreach (DataRow row in Globals.Core.GetSoftwareListsSoftware(softwareListRow))
 			{
 				if (software == (string)row["name"])
 					softwareRow = row;

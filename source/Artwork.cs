@@ -34,7 +34,7 @@ namespace Spludlow.MameAO
 		private readonly GitHubRepo GitHubRepo;
 		public Artwork()
 		{
-			MameArtworkDirectory = Path.Combine(Globals.MameDirectory, "artwork");
+			MameArtworkDirectory = Path.Combine(Globals.Core.Directory, "artwork");
 			GitHubRepo = Globals.GitHubRepos["MAME_Dats"];
 		}
 

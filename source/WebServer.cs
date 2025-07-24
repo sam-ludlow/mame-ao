@@ -288,9 +288,9 @@ namespace Spludlow.MameAO
 
 			string profile = context.Request.QueryString["profile"] ?? throw new ApplicationException("profile not passed");
 
-			Database.DataQueryProfile dataQueryProfile = Globals.Database.GetDataQueryProfile(profile);
+			Database.DataQueryProfile dataQueryProfile = Database.GetDataQueryProfileCore(profile);
 
-			DataTable table = Globals.Database.QueryMachine(dataQueryProfile.Key, offset, limit, search);
+			DataTable table = Globals.Core.QueryMachines(dataQueryProfile, offset, limit, search);
 
 			JArray results = new JArray();
 
@@ -320,21 +320,21 @@ namespace Spludlow.MameAO
 		{
 			string qs;
 
-			string machine = null;
+			string machine_name = null;
 			qs = context.Request.QueryString["name"];
 			if (qs != null)
-				machine = qs;
+				machine_name = qs;
 
-			if (machine == null)
+			if (machine_name == null)
 				throw new ApplicationException("machine not passed");
 
-			DataRow machineRow = Globals.Database.GetMachine(machine);
+			DataRow machine = Globals.Core.GetMachine(machine_name);
 
-			DataRow[] machineSoftwareListRows = Globals.Database.GetMachineSoftwareLists(machineRow);
+			DataRow[] machineSoftwareListRows = Globals.Core.GetMachineSoftwareLists(machine);
 
-			dynamic json = RowToJson(machineRow);
+			dynamic json = RowToJson(machine);
 
-			json.ao_image = MACHINE_IMAGE_URL.Replace("@machine", machine);
+			json.ao_image = MACHINE_IMAGE_URL.Replace("@machine", machine_name);
 
 			if (machineSoftwareListRows.Length > 0)
 			{
@@ -389,11 +389,11 @@ namespace Spludlow.MameAO
 			if (favorites_machine != null)
 				favorites_machine = favorites_machine.Trim();
 
-			DataRow[] rows = Globals.Database.GetSoftwareListsSoftware(softwarelist, offset, limit, search, favorites_machine);
+			DataTable table = Globals.Core.QuerySoftware(softwarelist, offset, limit, search, favorites_machine);
 
 			JArray results = new JArray();
 
-			foreach (DataRow row in rows)
+			foreach (DataRow row in table.Rows)
 			{
 				dynamic result = RowToJson(row);
 
@@ -410,7 +410,7 @@ namespace Spludlow.MameAO
 			json.softwarelist = softwarelist;
 			json.offset = offset;
 			json.limit = limit;
-			json.total = rows.Length == 0 ? 0 : (long)rows[0]["ao_total"];
+			json.total = table.Rows.Count == 0 ? 0 : (long)table.Rows[0]["ao_total"];
 			json.count = results.Count;
 			json.results = results;
 
@@ -421,8 +421,13 @@ namespace Spludlow.MameAO
 		{
 			JArray results = new JArray();
 
-			foreach (DataRow row in Globals.Database.GetSoftwareLists().Rows)
-				results.Add(RowToJson(row));
+			foreach (string key in Globals.Core.SoftwareListDescriptions.Keys)
+			{
+				dynamic item = new JObject();
+				item.name = key;
+				item.description = Globals.Core.SoftwareListDescriptions[key];
+				results.Add (item);
+			}
 
 			dynamic json = new JObject();
 			json.offset = 0;
@@ -442,11 +447,12 @@ namespace Spludlow.MameAO
 
 			json.time = DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture);
 			json.version = Globals.AssemblyVersion;
-			json.mame_version = Globals.MameVersion;
+			json.core_name = Globals.Core.Name;
+			json.core_version = Globals.Core.Version;
 			json.directory = Globals.RootDirectory;
 			json.rom_store_count = Globals.RomHashStore.Length;
 			json.disk_store_count = Globals.DiskHashStore.Length;
-			json.genre_version = Globals.Genre.Data != null ? Globals.Genre.Version : "";
+			//json.genre_version = Globals.Genre.Data != null ? Globals.Genre.Version : "";
 			json.linking_enabled = Globals.LinkingEnabled;
 			json.bit_torrent_enabled = Globals.BitTorrentAvailable;
 			if (Globals.BitTorrentAvailable == true)
@@ -573,7 +579,7 @@ namespace Spludlow.MameAO
 
 		public void _api_list(HttpListenerContext context, StreamWriter writer)
 		{
-			DataTable table = Mame.ListSavedState(Globals.RootDirectory, Globals.Database);
+			DataTable table = Mame.ListSavedState(Globals.Core);
 
 			JArray results = new JArray();
 

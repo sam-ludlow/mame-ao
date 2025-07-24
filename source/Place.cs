@@ -8,7 +8,7 @@ namespace Spludlow.MameAO
 {
 	public class Place
 	{
-		public static void PlaceAssetsCore(ICore core, string machineName, string softwareName)
+		public static void PlaceAssets(ICore core, string machineName, string softwareName)
 		{
 			Tools.ConsoleHeading(1, "Asset Acquisition");
 			Console.WriteLine();
@@ -32,8 +32,8 @@ namespace Spludlow.MameAO
 
 			int missingCount = 0;
 
-			missingCount += PlaceMachineRomsCore(core, machineName, true);
-			//missingCount += PlaceMachineDisks(machineName, true);
+			missingCount += PlaceMachineRoms(core, machineName, true);
+			missingCount += PlaceMachineDisks(core, machineName, true);
 
 			if (softwareName != "")
 			{
@@ -49,7 +49,7 @@ namespace Spludlow.MameAO
 					DataRow softwarelistRow = core.GetSoftwareList(softwarelistName);
 					if (softwarelistRow == null)
 					{
-						Console.WriteLine($"!!! MAME DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
+						Console.WriteLine($"!!! DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
 						continue;
 					}
 
@@ -82,7 +82,7 @@ namespace Spludlow.MameAO
 
 						if (softwarelist == null)
 						{
-							Console.WriteLine($"!!! MAME DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
+							Console.WriteLine($"!!! DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
 							continue;
 						}
 
@@ -90,8 +90,8 @@ namespace Spludlow.MameAO
 						{
 							if ((string)findSoftware["name"] == requiredSoftwareName)
 							{
-								missingCount += PlaceSoftwareRomsCore(core, softwarelist, findSoftware, true);
-								//missingCount += PlaceSoftwareDisks(softwarelist, findSoftware, true);
+								missingCount += PlaceSoftwareRoms(core, softwarelist, findSoftware, true);
+								missingCount += PlaceSoftwareDisks(core, softwarelist, findSoftware, true);
 
 								++softwareFound;
 							}
@@ -103,10 +103,11 @@ namespace Spludlow.MameAO
 					throw new ApplicationException($"Did not find software: {machineName}, {softwareName}");
 			}
 
-			Globals.Samples.PlaceAssets(machine);
-			Globals.Artwork.PlaceAssets(machine);
+			//	TODO
+			//Globals.Samples.PlaceAssets(machine);
+			//Globals.Artwork.PlaceAssets(machine);
 
-			Cheats.Place();
+			//Cheats.Place();
 
 			if (Globals.Settings.Options["PlaceReport"] == "Yes")
 				Globals.Reports.SaveHtmlReport(Globals.WorkerTaskReport, $"Place Assets {machineName} {softwareName}".Trim());
@@ -117,11 +118,11 @@ namespace Spludlow.MameAO
 			Tools.ConsoleHeading(1, new string[] {
 				"Machine Information",
 				"",
-				missingCount == 0 ? "Everything looks good to run MAME" : "!!! Missing ROM & Disk files. I doubt MAME will run !!!",
+				missingCount == 0 ? "Everything looks good" : "!!! Missing ROM & Disk files. I doubt MAME will run !!!",
 			});
 			Console.WriteLine();
 
-			DataRow[] features = Globals.Database.GetMachineFeatures(machine);
+			DataRow[] features = Globals.Core.GetMachineFeatures(machine);
 
 			Console.WriteLine($"Name:           {Tools.DataRowValue(machine, "name")}");
 			Console.WriteLine($"Description:    {Tools.DataRowValue(machine, "description")}");
@@ -135,7 +136,7 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 		}
 
-		public static int PlaceMachineRomsCore(ICore core, string mainMachineName, bool placeFiles)
+		public static int PlaceMachineRoms(ICore core, string mainMachineName, bool placeFiles)
 		{
 			int missingCount = 0;
 
@@ -193,7 +194,85 @@ namespace Spludlow.MameAO
 			return missingCount;
 		}
 
-		public static int PlaceSoftwareRomsCore(ICore core, DataRow softwareList, DataRow software, bool placeFiles)
+		public static int PlaceMachineDisks(ICore core, string machineName, bool placeFiles)
+		{
+			DataRow machineRow = core.GetMachine(machineName);
+
+			DataRow[] assetRows = core.GetMachineDisks(machineRow);
+
+			string[] info = new string[] { "machine disk", machineName, "" };
+
+			if (AssetsRequired(Globals.DiskHashStore, assetRows, info) == true)
+			{
+				foreach (DataRow row in assetRows)
+				{
+					if ((bool)row["_required"] == false)
+						continue;
+
+					string sha1 = (string)row["sha1"];
+
+					foreach (string[] key in MachineDiskAvailableKeys(machineRow, row))
+					{
+						string availableMachineName = key[0];
+						string availableDiskName = key[1];
+
+						if (Globals.BitTorrentAvailable == false)
+						{
+							ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineDisk][0];
+							ArchiveOrgFile file = item.GetFile($"{availableMachineName}/{availableDiskName}");
+							if (file != null)
+								DownloadImportDisk(item.DownloadLink(file), file.size, sha1, info);
+						}
+						else
+						{
+							var btFile = BitTorrent.MachineDisk(core.Name, availableMachineName, availableDiskName);
+							if (btFile != null)
+								DownloadImportDisk(btFile.Filename, btFile.Length, sha1, info);
+						}
+					}
+				}
+			}
+
+			string targetDirectory = Path.Combine(core.Directory, "roms", machineName);
+
+			if (placeFiles == true)
+				return PlaceAssetFiles(assetRows, Globals.DiskHashStore, targetDirectory, ".chd", info);
+
+			return 0;
+		}
+
+		public static string[][] MachineDiskAvailableKeys(DataRow machineRow, DataRow diskRow)
+		{
+			string machineName = Tools.DataRowValue(machineRow, "name");
+
+			string diskName = Tools.DataRowValue(diskRow, "name");
+			string merge = Tools.DataRowValue(diskRow, "merge");
+
+			List<string> machineNames = new List<string>(new string[] { machineName });
+
+			DataRow currentRow = machineRow;
+			while (currentRow.IsNull("romof") == false)
+			{
+				string romof = (string)currentRow["romof"];
+				machineNames.Add(romof);
+
+				currentRow = Globals.Core.GetMachine(romof);
+			}
+
+			string availableDiskName = diskName;
+
+			if (merge != null)
+				availableDiskName = merge;
+
+			List<string[]> keys = new List<string[]>();
+
+			foreach (string availableMachineName in machineNames)
+				keys.Add(new string[] { availableMachineName, availableDiskName });
+
+			return keys.ToArray();
+		}
+
+		public static int PlaceSoftwareRoms(ICore core, DataRow softwareList, DataRow software, bool placeFiles)
 		{
 			string softwareListName = (string)softwareList["name"];
 			string softwareName = (string)software["name"];
@@ -247,224 +326,53 @@ namespace Spludlow.MameAO
 			return 0;
 		}
 
-
-
-
-
-		public static void PlaceAssets(string machineName, string softwareName)
+		public static int PlaceSoftwareDisks(ICore core, DataRow softwareList, DataRow software, bool placeFiles)
 		{
-			Tools.ConsoleHeading(1, "Asset Acquisition");
-			Console.WriteLine();
+			string softwareListName = (string)softwareList["name"];
+			string softwareName = (string)software["name"];
 
-			if (Globals.AuthCookie == null && Globals.BitTorrentAvailable == false)
-			{
-				Tools.ConsoleHeading(1, new string[] {
-					"IMPORTANT - You must do either of the following to dowdload assets",
-					"",
-					"1) : Archive.org - Enter the command: .creds",
-					"2) : BitTorrent  - Enter the command: .bt   ",
-					""
-				});
+			DataRow[] assetRows = core.GetSoftwareDisks(software);
 
-				return;
-			}
-
-			DataRow machine = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: {machineName}");
-
-			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
-
-			int missingCount = 0;
-
-			missingCount += PlaceMachineRoms(machineName, true);
-			missingCount += PlaceMachineDisks(machineName, true);
-
-			if (softwareName != "")
-			{
-				List<string> requiredSoftwareNames = new List<string>(new string[] { softwareName });
-
-				DataRow[] softwarelists = Globals.Database.GetMachineSoftwareLists(machine);
-				int softwareFound = 0;
-
-				foreach (DataRow machineSoftwarelist in softwarelists)
-				{
-					string softwarelistName = (string)machineSoftwarelist["name"];
-
-					DataRow softwarelistRow = Globals.Database.GetSoftwareList(softwarelistName);
-					if (softwarelistRow == null)
-					{
-						Console.WriteLine($"!!! MAME DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
-						continue;
-					}
-
-					DataRow softwareRow = Globals.Database.GetSoftware(softwarelistRow, softwareName);
-					if (softwareRow != null)
-					{
-						// Does this need to be recursive ?
-						foreach (DataRow sharedFeat in Globals.Database.GetSoftwareSharedFeats(softwareRow))
-						{
-							if ((string)sharedFeat["name"] == "requirement")
-							{
-								string[] valueParts = ((string)sharedFeat["value"]).Split(':');
-
-								string requirementSoftware = valueParts[valueParts.Length - 1];
-
-								if (requiredSoftwareNames.Contains(requirementSoftware) == false)
-									requiredSoftwareNames.Add(requirementSoftware);
-							}
-						}
-					}
-				}
-
-				foreach (string requiredSoftwareName in requiredSoftwareNames)
-				{
-					foreach (DataRow machineSoftwarelist in softwarelists)
-					{
-						string softwarelistName = (string)machineSoftwarelist["name"];
-
-						DataRow softwarelist = Globals.Database.GetSoftwareList(softwarelistName);
-
-						if (softwarelist == null)
-						{
-							Console.WriteLine($"!!! MAME DATA Error Machine's '{machineName}' software list '{softwarelistName}' missing.");
-							continue;
-						}
-
-						foreach (DataRow findSoftware in Globals.Database.GetSoftwareListsSoftware(softwarelist))
-						{
-							if ((string)findSoftware["name"] == requiredSoftwareName)
-							{
-								missingCount += PlaceSoftwareRoms(softwarelist, findSoftware, true);
-								missingCount += PlaceSoftwareDisks(softwarelist, findSoftware, true);
-
-								++softwareFound;
-							}
-						}
-					}
-				}
-
-				if (softwareFound == 0)
-					throw new ApplicationException($"Did not find software: {machineName}, {softwareName}");
-			}
-
-			Globals.Samples.PlaceAssets(machine);
-			Globals.Artwork.PlaceAssets(machine);
-
-			Cheats.Place();
-
-			if (Globals.Settings.Options["PlaceReport"] == "Yes")
-				Globals.Reports.SaveHtmlReport(Globals.WorkerTaskReport, $"Place Assets {machineName} {softwareName}".Trim());
-
-			//
-			// Info
-			//
-			Tools.ConsoleHeading(1, new string[] {
-				"Machine Information",
-				"",
-				missingCount == 0 ? "Everything looks good to run MAME" : "!!! Missing ROM & Disk files. I doubt MAME will run !!!",
-			});
-			Console.WriteLine();
-
-			DataRow[] features = Globals.Database.GetMachineFeatures(machine);
-
-			Console.WriteLine($"Name:           {Tools.DataRowValue(machine, "name")}");
-			Console.WriteLine($"Description:    {Tools.DataRowValue(machine, "description")}");
-			Console.WriteLine($"Year:           {Tools.DataRowValue(machine, "year")}");
-			Console.WriteLine($"Manufacturer:   {Tools.DataRowValue(machine, "manufacturer")}");
-			Console.WriteLine($"Status:         {Tools.DataRowValue(machine, "ao_driver_status")}");
-
-			foreach (DataRow feature in features)
-				Console.WriteLine($"Feature issue:  {Tools.DataRowValue(feature, "type")} {Tools.DataRowValue(feature, "status")} {Tools.DataRowValue(feature, "overall")}");
-
-			Console.WriteLine();
-		}
-
-		public static int PlaceMachineRoms(string mainMachineName, bool placeFiles)
-		{
-			int missingCount = 0;
-
-			DataRow mainMachine = Globals.Database.GetMachine(mainMachineName) ?? throw new ApplicationException($"Machine not found: ${mainMachineName}");
-
-			DataRow[] mainAssetRows = Globals.Database.GetMachineRoms(mainMachine);
-
-			List<string> mainMachineNames = new List<string>(new string[] { mainMachineName });
-			if (mainMachine.IsNull("cloneof") == false)
-				mainMachineNames.Add((string)mainMachine["cloneof"]);
-
-			for (int pass = 0; pass < 2; ++pass)
-			{
-				foreach (string machineName in FindAllMachines(mainMachineName))
-				{
-					string[] info = new string[] { "machine rom", mainMachineName, machineName };
-
-					DataRow[] assetRows = mainAssetRows;
-					if (mainMachineNames.Contains(machineName) == false)
-						assetRows = Globals.Database.GetMachineRoms(Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: ${machineName}"));
-
-					if (pass == 0)
-					{
-						if (AssetsRequired(Globals.RomHashStore, assetRows, info) == true)
-						{
-							if (Globals.BitTorrentAvailable == false)
-							{
-								ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
-								ArchiveOrgFile file = item.GetFile(machineName);
-								if (file != null)
-									DownloadImportFiles(item.DownloadLink(file), file.size, info);
-							}
-							else
-							{
-								var btFile = BitTorrent.MachineRom(machineName);
-								if (btFile != null)
-									DownloadImportFiles(btFile.Filename, btFile.Length, info);
-							}
-						}
-					}
-					else
-					{
-						if (placeFiles == true)
-						{
-							string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", machineName);
-							missingCount += PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
-						}
-					}
-				}
-			}
-
-			return missingCount;
-		}
-
-		public static int PlaceMachineDisks(string machineName, bool placeFiles)
-		{
-			DataRow machineRow = Globals.Database.GetMachine(machineName);
-
-			DataRow[] assetRows = Globals.Database.GetMachineDisks(machineRow);
-
-			string[] info = new string[] { "machine disk", machineName, "" };
+			string[] info = new string[] { "software disk", softwareListName, softwareName };
 
 			if (AssetsRequired(Globals.DiskHashStore, assetRows, info) == true)
 			{
+				List<string> downloadSoftwareNames = new List<string>(new string[] { softwareName });
+
+				string parentSoftwareName = Tools.DataRowValue(software, "cloneof");
+				if (parentSoftwareName != null)
+					downloadSoftwareNames.Add(parentSoftwareName);
+
 				foreach (DataRow row in assetRows)
 				{
-					if ((bool)row["_required"] == false)
-						continue;
-
+					string name = (string)row["name"];
 					string sha1 = (string)row["sha1"];
 
-					foreach (string[] key in MachineDiskAvailableKeys(machineRow, row))
+					foreach (string downloadSoftwareName in downloadSoftwareNames)
 					{
-						string availableMachineName = key[0];
-						string availableDiskName = key[1];
-
 						if (Globals.BitTorrentAvailable == false)
 						{
-							ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineDisk][0];
-							ArchiveOrgFile file = item.GetFile($"{availableMachineName}/{availableDiskName}");
-							if (file != null)
-								DownloadImportDisk(item.DownloadLink(file), file.size, sha1, info);
+							bool found = false;
+
+							ArchiveOrgItem[] items = ArchiveOrgItem.GetItems(ItemType.SoftwareDisk, softwareListName);
+							foreach (ArchiveOrgItem item in items)
+							{
+								if (found == true)
+									break;
+
+								string key = $"{softwareListName}/{downloadSoftwareName}/{name}";
+
+								if (item.Tag != null && item.Tag != "*")
+									key = $"{downloadSoftwareName}/{name}";
+
+								ArchiveOrgFile file = item.GetFile(key);
+								if (file != null)
+									found = DownloadImportDisk(item.DownloadLink(file), file.size, sha1, info);
+							}
 						}
 						else
 						{
-							var btFile = BitTorrent.MachineDisk(availableMachineName, availableDiskName);
+							var btFile = BitTorrent.SoftwareDisk(core.Name, softwareListName, downloadSoftwareName, name);
 							if (btFile != null)
 								DownloadImportDisk(btFile.Filename, btFile.Length, sha1, info);
 						}
@@ -472,43 +380,12 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", machineName);
+			string targetDirectory = Path.Combine(core.Directory, "roms", softwareListName, softwareName);
 
 			if (placeFiles == true)
 				return PlaceAssetFiles(assetRows, Globals.DiskHashStore, targetDirectory, ".chd", info);
 
 			return 0;
-		}
-
-		public static string[][] MachineDiskAvailableKeys(DataRow machineRow, DataRow diskRow)
-		{
-			string machineName = Tools.DataRowValue(machineRow, "name");
-
-			string diskName = Tools.DataRowValue(diskRow, "name");
-			string merge = Tools.DataRowValue(diskRow, "merge");
-
-			List<string> machineNames = new List<string>(new string[] { machineName });
-
-			DataRow currentRow = machineRow;
-			while (currentRow.IsNull("romof") == false)
-			{
-				string romof = (string)currentRow["romof"];
-				machineNames.Add(romof);
-
-				currentRow = Globals.Database.GetMachine(romof);
-			}
-
-			string availableDiskName = diskName;
-
-			if (merge != null)
-				availableDiskName = merge;
-
-			List<string[]> keys = new List<string[]>();
-
-			foreach (string availableMachineName in machineNames)
-				keys.Add(new string[] { availableMachineName, availableDiskName });
-
-			return keys.ToArray();
 		}
 
 		private static bool DownloadImportDisk(string urlOrFilename, long length, string expectedSha1, string[] info)
@@ -567,158 +444,6 @@ namespace Spludlow.MameAO
 			Globals.WorkerTaskReport.Tables["Import"].Rows.Add(when, info[0], info[1], info[2], sha1, required, imported, Path.GetFileName(tempFilename));
 
 			return true;
-		}
-
-		public static int PlaceSoftwareRoms(DataRow softwareList, DataRow software, bool placeFiles)
-		{
-			string softwareListName = (string)softwareList["name"];
-			string softwareName = (string)software["name"];
-
-			DataRow[] assetRows = Globals.Database.GetSoftwareRoms(software);
-
-			string[] info = new string[] { "software rom", softwareListName, softwareName };
-
-			if (AssetsRequired(Globals.RomHashStore, assetRows, info) == true)
-			{
-				string requiredSoftwareName = softwareName;
-				string parentSoftwareName = Tools.DataRowValue(software, "cloneof");
-				if (parentSoftwareName != null)
-					requiredSoftwareName = parentSoftwareName;
-
-				if (Globals.BitTorrentAvailable == false)
-				{
-					ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.SoftwareRom][0];
-					ArchiveOrgFile file = item.GetFile(softwareListName);
-					if (file == null)
-						return 0;
-
-					string listEnc = Uri.EscapeDataString(softwareListName);
-					string softEnc = Uri.EscapeDataString(requiredSoftwareName);
-
-					string url = item.DownloadLink(file) + "/@LIST@%2f@SOFTWARE@.zip";
-					url = url.Replace("@LIST@", listEnc);
-					url = url.Replace("@SOFTWARE@", softEnc);
-
-					Dictionary<string, long> softwareSizes = item.GetZipContentsSizes(file, softwareListName.Length + 1, 4);
-
-					if (softwareSizes == null)
-						throw new ApplicationException($"Can't get software sizes for Software ROM in list: {softwareListName}");
-
-					if (softwareSizes.ContainsKey(requiredSoftwareName) == true)
-						DownloadImportFiles(url, softwareSizes[requiredSoftwareName], info);
-				}
-				else
-				{
-					var btFile = BitTorrent.SoftwareRom(softwareListName, requiredSoftwareName);
-					if (btFile != null)
-						DownloadImportFiles(btFile.Filename, btFile.Length, info);
-				}
-			}
-
-			string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", softwareListName, softwareName);
-
-			if (placeFiles == true)
-				return PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
-
-			return 0;
-		}
-
-		public static int PlaceSoftwareDisks(DataRow softwareList, DataRow software, bool placeFiles)
-		{
-			string softwareListName = (string)softwareList["name"];
-			string softwareName = (string)software["name"];
-
-			DataRow[] assetRows = Globals.Database.GetSoftwareDisks(software);
-
-			string[] info = new string[] { "software disk", softwareListName, softwareName };
-
-			if (AssetsRequired(Globals.DiskHashStore, assetRows, info) == true)
-			{
-				List<string> downloadSoftwareNames = new List<string>(new string[] { softwareName });
-
-				string parentSoftwareName = Tools.DataRowValue(software, "cloneof");
-				if (parentSoftwareName != null)
-					downloadSoftwareNames.Add(parentSoftwareName);
-
-				foreach (DataRow row in assetRows)
-				{
-					string name = (string)row["name"];
-					string sha1 = (string)row["sha1"];
-
-					foreach (string downloadSoftwareName in downloadSoftwareNames)
-					{
-						if (Globals.BitTorrentAvailable == false)
-						{
-							bool found = false;
-
-							ArchiveOrgItem[] items = ArchiveOrgItem.GetItems(ItemType.SoftwareDisk, softwareListName);
-							foreach (ArchiveOrgItem item in items)
-							{
-								if (found == true)
-									break;
-
-								string key = $"{softwareListName}/{downloadSoftwareName}/{name}";
-
-								if (item.Tag != null && item.Tag != "*")
-									key = $"{downloadSoftwareName}/{name}";
-
-								ArchiveOrgFile file = item.GetFile(key);
-								if (file != null)
-									found = DownloadImportDisk(item.DownloadLink(file), file.size, sha1, info);
-							}
-						}
-						else
-						{
-							var btFile = BitTorrent.SoftwareDisk(softwareListName, downloadSoftwareName, name);
-							if (btFile != null)
-								DownloadImportDisk(btFile.Filename, btFile.Length, sha1, info);
-						}
-					}
-				}
-			}
-
-			string targetDirectory = Path.Combine(Globals.MameDirectory, "roms", softwareListName, softwareName);
-
-			if (placeFiles == true)
-				return PlaceAssetFiles(assetRows, Globals.DiskHashStore, targetDirectory, ".chd", info);
-
-			return 0;
-		}
-
-		public static ArchiveOrgFile MachineDiskAvailableSourceFile(DataRow machineRow, DataRow diskRow, ArchiveOrgItem sourceItem)
-		{
-			string machineName = Tools.DataRowValue(machineRow, "name");
-
-			string diskName = Tools.DataRowValue(diskRow, "name");
-			string merge = Tools.DataRowValue(diskRow, "merge");
-
-			List<string> machineNames = new List<string>(new string[] { machineName });
-
-			DataRow currentRow = machineRow;
-			while (currentRow.IsNull("romof") == false)
-			{
-				string romof = (string)currentRow["romof"];
-				machineNames.Add(romof);
-
-				currentRow = Globals.Database.GetMachine(romof);
-			}
-
-			string availableDiskName = diskName;
-
-			if (merge != null)
-				availableDiskName = merge;
-
-			foreach (string availableMachineName in machineNames)
-			{
-				string key = $"{availableMachineName}/{availableDiskName}";
-
-				ArchiveOrgFile file = sourceItem.GetFile(key);
-
-				if (file != null)
-					return file;
-			}
-
-			return null;
 		}
 
 		public static bool AssetsRequired(HashStore hashStore, DataRow[] assetRows, string[] info)
@@ -860,37 +585,5 @@ namespace Spludlow.MameAO
 					File.Copy(targetStoreFilename[1], targetStoreFilename[0], true);
 			}
 		}
-
-		private static HashSet<string> FindAllMachines(string machineName)
-		{
-			HashSet<string> requiredMachines = new HashSet<string>();
-
-			DataRow machineRow = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found (FindAllMachines): ${machineName}");
-			if (machineRow.IsNull("cloneof") == false)
-				requiredMachines.Add((string)machineRow["cloneof"]);
-
-			FindAllMachinesWork(machineName, requiredMachines);
-
-			return requiredMachines;
-		}
-		private static void FindAllMachinesWork(string machineName, HashSet<string> requiredMachines)
-		{
-			if (requiredMachines.Contains(machineName) == true)
-				return;
-
-			DataRow machineRow = Globals.Database.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found (FindAllMachinesWork): ${machineName}");
-
-			if ((long)machineRow["ao_rom_count"] > 0)
-				requiredMachines.Add(machineName);
-
-			string romof = machineRow.IsNull("romof") ? null : (string)machineRow["romof"];
-
-			if (romof != null)
-				FindAllMachinesWork(romof, requiredMachines);
-
-			foreach (DataRow row in Globals.Database.GetMachineDeviceRefs(machineName))
-				FindAllMachinesWork((string)row["name"], requiredMachines);
-		}
-
 	}
 }

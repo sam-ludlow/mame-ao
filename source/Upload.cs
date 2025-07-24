@@ -102,8 +102,8 @@ namespace Spludlow.MameAO
 			if (host == null)
 				throw new ApplicationException("Archive.org item no workable_servers");
 
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, name, cloneof, description FROM machine ORDER BY machine.name");
-			DataTable romTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name, cloneof, description FROM machine ORDER BY machine.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
 
 			machineTable.PrimaryKey = new DataColumn[] { machineTable.Columns["name"] };
 
@@ -280,8 +280,8 @@ namespace Spludlow.MameAO
 
 		public static void MachineRomExport(string targetDirectory)
 		{
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, name, cloneof, description FROM machine ORDER BY machine.name");
-			DataTable romTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name, cloneof, description FROM machine ORDER BY machine.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
 
 			DataTable report = Tools.MakeDataTable("Machine manifests",
 				"name	sha1",
@@ -351,12 +351,12 @@ namespace Spludlow.MameAO
 
 		public static void SoftwareDisk(string itemName, int batchSize, string softwareListName)
 		{
-			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable softwareTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT softwarelist.name AS softwarelist_name, software.name, software.cloneof, software.description, software.software_id " +
 				"FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id " +
 				$"WHERE (softwarelist.name = '{softwareListName}') ORDER BY softwarelist.name, software.name");
 
-			DataTable diskTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT part.software_id, disk.name, disk.sha1 " +
 				"FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
 				"WHERE (disk.sha1 IS NOT NULL)");

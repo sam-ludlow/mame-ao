@@ -1,11 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SQLite;
 using System.IO;
 using System.Linq;
-
-using System.Data.SQLite;
 using Newtonsoft.Json;
+using static Spludlow.MameAO.Database;
 
 namespace Spludlow.MameAO
 {
@@ -15,6 +15,8 @@ namespace Spludlow.MameAO
 		string ICore.Version { get => _Version; }
 		string ICore.Directory { get => _CoreDirectory; }
 		string[] ICore.ConnectionStrings { get => new string[] { _ConnectionStringMachine, _ConnectionStringSoftware }; }
+
+		Dictionary<string, string> ICore.SoftwareListDescriptions { get => _SoftwareListDescriptions; }
 
 		private string _RootDirectory = null;
 		private string _CoreDirectory = null;
@@ -215,6 +217,10 @@ namespace Spludlow.MameAO
 
 		DataRow[] ICore.GetMachineRoms(DataRow machine) => Cores.GetMachineRoms(_ConnectionStringMachine, machine);
 
+		DataRow[] ICore.GetMachineDisks(DataRow machine) => Cores.GetMachineDisks(_ConnectionStringMachine, machine);
+
+		DataRow[] ICore.GetMachineSamples(DataRow machine) => Cores.GetMachineSamples(_ConnectionStringMachine, machine);
+
 		DataRow[] ICore.GetMachineSoftwareLists(DataRow machine) => Cores.GetMachineSoftwareLists(_ConnectionStringMachine, machine, _SoftwareListDescriptions);
 
 		DataRow ICore.GetSoftwareList(string softwarelist_name) => Cores.GetSoftwareList(_ConnectionStringSoftware, softwarelist_name);
@@ -225,11 +231,26 @@ namespace Spludlow.MameAO
 
 		DataRow ICore.GetSoftware(DataRow softwarelist, string software_name) => Cores.GetSoftware(_ConnectionStringSoftware, softwarelist, software_name);
 
+		DataRow ICore.GetSoftware(string softwarelist_name, string software_name) => Cores.GetSoftware(_ConnectionStringSoftware, softwarelist_name, software_name);
+
 		DataRow[] ICore.GetSoftwareSharedFeats(DataRow software) => Cores.GetSoftwareSharedFeats(_ConnectionStringSoftware, software);
 
 		DataRow[] ICore.GetSoftwareListsSoftware(DataRow softwarelist) => Cores.GetSoftwareListsSoftware(_ConnectionStringSoftware, softwarelist);
 
 		DataRow[] ICore.GetSoftwareRoms(DataRow software) => Cores.GetSoftwareRoms(_ConnectionStringSoftware, software);
+
+		DataRow[] ICore.GetSoftwareDisks(DataRow software) => Cores.GetSoftwareDisks(_ConnectionStringSoftware, software);
+
+		DataRow[] ICore.GetMachineFeatures(DataRow machine) => Cores.GetMachineFeatures(_ConnectionStringMachine, machine);
+
+		string ICore.GetRequiredMedia(string machine_name, string softwarelist_name, string software_name) =>
+			Cores.GetRequiredMedia(_ConnectionStringMachine, _ConnectionStringSoftware, _SoftwareListDescriptions, machine_name, softwarelist_name, software_name);
+
+		DataTable ICore.QueryMachines(DataQueryProfile profile, int offset, int limit, string search) =>
+			Cores.QueryMachines(_ConnectionStringMachine, profile, offset, limit, search);
+
+		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string favorites_machine) =>
+			Cores.QuerySoftware(_ConnectionStringSoftware, softwarelist_name, offset, limit, search, favorites_machine);
 
 	}
 }

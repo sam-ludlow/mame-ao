@@ -259,23 +259,14 @@ namespace Spludlow.MameAO
 			return JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/files?hash={hash}"));
 		}
 
-		public static BitTorrentFile MachineRom(string machine)
-		{
-			return Download($"{ClientUrl}/api/file?machine={machine}");
-		}
 		public static BitTorrentFile MachineRom(string core, string machine)
 		{
 			return Download($"{ClientUrl}/api/file?core={core}&machine={machine}");
 		}
 
-		public static BitTorrentFile MachineDisk(string machine, string disk)
+		public static BitTorrentFile MachineDisk(string core, string machine, string disk)
 		{
-			return Download($"{ClientUrl}/api/file?machine={machine}&disk={HttpUtility.UrlEncode(disk)}");
-		}
-
-		public static BitTorrentFile SoftwareRom(string list, string software)
-		{
-			return Download($"{ClientUrl}/api/file?list={list}&software={software}");
+			return Download($"{ClientUrl}/api/file?core={core}&machine={machine}&disk={HttpUtility.UrlEncode(disk)}");
 		}
 
 		public static BitTorrentFile SoftwareRom(string core, string list, string software)
@@ -283,9 +274,9 @@ namespace Spludlow.MameAO
 			return Download($"{ClientUrl}/api/file?core={core}&list={list}&software={software}");
 		}
 
-		public static BitTorrentFile SoftwareDisk(string list, string software, string disk)
+		public static BitTorrentFile SoftwareDisk(string core, string list, string software, string disk)
 		{
-			return Download($"{ClientUrl}/api/file?list={list}&software={software}&disk={HttpUtility.UrlEncode(disk)}");
+			return Download($"{ClientUrl}/api/file?core={core}&list={list}&software={software}&disk={HttpUtility.UrlEncode(disk)}");
 		}
 
 		public static BitTorrentFile Download(string apiUrl)

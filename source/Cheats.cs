@@ -16,7 +16,7 @@ namespace Spludlow.MameAO
             if (Globals.Settings.Options["Cheats"] == "No")
                 return;
 
-            string directory = Path.Combine(Globals.MameDirectory, "cheat");
+            string directory = Path.Combine(Globals.Core.Directory, "cheat");
 
             if (Directory.Exists(directory) == true)
                 return;

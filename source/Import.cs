@@ -84,8 +84,8 @@ namespace Spludlow.MameAO
 
 		public static void FetchMachineRom()
 		{
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, name, romof, description FROM machine ORDER BY machine.name");
-			DataTable romTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name, romof, description FROM machine ORDER BY machine.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
@@ -107,14 +107,14 @@ namespace Spludlow.MameAO
 					}
 
 					if (dontHaveCount != 0)
-						Place.PlaceMachineRoms(machine_name, false);
+						Place.PlaceMachineRoms(Globals.Core, machine_name, false);
 				}
 			}
 		}
 		public static void FetchMachineDisk()
 		{
-			DataTable machineTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
-			DataTable diskTable = Database.ExecuteFill(Globals.Database._MachineConnectionString, "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
+			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
@@ -134,15 +134,15 @@ namespace Spludlow.MameAO
 				}
 
 				if (dontHaveCount != 0)
-					Place.PlaceMachineDisks(machine_name, false);
+					Place.PlaceMachineDisks(Globals.Core, machine_name, false);
 			}
 		}
 
 		public static void FetchSoftwareRom()
 		{
-			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
-			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT software.software_id, software.softwarelist_id, software.name, software.description, software.cloneof FROM software ORDER BY software.name");
-			DataTable romTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT part.software_id, rom.name, rom.sha1 FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.sha1 IS NOT NULL)");
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
+			DataTable softwareTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT software.software_id, software.softwarelist_id, software.name, software.description, software.cloneof FROM software ORDER BY software.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT part.software_id, rom.name, rom.sha1 FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.sha1 IS NOT NULL)");
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
@@ -162,7 +162,7 @@ namespace Spludlow.MameAO
 					}
 
 					if (dontHaveCount != 0)
-						Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, false);
+						Place.PlaceSoftwareRoms(Globals.Core, softwarelistRow, softwareRow, false);
 				}
 			}
 		}
@@ -173,9 +173,9 @@ namespace Spludlow.MameAO
 			if (Globals.Config.ContainsKey("SoftwareListSkip") == true)
 				ignoreListNames.AddRange(Globals.Config["SoftwareListSkip"].Split(',').Select(item => item.Trim()));
 
-			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
-			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT software.software_id, software.softwarelist_id, software.name, software.description, software.cloneof FROM software ORDER BY software.name");
-			DataTable diskTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT part.software_id, disk.name, disk.sha1 FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.sha1 IS NOT NULL)");
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist ORDER BY softwarelist.name");
+			DataTable softwareTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT software.software_id, software.softwarelist_id, software.name, software.description, software.cloneof FROM software ORDER BY software.name");
+			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT part.software_id, disk.name, disk.sha1 FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.sha1 IS NOT NULL)");
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
@@ -200,22 +200,22 @@ namespace Spludlow.MameAO
 					}
 
 					if (dontHaveCount > 0)
-						Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, false);
+						Place.PlaceSoftwareDisks(Globals.Core, softwarelistRow, softwareRow, false);
 				}
 			}
 		}
 
 		public static DataSet PlaceSoftwareList(string softwareListName, bool placeFiles)
 		{
-			DataTable softwarelistTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString,
+			DataTable softwarelistTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				$"SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description FROM softwarelist WHERE (softwarelist.name = '{softwareListName}')");
 
 			if (softwarelistTable.Rows.Count != 1)
 				throw new ApplicationException($"Software List not found: {softwareListName}");
 
-			DataTable softwareTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT software.software_id, software.softwarelist_id, software.name, software.description, software.cloneof FROM software ORDER BY software.name");
-			DataTable romTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT part.software_id, rom.name, rom.sha1 FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.sha1 IS NOT NULL)");
-			DataTable diskTable = Database.ExecuteFill(Globals.Database._SoftwareConnectionString, "SELECT part.software_id, disk.name, disk.sha1 FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.sha1 IS NOT NULL)");
+			DataTable softwareTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT software.software_id, software.softwarelist_id, software.name, software.description, software.cloneof FROM software ORDER BY software.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT part.software_id, rom.name, rom.sha1 FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.sha1 IS NOT NULL)");
+			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT part.software_id, disk.name, disk.sha1 FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.sha1 IS NOT NULL)");
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
@@ -225,8 +225,8 @@ namespace Spludlow.MameAO
 
 				foreach (DataRow softwareRow in softwareTable.Select($"softwarelist_id = {softwarelist_id}"))
 				{
-					Place.PlaceSoftwareRoms(softwarelistRow, softwareRow, placeFiles);
-					Place.PlaceSoftwareDisks(softwarelistRow, softwareRow, placeFiles);
+					Place.PlaceSoftwareRoms(Globals.Core, softwarelistRow, softwareRow, placeFiles);
+					Place.PlaceSoftwareDisks(Globals.Core, softwarelistRow, softwareRow, placeFiles);
 				}
 			}
 

@@ -152,20 +152,20 @@ namespace Spludlow.MameAO
 			return versions[versions.Count - 1];
 		}
 
-		public static DataTable ListSavedState(string rootDirectory, Database database)
+		public static DataTable ListSavedState(ICore core)
 		{
 			DataTable table = Tools.MakeDataTable(
 				"version	binary_time	sta_name	sta_time	sta_machine	sta_description",
 				"String		DateTime	String		DateTime	String		String");
 
-			foreach (string mameDirectory in Directory.GetDirectories(rootDirectory))
+			foreach (string mameDirectory in Directory.GetDirectories(Path.GetDirectoryName(core.Directory)))
 			{
 				string version = Path.GetFileName(mameDirectory);
 
 				if (version.StartsWith("_") == true)
 					continue;
 
-				string mameBin = Path.Combine(mameDirectory, "mame.exe");
+				string mameBin = Path.Combine(mameDirectory, $"{core.Name}.exe");
 
 				if (File.Exists(mameBin) == false)
 					continue;
@@ -191,7 +191,7 @@ namespace Spludlow.MameAO
 							DateTime staLastWriteTime = File.GetLastWriteTime(staFilename);
 
 							string description = "";
-							DataRow machineRow = database.GetMachine(staMachine);
+							DataRow machineRow = core.GetMachine(staMachine);
 							if (machineRow != null)
 								description = (string)machineRow["description"];
 

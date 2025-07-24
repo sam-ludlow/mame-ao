@@ -624,7 +624,8 @@ namespace Spludlow.MameAO
 			return String.Join(" ", results);
 		}
 
-		public DataQueryProfile GetDataQueryProfile(string key)
+
+		public static DataQueryProfile GetDataQueryProfileCore(string key)
 		{
 			DataQueryProfile found = null;
 
@@ -632,7 +633,8 @@ namespace Spludlow.MameAO
 			{
 				long genre_id = Int64.Parse(key.Split(new char[] { '-' })[1]);
 
-				found = new DataQueryProfile() {
+				found = new DataQueryProfile()
+				{
 					Key = key,
 					Text = "genre",
 					Decription = "genre",
@@ -664,63 +666,7 @@ namespace Spludlow.MameAO
 			return found;
 		}
 
-		public DataTable QueryMachine(string key, int offset, int limit, string search)
-		{
-			DataQueryProfile profile = GetDataQueryProfile(key);
 
-			string commandText = profile.CommandText;
-		
-			if (search == null)
-			{
-				commandText = commandText.Replace("@SEARCH", "");
-			}
-			else
-			{
-				search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
-				commandText = commandText.Replace("@SEARCH",
-					" AND (machine.name LIKE @name OR machine.description LIKE @description)");
-			}
-
-			if (profile.Key == "favorites")
-			{
-				string favorites = "machine.machine_id = -1";
-				if (Globals.Favorites._Machines.Count > 0)
-				{
-					StringBuilder text = new StringBuilder();
-					foreach (string name in Globals.Favorites._Machines.Keys)
-					{
-						if (text.Length > 0)
-							text.Append(" OR ");
-						text.Append($"(name = '{name}')");
-					}
-					favorites = text.ToString();
-				}
-				commandText = commandText.Replace("@FAVORITES", $" AND ({favorites})");
-			}
-
-			commandText = commandText.Replace("@LIMIT", limit.ToString());
-			commandText = commandText.Replace("@OFFSET", offset.ToString());
-
-			DataTable table;
-
-			using (var connection = new SQLiteConnection(_MachineConnectionString))
-			{
-				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
-				{
-					if (search != null)
-					{
-						command.Parameters.AddWithValue("@name", search);
-						command.Parameters.AddWithValue("@description", search);
-					}
-
-					table = ExecuteFill(command);
-				}
-			}
-
-			Globals.Favorites.AddColumnMachines(table, "name", "favorite");
-
-			return table;
-		}
 
 		public static string DatabaseFromXML(string xmlFilename, string sqliteFilename, string assemblyVersion)
 		{
