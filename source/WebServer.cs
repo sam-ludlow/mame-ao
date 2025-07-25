@@ -452,7 +452,7 @@ namespace Spludlow.MameAO
 			json.directory = Globals.RootDirectory;
 			json.rom_store_count = Globals.RomHashStore.Length;
 			json.disk_store_count = Globals.DiskHashStore.Length;
-			//json.genre_version = Globals.Genre.Data != null ? Globals.Genre.Version : "";
+			json.genre_version = Globals.Genre.Data != null ? Globals.Genre.Version : "";
 			json.linking_enabled = Globals.LinkingEnabled;
 			json.bit_torrent_enabled = Globals.BitTorrentAvailable;
 			if (Globals.BitTorrentAvailable == true)

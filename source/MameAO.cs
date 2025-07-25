@@ -283,6 +283,21 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			});
 
 			//
+			// Bits & Bobs
+			//
+
+			ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
+
+			Globals.Samples = new Samples();
+			Globals.Artwork = new Artwork();
+			Globals.Genre = new Genre();
+
+			Globals.Reports = new Reports();
+
+			// TODO
+			//Globals.Favorites = new Favorites();
+
+			//
 			// Default Core MAME
 			//
 
@@ -309,25 +324,6 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			Console.Write($"Loading Hash Store {directory} ...");
 			Globals.DiskHashStore = new HashStore(directory, Globals.MameChdMan.Hash);
 			Console.WriteLine("...done.");
-
-			//
-			// Bits & Bobs
-			//
-
-			ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
-
-			Globals.Samples = new Samples();
-			Globals.Artwork = new Artwork();
-
-			Globals.Reports = new Reports();
-
-			// TODO
-
-			//Globals.Genre = new Genre();
-			//Globals.Genre.Initialize();
-
-			//Globals.Favorites = new Favorites();
-
 
 			//
 			// New version Check

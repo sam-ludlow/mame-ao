@@ -84,6 +84,8 @@ namespace Spludlow.MameAO
 			core.SQLiteAo();
 
 			core.AllSHA1(Globals.AllSHA1);
+
+			Globals.Genre.InitializeCore(core);
 		}
 
 		public static void ExtractXML(string exeFilename)

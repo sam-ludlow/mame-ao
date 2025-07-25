@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Data;
+using System.IO;
 
 using System.Data.SQLite;
 
@@ -11,22 +11,18 @@ namespace Spludlow.MameAO
 	{
 		public string Version = "";
 		public string SHA1 = "";
+
 		public DataSet Data = null;
 
-		public Genre()
-		{
-		}
+		private List<string> _Groups = new List<string>();
+		private List<string> _Genres = new List<string>();
+		private DataTable _MachineGroupGenreTable = null;
 
-		public void Initialize()
+		public Genre()
 		{
 			GitHubRepo repo = Globals.GitHubRepos["MAME_SupportFiles"];
 
 			string url = repo.UrlRaw + "/main/catver.ini/catver.ini";
-
-			Tools.ConsoleHeading(2, new string[] {
-				$"Machine Genres",
-				url
-			});
 
 			string iniData = repo.Fetch(url);
 
@@ -39,20 +35,17 @@ namespace Spludlow.MameAO
 			Version = ParseVersion(iniData);
 			SHA1 = Tools.SHA1HexText(iniData);
 
-			//
-			// Parse .ini
-			//
-
-			List<string> groups = new List<string>();
-			List<string> genres = new List<string>();
-
-			DataTable machineGroupGenreTable;
+			Tools.ConsoleHeading(2, new string[] {
+				$"Machine Genres",
+				url,
+				$"{Version} {SHA1}"
+			});
 
 			try
 			{
 				using (StringReader reader = new StringReader(iniData))
 				{
-					machineGroupGenreTable = ParseIni(reader, groups, genres);
+					_MachineGroupGenreTable = ParseIni(reader, _Groups, _Genres);
 				}
 			}
 			catch (Exception e)
@@ -61,98 +54,11 @@ namespace Spludlow.MameAO
 				return;
 			}
 
-			groups.Sort();
-			genres.Sort();
-
-			string[] statuses = new string[] { "good", "imperfect", "preliminary" };
-
-			Dictionary<string, string> machineStatus = GetMachineDriverStatuses();
-
-			Data = new DataSet();
-
-			//
-			// Groups
-			//
-
-			Console.Write("Loading Genres...");
-
-			DataTable groupTable = Tools.MakeDataTable(
-				"group_id	group_name",
-				"Int64		String"
-			);
-			groupTable.TableName = "groups";
-			groupTable.PrimaryKey = new DataColumn[] { groupTable.Columns["group_id"] };
-			groupTable.Columns["group_id"].AutoIncrement = true;
-			groupTable.Columns["group_id"].AutoIncrementSeed = 1;
-			foreach (string status in statuses)
-				groupTable.Columns.Add(status, typeof(int));
-
-			foreach (string group in groups)
-			{
-				DataRow groupRow = groupTable.Rows.Add(null, group, 0, 0, 0);
-
-				foreach (DataRow machineRow in machineGroupGenreTable.Select($"group = '{group.Replace("'", "''")}'"))
-				{
-					string machine = (string)machineRow["machine"];
-					if (machineStatus.ContainsKey(machine) == false)
-						continue;
-					
-					string status = machineStatus[machine];
-					groupRow[status] = (int)groupRow[status] + 1;
-				}
-			}
-
-			Data.Tables.Add(groupTable);
-
-			//
-			// Genres
-			//
-
-			Dictionary<string, long[]> machineGenreIds = new Dictionary<string, long[]>();
-
-			DataTable genreTable = Tools.MakeDataTable(
-				"genre_id	group_id	genre_name",
-				"Int64		Int64		String"
-			);
-			genreTable.TableName = "genres";
-			genreTable.PrimaryKey = new DataColumn[] { genreTable.Columns["genre_id"] };
-			genreTable.Columns["genre_id"].AutoIncrement = true;
-			genreTable.Columns["genre_id"].AutoIncrementSeed = 1;
-			foreach (string status in statuses)
-				genreTable.Columns.Add(status, typeof(int));
-
-			foreach (string genre in genres)
-			{
-				string group = genre.Split(new char[] { '/' })[0].Trim();
-
-				long group_id = (long)groupTable.Select($"group_name = '{group.Replace("'", "''")}'")[0]["group_id"];
-
-				DataRow genreRow = genreTable.Rows.Add(null, group_id, genre, 0, 0, 0);
-
-				foreach (DataRow machineRow in machineGroupGenreTable.Select($"genre = '{genre.Replace("'", "''")}'"))
-				{
-					string machine = (string)machineRow["machine"];
-					if (machineStatus.ContainsKey(machine) == false)
-						continue;
-
-					string status = machineStatus[machine];
-					genreRow[status] = (int)genreRow[status] + 1;
-
-					long genre_id = (long)genreRow["genre_id"];
-					machineGenreIds.Add(machine, new long[] { group_id, genre_id });
-				}
-			}
-
-			Console.WriteLine("...done");
-
-			Data.Tables.Add(genreTable);
-
-			SetMachines(machineGenreIds);
-
-			Console.WriteLine($"Version:\t{Version}");
+			_Groups.Sort();
+			_Genres.Sort();
 		}
 
-		public string ParseVersion(string data)
+		private static string ParseVersion(string data)
 		{
 			string find = "catver.ini";
 
@@ -171,7 +77,7 @@ namespace Spludlow.MameAO
 			return data.Substring(0, index).Trim();
 		}
 
-		public DataTable ParseIni(StringReader reader, List<string> groups, List<string> genres)
+		private static DataTable ParseIni(StringReader reader, List<string> groups, List<string> genres)
 		{
 			DataTable table = Tools.MakeDataTable(
 				"machine	group	genre",
@@ -229,30 +135,122 @@ namespace Spludlow.MameAO
 			return table;
 		}
 
-		private Dictionary<string, string> GetMachineDriverStatuses()
+		public void InitializeCore(ICore core)
 		{
-			DataTable table = Database.ExecuteFill(Globals.Core.ConnectionStrings[0],
+			if (_MachineGroupGenreTable == null)
+				return;
+
+			Data = new DataSet();
+
+			string[] statuses = new string[] { "good", "imperfect", "preliminary" };
+
+			//
+			// Get core machine statuses
+			//
+
+			Dictionary<string, string> machineStatus = new Dictionary<string, string>();
+
+			DataTable table = Database.ExecuteFill(core.ConnectionStrings[0],
 				"SELECT machine.name, driver.status FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id");
 
-			Dictionary<string, string> result = new Dictionary<string, string>();
-
 			foreach (DataRow row in table.Rows)
-				result.Add((string)row["name"], (string)row["status"]);
+				machineStatus.Add((string)row["name"], (string)row["status"]);
 
-			return result;
+			//
+			// Groups
+			//
+
+			Console.Write("Loading Genres...");
+
+			DataTable groupTable = Tools.MakeDataTable(
+				"group_id	group_name",
+				"Int64		String"
+			);
+			groupTable.TableName = "groups";
+			groupTable.PrimaryKey = new DataColumn[] { groupTable.Columns["group_id"] };
+			groupTable.Columns["group_id"].AutoIncrement = true;
+			groupTable.Columns["group_id"].AutoIncrementSeed = 1;
+			foreach (string status in statuses)
+				groupTable.Columns.Add(status, typeof(int));
+
+			foreach (string group in _Groups)
+			{
+				DataRow groupRow = groupTable.Rows.Add(null, group, 0, 0, 0);
+
+				foreach (DataRow machineRow in _MachineGroupGenreTable.Select($"group = '{group.Replace("'", "''")}'"))
+				{
+					string machine = (string)machineRow["machine"];
+					if (machineStatus.ContainsKey(machine) == false)
+						continue;
+
+					string status = machineStatus[machine];
+					groupRow[status] = (int)groupRow[status] + 1;
+				}
+			}
+
+			Data.Tables.Add(groupTable);
+
+			//
+			// Genres
+			//
+
+			Dictionary<string, long[]> machineGenreIds = new Dictionary<string, long[]>();
+
+			DataTable genreTable = Tools.MakeDataTable(
+				"genre_id	group_id	genre_name",
+				"Int64		Int64		String"
+			);
+			genreTable.TableName = "genres";
+			genreTable.PrimaryKey = new DataColumn[] { genreTable.Columns["genre_id"] };
+			genreTable.Columns["genre_id"].AutoIncrement = true;
+			genreTable.Columns["genre_id"].AutoIncrementSeed = 1;
+			foreach (string status in statuses)
+				genreTable.Columns.Add(status, typeof(int));
+
+			foreach (string genre in _Genres)
+			{
+				string group = genre.Split(new char[] { '/' })[0].Trim();
+
+				long group_id = (long)groupTable.Select($"group_name = '{group.Replace("'", "''")}'")[0]["group_id"];
+
+				DataRow genreRow = genreTable.Rows.Add(null, group_id, genre, 0, 0, 0);
+
+				foreach (DataRow machineRow in _MachineGroupGenreTable.Select($"genre = '{genre.Replace("'", "''")}'"))
+				{
+					string machine = (string)machineRow["machine"];
+					if (machineStatus.ContainsKey(machine) == false)
+						continue;
+
+					string status = machineStatus[machine];
+					genreRow[status] = (int)genreRow[status] + 1;
+
+					long genre_id = (long)genreRow["genre_id"];
+					machineGenreIds.Add(machine, new long[] { group_id, genre_id });
+				}
+			}
+
+			Data.Tables.Add(genreTable);
+
+			Console.WriteLine("...done");
+
+			//
+			// Set Core Database
+			//
+
+			SetMachines(core, machineGenreIds);
 		}
 
-		public void SetMachines(Dictionary<string, long[]> machineGenreIds)
+		private void SetMachines(ICore core, Dictionary<string, long[]> machineGenreIds)
 		{
-			DataTable infoTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT * FROM ao_info");
+			DataTable infoTable = Database.ExecuteFill(core.ConnectionStrings[0], "SELECT * FROM ao_info");
 
 			if (infoTable.Columns.Contains("genre_version") == false)
 			{
-				Database.ExecuteNonQuery(Globals.Core.ConnectionStrings[0], "ALTER TABLE ao_info ADD COLUMN genre_version TEXT");
-				Database.ExecuteNonQuery(Globals.Core.ConnectionStrings[0], "UPDATE ao_info SET genre_version = '' WHERE ao_info_id = 1");
+				Database.ExecuteNonQuery(core.ConnectionStrings[0], "ALTER TABLE ao_info ADD COLUMN genre_version TEXT");
+				Database.ExecuteNonQuery(core.ConnectionStrings[0], "UPDATE ao_info SET genre_version = '' WHERE ao_info_id = 1");
 			}
 
-			infoTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT * FROM ao_info");
+			infoTable = Database.ExecuteFill(core.ConnectionStrings[0], "SELECT * FROM ao_info");
 
 			string databaseVersion = (string)infoTable.Rows[0]["genre_version"];
 
@@ -261,16 +259,16 @@ namespace Spludlow.MameAO
 
 			Console.Write("Update Machines database with genre IDs ...");
 
-			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT * FROM machine WHERE machine_id = 0");
+			DataTable machineTable = Database.ExecuteFill(core.ConnectionStrings[0], "SELECT * FROM machine WHERE machine_id = 0");
 
 			if (machineTable.Columns.Contains("genre_id") == false)
-				Database.ExecuteNonQuery(Globals.Core.ConnectionStrings[0], "ALTER TABLE machine ADD COLUMN genre_id INTEGER");
+				Database.ExecuteNonQuery(core.ConnectionStrings[0], "ALTER TABLE machine ADD COLUMN genre_id INTEGER");
 
-			Database.ExecuteNonQuery(Globals.Core.ConnectionStrings[0], "UPDATE machine SET genre_id = 0");
+			Database.ExecuteNonQuery(core.ConnectionStrings[0], "UPDATE machine SET genre_id = 0");
 
-			machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name FROM machine");
+			machineTable = Database.ExecuteFill(core.ConnectionStrings[0], "SELECT machine_id, name FROM machine");
 
-			using (SQLiteConnection connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]))
+			using (SQLiteConnection connection = new SQLiteConnection(core.ConnectionStrings[0]))
 			{
 				using (SQLiteCommand command = new SQLiteCommand("UPDATE machine SET genre_id = @genre_id WHERE machine_id = @machine_id", connection))
 				{
@@ -313,10 +311,9 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			Database.ExecuteNonQuery(Globals.Core.ConnectionStrings[0], $"UPDATE ao_info SET genre_version = '{SHA1}' WHERE ao_info_id = 1");
+			Database.ExecuteNonQuery(core.ConnectionStrings[0], $"UPDATE ao_info SET genre_version = '{SHA1}' WHERE ao_info_id = 1");
 
 			Console.WriteLine("...done");
-
 		}
 
 	}
