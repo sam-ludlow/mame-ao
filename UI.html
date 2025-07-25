@@ -1192,11 +1192,11 @@
 						if (result.ao_softwarelist_count > 0)
 							cell.innerHTML = `<a id="${result.name}" href="${_baseUrl}/machines/${profileKey}/${result.name}"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
 						else
-							cell.innerHTML = `<a id="${result.name}" onclick="runCommand(this.id)" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
+							cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${result.name}@${_info.core_name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
 						break;
 
 					case 'name':
-						cell.innerHTML = `<a href="https://data.spludlow.co.uk/mame/machine/${result.name}" target="_blank">${result.name}</a>`;
+						cell.innerHTML = `<a href="https://data.spludlow.co.uk/${_info.core_name}/machine/${result.name}" target="_blank">${result.name}</a>`;
 						break;
 
 					case 'cloneof':
@@ -1300,11 +1300,11 @@
 
 				switch (columnDef.columnName) {
 					case 'ao_image':
-						cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${machineData.name} ${result.name}@${result.softwarelist_name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
+						cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${machineData.name}@${_info.core_name} ${result.name}@${result.softwarelist_name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
 						break;
 
 					case 'name':
-						cell.innerHTML = `<a href="https://data.spludlow.co.uk/mame/software/${result.softwarelist_name}/${result.name}" target="_blank">${result.name}</a>`;
+						cell.innerHTML = `<a href="https://data.spludlow.co.uk/${_info.core_name}/software/${result.softwarelist_name}/${result.name}" target="_blank">${result.name}</a>`;
 						break;
 
 					case 'favorite':
@@ -1541,9 +1541,9 @@
 
 		const displayMenu = () => {
 
-			const versions = `V${_info.version} (${_info.mame_version})`;
+			const versions = `AO V${_info.version} (${_info.core_name?.toUpperCase()} ${_info.core_version})`;
 
-			_rootMenu[0].text = `MAME-AO ${versions}`;
+			_rootMenu[0].text = versions;
 			_rootMenu[0].title = versions;
 
 			displayMenuWalk(_rootMenu);

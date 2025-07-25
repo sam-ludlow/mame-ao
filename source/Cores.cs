@@ -1,12 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SQLite;
 using System.IO;
 using System.Linq;
 using System.Text;
 using System.Xml.Linq;
-using static Spludlow.MameAO.Database;
+
+using System.Data.SQLite;
 
 namespace Spludlow.MameAO
 {
@@ -232,7 +232,7 @@ namespace Spludlow.MameAO
 		public static DataRow[] GetMachineSamples(string connectionString, DataRow machine)
 		{
 			long machine_id = (long)machine["machine_id"];
-			DataTable table = ExecuteFill(connectionString, $"SELECT * FROM [sample] WHERE [machine_id] = {machine_id}");
+			DataTable table = Database.ExecuteFill(connectionString, $"SELECT * FROM [sample] WHERE [machine_id] = {machine_id}");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
@@ -332,7 +332,7 @@ namespace Spludlow.MameAO
 				{
 					command.Parameters.AddWithValue("@softwarelist_name", softwarelist_name);
 					command.Parameters.AddWithValue("@software_name", software_name);
-					table = ExecuteFill(command);
+					table = Database.ExecuteFill(command);
 				}
 			}
 
@@ -371,7 +371,7 @@ namespace Spludlow.MameAO
 		public static DataRow[] GetSoftwareDisks(string connectionString, DataRow software)
 		{
 			long software_id = (long)software["software_id"];
-			DataTable table = ExecuteFill(connectionString,
+			DataTable table = Database.ExecuteFill(connectionString,
 				"SELECT disk.* FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +
 				$"WHERE part.software_id = {software_id} AND disk.[name] IS NOT NULL AND disk.[sha1] IS NOT NULL");
 			return table.Rows.Cast<DataRow>().ToArray();
@@ -380,7 +380,7 @@ namespace Spludlow.MameAO
 		public static DataRow[] GetMachineFeatures(string connectionString, DataRow machine)
 		{
 			long machine_id = (long)machine["machine_id"];
-			DataTable table = ExecuteFill(connectionString, $"SELECT * FROM feature WHERE machine_id = {machine_id}");
+			DataTable table = Database.ExecuteFill(connectionString, $"SELECT * FROM feature WHERE machine_id = {machine_id}");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
 
@@ -458,7 +458,7 @@ namespace Spludlow.MameAO
 				{
 					command.Parameters.AddWithValue("@softwarelist_name", softwarelist_name);
 					command.Parameters.AddWithValue("@software_name", software_name);
-					table = ExecuteFill(command);
+					table = Database.ExecuteFill(command);
 				}
 			}
 
@@ -480,7 +480,7 @@ namespace Spludlow.MameAO
 				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 				{
 					command.Parameters.AddWithValue("@machine_name", machine_name);
-					table = ExecuteFill(command);
+					table = Database.ExecuteFill(command);
 				}
 			}
 
@@ -571,7 +571,7 @@ namespace Spludlow.MameAO
 						command.Parameters.AddWithValue("@description", search);
 					}
 
-					table = ExecuteFill(command);
+					table = Database.ExecuteFill(command);
 				}
 			}
 
@@ -638,7 +638,7 @@ namespace Spludlow.MameAO
 						command.Parameters.AddWithValue("@description", search);
 					}
 
-					table = ExecuteFill(command);
+					table = Database.ExecuteFill(command);
 				}
 			}
 

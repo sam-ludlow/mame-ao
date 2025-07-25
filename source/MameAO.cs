@@ -22,6 +22,14 @@ namespace Spludlow.MameAO
 		Support,
 	};
 
+	public class DataQueryProfile
+	{
+		public string Key;
+		public string Text;
+		public string Decription;
+		public string CommandText;
+	}
+
 	public static class Globals
 	{
 		public class TaskInfo
@@ -194,6 +202,8 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			//
 
 			//	...
+			//	TODO move to "mame"
+			//	TODO handle favorites move config files
 
 			//
 			// Symbolic Links check
@@ -306,16 +316,18 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
 
-			// !!!! These all need fixing !!!!!!
+			Globals.Samples = new Samples();
+			Globals.Artwork = new Artwork();
 
-			//Globals.Reports = new Reports();
-			//Globals.Favorites = new Favorites();
+			Globals.Reports = new Reports();
 
-			//Globals.Artwork = new Artwork();
-			//Globals.Samples = new Samples();
+			// TODO
 
 			//Globals.Genre = new Genre();
 			//Globals.Genre.Initialize();
+
+			//Globals.Favorites = new Favorites();
+
 
 			//
 			// New version Check
@@ -363,7 +375,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			while (true)
 			{
-				Console.Write($"AO ({Globals.Core.Name} {Globals.Core.Version})> ");
+				Console.Write($"{Globals.Core.Name.ToUpper()} {Globals.Core.Version}> ");
 				string line = Console.ReadLine();
 				line = line.Trim();
 
@@ -798,8 +810,8 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			if (softwareList != null)
 				software = Globals.Core.GetRequiredMedia(machine, softwareList, software);
 
-			//if (Globals.Settings.Options["Cheats"] == "Yes")
-			//	arguments += " -cheat";
+			if (Globals.Settings.Options["Cheats"] == "Yes")
+				arguments += " -cheat";
 
 			//Globals.PhoneHome.Ready();
 

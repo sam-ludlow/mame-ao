@@ -12,11 +12,8 @@ namespace Spludlow.MameAO
 		public string Version = "";
 		public DataSet DataSet = null;
 
-		private readonly string MameSamplesDirectory;
-
 		public Samples()
 		{
-			MameSamplesDirectory = Path.Combine(Globals.Core.Directory, "samples");
 		}
 
 		public void Initialize()
@@ -70,7 +67,7 @@ namespace Spludlow.MameAO
 			return (string)table.Rows[0]["version"];
 		}
 
-		public void PlaceAssets(DataRow machineRow)
+		public void PlaceAssets(string coreDirectory, DataRow machineRow)
 		{
 			Initialize();
 
@@ -130,7 +127,7 @@ namespace Spludlow.MameAO
 				Place.DownloadImportFiles(url, file.size, info);
 			}
 
-			string targetDirectory = Path.Combine(MameSamplesDirectory, machineSampleOf);
+			string targetDirectory = Path.Combine(coreDirectory, "samples", machineSampleOf);
 
 			Place.PlaceAssetFiles(sampleRoms.ToArray(), Globals.RomHashStore, targetDirectory, null, info);
 		}

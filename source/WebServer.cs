@@ -243,7 +243,7 @@ namespace Spludlow.MameAO
 		{
 			dynamic results = new JArray();
 
-			foreach (Database.DataQueryProfile profile in Database.DataQueryProfiles)
+			foreach (DataQueryProfile profile in Database.DataQueryProfiles)
 			{
 				dynamic result = new JObject();
 
@@ -288,7 +288,7 @@ namespace Spludlow.MameAO
 
 			string profile = context.Request.QueryString["profile"] ?? throw new ApplicationException("profile not passed");
 
-			Database.DataQueryProfile dataQueryProfile = Database.GetDataQueryProfileCore(profile);
+			DataQueryProfile dataQueryProfile = Database.GetDataQueryProfile(profile);
 
 			DataTable table = Globals.Core.QueryMachines(dataQueryProfile, offset, limit, search);
 

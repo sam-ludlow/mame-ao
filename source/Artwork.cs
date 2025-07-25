@@ -30,11 +30,9 @@ namespace Spludlow.MameAO
 
 		public Dictionary<ArtworkTypes, ArtworkData> ArtworkDatas = new Dictionary<ArtworkTypes, ArtworkData>();
 
-		private readonly string MameArtworkDirectory;
 		private readonly GitHubRepo GitHubRepo;
 		public Artwork()
 		{
-			MameArtworkDirectory = Path.Combine(Globals.Core.Directory, "artwork");
 			GitHubRepo = Globals.GitHubRepos["MAME_Dats"];
 		}
 
@@ -98,7 +96,7 @@ namespace Spludlow.MameAO
 			return (string)table.Rows[0]["version"];
 		}
 
-		public void PlaceAssets(DataRow machineRow)
+		public void PlaceAssets(string coreDirectory, DataRow machineRow)
 		{
 			List<string> machineNames = new List<string>(new string[] { (string)machineRow["name"] });
 			if (machineRow.IsNull("cloneof") == false)
@@ -108,7 +106,7 @@ namespace Spludlow.MameAO
 			{
 				foreach (string machineName in machineNames)
 				{
-					string directory = Path.Combine(MameArtworkDirectory, machineName);
+					string directory = Path.Combine(coreDirectory, "artwork", machineName);
 					if (Directory.Exists(directory) == true)
 						Directory.Delete(directory, true);
 				}
@@ -156,7 +154,7 @@ namespace Spludlow.MameAO
 					Place.DownloadImportFiles(url, softwareSizes[machineName], info);
 				}
 
-				string targetDirectory = Path.Combine(MameArtworkDirectory, machineName);
+				string targetDirectory = Path.Combine(coreDirectory, "artwork", machineName);
 
 				Place.PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
 			}

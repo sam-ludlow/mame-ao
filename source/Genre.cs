@@ -4,7 +4,6 @@ using System.IO;
 using System.Data;
 
 using System.Data.SQLite;
-using System.Data.SqlClient;
 
 namespace Spludlow.MameAO
 {

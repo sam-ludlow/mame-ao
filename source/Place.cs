@@ -26,6 +26,9 @@ namespace Spludlow.MameAO
 				return;
 			}
 
+			if (Globals.BitTorrentAvailable == false && core.Name != "mame")
+				throw new ApplicationException("Archive.org downloads are only supported for MAME");
+
 			DataRow machine = core.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: {machineName}");
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
@@ -103,11 +106,10 @@ namespace Spludlow.MameAO
 					throw new ApplicationException($"Did not find software: {machineName}, {softwareName}");
 			}
 
-			//	TODO
-			//Globals.Samples.PlaceAssets(machine);
-			//Globals.Artwork.PlaceAssets(machine);
+			Globals.Samples.PlaceAssets(core.Directory, machine);
+			Globals.Artwork.PlaceAssets(core.Directory, machine);
 
-			//Cheats.Place();
+			Cheats.Place(core.Directory);
 
 			if (Globals.Settings.Options["PlaceReport"] == "Yes")
 				Globals.Reports.SaveHtmlReport(Globals.WorkerTaskReport, $"Place Assets {machineName} {softwareName}".Trim());
@@ -164,9 +166,6 @@ namespace Spludlow.MameAO
 						{
 							if (Globals.BitTorrentAvailable == false)
 							{
-								if (core.Name != "mame")
-									throw new ApplicationException("Archive.org downloads are only support for MAME");
-
 								ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
 								ArchiveOrgFile file = item.GetFile(machineName);
 								if (file != null)

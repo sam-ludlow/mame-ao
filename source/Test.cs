@@ -9,7 +9,7 @@ namespace Spludlow.MameAO
 	{
 		public static void Run(string profile, int count)
 		{
-			Database.DataQueryProfile dataQueryProfile = Database.GetDataQueryProfileCore(profile);
+			DataQueryProfile dataQueryProfile = Database.GetDataQueryProfile(profile);
 
 			DataTable table = Globals.Core.QueryMachines(dataQueryProfile, 0, 0xfff, null);
 

@@ -1,22 +1,17 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.IO;
 using System.IO.Compression;
-using System.Linq;
-using System.Security.Policy;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Spludlow.MameAO
 {
     public class Cheats
     {
-        public static void Place()
+        public static void Place(string coreDirectory)
         {
             if (Globals.Settings.Options["Cheats"] == "No")
                 return;
 
-            string directory = Path.Combine(Globals.Core.Directory, "cheat");
+            string directory = Path.Combine(coreDirectory, "cheat");
 
             if (Directory.Exists(directory) == true)
                 return;

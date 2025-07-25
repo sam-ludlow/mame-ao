@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
-using System.Data.SQLite;
 using System.IO;
 using System.Linq;
-using static Spludlow.MameAO.Database;
+
+using System.Data.SQLite;
 
 namespace Spludlow.MameAO
 {
@@ -276,7 +276,7 @@ namespace Spludlow.MameAO
 		
 		DataRow[] ICore.GetMachineRoms(DataRow machine) => Cores.GetMachineRoms(_ConnectionStringMachine, machine);
 
-		DataRow[] ICore.GetMachineDisks(DataRow machine) => Cores.GetMachineDisks(_ConnectionStringMachine, machine);
+		DataRow[] ICore.GetMachineDisks(DataRow machine) => new DataRow[0];
 
 		DataRow[] ICore.GetMachineSamples(DataRow machine) => Cores.GetMachineSamples(_ConnectionStringMachine, machine);
 
@@ -298,7 +298,7 @@ namespace Spludlow.MameAO
 
 		DataRow[] ICore.GetSoftwareRoms(DataRow software) => Cores.GetSoftwareRoms(_ConnectionStringSoftware, software);
 
-		DataRow[] ICore.GetSoftwareDisks(DataRow software) => Cores.GetSoftwareDisks(_ConnectionStringSoftware, software);
+		DataRow[] ICore.GetSoftwareDisks(DataRow software) => new DataRow[0];
 
 		DataRow[] ICore.GetMachineFeatures(DataRow machine) => Cores.GetMachineFeatures(_ConnectionStringMachine, machine);
 
