@@ -74,8 +74,6 @@ namespace Spludlow.MameAO
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 			Directory.CreateDirectory(_CoreDirectory);
 
-			Tools.ConsoleHeading(1, new string[] { "Get HBMAME", _Version, _CoreDirectory });
-
 			if (File.Exists(Path.Combine(_CoreDirectory, "hbmame.exe")) == true)
 				return 0;
 
@@ -87,7 +85,7 @@ namespace Spludlow.MameAO
 				Tools.Download(downloadUrl, archiveFilename, 1);
 				Console.WriteLine("...done");
 
-				Console.Write($"Extract 7-Zip {archiveFilename} {_CoreDirectory} ...");
+				Console.Write($"Extracting {archiveFilename} {_CoreDirectory} ...");
 				Tools.ExtractToDirectory7Zip(archiveFilename, _CoreDirectory);
 				Console.WriteLine("...done");
 			}
@@ -127,8 +125,6 @@ namespace Spludlow.MameAO
 				_Version = LatestLocalVersion(_RootDirectory);
 
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
-
-			Tools.ConsoleHeading(1, new string[] { "Xml HBMAME", _Version, _CoreDirectory });
 
 			Cores.ExtractXML(Path.Combine(_CoreDirectory, "hbmame.exe"));
 		}
@@ -247,12 +243,12 @@ namespace Spludlow.MameAO
 
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
-			Tools.ConsoleHeading(1, new string[] { "AllSHA1 HBMAME", _Version, _CoreDirectory });
-
 			InitializeConnections();
 
+			Console.Write($"Load all database SHA1 ...");
 			Cores.AllSHA1(hashSet, _ConnectionStringMachine, new string[] { "rom" });
 			Cores.AllSHA1(hashSet, _ConnectionStringSoftware, new string[] { "rom" });
+			Console.WriteLine("...done");
 		}
 
 

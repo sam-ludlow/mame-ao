@@ -181,10 +181,10 @@ namespace Spludlow.MameAO
 		//
 		public static int GetMame(string directory, string version)
 		{
-			ICore core = new CoreMame();
-			core.Initialize(directory, version);
+			//ICore core = new CoreMame();
+			//core.Initialize(directory, version);
 
-			return core.Get();
+			//return core.Get();
 			int newVersion = 0;
 
 			string mameLatestJson = Tools.Query("https://api.github.com/repos/mamedev/mame/releases/latest");

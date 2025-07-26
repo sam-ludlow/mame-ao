@@ -201,9 +201,33 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			// Fixes
 			//
 
-			//	...
-			//	TODO move to "mame"
-			//	TODO handle favorites move config files
+			// Move a few things for multi core
+			string newMameDirectory = Path.Combine(Globals.RootDirectory, "mame");
+			if (Directory.Exists(newMameDirectory) == false)
+			{
+				Directory.CreateDirectory(newMameDirectory);
+
+				foreach (string mameDirectory in Directory.GetDirectories(Globals.RootDirectory))
+				{
+					if (File.Exists(Path.Combine(mameDirectory, "mame.exe")) == true)
+					{
+						string target = Path.Combine(newMameDirectory, Path.GetFileName(mameDirectory));
+						Console.WriteLine($"Move MAME directory for cores. {mameDirectory} => {target}");
+						Directory.Move(mameDirectory, target);
+					}
+				}
+
+				foreach (string name in new string[] { "_FavoritesMachines.txt", "_FavoritesSoftware.txt" })
+				{
+					string source = Path.Combine(Globals.RootDirectory, name);
+					if (File.Exists(source) == true)
+					{
+						string target = Path.Combine(newMameDirectory, name);
+						Console.WriteLine($"Move Favorities for cores. {source} => {target}");
+						File.Move(source, target);
+					}
+				}
+			}
 
 			//
 			// Symbolic Links check

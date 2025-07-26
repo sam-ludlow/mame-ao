@@ -98,12 +98,18 @@ namespace Spludlow.MameAO
 			string softwareXmlFilename = Path.Combine(coreDirectory, "_software.xml");
 
 			if (File.Exists(machineXmlFilename) == false)
+			{
+				Console.Write("Extract machine XML ...");
 				Mame.ExtractXML(exeFilename, machineXmlFilename, "-listxml");
+				Console.WriteLine("...done");
+			}
 
 			if (File.Exists(softwareXmlFilename) == false)
 			{
+				Console.Write("Extract software XML and combine ...");
 				Mame.ExtractXML(exeFilename, softwareXmlFilename, "-listsoftware");
 				ReadXML.CombineHashSoftwareLists(softwareXmlFilename);
+				Console.WriteLine("...done");
 			}
 		}
 
@@ -123,14 +129,18 @@ namespace Spludlow.MameAO
 
 			if (File.Exists(machineSqlLiteFilename) == false)
 			{
+				Console.Write("Convert machine XML to SQLite ...");
 				XML2SQLite(machineXmlFilename, machineSqlLiteFilename, requiredMachineTables, assemblyVersion, aoExtra);
 				GC.Collect();
+				Console.WriteLine("...done");
 			}
 
 			if (File.Exists(softwareSqlLiteFilename) == false)
 			{
+				Console.Write("Convert software XML to SQLite ...");
 				XML2SQLite(softwareXmlFilename, softwareSqlLiteFilename, requiredSoftwareTables, assemblyVersion, aoExtra);
 				GC.Collect();
+				Console.WriteLine("...done");
 			}
 		}
 

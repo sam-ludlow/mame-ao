@@ -50,8 +50,6 @@ namespace Spludlow.MameAO
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 			Directory.CreateDirectory(_CoreDirectory);
 
-			Tools.ConsoleHeading(1, new string[] { "Get MAME", _Version, _CoreDirectory });
-
 			if (File.Exists(Path.Combine(_CoreDirectory, "mame.exe")) == true)
 				return 0;
 			
@@ -60,9 +58,13 @@ namespace Spludlow.MameAO
 
 			string binariesFilename = Path.Combine(_CoreDirectory, Path.GetFileName(binariesUrl));
 
+			Console.Write($"Downloading {binariesUrl} {binariesFilename} ...");
 			Tools.Download(binariesUrl, binariesFilename);
+			Console.WriteLine("...done");
 
+			Console.Write($"Extracting {binariesFilename} {_CoreDirectory} ...");
 			Mame.RunSelfExtract(binariesFilename);
+			Console.WriteLine("...done");
 
 			return 1;
 		}
@@ -73,8 +75,6 @@ namespace Spludlow.MameAO
 				_Version = LatestLocalVersion(_RootDirectory);
 
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
-
-			Tools.ConsoleHeading(1, new string[] { "Xml MAME", _Version, _CoreDirectory });
 
 			Cores.ExtractXML(Path.Combine(_CoreDirectory, "mame.exe"));
 		}
@@ -118,8 +118,6 @@ namespace Spludlow.MameAO
 				_Version = LatestLocalVersion(_RootDirectory);
 
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
-
-			Tools.ConsoleHeading(1, new string[] { "SQLiteAo MAME", _Version, _CoreDirectory });
 
 			InitializeConnections();
 
@@ -182,12 +180,12 @@ namespace Spludlow.MameAO
 
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
-			Tools.ConsoleHeading(1, new string[] { "AllSHA1 MAME", _Version, _CoreDirectory });
-
 			InitializeConnections();
 
+			Console.Write($"Load all database SHA1 ...");
 			Cores.AllSHA1(hashSet, _ConnectionStringMachine, new string[] { "rom", "disk" });
 			Cores.AllSHA1(hashSet, _ConnectionStringSoftware, new string[] { "rom", "disk" });
+			Console.WriteLine("...done");
 		}
 
 
