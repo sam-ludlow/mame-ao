@@ -294,9 +294,6 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			Globals.Reports = new Reports();
 
-			// TODO
-			//Globals.Favorites = new Favorites();
-
 			//
 			// Default Core MAME
 			//
@@ -759,6 +756,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						if (File.Exists(binFilename) == false)
 							throw new ApplicationException($"Unknow command or no such version: {binFilename}");
 
+						Globals.PhoneHome.Ready();
 						Mame.RunMame(binFilename, arguments);
 						return;
 				}
@@ -809,8 +807,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			if (Globals.Settings.Options["Cheats"] == "Yes")
 				arguments += " -cheat";
 
-			//Globals.PhoneHome.Ready();
-
+			Globals.PhoneHome.Ready();
 			Mame.RunMame(Path.Combine(Globals.Core.Directory, $"{Globals.Core.Name}.exe"), $"{machine} {software} {arguments}");
 		}
 

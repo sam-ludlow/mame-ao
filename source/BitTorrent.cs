@@ -239,16 +239,16 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static Dictionary<ItemType, string> TorrentHashes()
+		public static Dictionary<string, string> TorrentHashes()
 		{
-			Dictionary<ItemType, string> result = new Dictionary<ItemType, string>();
+			Dictionary<string, string> result = new Dictionary<string, string>();
 
 			dynamic info = JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/info"));
 
 			foreach (dynamic mangent in info.magnets)
 			{
-				ItemType type = (ItemType) Enum.Parse(typeof(ItemType), (string)mangent.type);
-				result.Add(type, (string)mangent.hash);
+				//ItemType type = (ItemType) Enum.Parse(typeof(ItemType), (string)mangent.type);
+				result.Add((string)mangent.type, (string)mangent.hash);
 			}
 
 			return result;

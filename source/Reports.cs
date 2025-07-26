@@ -488,7 +488,7 @@ namespace Spludlow.MameAO
 
 			var torrentHashes = BitTorrent.TorrentHashes();
 
-			foreach (ItemType type in torrentHashes.Keys)
+			foreach (string type in torrentHashes.Keys)
 			{
 				string hash = torrentHashes[type];
 
@@ -506,8 +506,8 @@ namespace Spludlow.MameAO
 
 				switch (type)
 				{
-					case ItemType.SoftwareRom:
-					case ItemType.SoftwareDisk:
+					case "SoftwareRom":
+					case "SoftwareDisk":
 
 						SortedDictionary<string, long[]> lists = new SortedDictionary<string, long[]>();
 
@@ -1150,7 +1150,7 @@ namespace Spludlow.MameAO
 
 		public void Report_AVSUM()
 		{
-			string[] names = new string[] {
+			List<string> names = new List<string>(new string[] {
 				"Machine Rom",
 				"Machine Disk",
 				"Software Rom",
@@ -1159,9 +1159,9 @@ namespace Spludlow.MameAO
 				"Artworks Alt",
 				"Artworks Wide Screen",
 				"Samples",
-			};
+			});
 
-			HashStore[] hashStores = new HashStore[] {
+			List<HashStore> hashStores = new List<HashStore>(new HashStore[] {
 				Globals.RomHashStore,
 				Globals.DiskHashStore,
 				Globals.RomHashStore,
@@ -1170,30 +1170,41 @@ namespace Spludlow.MameAO
 				Globals.RomHashStore,
 				Globals.RomHashStore,
 				Globals.RomHashStore,
-			};
+			});
 
 			foreach (ArtworkTypes type in new ArtworkTypes[] { ArtworkTypes.Artworks, ArtworkTypes.ArtworksAlt, ArtworkTypes.ArtworksWideScreen })
 				Globals.Artwork.Initialize(type);
 
 			Globals.Samples.Initialize();
 
-			HashSet<string>[] databaseHashes = new HashSet<string>[] {
-				new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
-				new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
-				new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
-				new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])),
-				new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.Artworks].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])),
-				new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.ArtworksAlt].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])),
-				new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.ArtworksWideScreen].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])),
-				new HashSet<string>(Globals.Samples.DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])),
-			};
+			List<HashSet<string>> databaseHashes = new List<HashSet<string>>();
+
+			databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
+			if (Globals.Core.Name == "mame")
+				databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
+			databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
+			if (Globals.Core.Name == "mame")
+				databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
+			databaseHashes.Add(new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.Artworks].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])));
+			databaseHashes.Add(new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.ArtworksAlt].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])));
+			databaseHashes.Add(new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.ArtworksWideScreen].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])));
+			databaseHashes.Add(new HashSet<string>(Globals.Samples.DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])));
+
+			if (Globals.Core.Name == "hbmame")
+			{
+				foreach (int removeIndex in new int[] { 3, 1 })
+				{
+					names.RemoveAt(removeIndex);
+					hashStores.RemoveAt(removeIndex);
+				}
+			}
 
 			DataTable table = Tools.MakeDataTable("Summary",
 				"Asset Type	Total	Have	Missing	Complete",
 				"String		Int32	Int32	Int32	String"
 			);
 
-			for (int index = 0; index < names.Length; ++index)
+			for (int index = 0; index < names.Count; ++index)
 			{
 				string name = names[index];
 				HashSet<string> databaseHash = databaseHashes[index];
@@ -1295,6 +1306,12 @@ namespace Spludlow.MameAO
 
 		public void Report_AVSDL()
 		{
+			if (Globals.Core.Name == "hbmame")
+			{
+				Console.WriteLine("!!! No disk reports for HBMAME.");
+				return;
+			}
+
 			DataTable softwarelistTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1],
 				"SELECT softwarelist.softwarelist_id, softwarelist.name, softwarelist.description, COUNT(disk.disk_id) AS disk_count " +
 				"FROM (((softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id) INNER JOIN part ON software.software_id = part.software_id) INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id " +

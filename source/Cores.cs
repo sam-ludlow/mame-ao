@@ -86,6 +86,8 @@ namespace Spludlow.MameAO
 			core.AllSHA1(Globals.AllSHA1);
 
 			Globals.Genre.InitializeCore(core);
+
+			Globals.Favorites = new Favorites();
 		}
 
 		public static void ExtractXML(string exeFilename)
@@ -525,7 +527,6 @@ namespace Spludlow.MameAO
 			return String.Join(" ", results);
 		}
 
-
 		public static DataTable QueryMachines(string connectionString, DataQueryProfile profile, int offset, int limit, string search)
 		{
 			string commandText = profile.CommandText;
@@ -577,7 +578,7 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			//	TODO	Globals.Favorites.AddColumnMachines(table, "name", "favorite");
+			Globals.Favorites.AddColumnMachines(table, "name", "favorite");
 
 			return table;
 		}
@@ -644,14 +645,11 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			//	TODO
-			//if (favorites_machine != null)
-			//	Globals.Favorites.AddColumnSoftware(table, favorites_machine, softwareListName, "name", "favorite");
+			if (favorites_machine != null)
+				Globals.Favorites.AddColumnSoftware(table, favorites_machine, softwarelist_name, "name", "favorite");
 
 			return table;
 		}
-
-
 
 	}
 }
