@@ -1,5 +1,5 @@
 # mame-ao
-Easiest way to use MAME. Automatic download and setup of all files from GitHub, BitTorrent, and archive.org on the fly.
+Easiest way to use MAME & HBMAME. Automatic download and setup of all files from GitHub, BitTorrent, and archive.org on the fly.
 
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-ui.png)
 
@@ -112,6 +112,7 @@ From the shell you can enter the short machine name, other options are available
 |Command|Description|Example|
 |:----|:----|:----|
 | \<machine\> | Start machine | `mrdo` |
+| \<machine\>@\<core\> | Start machine in core (`mame`, `hbmame`) |`dinos163@hbmame`|
 | \<machine\> \<arguments\> | With all place commands you can put arguments at the end | `mrdo -window` |
 | \<machine\> \<software\> | Start machine with software | `a2600 et` |
 | \<machine\> \<software\>@\<software list\> | Start machine with software, specify software list for correct media | `cpc464p barb2@gx4000` |
@@ -127,6 +128,7 @@ There are also commands available they all start with a dot `.`
 |.btr|Restart the bit torrent client|`.btr`|
 |.bts|Stop the bit torrent client|`.bts`|
 |.btx|Remove the bit torrent client|`.btx`|
+|.core|Chnage emulation core|`.core hbmame`|
 |.creds|Enter archive.org credentials, If you press `ENTER` twice your auth cookie will be deleted.|`.creds`|
 |.dbm|Machine database SQL query|`.dbm SELECT rom.* FROM machine INNER JOIN rom ON machine.machine_id = rom.machine_id WHERE machine.name = 'mrdo'`|
 |.dbs|Software database SQL query|`.dbs SELECT softwarelist.* FROM softwarelist ORDER BY softwarelist.name`|

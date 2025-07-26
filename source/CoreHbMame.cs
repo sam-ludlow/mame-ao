@@ -178,8 +178,6 @@ namespace Spludlow.MameAO
 
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
-			Tools.ConsoleHeading(1, new string[] { "SQLiteAo HBMAME", _Version, _CoreDirectory });
-
 			InitializeConnections();
 
 
