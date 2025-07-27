@@ -128,7 +128,7 @@ There are also commands available they all start with a dot `.`
 |.btr|Restart the bit torrent client|`.btr`|
 |.bts|Stop the bit torrent client|`.bts`|
 |.btx|Remove the bit torrent client|`.btx`|
-|.core|Chnage emulation core|`.core hbmame`|
+|.core|Change emulation core|`.core hbmame`|
 |.creds|Enter archive.org credentials, If you press `ENTER` twice your auth cookie will be deleted.|`.creds`|
 |.dbm|Machine database SQL query|`.dbm SELECT rom.* FROM machine INNER JOIN rom ON machine.machine_id = rom.machine_id WHERE machine.name = 'mrdo'`|
 |.dbs|Software database SQL query|`.dbs SELECT softwarelist.* FROM softwarelist ORDER BY softwarelist.name`|

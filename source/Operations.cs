@@ -181,42 +181,9 @@ namespace Spludlow.MameAO
 		//
 		public static int GetMame(string directory, string version)
 		{
-			//ICore core = new CoreMame();
-			//core.Initialize(directory, version);
-
-			//return core.Get();
-			int newVersion = 0;
-
-			string mameLatestJson = Tools.Query("https://api.github.com/repos/mamedev/mame/releases/latest");
-			mameLatestJson = Tools.PrettyJSON(mameLatestJson);
-
-			dynamic mameLatest = JsonConvert.DeserializeObject<dynamic>(mameLatestJson);
-
-			if (version == "0")
-				version = ((string)mameLatest.tag_name).Substring(4);
-
-			string versionDirectory = Path.Combine(directory, version);
-
-			if (Directory.Exists(versionDirectory) == false)
-				Directory.CreateDirectory(versionDirectory);
-
-			string exeFilename = Path.Combine(versionDirectory, "mame.exe");
-
-			if (File.Exists(exeFilename) == false)
-			{
-				newVersion = 1;
-
-				string binariesUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
-				binariesUrl = binariesUrl.Replace("@VERSION@", version);
-
-				string binariesFilename = Path.Combine(versionDirectory, Path.GetFileName(binariesUrl));
-
-				Tools.Download(binariesUrl, binariesFilename);
-
-				Mame.RunSelfExtract(binariesFilename);
-			}
-
-			return newVersion;
+			ICore core = new CoreMame();
+			core.Initialize(directory, version);
+			return core.Get();
 		}
 
 		//
@@ -224,25 +191,9 @@ namespace Spludlow.MameAO
 		//
 		public static int MakeXML(string directory, string version)
 		{
-			if (version == "0")
-				version = GetLatestDownloadedVersion(directory);
-
-			string versionDirectory = Path.Combine(directory, version);
-
-			string exeFilename = Path.Combine(versionDirectory, "mame.exe");
-
-			string machineXmlFilename = Path.Combine(versionDirectory, "_machine.xml");
-			string softwareXmlFilename = Path.Combine(versionDirectory, "_software.xml");
-
-			if (File.Exists(machineXmlFilename) == false)
-				Mame.ExtractXML(exeFilename, machineXmlFilename, "-listxml");
-
-			if (File.Exists(softwareXmlFilename) == false)
-			{
-				Mame.ExtractXML(exeFilename, softwareXmlFilename, "-listsoftware");
-				ReadXML.CombineHashSoftwareLists(softwareXmlFilename);
-			}
-
+			ICore core = new CoreMame();
+			core.Initialize(directory, version);
+			core.Xml();
 			return 0;
 		}
 
@@ -294,29 +245,9 @@ namespace Spludlow.MameAO
 		//
 		public static int MakeSQLite(string directory, string version)
 		{
-			if (version == "0")
-				version = GetLatestDownloadedVersion(directory);
-
-			string versionDirectory = Path.Combine(directory, version);
-
-			string machineSqlLiteFilename = Path.Combine(versionDirectory, "_machine.sqlite");
-			string softwareSqlLiteFilename = Path.Combine(versionDirectory, "_software.sqlite");
-
-			string machineXmlFilename = Path.Combine(versionDirectory, "_machine.xml");
-			string softwareXmlFilename = Path.Combine(versionDirectory, "_software.xml");
-
-			if (File.Exists(machineSqlLiteFilename) == false)
-			{
-				XML2SQLite(machineXmlFilename, machineSqlLiteFilename);
-				GC.Collect();
-			}
-
-			if (File.Exists(softwareSqlLiteFilename) == false)
-			{
-				XML2SQLite(softwareXmlFilename, softwareSqlLiteFilename);
-				GC.Collect();
-			}
-
+			ICore core = new CoreMame();
+			core.Initialize(directory, version);
+			core.SQLite();
 			return 0;
 		}
 		public static void XML2SQLite(string xmlFilename, string sqliteFilename)
@@ -1833,107 +1764,24 @@ namespace Spludlow.MameAO
 
 		public static int GetHbMame(string directory, string version)
 		{
-			string url = "https://hbmame.1emulation.com/";
-			string html = Tools.Query(url);
-
-			string downloadUrl = null;
-
-			string find = "<a href=\"";
-			int index = 0;
-			while ((index = html.IndexOf(find, index)) != -1)
-			{
-				int endIndex = html.IndexOf("\"", index + find.Length);
-				if (endIndex == -1)
-					break;
-
-				string link = html.Substring(index + find.Length, endIndex - index - find.Length);
-				if (link.StartsWith("hbmame") == true && link.Contains("ui") == false && link.EndsWith(".7z") == true)
-				{
-					if (downloadUrl == null)
-						downloadUrl = new Uri(new Uri(url), link).AbsoluteUri;
-					else
-						throw new ApplicationException("Found more dowload links than expected");
-				}
-
-				index = endIndex;
-			}
-
-			if (downloadUrl == null)
-				throw new ApplicationException("Did not find download link");
-
-			version = HbMameVersion(html);
-
-			directory = Path.Combine(directory, version);
-			Directory.CreateDirectory(directory);
-
-			if (File.Exists(Path.Combine(directory, "hbmame.exe")) == true)
-				return 0;
-
-			using (TempDirectory tempDir = new TempDirectory())
-			{
-				string archiveFilename = Path.Combine(tempDir.Path, "hbmame.7z");
-
-				Console.Write($"Downloading {downloadUrl} {archiveFilename} ...");
-				Tools.Download(downloadUrl, archiveFilename, 1);
-				Console.WriteLine("...done");
-
-				Console.Write($"Extract 7-Zip {archiveFilename} {directory} ...");
-				Tools.ExtractToDirectory7Zip(archiveFilename, directory);
-				Console.WriteLine("...done");
-			}
-
-			return 1;
+			ICore core = new CoreHbMame();
+			core.Initialize(directory, version);
+			return core.Get();
 		}
 
 		public static int MakeHbMameXML(string directory, string version)
 		{
-			if (version == "0")
-				version = HbMameGetLatestDownloadedVersion(directory);
-
-			directory = Path.Combine(directory, version);
-
-			string exeFilename = Path.Combine(directory, "hbmame.exe");
-
-			string machineXmlFilename = Path.Combine(directory, "_machine.xml");
-			string softwareXmlFilename = Path.Combine(directory, "_software.xml");
-
-			if (File.Exists(machineXmlFilename) == false)
-				Mame.ExtractXML(exeFilename, machineXmlFilename, "-listxml");
-
-			if (File.Exists(softwareXmlFilename) == false)
-			{
-				Mame.ExtractXML(exeFilename, softwareXmlFilename, "-listsoftware");
-				ReadXML.CombineHashSoftwareLists(softwareXmlFilename);
-			}
-
+			ICore core = new CoreHbMame();
+			core.Initialize(directory, version);
+			core.Xml();
 			return 0;
 		}
 
 		public static int MakeHbMameSQLite(string directory, string version)
 		{
-			if (version == "0")
-				version = HbMameGetLatestDownloadedVersion(directory);
-
-			string versionDirectory = Path.Combine(directory, version);
-
-			string machineSqlLiteFilename = Path.Combine(versionDirectory, "_machine.sqlite");
-			string softwareSqlLiteFilename = Path.Combine(versionDirectory, "_software.sqlite");
-
-			string machineXmlFilename = Path.Combine(versionDirectory, "_machine.xml");
-			string softwareXmlFilename = Path.Combine(versionDirectory, "_software.xml");
-
-			if (File.Exists(machineSqlLiteFilename) == false)
-			{
-				XML2SQLite(machineXmlFilename, machineSqlLiteFilename);
-				GC.Collect();
-			}
-
-			if (File.Exists(softwareSqlLiteFilename) == false)
-			{
-				XML2SQLite(softwareXmlFilename, softwareSqlLiteFilename);
-				GC.Collect();
-			}
-
+			ICore core = new CoreHbMame();
+			core.Initialize(directory, version);
+			core.SQLite();
 			return 0;
 		}
 
