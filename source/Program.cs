@@ -7,6 +7,8 @@ namespace Spludlow.MameAO
 	{
 		static int Main(string[] args)
 		{
+			//args = new string[] { "hbmame-sqlite", @"directory=C:\ao-data\hbmame" };
+
 			if (args.Length > 0 && args[0].Contains("=") == false)
 				args[0] = $"operation={args[0]}";
 

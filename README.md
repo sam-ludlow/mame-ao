@@ -47,6 +47,11 @@ NOTE: MAME-AO application is 32 bit to keep RAM usage down.
 ## Reporting issues
 https://github.com/sam-ludlow/mame-ao/issues
 
+## HBMAME - HomeBrew MAME
+We now support HBMAME. To enable use the command `.core hbmame`.
+
+![HBMAME](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-hbmame.png)
+
 ## Symbolic Links - Save disk space
 When MAME-AO downloads assets it keeps them in a "hash store", this makes keeping account of them very simple, you don’t have to keep grooming a bunch of ZIP files.
 
@@ -106,7 +111,7 @@ You can set advanced configuration options using the file `_config.txt`, each li
 
 MAME-AO must be restarted for changes to `_config.txt` to take affect.
 
-## MAME-AO Shell
+## AO Shell
 From the shell you can enter the short machine name, other options are available for software.
 
 |Command|Description|Example|
