@@ -49,7 +49,14 @@ namespace Spludlow.MameAO
 
 						using (TempDirectory tempDir = new TempDirectory())
 						{
-							ZipFile.ExtractToDirectory(filename, tempDir.Path);
+							try
+							{
+								ZipFile.ExtractToDirectory(filename, tempDir.Path);
+							}
+							catch (InvalidDataException e)
+							{
+								status = e.Message;
+							}
 
 							Tools.ClearAttributes(tempDir.Path);
 
