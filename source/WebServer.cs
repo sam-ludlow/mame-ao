@@ -708,7 +708,7 @@ namespace Spludlow.MameAO
 		{
 			context.Response.Headers["Content-Type"] = "text/plain; charset=utf-8";
 
-			writer.Write(Mame.WhatsNew(Globals.RootDirectory));
+			writer.Write(File.ReadAllText(Path.Combine(Globals.Core.Directory, "whatsnew.txt"), Encoding.UTF8));
 		}
 
 		public void _api_genre_groups(HttpListenerContext context, StreamWriter writer)
