@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Xml.Linq;
 
@@ -21,19 +22,11 @@ namespace Spludlow.MameAO
 
 	public class Artwork
 	{
-		public Dictionary<ArtworkTypes, string> ArchivePaths = new Dictionary<ArtworkTypes, string>()
-		{
-			{ ArtworkTypes.Artworks,            "/refs/heads/main/Resources/pS_Artwork_Official.dat" },
-			{ ArtworkTypes.ArtworksAlt,         "/refs/heads/main/Resources/pS_Artwork_Unofficial_Alternate.dat" },
-			{ ArtworkTypes.ArtworksWideScreen,  "/refs/heads/main/Resources/pS_Artwork_WideScreen.dat" },
-		};
-
+		public Dictionary<ArtworkTypes, string> ZipPaths = null;
 		public Dictionary<ArtworkTypes, ArtworkData> ArtworkDatas = new Dictionary<ArtworkTypes, ArtworkData>();
 
-		private readonly GitHubRepo GitHubRepo;
 		public Artwork()
 		{
-			GitHubRepo = Globals.GitHubRepos["MAME_Dats"];
 		}
 
 		public void Initialize(ArtworkTypes artworkType)
@@ -41,12 +34,39 @@ namespace Spludlow.MameAO
 			if (ArtworkDatas.ContainsKey(artworkType) == true)
 				return;
 
-			string url = $"{GitHubRepo.UrlRaw}{ArchivePaths[artworkType]}";
+			if (ZipPaths == null)
+				ZipPaths = ParseZipPaths();
+
+			if (ZipPaths.ContainsKey(artworkType) == false)
+				return;
+
+			string zipUrl = ZipPaths[artworkType];
+			string name = Tools.ValidFileName(Path.GetFileNameWithoutExtension(zipUrl));
+			string cacheFilename = Path.Combine(Globals.CacheDirectory, name + ".xml");
 
 			Tools.ConsoleHeading(2, new string[] {
 				$"Artwork Initialize: {artworkType}",
-				url
+				zipUrl,
+				name
 			});
+
+			if (File.Exists(cacheFilename) == false)
+			{
+				using (TempDirectory tempDir = new TempDirectory())
+				{
+					string zipFilename = Path.Combine(tempDir.Path, "archive.zip");
+
+					Tools.Download(zipUrl, zipFilename);
+					ZipFile.ExtractToDirectory(zipFilename, tempDir.Path);
+					Tools.ClearAttributes(tempDir.Path);
+
+					string tempFilename = Directory.GetFiles(tempDir.Path, "*.dat").Single();
+
+					File.Copy(tempFilename, cacheFilename);
+				}
+			}
+
+			string xml = File.ReadAllText(cacheFilename);
 
 			ArtworkData artworkData = new ArtworkData
 			{
@@ -54,11 +74,6 @@ namespace Spludlow.MameAO
 				DataSet = null
 			};
 			ArtworkDatas.Add(artworkType, artworkData);
-
-			string xml = GitHubRepo.Fetch(url);
-
-			if (xml == null)
-				return;
 
 			artworkData.DataSet = ParseXML(xml);
 			artworkData.Version = GetDataSetVersion(artworkData.DataSet);
@@ -71,8 +86,72 @@ namespace Spludlow.MameAO
 				if (row.IsNull("sha1") == false)
 					Globals.AllSHA1.Add((string)row["sha1"]);
 			}
+		}
 
-			Console.WriteLine($"Version:\t{artworkData.Version}");
+		private static Dictionary<ArtworkTypes, string> ParseZipPaths()
+		{
+			string url = "https://www.progettosnaps.net/artworks/";
+
+			Dictionary<ArtworkTypes, string> zipPaths = new Dictionary<ArtworkTypes, string>();
+
+			string html = Tools.Query(url);
+
+			if (html == null)
+				return zipPaths;
+
+			using (StringReader reader = new StringReader(html))
+			{
+				string line;
+				while ((line = reader.ReadLine()) != null)
+				{
+					line = line.Trim();
+
+					if (line.Length == 0 || line.StartsWith("<a href=") == false || line.Contains("pS_Artwork_") == false)
+						continue;
+
+					string fullLine = line;
+
+					try
+					{
+						int index;
+
+						index = line.IndexOf('\"');
+						line = line.Substring(index + 1);
+						index = line.IndexOf('\"');
+						line = line.Substring(0, index);
+						line = new Uri(new Uri(url), line).AbsoluteUri;
+						string link = line;
+
+						index = line.LastIndexOf('/');
+						line = line.Substring(index + 12);
+						index = line.IndexOf('_');
+						line = line.Substring(0, index);
+						string name = line;
+
+						switch (name.ToLower())
+						{
+							case "official":
+								zipPaths.Add(ArtworkTypes.Artworks, link);
+								break;
+							case "unofficial":
+								zipPaths.Add(ArtworkTypes.ArtworksAlt, link);
+								break;
+							case "widescreen":
+								zipPaths.Add(ArtworkTypes.ArtworksWideScreen, link);
+								break;
+							default:
+								break;
+						}
+					}
+					catch (Exception e)
+					{
+						Console.WriteLine($"!!! Error parsing artwork html, {fullLine}, {e.Message}");
+						Console.WriteLine(e.ToString());
+					}
+				}
+			}
+
+			return zipPaths;
 		}
 
 		private DataSet ParseXML(string xml)
