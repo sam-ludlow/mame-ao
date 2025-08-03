@@ -61,33 +61,37 @@ namespace Spludlow.MameAO
 			if (Globals.Core != null && Globals.Core.Name == name && version != null && Globals.Core.Version == version)
 				return;
 
+			ICore core = Globals.Core;
+
 			switch (name)
 			{
 				case "mame":
-					Globals.Core = new CoreMame();
+					core = new CoreMame();
 					break;
 
 				case "hbmame":
-					Globals.Core = new CoreHbMame();
+					core = new CoreHbMame();
 					break;
 
 				default:
 					throw new ApplicationException($"Unknow core: {name}");
 			}
 
-			ICore core = Globals.Core;
-
 			core.Initialize(Path.Combine(Globals.RootDirectory, name), version);
 
 			core.Get();
 			core.Xml();
 			core.SQLiteAo();
-
 			core.AllSHA1(Globals.AllSHA1);
+
+			Globals.Core = core;
 
 			Globals.Genre.InitializeCore(core);
 
 			Globals.Favorites = new Favorites();
+
+			if (Globals.BitTorrentAvailable == true)
+				BitTorrent.EnableCore(core.Name);
 		}
 
 		public static void ExtractXML(string exeFilename)

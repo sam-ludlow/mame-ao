@@ -119,7 +119,7 @@ namespace Spludlow.MameAO
 				process.BeginErrorReadLine();
 				process.WaitForExit();
 
-				Globals.PhoneHome.MameExitCode(process.ExitCode);
+				Globals.PhoneHome.MameExitCode(process.ExitCode, Globals.Core.Name, Globals.Core.Version, arguments);
 
 				Console.WriteLine();
 				if (process.ExitCode == 0)

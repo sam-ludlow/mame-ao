@@ -41,8 +41,18 @@ namespace Spludlow.MameAO
 		int ICore.Get()
 		{
 			string url = "https://hbmame.1emulation.com/";
-			string html = Tools.Query(url);
-
+			string html;
+			
+			try
+			{
+				html = Tools.Query(url);
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine($"!!! Can not download HBMAME HTML, {e.Message}");
+				return 0;
+			}
+			
 			string downloadUrl = null;
 
 			string find = "<a href=\"";

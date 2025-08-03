@@ -20,6 +20,9 @@ namespace Spludlow.MameAO
 		private StringBuilder _MameOutput = new StringBuilder();
 		private StringBuilder _MameError = new StringBuilder();
 		private int? _MameExitCode = null;
+		private string _core_name = null;
+		private string _core_version = null;
+		private string _arguments = null;
 
 		public PhoneHome(string line)
 		{
@@ -52,9 +55,12 @@ namespace Spludlow.MameAO
 		{
 			_MameError.AppendLine(line);
 		}
-		public void MameExitCode(int code)
+		public void MameExitCode(int code, string core_name, string core_version, string arguments)
 		{
 			_MameExitCode = code;
+			_core_name = core_name;
+			_core_version = core_version;
+			_arguments = arguments;
 		}
 
 		private void Submit()
@@ -77,7 +83,11 @@ namespace Spludlow.MameAO
 					json.ready_time = ReadyTime;
 					json.end_time = EndTime;
 					json.line = Line;
+
 					json.mame_exit_code = _MameExitCode;
+					json.core_name = _core_name;
+					json.core_version = _core_version;
+					json.arguments = _arguments;
 
 					if (Exception != null)
 						json.exception = Exception.ToString();

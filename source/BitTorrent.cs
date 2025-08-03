@@ -239,6 +239,48 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static void EnableCore(string coreName)
+		{
+			dynamic info = JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/info"));
+
+			if (info.cores == null)
+			{
+				Console.WriteLine("!!! Update your dome-bt so it can use other cores.");
+				return;
+			}
+
+			List<string> btCores = ((JArray)info.cores).ToObject<List<string>>();
+
+			if (btCores.Contains(coreName) == true)
+				return;
+
+			List<string> config = new List<string>(new string[] { "cores\tmame, hbmame" });
+
+			string configFilename = Path.Combine(Globals.BitTorrentDirectory, "_config.txt");
+			if (File.Exists(configFilename) == true)
+			{
+				using (StreamReader reader = new StreamReader(configFilename))
+				{
+					string line;
+					while ((line = reader.ReadLine()) != null)
+					{
+						line = line.Trim();
+						if (line.Length == 0)
+							continue;
+
+						if (line.StartsWith("cores\t") == false)
+							config.Add(line);
+					}
+				}
+			}
+
+			File.WriteAllLines(configFilename, config.ToArray());
+
+			Tools.ConsoleHeading(2, new string[] { "Restarting BOME-BT to enable core, configuration updated.", configFilename });
+
+			Restart();
+		}
+
 		public static Dictionary<string, string> TorrentHashes()
 		{
 			Dictionary<string, string> result = new Dictionary<string, string>();
