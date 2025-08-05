@@ -222,13 +222,19 @@ namespace Spludlow.MameAO
 					ArchiveOrgFile file = item.GetFile(key);
 					if (file == null)
 					{
-						Console.WriteLine($"!!! Artwork file not on archive.org: {key}");
+						Console.WriteLine($"!!! Artwork file not on archive.org: {item.UrlDownload}, {key}");
+						continue;
+					}
+
+					Dictionary<string, long> softwareSizes = item.GetZipContentsSizes(file, 0, 4);
+
+					if (softwareSizes.ContainsKey(machineName) == false)
+					{
+						Console.WriteLine($"!!! Artwork machine not in ZIP on archive.org: {machineName}, {item.UrlDownload}/{file.name}/");
 						continue;
 					}
 
 					string url = $"{item.DownloadLink(file)}/{machineName}.zip";
-
-					Dictionary<string, long> softwareSizes = item.GetZipContentsSizes(file, 0, 4);
 
 					Place.DownloadImportFiles(url, softwareSizes[machineName], info);
 				}
