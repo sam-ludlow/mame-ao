@@ -286,10 +286,6 @@ namespace Spludlow.MameAO
 		{
 			HashSet<string> requiredMachines = new HashSet<string>();
 
-			DataRow machineRow = core.GetMachine(machine_name) ?? throw new ApplicationException($"Machine not found (GetReferencedMachines): ${machine_name}");
-			if (machineRow.IsNull("cloneof") == false)
-				requiredMachines.Add((string)machineRow["cloneof"]);
-
 			GetReferencedMachines(core, machine_name, requiredMachines);
 
 			return requiredMachines;

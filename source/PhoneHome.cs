@@ -89,6 +89,10 @@ namespace Spludlow.MameAO
 					json.core_version = _core_version;
 					json.arguments = _arguments;
 
+					json.ao_available = Globals.AuthCookie != null;
+					json.bt_available = Globals.BitTorrentAvailable;
+					json.linking_enabled = Globals.LinkingEnabled;
+
 					if (Exception != null)
 						json.exception = Exception.ToString();
 

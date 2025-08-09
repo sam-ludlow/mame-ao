@@ -487,7 +487,7 @@ namespace Spludlow.MameAO
 						int romCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
 						int diskCount = Database.TableExists(connection, "disk") == true ? (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM disk") : 0;
 
-						info = $"MAME: {version} - Released: {exeTime} - Machines: {machineCount} - rom: {romCount} - disk: {diskCount}";
+						info = $"{dataSetName.ToUpper()}: {version} - Released: {exeTime} - Machines: {machineCount} - rom: {romCount} - disk: {diskCount}";
 						break;
 
 					case "software":
@@ -497,7 +497,7 @@ namespace Spludlow.MameAO
 						int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
 						int softDiskCount = Database.TableExists(connection, "disk") == true ? (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM disk") : 0;
 
-						info = $"MAME: {version} - Released: {exeTime} - Lists: {softwarelistCount} - Software: {softwareCount} - rom: {softRomCount} - disk: {softDiskCount}";
+						info = $"{dataSetName.ToUpper()}: {version} - Released: {exeTime} - Lists: {softwarelistCount} - Software: {softwareCount} - rom: {softRomCount} - disk: {softDiskCount}";
 						break;
 
 					default:
@@ -1094,7 +1094,7 @@ namespace Spludlow.MameAO
 							}
 						}
 
-						command.Parameters["@title"].Value = $"{(string)machineRow["description"]} - mame ({version}) machine";
+						command.Parameters["@title"].Value = $"{(string)machineRow["description"]} - {datasetName} ({version}) machine";
 						command.Parameters["@html"].Value = html.ToString();
 						command.Parameters["@machine_name"].Value = machine_name;
 
@@ -1222,7 +1222,7 @@ namespace Spludlow.MameAO
 
 					listTable.Rows.Add($"<a href=\"/{dataSetName}/software/{softwarelist_name}\">{softwarelist_name}</a>", softwarelist_description);
 
-					softwarelistCommand.Parameters["@title"].Value = $"{softwarelist_description} - mame ({version}) software list";
+					softwarelistCommand.Parameters["@title"].Value = $"{softwarelist_description} - {dataSetName} ({version}) software list";
 					softwarelistCommand.Parameters["@html"].Value = html.ToString();
 					softwarelistCommand.Parameters["@softwarelist_name"].Value = softwarelist_name;
 
@@ -1415,7 +1415,7 @@ namespace Spludlow.MameAO
 							}
 						}
 
-						softwareCommand.Parameters["@title"].Value = $"{(string)softwareRow["description"]} - {(string)softwarelistRow["description"]} - mame ({version}) software";
+						softwareCommand.Parameters["@title"].Value = $"{(string)softwareRow["description"]} - {(string)softwarelistRow["description"]} - {dataSetName} ({version}) software";
 						softwareCommand.Parameters["@html"].Value = html.ToString();
 						softwareCommand.Parameters["@softwarelist_name"].Value = softwarelist_name;
 						softwareCommand.Parameters["@software_name"].Value = software_name;
@@ -1428,7 +1428,7 @@ namespace Spludlow.MameAO
 				softwarelistsCommand.Parameters.Add("@title", SqlDbType.NVarChar);
 				softwarelistsCommand.Parameters.Add("@html", SqlDbType.NVarChar);
 
-				softwarelistsCommand.Parameters["@title"].Value = $"Software Lists - mame ({version}) software";
+				softwarelistsCommand.Parameters["@title"].Value = $"Software Lists - {dataSetName} ({version}) software";
 				softwarelistsCommand.Parameters["@html"].Value = Reports.MakeHtmlTable(listTable, null);
 
 				softwarelistsCommand.ExecuteNonQuery();
