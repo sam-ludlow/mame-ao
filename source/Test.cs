@@ -65,6 +65,12 @@ namespace Spludlow.MameAO
 				int exitCode = RunMame(arguments);
 
 				Tools.ConsoleHeading(2, new string[] { $"END Test {profile} {machine_name}", $"Exit Code {exitCode}" });
+
+				if (exitCode != 0)
+				{
+					Console.WriteLine("!!! Ending test bad exit code.");
+					break;
+				}
 			}
 		}
 

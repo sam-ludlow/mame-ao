@@ -31,6 +31,7 @@ namespace Spludlow.MameAO
 
 		void ICore.Initialize(string directory, string version)
 		{
+			//	TODO: validate version
 			_RootDirectory = directory;
 			Directory.CreateDirectory(_RootDirectory);
 

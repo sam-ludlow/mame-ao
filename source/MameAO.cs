@@ -885,7 +885,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 				ProcessStartInfo startInfo = new ProcessStartInfo(exeFilename)
 				{
 					Arguments = $"access-link-new filename=\"{targetFilename}\" odbc=\"{filename}\"",
-					UseShellExecute = false,
+					UseShellExecute = true,
 				};
 
 				using (Process process = new Process())
