@@ -40,7 +40,11 @@ namespace Spludlow.MameAO
 
 		int ICore.Get()
 		{
-			string mameLatestJson = Tools.Query("https://api.github.com/repos/mamedev/mame/releases/latest");
+			string mameLatestJson = Tools.FetchTextCached("https://api.github.com/repos/mamedev/mame/releases/latest");
+
+			if (mameLatestJson == null)
+				throw new ApplicationException("Unanle to get core lastest");
+
 			mameLatestJson = Tools.PrettyJSON(mameLatestJson);
 
 			dynamic mameLatest = JsonConvert.DeserializeObject<dynamic>(mameLatestJson);

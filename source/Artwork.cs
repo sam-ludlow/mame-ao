@@ -94,7 +94,7 @@ namespace Spludlow.MameAO
 
 			Dictionary<ArtworkTypes, string> zipPaths = new Dictionary<ArtworkTypes, string>();
 
-			string html = Tools.Query(url);
+			string html = Tools.FetchTextCached(url);
 
 			if (html == null)
 				return zipPaths;

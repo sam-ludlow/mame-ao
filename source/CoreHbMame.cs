@@ -46,14 +46,17 @@ namespace Spludlow.MameAO
 			
 			try
 			{
-				html = Tools.Query(url);
+				html = Tools.FetchTextCached(url);
 			}
 			catch (Exception e)
 			{
 				Console.WriteLine($"!!! Can not download HBMAME HTML, {e.Message}");
 				return 0;
 			}
-			
+
+			if (html == null)
+				throw new ApplicationException("Unable to get core html");
+
 			string downloadUrl = null;
 
 			string find = "<a href=\"";
