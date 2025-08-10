@@ -224,6 +224,13 @@ namespace Spludlow.MameAO
 						machineRow["ao_input_coins"] = Int32.Parse((string)inputRows[0]["coins"]);
 				}
 			}
+
+			if (dataSet.Tables.Contains("software") == true)
+			{
+				DataTable softwareTable = dataSet.Tables["software"];
+				if (softwareTable.Columns.Contains("cloneof") == false)
+					softwareTable.Columns.Add("cloneof", typeof(string));
+			}
 		}
 
 		public static DataRow GetMachine(string connectionString, string name)
