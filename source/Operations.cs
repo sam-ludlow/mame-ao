@@ -620,7 +620,13 @@ namespace Spludlow.MameAO
 				List<string> columnDefs = new List<string>();
 
 				foreach (string primaryKeyName in primaryKeyNames)
-					columnDefs.Add($"{primaryKeyName} VARCHAR(32)");
+				{
+					int maxLength = table.Columns[primaryKeyName].MaxLength;
+					if (maxLength == -1)
+						maxLength = 32;
+
+					columnDefs.Add($"{primaryKeyName} VARCHAR({maxLength})");
+				}
 
 				columnDefs.Add("[title] NVARCHAR(MAX)");
 				columnDefs.Add("[xml] NVARCHAR(MAX)");
@@ -1748,8 +1754,14 @@ namespace Spludlow.MameAO
 					html.AppendLine("<table>");
 					html.AppendLine("<tr><th>Name</th><th>Version</th></tr>");
 
-					foreach (DataRow row in datafileTable.Select($"category = '{category}'"))
-						html.AppendLine($"<tr><td>{(string)row["name"]}</td><td>{(string)row["version"]}</td></tr>");
+					foreach (DataRow row in datafileTable.Rows)
+					{
+						string dataFileName = (string)row["name"];
+						string dataFileVersion = (string)row["version"];
+						string dataFileNameEnc = Uri.EscapeDataString(dataFileName);
+
+						html.AppendLine($"<tr><td><a href=\"{category.ToLower()}/{dataFileNameEnc}\">{dataFileName}</a></td><td>{dataFileVersion}</td></tr>");
+					}
 
 					html.AppendLine("</table>");
 
@@ -1758,6 +1770,53 @@ namespace Spludlow.MameAO
 			}
 
 			MakeMSSQLPayloadsInsert(table, serverConnectionString, databaseName, new string[] { "category" });
+
+			table = new DataTable("datafile_payload");
+			table.Columns.Add("category", typeof(string)).MaxLength = 9;
+			table.Columns.Add("name", typeof(string)).MaxLength = 128;
+			table.Columns.Add("title", typeof(string));
+			table.Columns.Add("xml", typeof(string));
+			table.Columns.Add("json", typeof(string));
+			table.Columns.Add("html", typeof(string));
+
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			{
+				DataTable gameTable = Database.ExecuteFill(connection, "SELECT [game_id], [datafile_id], [name] from [game] ORDER BY [name]");
+
+				foreach (string category in new string[] { "TOSEC", "TOSEC-ISO", "TOSEC-PIX" })
+				{
+					DataTable datafileTable = Database.ExecuteFill(connection,
+						$"SELECT [datafile_id], [name], [version] FROM [datafile] WHERE ([category] = '{category}') ORDER BY [name]");
+
+					foreach (DataRow datafileRow in datafileTable.Rows)
+					{
+						StringBuilder html = new StringBuilder();
+
+						long datafile_id = (long)datafileRow["datafile_id"];
+						string datafileName = (string)datafileRow["name"];
+						string datafileVersion = (string)datafileRow["version"];
+
+						string title = $"{datafileName} ({category} {datafileVersion})";
+
+						html.AppendLine($"<h2>{title}</h2>");
+
+						html.AppendLine("<table>");
+						html.AppendLine("<tr><th>Name</th></tr>");
+
+						foreach (DataRow gameRow in gameTable.Select($"datafile_id = {datafile_id}"))
+						{
+							string gameName = (string)gameRow["name"];
+							html.AppendLine($"<tr><td>{gameName}</td></tr>");
+						}
+						
+						html.AppendLine("</table>");
+
+						table.Rows.Add(category.ToLower(), datafileName, title, "", "", html.ToString());
+					}
+				}
+			}
+
+			MakeMSSQLPayloadsInsert(table, serverConnectionString, databaseName, new string[] { "category", "name" });
 
 			return 0;
 		}
