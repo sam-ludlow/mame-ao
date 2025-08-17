@@ -1731,6 +1731,7 @@ namespace Spludlow.MameAO
 				Database.BulkInsert(connection, table);
 			}
 
+
 			table = new DataTable("category_payload");
 			table.Columns.Add("category", typeof(string));
 			table.Columns.Add("title", typeof(string));
@@ -1771,6 +1772,7 @@ namespace Spludlow.MameAO
 
 			MakeMSSQLPayloadsInsert(table, serverConnectionString, databaseName, new string[] { "category" });
 
+
 			table = new DataTable("datafile_payload");
 			table.Columns.Add("category", typeof(string)).MaxLength = 9;
 			table.Columns.Add("name", typeof(string)).MaxLength = 128;
@@ -1794,6 +1796,7 @@ namespace Spludlow.MameAO
 
 						long datafile_id = (long)datafileRow["datafile_id"];
 						string datafileName = (string)datafileRow["name"];
+						string dataFileNameEnc = Uri.EscapeDataString(datafileName);
 						string datafileVersion = (string)datafileRow["version"];
 
 						string title = $"{datafileName} ({category} {datafileVersion})";
@@ -1806,9 +1809,10 @@ namespace Spludlow.MameAO
 						foreach (DataRow gameRow in gameTable.Select($"datafile_id = {datafile_id}"))
 						{
 							string gameName = (string)gameRow["name"];
-							html.AppendLine($"<tr><td>{gameName}</td></tr>");
+							string gameNameEnc = Uri.EscapeDataString(gameName);
+							html.AppendLine($"<tr><td><a href=\"{dataFileNameEnc}/{gameNameEnc}\">{gameName}</a></td></tr>");
 						}
-						
+
 						html.AppendLine("</table>");
 
 						table.Rows.Add(category.ToLower(), datafileName, title, "", "", html.ToString());
@@ -1817,6 +1821,103 @@ namespace Spludlow.MameAO
 			}
 
 			MakeMSSQLPayloadsInsert(table, serverConnectionString, databaseName, new string[] { "category", "name" });
+
+
+			table = new DataTable("game_payload");
+			table.Columns.Add("category", typeof(string)).MaxLength = 9;
+			table.Columns.Add("datafile_name", typeof(string)).MaxLength = 128;
+			table.Columns.Add("game_name", typeof(string)).MaxLength = 256;
+			table.Columns.Add("title", typeof(string));
+			table.Columns.Add("xml", typeof(string));
+			table.Columns.Add("json", typeof(string));
+			table.Columns.Add("html", typeof(string));
+
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			{
+				//
+				//	Datafix for duplicates in source data
+				//
+				DataTable dupTable = Database.ExecuteFill(connection,
+					"SELECT datafile.category, datafile.name AS datafile_name, game.name AS game_name FROM datafile INNER JOIN game ON datafile.datafile_id = game.datafile_id " +
+					"GROUP BY datafile.category, datafile.name, game.name HAVING (COUNT(*) > 1)");
+
+				List<long> dup_game_ids = new List<long>();
+				foreach (DataRow dupRow in dupTable.Rows)
+				{
+					using (SqlCommand command = new SqlCommand("SELECT game.game_id FROM datafile INNER JOIN game ON datafile.datafile_id = game.datafile_id "
+						+ "WHERE ((datafile.category = @category) AND (datafile.[name] = @datafile_name) AND (game.[name] = @game_name))", connection))
+					{
+						command.Parameters.AddWithValue("@category", (string)dupRow["category"]);
+						command.Parameters.AddWithValue("@datafile_name", (string)dupRow["datafile_name"]);
+						command.Parameters.AddWithValue("@game_name", (string)dupRow["game_name"]);
+
+						DataTable dupIdTable = new DataTable();
+						using (SqlDataAdapter adapter = new SqlDataAdapter(command))
+							adapter.Fill(dupIdTable);
+
+						for (int index = 1; index < dupIdTable.Rows.Count; ++index)
+							dup_game_ids.Add((long)dupIdTable.Rows[index]["game_id"]);
+					}
+				}
+
+				string commandText = "SELECT [game_id], [datafile_id], [name] from [game] @WHERE ORDER BY [name]";
+				if (dup_game_ids.Count > 0)
+				{
+					Console.WriteLine($"!!! Warning Duplicate TOSEC games: {String.Join(", ", dup_game_ids)}");
+					commandText = commandText.Replace("@WHERE", $"WHERE ([game_id] NOT IN ({String.Join(", ", dup_game_ids)}))");
+				}
+				else
+				{
+					commandText = commandText.Replace("@WHERE", "");
+				}
+
+
+				DataTable gameTable = Database.ExecuteFill(connection, commandText);
+				DataTable romTable = Database.ExecuteFill(connection, "SELECT * from [rom] ORDER BY [game_id], [name]");
+
+				foreach (string category in new string[] { "TOSEC", "TOSEC-ISO", "TOSEC-PIX" })
+				{
+					DataTable datafileTable = Database.ExecuteFill(connection, $"SELECT [datafile_id], [name], [version] FROM [datafile] WHERE ([category] = '{category}') ORDER BY [name]");
+					foreach (DataRow datafileRow in datafileTable.Rows)
+					{
+						long datafile_id = (long)datafileRow["datafile_id"];
+						string datafile_name = (string)datafileRow["name"];
+						string datafile_version = (string)datafileRow["version"];
+
+						foreach (DataRow gameRow in gameTable.Select($"datafile_id = {datafile_id}"))
+						{
+							long game_id = (long)gameRow["game_id"];
+							string game_name = (string)gameRow["name"];
+
+							StringBuilder html = new StringBuilder();
+
+							string title = $"{datafile_name} - {game_name} ({category} {datafile_version})";
+							html.AppendLine($"<h2>{title}</h2>");
+
+							html.AppendLine("<table>");
+							html.AppendLine("<tr><th>Name</th><th>size</th><th>crc</th><th>md5</th><th>sha1</th></tr>");
+
+							foreach (DataRow romRow in romTable.Select($"game_id = {game_id}"))
+							{
+								string name = (string)romRow["name"];
+								long size = Int64.Parse((string)romRow["size"]);
+								string crc = size == 0 ? "" : (string)romRow["crc"];
+								string md5 = size == 0 ? "" : (string)romRow["md5"];
+								string sha1 = size == 0 ? "" : (string)romRow["sha1"];
+
+								html.AppendLine($"<tr><td>{name}</td><td>{size}</td><td>{crc}</td><td>{md5}</td><td>{sha1}</td></tr>");
+							}
+
+							html.AppendLine("</table>");
+
+							table.Rows.Add(category.ToLower(), datafile_name, game_name, title, "", "", html.ToString());
+						}
+					}
+				}
+			}
+
+			MakeMSSQLPayloadsInsert(table, serverConnectionString, databaseName, new string[] { "category", "datafile_name", "game_name" });
+
 
 			return 0;
 		}
