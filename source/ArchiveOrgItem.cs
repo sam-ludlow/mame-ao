@@ -181,6 +181,7 @@ namespace Spludlow.MameAO
 		public string Status = "";
 
 		public bool DontCache = false;
+		public bool DontIgnore = false;
 
 		private readonly List<string> AcceptedExtentions = new List<string>(new string[] { ".zip", ".chd" });
 
@@ -253,15 +254,25 @@ namespace Spludlow.MameAO
 				string name = (string)file.name;
 				string extention = Path.GetExtension(name);
 
-				if ((SubDirectory == null || name.StartsWith(SubDirectory) == true) && (AcceptedExtentions.Contains(extention) == true || name == "_manifest-sha1.txt"))
-				{
-					if (SubDirectory != null)
-						name = name.Substring(SubDirectory.Length);
+				if (file.sha1 == null)
+					continue;
 
+				if (DontIgnore == false)
+				{
+					if (SubDirectory != null && name.StartsWith(SubDirectory) == false)
+						continue;
+
+					if (AcceptedExtentions.Contains(extention) == false && name != "_manifest-sha1.txt")
+						continue;
+				}
+
+				if (SubDirectory != null)
+					name = name.Substring(SubDirectory.Length);
+
+				if (DontIgnore == false)
 					name = name.Substring(0, name.Length - extention.Length);
 
-					Files.Add(name, new ArchiveOrgFile(file));
-				}
+				Files.Add(name, new ArchiveOrgFile(file));
 			}
 
 			Status = "ok";

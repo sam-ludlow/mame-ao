@@ -1713,6 +1713,8 @@ namespace Spludlow.MameAO
 
 			string agent = $"mame-ao/{assemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
 
+			Dictionary<long, string> datafileUrls = GetTosecDatafileUrls(serverConnectionString, databaseName);
+
 			//
 			//	Metadata table
 			//
@@ -1807,7 +1809,7 @@ namespace Spludlow.MameAO
 
 					category_html.AppendLine($"<h2>{category}</h2>");
 					category_html.AppendLine("<table>");
-					category_html.AppendLine("<tr><th>Name</th><th>Version</th><th>Game Count</th><th>Rom Count</th><th>Rom Size</th><th>Rom Bytes</th></tr>");
+					category_html.AppendLine("<tr><th>Name</th><th>Version</th><th>Game Count</th><th>Rom Count</th><th>Rom Size</th><th>Rom Bytes</th><th>Extentions</th><th>IA Archive</th></tr>");
 
 					foreach (DataRow datafileRow in datafileTable.Select($"[category] = '{category}'"))
 					{
@@ -1820,13 +1822,15 @@ namespace Spludlow.MameAO
 						long datafile_rom_count = 0;
 						long datafile_rom_size = 0;
 
+						Dictionary<string, int> datafileExtentions = new Dictionary<string, int>();
+
 						StringBuilder datafile_html = new StringBuilder();
 
 						string datafile_title = $"{datafile_name} ({category} {datafile_version})";
 
 						datafile_html.AppendLine($"<h2>{datafile_title}</h2>");
 						datafile_html.AppendLine("<table>");
-						datafile_html.AppendLine("<tr><th>Name</th><th>Rom Count</th><th>Rom Size</th><th>Rom Bytes</th></tr>");
+						datafile_html.AppendLine("<tr><th>Name</th><th>Rom Count</th><th>Rom Size</th><th>Rom Bytes</th><th>Extentions</th></tr>");
 
 						foreach (DataRow gameRow in gameTable.Select($"[datafile_id] = {datafile_id}"))
 						{
@@ -1837,6 +1841,8 @@ namespace Spludlow.MameAO
 							long game_rom_count = 0;
 							long game_rom_size = 0;
 
+							Dictionary<string, int> gameExtentions = new Dictionary<string, int>();
+
 							++datafile_game_count;
 
 							StringBuilder game_html = new StringBuilder();
@@ -1845,11 +1851,12 @@ namespace Spludlow.MameAO
 							game_html.AppendLine($"<h2>{game_title}</h2>");
 
 							game_html.AppendLine("<table>");
-							game_html.AppendLine("<tr><th>Name</th><th>Size</th><th>Size Bytes</th><th>CRC32</th><th>MD5</th><th>SHA1</th></tr>");
+							game_html.AppendLine("<tr><th>Name</th><th>Size</th><th>Size Bytes</th><th>CRC32</th><th>MD5</th><th>SHA1</th><th>IA File</th></tr>");
 
 							foreach (DataRow romRow in romTable.Select($"[game_id] = {game_id}"))
 							{
 								string rom_name = (string)romRow["name"];
+								string rom_extention = Path.GetExtension(rom_name).ToLower();
 								long rom_size = Int64.Parse((string)romRow["size"]);
 								string crc = rom_size == 0 ? "" : (string)romRow["crc"];
 								string md5 = rom_size == 0 ? "" : (string)romRow["md5"];
@@ -1858,22 +1865,48 @@ namespace Spludlow.MameAO
 								datafile_rom_count += 1;
 								datafile_rom_size += rom_size;
 
+								foreach (var extentions in new Dictionary<string, int>[] { datafileExtentions, gameExtentions })
+								{
+									if (extentions.ContainsKey(rom_extention) == false)
+										extentions[rom_extention] = 0;
+									extentions[rom_extention] += 1;
+								}
+
 								game_rom_count += 1;
 								game_rom_size += rom_size;
 
-								game_html.AppendLine($"<tr><td>{rom_name}</td><td>{Tools.DataSize(rom_size)}</td><td>{rom_size}</td><td>{crc}</td><td>{md5}</td><td>{sha1}</td></tr>");
+								string rom_url = "";
+								if (datafileUrls.ContainsKey(datafile_id) == true)
+								{
+									rom_url = datafileUrls[datafile_id];
+									rom_url = $"{rom_url}/{Uri.EscapeDataString(game_name)}%2F{Uri.EscapeDataString(rom_name)}";
+									rom_url = $"<a href=\"{rom_url}\" target=\"_blank\">{rom_extention}</a>";
+								}
+
+								game_html.AppendLine($"<tr><td>{rom_name}</td><td>{Tools.DataSize(rom_size)}</td><td>{rom_size}</td><td>{crc}</td><td>{md5}</td><td>{sha1}</td><td>{rom_url}</td></tr>");
 							}
 
 							game_html.AppendLine("</table>");
 							game_payload_table.Rows.Add(category.ToLower(), datafile_name, game_name, game_title, "", "", game_html.ToString());
 
-							datafile_html.AppendLine($"<tr><td><a href=\"{datafile_name_enc}/{game_name_enc}\">{game_name}</a></td><td>{game_rom_count}</td><td>{Tools.DataSize(game_rom_size)}</td><td>{game_rom_size}</td></tr>");
+							string game_extentions = TosecExtentionsLink(gameExtentions);
+
+							datafile_html.AppendLine($"<tr><td><a href=\"{datafile_name_enc}/{game_name_enc}\">{game_name}</a></td><td>{game_rom_count}</td><td>{Tools.DataSize(game_rom_size)}</td><td>{game_rom_size}</td><td>{game_extentions}</td></tr>");
 						}
 
 						datafile_html.AppendLine("</table>");
 						datafile_payload_table.Rows.Add(category.ToLower(), datafile_name, datafile_title, "", "", datafile_html.ToString());
 
-						category_html.AppendLine($"<tr><td><a href=\"{category.ToLower()}/{datafile_name_enc}\">{datafile_name}</a></td><td>{datafile_version}</td><td>{datafile_game_count}</td><td>{datafile_rom_count}</td><td>{Tools.DataSize(datafile_rom_size)}</td><td>{datafile_rom_size}</td></tr>");
+						string datafile_extentions = TosecExtentionsLink(datafileExtentions);
+
+						string datafile_url = "";
+						if (datafileUrls.ContainsKey(datafile_id) == true)
+						{
+							datafile_url = datafileUrls[datafile_id];
+							datafile_url = $"<a href=\"{datafile_url}\">{Path.GetExtension(datafile_url)}</a>";
+						}
+
+						category_html.AppendLine($"<tr><td><a href=\"{category.ToLower()}/{datafile_name_enc}\">{datafile_name}</a></td><td>{datafile_version}</td><td>{datafile_game_count}</td><td>{datafile_rom_count}</td><td>{Tools.DataSize(datafile_rom_size)}</td><td>{datafile_rom_size}</td><td>{datafile_extentions}</td><td>{datafile_url}</td></tr>");
 					}
 
 					category_html.AppendLine("</table>");
@@ -1894,135 +1927,92 @@ namespace Spludlow.MameAO
 			return 0;
 		}
 
-		public static void GetTosecLinkUrls(string serverConnectionString, string databaseName)
+		private static string TosecExtentionsLink(Dictionary<string, int> sourceExtentions)
 		{
-			ArchiveOrgItem[] items = new ArchiveOrgItem[] { new ArchiveOrgItem("tosec-pix", null, null), new ArchiveOrgItem("tosec-pix-part2", null, null) };
+			var extentions = sourceExtentions.OrderByDescending(pair => pair.Value).Cast<KeyValuePair<string, int>>();
+			if (extentions.Count() > 10)
+			{
+				int remainingCount = 0;
+				foreach (int count in extentions.Skip(10).Select(pair => pair.Value))
+					remainingCount += count;
 
-			foreach (ArchiveOrgItem item in items)
-				item.GetFile(null);
+				sourceExtentions = new Dictionary<string, int>();
+				foreach (var pair in extentions.Take(10))
+					sourceExtentions.Add(pair.Key, pair.Value);
+
+				sourceExtentions.Add("....", remainingCount);
+
+				extentions = sourceExtentions.OrderByDescending(pair => pair.Value).Cast<KeyValuePair<string, int>>();
+			}
+
+			return String.Join(", ", extentions.Select(pair => $"{pair.Key}({pair.Value})"));
+		}
+
+		public static Dictionary<long, string> GetTosecDatafileUrls(string serverConnectionString, string databaseName)
+		{
+			Dictionary<string, string[]> categorySources = new Dictionary<string, string[]>();
+
+			//categorySources.Add("TOSEC", new string[] { "" });
+			//categorySources.Add("TOSEC-ISO", new string[] { "TOSEC-ISO-Update-2022-07-10" });	//	TODO handle the rest
+			categorySources.Add("TOSEC-PIX", new string[] { "tosec-pix-part2", "tosec-pix" });
+
+			Dictionary<long, string> datafileUrls = new Dictionary<long, string>();
 
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
 			{
-				DataTable table = Database.ExecuteFill(connection,
-					"SELECT datafile.datafile_id, datafile.name, datafile.description FROM datafile WHERE (datafile.category = 'TOSEC-PIX') ORDER BY datafile.name");
-
-				table.Columns.Add("status", typeof(string));
-
-				foreach (DataRow row in table.Rows)
+				foreach (string category in categorySources.Keys)
 				{
-					string datafile_name = (string)row["name"];
-					string datafile_description = (string)row["description"];
+					DataTable table = Database.ExecuteFill(connection, $"SELECT [datafile_id], [description] FROM [datafile] WHERE ([category] = '{category}') ORDER BY [name]");
+					
+					table.Columns.Add("status", typeof(string));
+					table.Columns.Add("url", typeof(string));
 
-					string match = $"/{datafile_description}";
-
-					foreach (ArchiveOrgItem item in items)
+					foreach (DataRow row in table.Rows)
 					{
-						string[] keys = item.Files.Keys.Where(key => key.EndsWith(match)).ToArray();
+						long datafile_id = (long)row["datafile_id"];
+						string datafile_description = (string)row["description"];
 
-						if (keys.Length > 1)
-							throw new ApplicationException($"Matched many: {match}");
-
-						if (keys.Length == 1)
+						foreach (string extention in new string[] { ".zip" })	// ".7z" })  //	TODO all archive formats
 						{
-							row["status"] = item.Key;
-							break;
-						}
+							string match = $"/{datafile_description}{extention}";
 
-						row["status"] = "NOT FOUND";
+							foreach (string itemKey in categorySources[category])
+							{
+								ArchiveOrgItem item = new ArchiveOrgItem(itemKey, null, null);
+								item.DontIgnore = true;
+								item.GetFile(null);
+
+								string[] keys = item.Files.Keys.Where(key => key.EndsWith(match)).ToArray();
+
+								if (keys.Length > 1)
+									throw new ApplicationException($"Matched many files: {match}");
+
+								if (keys.Length == 1)
+								{
+									if (row.IsNull("status") == false)
+									{
+										Console.WriteLine($"Matched many items: {match}");
+										continue;
+									}
+
+									row["status"] = item.Key;
+
+									ArchiveOrgFile file = item.GetFile(keys[0]);
+									if (file == null)
+										throw new ApplicationException("file not found");
+
+									string url = item.UrlDownload + String.Join("/", item.DownloadLink(file).Substring(item.UrlDownload.Length).Split('/').Select(part => Uri.EscapeDataString(part)));
+
+									row["url"] = url;
+									datafileUrls.Add(datafile_id, url);
+								}
+							}
+						}
 					}
 				}
-
-
-				Tools.PopText(table);
-
-				//DataTable table = Database.ExecuteFill(connection,
-				//	"SELECT datafile.name AS datafile_name, datafile.description AS datafile_description, game.name AS game_name, rom.rom_id, rom.name AS rom_name FROM (datafile INNER JOIN game ON datafile.datafile_id = game.datafile_id) INNER JOIN rom ON game.game_id = rom.game_id " +
-				//	"WHERE (datafile.category = 'TOSEC-PIX') ORDER BY datafile.name, game.name, rom.name");
-
-				//table.Columns.Add("url", typeof(string));
-				//table.Columns.Add("status", typeof(string));
-
-				//foreach (DataRow row in table.Rows)
-				//{
-				//	string datafile_name = (string)row["datafile_name"];
-				//	string datafile_description = (string)row["datafile_description"];
-				//	string game_name = (string)row["game_name"];
-				//	string rom_name = (string)row["rom_name"];
-
-				//	row["url"] = "";
-				//	row["status"] = "";
-
-				//	int index1 = datafile_name.IndexOf("-");
-				//	int index2 = datafile_name.IndexOf("-", index1 + 1);
-
-				//	if (index1 == -1 || index2 == -1)
-				//	{
-				//		row["status"] = "index";
-				//		continue;
-				//	}
-
-				//	string level1 = datafile_name.Substring(0, index1).Trim();
-				//	string level2 = datafile_name.Substring(index1 + 1, index2 - index1 - 1).Trim();
-				//	string level3 = datafile_name.Substring(index2 + 1).Trim();
-
-				//	string filename = $"{level1}/{level2}/{level3}/{datafile_description}"; //.zip";
-
-
-				//	//item.Files.Keys.Where()
-
-				//	if (item.GetFile(filename) == null)
-				//	{
-				//		row["status"] = filename;
-				//		continue;
-				//	}
-
-				//	row["url"] = $"{item.UrlDownload}/{level1}/{level2}/{level3}/{Uri.EscapeDataString(datafile_description)}.zip/{Uri.EscapeDataString(game_name)}%2F{Uri.EscapeDataString(rom_name)}";
-				//}
-
-
-				//DataTable game_payloadTable = Database.ExecuteFill(connection, "SELECT * FROM [game_payload]");
-
-				//if (game_payloadTable.Columns.Contains("url") == false)
-				//	Database.ExecuteNonQuery(connection, "ALTER TABLE [game_payload] ADD [url] NVARCHAR(MAX) NULL");
-
-				//Database.ExecuteNonQuery(connection, "UPDATE [game_payload] SET [url] = NULL");
-
-
-
-				//connection.Open();
-
-				//SqlTransaction transaction = connection.BeginTransaction();
-
-				//try
-				//{
-				//	using (SqlCommand command = new SqlCommand("UPDATE [game_payload] SET [url] = @url WHERE ([rom_id] = @rom_id)", connection, transaction))
-				//	{
-				//		command.Parameters.AddWithValue("@url", "");
-				//		command.Parameters.AddWithValue("@rom_id", 0);
-
-				//		foreach (DataRow row in table.Rows)
-				//		{
-				//			command.Parameters["@url"].Value = row["url"];
-				//			command.Parameters["@rom_id"].Value = row["rom_id"];
-
-				//			command.ExecuteNonQuery();
-				//		}
-				//	}
-
-				//	transaction.Commit();
-				//}
-				//catch
-				//{
-				//	transaction.Rollback();
-				//	throw;
-				//}
-				//finally
-				//{
-				//	connection.Close();
-				//}
-
 			}
 
+			return datafileUrls;
 		}
 
 		public static int GetHbMame(string directory, string version)
