@@ -257,6 +257,9 @@ namespace Spludlow.MameAO
 				if (file.sha1 == null)
 					continue;
 
+				if (name.StartsWith($"{Key}_") == true)
+					continue;
+
 				if (DontIgnore == false)
 				{
 					if (SubDirectory != null && name.StartsWith(SubDirectory) == false)
@@ -269,8 +272,7 @@ namespace Spludlow.MameAO
 				if (SubDirectory != null)
 					name = name.Substring(SubDirectory.Length);
 
-				if (DontIgnore == false)
-					name = name.Substring(0, name.Length - extention.Length);
+				name = name.Substring(0, name.Length - extention.Length);
 
 				Files.Add(name, new ArchiveOrgFile(file));
 			}
