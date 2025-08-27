@@ -1739,6 +1739,7 @@ namespace Spludlow.MameAO
 			DataTable category_payload_table = Tools.MakeDataTable("category_payload",
 				"category	title	xml		json	html",
 				"String		String	String	String	String");
+			category_payload_table.Columns["category"].MaxLength = 9;
 
 			DataTable datafile_payload_table = Tools.MakeDataTable("datafile_payload",
 				"category	name	title	xml		json	html",
@@ -1823,6 +1824,8 @@ namespace Spludlow.MameAO
 						long datafile_rom_count = 0;
 						long datafile_rom_size = 0;
 
+						long game_url_count = 0;
+
 						Dictionary<string, int> datafileExtentions = new Dictionary<string, int>();
 
 						StringBuilder datafile_html = new StringBuilder();
@@ -1841,6 +1844,8 @@ namespace Spludlow.MameAO
 
 							long game_rom_count = 0;
 							long game_rom_size = 0;
+
+							long rom_url_count = 0;
 
 							Dictionary<string, int> gameExtentions = new Dictionary<string, int>();
 
@@ -1883,6 +1888,14 @@ namespace Spludlow.MameAO
 									rom_url = $"{rom_url}/{Uri.EscapeDataString(game_name)}%2F{Uri.EscapeDataString(rom_name)}";
 									rom_url = $"<a href=\"{rom_url}\" target=\"_blank\">{rom_extention}</a>";
 								}
+								if (gameUrls.ContainsKey(game_id) == true)
+								{
+									rom_url = gameUrls[game_id];
+									rom_url = $"{rom_url}/{Uri.EscapeDataString(rom_name)}";
+									rom_url = $"<a href=\"{rom_url}\" target=\"_blank\">{rom_extention}</a>";
+								}
+								if (rom_url != "")
+									rom_url_count += 1;
 
 								game_html.AppendLine($"<tr><td>{rom_name}</td><td>{Tools.DataSize(rom_size)}</td><td>{rom_size}</td><td>{crc}</td><td>{md5}</td><td>{sha1}</td><td>{rom_url}</td></tr>");
 							}
@@ -1897,6 +1910,12 @@ namespace Spludlow.MameAO
 							{
 								game_url = gameUrls[game_id];
 								game_url = $"<a href=\"{game_url}\">{Path.GetExtension(game_url)}</a>";
+								game_url_count += 1;
+							}
+							else
+							{
+								if (rom_url_count > 0)
+									game_url = $"{rom_url_count}";
 							}
 
 							datafile_html.AppendLine($"<tr><td><a href=\"{datafile_name_enc}/{game_name_enc}\">{game_name}</a></td><td>{game_rom_count}</td><td>{Tools.DataSize(game_rom_size)}</td><td>{game_rom_size}</td><td>{game_extentions}</td><td>{game_url}</td></tr>");
@@ -1912,6 +1931,11 @@ namespace Spludlow.MameAO
 						{
 							datafile_url = datafileUrls[datafile_id];
 							datafile_url = $"<a href=\"{datafile_url}\">{Path.GetExtension(datafile_url)}</a>";
+						}
+						else
+						{
+							if (game_url_count > 0)
+								datafile_url = $"{game_url_count}";
 						}
 
 						category_html.AppendLine($"<tr><td><a href=\"{category.ToLower()}/{datafile_name_enc}\">{datafile_name}</a></td><td>{datafile_version}</td><td>{datafile_game_count}</td><td>{datafile_rom_count}</td><td>{Tools.DataSize(datafile_rom_size)}</td><td>{datafile_rom_size}</td><td>{datafile_extentions}</td><td>{datafile_url}</td></tr>");
@@ -1958,11 +1982,10 @@ namespace Spludlow.MameAO
 
 		public static Dictionary<long, string> GetTosecDatafileUrls(string serverConnectionString, string databaseName)
 		{
-			Dictionary<string, string[]> categorySources = new Dictionary<string, string[]>();
-
-			//categorySources.Add("TOSEC", new string[] { "" });
-			//categorySources.Add("TOSEC-ISO", new string[] { "TOSEC-ISO-Update-2022-07-10" });
-			categorySources.Add("TOSEC-PIX", new string[] { "tosec-pix-part2", "tosec-pix" });
+			Dictionary<string, string[]> categorySources = new Dictionary<string, string[]>() {
+				{ "TOSEC", new string[] { "tosec-main" } },
+				{ "TOSEC-PIX", new string[] { "tosec-pix-part2", "tosec-pix" } }
+			};
 
 			Dictionary<long, string> datafileUrls = new Dictionary<long, string>();
 
@@ -1975,47 +1998,42 @@ namespace Spludlow.MameAO
 					table.Columns.Add("status", typeof(string));
 					table.Columns.Add("url", typeof(string));
 
-					foreach (DataRow row in table.Rows)
+					foreach (string itemKey in categorySources[category])
 					{
-						long datafile_id = (long)row["datafile_id"];
-						string datafile_name = (string)row["name"];
-						string datafile_description = (string)row["description"];
+						ArchiveOrgItem item = new ArchiveOrgItem(itemKey, null, null);
+						item.DontIgnore = true;
+						item.GetFile(null);
 
-						string match = $"/{datafile_description}";	//	Works for PIX only
-						
-						foreach (string itemKey in categorySources[category])
+						foreach (DataRow row in table.Rows)
 						{
-							ArchiveOrgItem item = new ArchiveOrgItem(itemKey, null, null);
-							item.DontIgnore = true;
-							item.GetFile(null);
+							long datafile_id = (long)row["datafile_id"];
+							//string datafile_name = (string)row["name"];
+							string datafile_description = (string)row["description"];
 
-							string[] keys = item.Files.Keys.Where(key => key.EndsWith(match)).ToArray();
+							string match = $"/{datafile_description}";
 
-							if (keys.Length > 1)
-								throw new ApplicationException($"Matched many files: {match}");
+							var keys = item.Files.Keys.Where(key => key.EndsWith(match));
 
-							if (keys.Length == 1)
-							{
-								if (row.IsNull("status") == false)
-								{
-									Console.WriteLine($"Matched many items: {match}");
-									continue;
-								}
+							if (keys.Any() == false)
+								continue;
 
-								row["status"] = item.Key;
+							if (keys.Take(2).Count() > 1)
+								throw new ApplicationException($"Matched many items: {match}");
 
-								ArchiveOrgFile file = item.GetFile(keys[0]);
-								if (file == null)
-									throw new ApplicationException("file not found");
+							ArchiveOrgFile file = item.GetFile(keys.First());
 
-								string url = item.UrlDownload + String.Join("/", item.DownloadLink(file).Substring(item.UrlDownload.Length).Split('/').Select(part => Uri.EscapeDataString(part)));
+							string url = item.UrlDownload + String.Join("/", item.DownloadLink(file).Substring(item.UrlDownload.Length).Split('/').Select(part => Uri.EscapeDataString(part)));
 
-								row["url"] = url;
+							row["status"] = item.Key;
+							row["url"] = url;
+
+							if (datafileUrls.ContainsKey(datafile_id) == false)
 								datafileUrls.Add(datafile_id, url);
-							}
+							else
+								Console.WriteLine($"Matched before: {category} {datafile_description}");
+
 						}
 					}
-
 					//Tools.PopText(table);
 				}
 			}
@@ -2025,17 +2043,16 @@ namespace Spludlow.MameAO
 
 		public static Dictionary<long, string> GetTosecGameUrls(string serverConnectionString, string databaseName)
 		{
-			Dictionary<string, string[]> categorySources = new Dictionary<string, string[]>();
-
-			//categorySources.Add("TOSEC", new string[] { "" });
-			categorySources.Add("TOSEC-ISO", new string[] {
-				"noaen-tosec-iso-acorn",
-				"noaen-tosec-iso-commodore-amiga",
-				"noaen-tosec-iso-commodore-amiga-cd32",
-				"noaen-tosec-iso-commodore-amiga-cdtv",
-				"noaen-tosec-iso-commodore-c64",
-			});
-			//categorySources.Add("TOSEC-PIX", new string[] { "tosec-pix-part2", "tosec-pix" });
+			Dictionary<string, string[]> categorySources = new Dictionary<string, string[]>(){
+				{ "TOSEC-ISO", new string[] {
+					"noaen-tosec-iso-acorn",
+					"noaen-tosec-iso-commodore-amiga",
+					"noaen-tosec-iso-commodore-amiga-cd32",
+					"noaen-tosec-iso-commodore-amiga-cdtv",
+					"noaen-tosec-iso-commodore-c64",
+					}
+				}
+			};
 
 			Dictionary<long, string> gameUrls = new Dictionary<long, string>();
 
@@ -2050,62 +2067,53 @@ namespace Spludlow.MameAO
 					table.Columns.Add("status", typeof(string));
 					table.Columns.Add("url", typeof(string));
 
-					foreach (DataRow row in table.Rows)
+					foreach (string itemKey in categorySources[category])
 					{
-						//long datafile_id = (long)row["datafile_id"];
-						string datafile_name = (string)row["datafile_name"];
-						//string datafile_description = (string)row["datafile_description"];
+						ArchiveOrgItem item = new ArchiveOrgItem(itemKey, null, null);
+						item.DontIgnore = true;
+						item.GetFile(null);
 
-						long game_id = (long)row["game_id"];
-						string game_name = (string)row["game_name"];
-						string game_description = (string)row["game_description"];
-
-						string match = $"/{game_name}";	//	Works for ISO
-
-						foreach (string itemKey in categorySources[category])
+						foreach (DataRow row in table.Rows)
 						{
-							ArchiveOrgItem item = new ArchiveOrgItem(itemKey, null, null);
-							item.DontIgnore = true;
-							item.GetFile(null);
+							long game_id = (long)row["game_id"];
+							string game_name = (string)row["game_name"];
 
-							string[] keys = item.Files.Keys.Where(key => key.EndsWith(match)).ToArray();
+							string match = $"/{game_name}";
 
-							if (keys.Length > 1)
+							var keys = item.Files.Keys.Where(key => key.EndsWith(match));
+
+							if (keys.Any() == false)
+								continue;
+
+							if (keys.Take(2).Count() > 1)
 							{
+								string datafile_name = (string)row["datafile_name"];
+
 								keys = keys.Where(key => {
 									string[] parts = key.Split('/');
 									return datafile_name.Contains(parts[parts.Length - 2]);
-								}).ToArray();
+								});
 
-								if (keys.Length == 0)
+								if (keys.Any() == false)
 									throw new ApplicationException("had it and lost it");
+
+								if (keys.Count() > 1)
+									throw new ApplicationException($"Matched many files: {match}");
 							}
 
-							if (keys.Length > 1)
-								throw new ApplicationException($"Matched many files: {match}");
+							ArchiveOrgFile file = item.GetFile(keys.First());
 
-							if (keys.Length == 1)
-							{
-								if (row.IsNull("status") == false)
-								{
-									Console.WriteLine($"Matched many items: {match}");
-									continue;
-								}
+							string url = item.UrlDownload + String.Join("/", item.DownloadLink(file).Substring(item.UrlDownload.Length).Split('/').Select(part => Uri.EscapeDataString(part)));
 
-								row["status"] = item.Key;
+							row["status"] = item.Key;
+							row["url"] = url;
 
-								ArchiveOrgFile file = item.GetFile(keys[0]);
-								if (file == null)
-									throw new ApplicationException("file not found");
-
-								string url = item.UrlDownload + String.Join("/", item.DownloadLink(file).Substring(item.UrlDownload.Length).Split('/').Select(part => Uri.EscapeDataString(part)));
-
-								row["url"] = url;
+							if (gameUrls.ContainsKey(game_id) == false)
 								gameUrls.Add(game_id, url);
-							}
+							else
+								Console.WriteLine($"Matched before: {category} {game_name}");
 						}
 					}
-
 					//Tools.PopText(table);
 				}
 			}
