@@ -2045,11 +2045,50 @@ namespace Spludlow.MameAO
 		{
 			Dictionary<string, string[]> categorySources = new Dictionary<string, string[]>(){
 				{ "TOSEC-ISO", new string[] {
+					"noaen-tosec-iso-3do",
 					"noaen-tosec-iso-acorn",
+					"noaen-tosec-iso-american-laser-games",
+					"noaen-tosec-iso-apple",
+					"noaen-tosec-iso-atari",
+					"noaen-tosec-iso-bandai",
+					"noaen-tosec-iso-capcom",
 					"noaen-tosec-iso-commodore-amiga",
 					"noaen-tosec-iso-commodore-amiga-cd32",
 					"noaen-tosec-iso-commodore-amiga-cdtv",
 					"noaen-tosec-iso-commodore-c64",
+					"noaen-tosec-iso-fujitsu",
+					"noaen-tosec-iso-ibm",
+					"noaen-tosec-iso-incredible-technologies",
+					"noaen-tosec-iso-konami",
+					"noaen-tosec-iso-mattel",
+					"noaen-tosec-iso-memorex",
+					"noaen-tosec-iso-nec",
+					"noaen-tosec-iso-nintendo",
+					"noaen-tosec-iso-philips",
+					"noaen-tosec-iso-snk",
+					"noaen-tosec-iso-sega-32x",
+					"noaen-tosec-iso-sega-chihiro",
+					"noaen-tosec-iso-sega-dreamcast-applications",
+					"noaen-tosec-iso-sega-dreamcast-firmware",
+					"noaen-tosec-iso-sega-dreamcast-games-dev-builds",
+					"noaen-tosec-iso-sega-dreamcast-games-jp",
+					"noaen-tosec-iso-sega-dreamcast-games-pal",
+					"noaen-tosec-iso-sega-dreamcast-games-us",
+					"noaen-tosec-iso-sega-dreamcast-homebrew",
+					"noaen-tosec-iso-sega-dreamcast-multimedia",
+					"noaen-tosec-iso-sega-dreamcast-samplers",
+					"noaen-tosec-iso-sega-dreamcast-various-unverified-dumps",
+					"noaen-tosec-iso-sega-mega-cd-sega-cd",
+					"noaen-tosec-iso-sega-naomi",
+					"noaen-tosec-iso-sega-naomi-2",
+					"noaen-tosec-iso-sega-saturn",
+					"noaen-tosec-iso-sega-wondermega",
+					"noaen-tosec-iso-sinclair",
+					"noaen-tosec-iso-sony",
+					"noaen-tosec-iso-tomy",
+					"noaen-tosec-iso-vm-labs",
+					"noaen-tosec-iso-vtech",
+					"noaen-tosec-iso-zapit-games",
 					}
 				}
 			};
@@ -2072,6 +2111,17 @@ namespace Spludlow.MameAO
 						ArchiveOrgItem item = new ArchiveOrgItem(itemKey, null, null);
 						item.DontIgnore = true;
 						item.GetFile(null);
+
+						// Data Fix - parent directory mismatch
+						if (itemKey == "noaen-tosec-iso-sony")
+						{
+							foreach (string oldKey in item.Files.Keys.Where(key => key.Contains("/[BIN]/")).ToArray())
+							{
+								string newKey = oldKey.Replace("/[BIN]/", "/[BIN-CUE]/");
+								item.Files.Add(newKey, item.Files[oldKey]);
+								item.Files.Remove(oldKey);
+							}
+						}
 
 						foreach (DataRow row in table.Rows)
 						{

@@ -7,8 +7,6 @@ namespace Spludlow.MameAO
 	{
 		static int Main(string[] args)
 		{
-			//args = new string[] { "tosec-mssql-payload", "directory=C:\\ao-data\\tosec", "server=Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;", "names=ao-tosec" };
-
 			if (args.Length > 0 && args[0].Contains("=") == false)
 				args[0] = $"operation={args[0]}";
 
