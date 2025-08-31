@@ -130,6 +130,11 @@ namespace Spludlow.MameAO
 					exitCode = MakeFBNeoMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
 					break;
 
+				case "fbneo-mssql-payload":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					exitCode = MakeFBNeoMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"], Globals.AssemblyVersion);
+					break;
+
 				default:
 					throw new ApplicationException($"Unknown Operation {parameters["operation"]}");
 			}
@@ -625,7 +630,7 @@ namespace Spludlow.MameAO
 					if (maxLength == -1)
 						maxLength = 32;
 
-					columnDefs.Add($"{primaryKeyName} VARCHAR({maxLength})");
+					columnDefs.Add($"[{primaryKeyName}] VARCHAR({maxLength})");
 				}
 
 				columnDefs.Add("[title] NVARCHAR(MAX)");
@@ -633,7 +638,7 @@ namespace Spludlow.MameAO
 				columnDefs.Add("[json] NVARCHAR(MAX)");
 				columnDefs.Add("[html] NVARCHAR(MAX)");
 
-				columnDefs.Add($"CONSTRAINT [PK_{table.TableName}] PRIMARY KEY NONCLUSTERED ({String.Join(", ", primaryKeyNames)})");
+				columnDefs.Add($"CONSTRAINT [PK_{table.TableName}] PRIMARY KEY NONCLUSTERED ([{String.Join("], [", primaryKeyNames)}])");
 
 				string commandText = $"CREATE TABLE [{table.TableName}] ({String.Join(", ", columnDefs)});";
 
@@ -2497,6 +2502,18 @@ namespace Spludlow.MameAO
 
 				DataFileMoveHeader(fileDataSet);
 
+				string key = name;
+				if (key == "gg")
+					key = "gamegear";
+				if (key == "md")
+					key = "megadrive";
+
+				DataTable datafileTable = fileDataSet.Tables["datafile"];
+				datafileTable.Columns.Add("key_argument", typeof(string));
+				datafileTable.Rows[0]["key_argument"] = name;
+				datafileTable.Columns.Add("key", typeof(string));
+				datafileTable.Rows[0]["key"] = key;
+
 				foreach (DataTable table in dataSet.Tables)
 					foreach (DataColumn column in table.Columns)
 						column.AutoIncrement = false;
@@ -2527,6 +2544,90 @@ namespace Spludlow.MameAO
 			versions.Sort();
 
 			return versions.Last();
+		}
+
+		public static int MakeFBNeoMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName, string assemblyVersion)
+		{
+			if (version == "0")
+				version = FBNeoGetLatestDownloadedVersion(directory);
+
+			string agent = $"mame-ao/{assemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
+
+			//
+			//	Metadata table
+			//
+			DataTable table = CreateMetaDataTable(serverConnectionString, databaseName);
+
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			{
+				int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
+				int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
+				int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
+
+				string info = $"FBNeo: {version} - datafiles: {datafileCount} - games: {gameCount} - roms: {softRomCount}";
+
+				table.Rows.Add(1L, "fbneo", "", version, info, DateTime.Now, agent);
+				Database.BulkInsert(connection, table);
+			}
+
+
+			DataTable datafile_payload_table = Tools.MakeDataTable("datafile_payload",
+				"key	title	xml		json	html",
+				"String	String	String	String	String");
+
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			{
+				DataTable datafileTable = Database.ExecuteFill(connection, $"SELECT * FROM [datafile] ORDER BY [name]");
+				DataTable gameTable = Database.ExecuteFill(connection, $"SELECT * FROM [game] ORDER BY [name]");
+				DataTable romTable = Database.ExecuteFill(connection, $"SELECT * FROM [rom] ORDER BY [name]");
+				DataTable sampleTable = Database.ExecuteFill(connection, $"SELECT * FROM [sample] ORDER BY [name]");
+				DataTable videoTable = Database.ExecuteFill(connection, $"SELECT * FROM [video]");
+				DataTable driverTable = Database.ExecuteFill(connection, $"SELECT * FROM [driver]");
+
+				foreach (DataRow dataFileRow in datafileTable.Rows)
+				{
+					long datafile_id = (long)dataFileRow["datafile_id"];
+					string datafile_key = (string)dataFileRow["key"];
+					string datafile_name = (string)dataFileRow["name"];
+
+
+					StringBuilder datafile_html = new StringBuilder();
+
+					string datafile_title = $"{datafile_name}";
+
+					datafile_html.AppendLine($"<h2>{datafile_title}</h2>");
+					datafile_html.AppendLine("<table>");
+					datafile_html.AppendLine("<tr><th>Name</th><th>Description</th><th>Year</th><th>Manufacturer</th><th>cloneof</th><th>romof</th></tr>");
+
+
+					foreach (DataRow gameRow in gameTable.Select($"datafile_id = {datafile_id}"))
+					{
+						long game_id = (long)gameRow["game_id"];
+						string game_name = (string)gameRow["name"];
+						string game_description = (string)gameRow["description"];
+						string game_year = (string)gameRow["year"];
+						string game_manufacturer = (string)gameRow["manufacturer"];
+						string game_cloneof = Tools.DataRowValue(gameRow, "cloneof");
+						string game_romof = Tools.DataRowValue(gameRow, "romof");
+
+						DataRow[] romRows = romTable.Select($"game_id = {game_id}");
+						DataRow[] driverRows = romTable.Select($"game_id = {game_id}");
+						DataRow[] sampleRows = romTable.Select($"game_id = {game_id}");
+						DataRow[] videoRows = romTable.Select($"game_id = {game_id}");
+
+						datafile_html.AppendLine($"<tr><td>{game_name}</td><td>{game_description}</td><td>{game_year}</td><td>{game_manufacturer}</td><td>{game_cloneof}</td><td>{game_romof}</td></tr>");
+					}
+
+					datafile_html.AppendLine("</table>");
+					datafile_payload_table.Rows.Add(datafile_key, datafile_title, "", "", datafile_html.ToString());
+
+				}
+
+				MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "key" });
+
+			}
+
+			return 0;
 		}
 
 		public static void ReportRelations(DataSet dataSet)
