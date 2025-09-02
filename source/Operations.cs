@@ -2570,10 +2570,13 @@ namespace Spludlow.MameAO
 				Database.BulkInsert(connection, table);
 			}
 
-
 			DataTable datafile_payload_table = Tools.MakeDataTable("datafile_payload",
 				"key	title	xml		json	html",
 				"String	String	String	String	String");
+
+			DataTable game_payload_table = Tools.MakeDataTable("game_payload",
+				"datafile_key	game_name	title	xml		json	html",
+				"String			String		String	String	String	String");
 
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
 			{
@@ -2590,15 +2593,11 @@ namespace Spludlow.MameAO
 					string datafile_key = (string)dataFileRow["key"];
 					string datafile_name = (string)dataFileRow["name"];
 
-
 					StringBuilder datafile_html = new StringBuilder();
-
 					string datafile_title = $"{datafile_name}";
-
 					datafile_html.AppendLine($"<h2>{datafile_title}</h2>");
 					datafile_html.AppendLine("<table>");
 					datafile_html.AppendLine("<tr><th>Name</th><th>Description</th><th>Year</th><th>Manufacturer</th><th>cloneof</th><th>romof</th></tr>");
-
 
 					foreach (DataRow gameRow in gameTable.Select($"datafile_id = {datafile_id}"))
 					{
@@ -2610,12 +2609,52 @@ namespace Spludlow.MameAO
 						string game_cloneof = Tools.DataRowValue(gameRow, "cloneof");
 						string game_romof = Tools.DataRowValue(gameRow, "romof");
 
+						DataRow[] driverRows = driverTable.Select($"game_id = {game_id}");
 						DataRow[] romRows = romTable.Select($"game_id = {game_id}");
-						DataRow[] driverRows = romTable.Select($"game_id = {game_id}");
-						DataRow[] sampleRows = romTable.Select($"game_id = {game_id}");
-						DataRow[] videoRows = romTable.Select($"game_id = {game_id}");
+						DataRow[] videoRows = videoTable.Select($"game_id = {game_id}");
+						DataRow[] sampleRows = sampleTable.Select($"game_id = {game_id}");
 
-						datafile_html.AppendLine($"<tr><td>{game_name}</td><td>{game_description}</td><td>{game_year}</td><td>{game_manufacturer}</td><td>{game_cloneof}</td><td>{game_romof}</td></tr>");
+						if (game_cloneof != null)
+							game_cloneof = $"<a href=\"{datafile_key}/{game_cloneof}\">{game_cloneof}</a>";
+
+						if (game_romof != null)
+							game_romof = $"<a href=\"{datafile_key}/{game_romof}\">{game_romof}</a>";
+
+						datafile_html.AppendLine($"<tr><td><a href=\"{datafile_key}/{game_name}\">{game_name}</a></td><td>{game_description}</td><td>{game_year}</td><td>{game_manufacturer}</td><td>{game_cloneof}</td><td>{game_romof}</td></tr>");
+
+						StringBuilder game_html = new StringBuilder();
+						string game_title = $"{game_description} ({datafile_name})";
+
+						game_html.AppendLine("<h2>game</h2>");
+						game_html.AppendLine(Reports.MakeHtmlTable(gameTable, new[] { gameRow }, null));
+						game_html.AppendLine("<hr />");
+
+						if (driverRows.Length > 0)
+						{
+							game_html.AppendLine("<h2>driver</h2>");
+							game_html.AppendLine(Reports.MakeHtmlTable(driverTable, driverRows, null));
+							game_html.AppendLine("<hr />");
+						}
+						if (romRows.Length > 0)
+						{
+							game_html.AppendLine("<h2>rom</h2>");
+							game_html.AppendLine(Reports.MakeHtmlTable(romTable, romRows, null));
+							game_html.AppendLine("<hr />");
+						}
+						if (videoRows.Length > 0)
+						{
+							game_html.AppendLine("<h2>video</h2>");
+							game_html.AppendLine(Reports.MakeHtmlTable(videoTable, videoRows, null));
+							game_html.AppendLine("<hr />");
+						}
+						if (sampleRows.Length > 0)
+						{
+							game_html.AppendLine("<h2>sample</h2>");
+							game_html.AppendLine(Reports.MakeHtmlTable(sampleTable, sampleRows, null));
+							game_html.AppendLine("<hr />");
+						}
+
+						game_payload_table.Rows.Add(datafile_key, game_name, game_title, "", "", game_html.ToString());
 					}
 
 					datafile_html.AppendLine("</table>");
@@ -2624,6 +2663,7 @@ namespace Spludlow.MameAO
 				}
 
 				MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "key" });
+				MakeMSSQLPayloadsInsert(game_payload_table, serverConnectionString, databaseName, new string[] { "datafile_key", "game_name" });
 
 			}
 
