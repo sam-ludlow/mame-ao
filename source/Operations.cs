@@ -70,6 +70,10 @@ namespace Spludlow.MameAO
 					exitCode = MakeHbMameXML(parameters["directory"], parameters["version"]);
 					break;
 
+				case "hbmame-json":
+					exitCode = 0;
+					break;
+
 				case "hbmame-sqlite":
 					exitCode = MakeHbMameSQLite(parameters["directory"], parameters["version"]);
 					break;
@@ -96,6 +100,14 @@ namespace Spludlow.MameAO
 					exitCode = GetTosec(parameters["directory"], parameters["version"]);
 					break;
 
+				case "tosec-xml":
+					exitCode = 0;
+					break;
+
+				case "tosec-json":
+					exitCode = 0;
+					break;
+
 				case "tosec-sqlite":
 					exitCode = MakeTosecSQLite(parameters["directory"], parameters["version"]);
 					break;
@@ -110,6 +122,10 @@ namespace Spludlow.MameAO
 					exitCode = MakeTosecMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"], Globals.AssemblyVersion);
 					break;
 
+				case "tosec-mssql-payload-html":
+					exitCode = 0;
+					break;
+
 				//
 				// FBNeo
 				//
@@ -119,6 +135,10 @@ namespace Spludlow.MameAO
 
 				case "fbneo-xml":
 					exitCode = MakeFBNeoXML(parameters["directory"], parameters["version"]);
+					break;
+
+				case "fbneo-json":
+					exitCode = 0;
 					break;
 
 				case "fbneo-sqlite":
@@ -133,6 +153,10 @@ namespace Spludlow.MameAO
 				case "fbneo-mssql-payload":
 					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
 					exitCode = MakeFBNeoMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"], Globals.AssemblyVersion);
+					break;
+
+				case "fbneo-mssql-payload-html":
+					exitCode = 0;
 					break;
 
 				default:
