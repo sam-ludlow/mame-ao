@@ -1,17 +1,18 @@
 using System;
 using System.Collections.Generic;
+using System.ComponentModel;
+using System.Data;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Security.Cryptography;
-using System.Data;
 using System.Text;
-using System.Threading.Tasks;
-using System.ComponentModel;
-using System.Drawing;
 using System.Text.RegularExpressions;
-using System.Linq;
+using System.Threading.Tasks;
+using System.Xml.Linq;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -672,6 +673,36 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static string XML2JSON(XElement element)
+		{
+			JsonSerializerSettings serializerSettings = new JsonSerializerSettings
+			{
+				Formatting = Newtonsoft.Json.Formatting.Indented
+			};
+
+			using (StringWriter writer = new StringWriter())
+			{
+				CustomJsonWriter customJsonWriter = new CustomJsonWriter(writer);
+
+				JsonSerializer jsonSerializer = JsonSerializer.Create(serializerSettings);
+				jsonSerializer.Serialize(customJsonWriter, element);
+
+				return writer.ToString();
+			}
+		}
+
+	}
+
+	public class CustomJsonWriter : JsonTextWriter
+	{
+		public CustomJsonWriter(TextWriter writer) : base(writer) { }
+		public override void WritePropertyName(string name)
+		{
+			if (name.StartsWith("@") == true)
+				base.WritePropertyName(name.Substring(1));
+			else
+				base.WritePropertyName(name);
+		}
 	}
 
 	public class LineArguments

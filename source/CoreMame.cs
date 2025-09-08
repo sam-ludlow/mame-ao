@@ -40,10 +40,7 @@ namespace Spludlow.MameAO
 
 		int ICore.Get()
 		{
-			string mameLatestJson = Tools.FetchTextCached("https://api.github.com/repos/mamedev/mame/releases/latest");
-
-			if (mameLatestJson == null)
-				throw new ApplicationException("Unanle to get core lastest");
+			string mameLatestJson = Tools.FetchTextCached("https://api.github.com/repos/mamedev/mame/releases/latest") ?? throw new ApplicationException("Unanle to get core lastest");
 
 			mameLatestJson = Tools.PrettyJSON(mameLatestJson);
 

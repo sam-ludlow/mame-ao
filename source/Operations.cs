@@ -279,20 +279,6 @@ namespace Spludlow.MameAO
 			core.SQLite();
 			return 0;
 		}
-		public static void XML2SQLite(string xmlFilename, string sqliteFilename)
-		{
-			XElement document = XElement.Load(xmlFilename);
-
-			DataSet dataSet = new DataSet();
-
-			ReadXML.ImportXMLWork(document, dataSet, null, null);
-
-			File.WriteAllBytes(sqliteFilename, new byte[0]);
-
-			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
-
-			Database.DatabaseFromXML(document.Name.LocalName, connectionString, dataSet);
-		}
 
 		//
 		// MS SQL
@@ -323,100 +309,16 @@ namespace Spludlow.MameAO
 				DataSet dataSet = new DataSet();
 				ReadXML.ImportXMLWork(document, dataSet, null, null);
 
-				DataSet2MSSQL(dataSet, serverConnectionString, targetDatabaseName);
+				Database.DataSet2MSSQL(dataSet, serverConnectionString, targetDatabaseName);
 
-				MakeForeignKeys(serverConnectionString, targetDatabaseName);
+				Database.MakeForeignKeys(serverConnectionString, targetDatabaseName);
 			}
 
 			return 0;
 		}
-		public static void DataSet2MSSQL(DataSet dataSet, string serverConnectionString, string databaseName)
-		{
-			SqlConnection targetConnection = new SqlConnection(serverConnectionString);
 
-			if (Database.DatabaseExists(targetConnection, databaseName) == true)
-				return;
 
-			Database.ExecuteNonQuery(targetConnection, $"CREATE DATABASE[{databaseName}]");
 
-			targetConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';");
-
-			foreach (DataTable table in dataSet.Tables)
-			{
-				List<string> columnDefs = new List<string>();
-
-				foreach (DataColumn column in table.Columns)
-				{
-					int max = 1;
-					if (column.DataType.Name == "String")
-					{
-						foreach (DataRow row in table.Rows)
-						{
-							if (row.IsNull(column) == false)
-								max = Math.Max(max, ((string)row[column]).Length);
-						}
-					}
-
-					switch (column.DataType.Name)
-					{
-						case "String":
-							columnDefs.Add($"[{column.ColumnName}] NVARCHAR({max})");
-							break;
-
-						case "Int64":
-							columnDefs.Add($"[{column.ColumnName}] BIGINT" + (columnDefs.Count == 0 ? " NOT NULL" : ""));
-							break;
-
-						default:
-							throw new ApplicationException($"SQL Bulk Copy, Unknown datatype {column.DataType.Name}");
-					}
-				}
-
-				columnDefs.Add($"CONSTRAINT [PK_{table.TableName}] PRIMARY KEY NONCLUSTERED ([{table.Columns[0].ColumnName}])");
-
-				string createText = $"CREATE TABLE [{table.TableName}]({String.Join(", ", columnDefs.ToArray())});";
-
-				Console.WriteLine(createText);
-				Database.ExecuteNonQuery(targetConnection, createText);
-
-				Database.BulkInsert(targetConnection, table);
-
-			}
-		}
-
-		public static int MakeForeignKeys(string serverConnectionString, string databaseName)
-		{
-			using (var connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
-			{
-				DataTable table = Database.ExecuteFill(connection, "SELECT * FROM INFORMATION_SCHEMA.COLUMNS");
-
-				foreach (DataRow row in table.Rows)
-				{
-					string TABLE_NAME = (string)row["TABLE_NAME"];
-					string COLUMN_NAME = (string)row["COLUMN_NAME"];
-					int ORDINAL_POSITION = (int)row["ORDINAL_POSITION"];
-					string DATA_TYPE = (string)row["DATA_TYPE"];
-
-					if (ORDINAL_POSITION > 1 && COLUMN_NAME.EndsWith("_id") && DATA_TYPE == "bigint")
-					{
-						string parentTableName = COLUMN_NAME.Substring(0, COLUMN_NAME.Length - 3);
-
-						string commandText =
-							$"ALTER TABLE [{TABLE_NAME}] ADD CONSTRAINT [FK_{parentTableName}_{TABLE_NAME}] FOREIGN KEY ([{COLUMN_NAME}]) REFERENCES [{parentTableName}] ([{COLUMN_NAME}])";
-
-						Console.WriteLine(commandText);
-						Database.ExecuteNonQuery(connection, commandText);
-
-						commandText = $"CREATE INDEX [IX_{TABLE_NAME}_{COLUMN_NAME}] ON [{TABLE_NAME}] ([{COLUMN_NAME}])";
-
-						Console.WriteLine(commandText);
-						Database.ExecuteNonQuery(connection, commandText);
-					}
-				}
-			}
-
-			return 0;
-		}
 
 		private static readonly XmlReaderSettings _XmlReaderSettings = new XmlReaderSettings() {
 			DtdProcessing = DtdProcessing.Parse,
@@ -562,7 +464,7 @@ namespace Spludlow.MameAO
 
 							string title = "";
 							string xml = element.ToString();
-							string json = XML2JSON(element);
+							string json = Tools.XML2JSON(element);
 							string html = "";
 
 							table.Rows.Add(key, title, xml, json, html);
@@ -614,7 +516,7 @@ namespace Spludlow.MameAO
 
 							string title = "";
 							string xml = listElement.ToString();
-							string json = XML2JSON(listElement);
+							string json = Tools.XML2JSON(listElement);
 							string html = "";
 
 							listTable.Rows.Add(softwarelist_name, title, xml, json, html);
@@ -625,7 +527,7 @@ namespace Spludlow.MameAO
 
 								title = "";
 								xml = element.ToString();
-								json = XML2JSON(element);
+								json = Tools.XML2JSON(element);
 								html = "";
 
 								softwareTable.Rows.Add(softwarelist_name, software_name, title, xml, json, html);
@@ -1595,9 +1497,9 @@ namespace Spludlow.MameAO
 
 			DataSet dataSet = TosecDataSet(directory);
 
-			DataSet2MSSQL(dataSet, serverConnectionString, databaseName);
+			Database.DataSet2MSSQL(dataSet, serverConnectionString, databaseName);
 
-			MakeForeignKeys(serverConnectionString, databaseName);
+			Database.MakeForeignKeys(serverConnectionString, databaseName);
 
 			return 0;
 		}
@@ -2029,8 +1931,10 @@ namespace Spludlow.MameAO
 
 					foreach (string itemKey in categorySources[category])
 					{
-						ArchiveOrgItem item = new ArchiveOrgItem(itemKey, null, null);
-						item.DontIgnore = true;
+						ArchiveOrgItem item = new ArchiveOrgItem(itemKey, null, null)
+						{
+							DontIgnore = true
+						};
 						item.GetFile(null);
 
 						foreach (DataRow row in table.Rows)
@@ -2137,8 +2041,10 @@ namespace Spludlow.MameAO
 
 					foreach (string itemKey in categorySources[category])
 					{
-						ArchiveOrgItem item = new ArchiveOrgItem(itemKey, null, null);
-						item.DontIgnore = true;
+						ArchiveOrgItem item = new ArchiveOrgItem(itemKey, null, null)
+						{
+							DontIgnore = true
+						};
 						item.GetFile(null);
 
 						// Data Fix - parent directory mismatch
@@ -2249,9 +2155,9 @@ namespace Spludlow.MameAO
 				DataSet dataSet = new DataSet();
 				ReadXML.ImportXMLWork(document, dataSet, null, null);
 
-				DataSet2MSSQL(dataSet, serverConnectionString, targetDatabaseName);
+				Database.DataSet2MSSQL(dataSet, serverConnectionString, targetDatabaseName);
 
-				MakeForeignKeys(serverConnectionString, targetDatabaseName);
+				Database.MakeForeignKeys(serverConnectionString, targetDatabaseName);
 			}
 
 			return 0;
@@ -2300,34 +2206,6 @@ namespace Spludlow.MameAO
 			return 0;
 		}
 
-		public static string HbMameVersion(string html)
-		{
-			string version = null;
-
-			string find = "HBMAME 0.";
-			int index = 0;
-			while ((index = html.IndexOf(find, index)) != -1)
-			{
-				int endIndex = html.IndexOf("(", index + find.Length);
-				if (endIndex == -1)
-					break;
-
-				string text = html.Substring(index + find.Length, endIndex - index - find.Length);
-				if (version == null)
-					version = "0." + text.Trim();
-				else
-					throw new ApplicationException("Found more versions than expected");
-
-				index = endIndex;
-			}
-
-			if (version == null)
-				throw new ApplicationException("Did not find version");
-
-			Console.WriteLine($"HBMAME Version: {version}");
-
-			return version;
-		}
 
 		public static string HbMameGetLatestDownloadedVersion(string directory)
 		{
@@ -2495,9 +2373,9 @@ namespace Spludlow.MameAO
 
 			DataSet dataSet = FBNeoDataSet(directory);
 
-			DataSet2MSSQL(dataSet, serverConnectionString, databaseName);
+			Database.DataSet2MSSQL(dataSet, serverConnectionString, databaseName);
 
-			MakeForeignKeys(serverConnectionString, databaseName);
+			Database.MakeForeignKeys(serverConnectionString, databaseName);
 
 			return 0;
 		}
@@ -2694,83 +2572,5 @@ namespace Spludlow.MameAO
 			return 0;
 		}
 
-		public static void ReportRelations(DataSet dataSet)
-		{
-			StringBuilder report = new StringBuilder();
-			foreach (DataTable parentTable in dataSet.Tables)
-			{
-				string pkName = parentTable.Columns[0].ColumnName;
-
-				DataTable[] childTables = FindChildTables(pkName, dataSet);
-
-				if (childTables.Length > 0)
-				{
-					foreach (DataTable childTable in childTables)
-					{
-						int min = Int32.MaxValue;
-						int max = Int32.MinValue;
-
-						foreach (DataRow row in parentTable.Rows)
-						{
-							long id = (long)row[pkName];
-
-							DataRow[] childRows = childTable.Select($"{pkName} = {id}");
-
-							min = Math.Min(min, childRows.Length);
-							max = Math.Max(max, childRows.Length);
-						}
-
-						report.AppendLine($"{parentTable.TableName}\t{childTable.TableName}\t{min}\t{max}");
-					}
-				}
-			}
-			Tools.PopText(report.ToString());
-		}
-
-		public static DataTable[] FindChildTables(string parentKeyName, DataSet dataSet)
-		{
-			List<DataTable> childTables = new List<DataTable>();
-
-			foreach (DataTable table in dataSet.Tables)
-			{
-				DataColumn column = table.Columns.Cast<DataColumn>().Where(col => col.Ordinal > 0 && col.ColumnName == parentKeyName).SingleOrDefault();
-
-				if (column != null)
-					childTables.Add(table);
-			}
-
-			return childTables.ToArray();
-		}
-
-		public static string XML2JSON(XElement element)
-		{
-			JsonSerializerSettings serializerSettings = new JsonSerializerSettings
-			{
-				Formatting = Newtonsoft.Json.Formatting.Indented
-			};
-
-			using (StringWriter writer  = new StringWriter())
-			{
-				CustomJsonWriter customJsonWriter = new CustomJsonWriter(writer);
-
-				JsonSerializer jsonSerializer = JsonSerializer.Create(serializerSettings);
-				jsonSerializer.Serialize(customJsonWriter, element);
-
-				return writer.ToString();
-			}
-		}
-
-	}
-
-	public class CustomJsonWriter : JsonTextWriter
-	{
-		public CustomJsonWriter(TextWriter writer) : base(writer) { }
-		public override void WritePropertyName(string name)
-		{
-			if (name.StartsWith("@") == true)
-				base.WritePropertyName(name.Substring(1));
-			else
-				base.WritePropertyName(name);
-		}
 	}
 }

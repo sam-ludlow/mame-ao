@@ -61,7 +61,7 @@ namespace Spludlow.MameAO
 			if (Globals.Core != null && Globals.Core.Name == name && version != null && Globals.Core.Version == version)
 				return;
 
-			ICore core = Globals.Core;
+			ICore core;
 
 			switch (name)
 			{

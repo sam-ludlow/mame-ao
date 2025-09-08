@@ -240,6 +240,94 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static void DataSet2MSSQL(DataSet dataSet, string serverConnectionString, string databaseName)
+		{
+			SqlConnection targetConnection = new SqlConnection(serverConnectionString);
+
+			if (DatabaseExists(targetConnection, databaseName) == true)
+				return;
+
+			ExecuteNonQuery(targetConnection, $"CREATE DATABASE[{databaseName}]");
+
+			targetConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';");
+
+			foreach (DataTable table in dataSet.Tables)
+			{
+				List<string> columnDefs = new List<string>();
+
+				foreach (DataColumn column in table.Columns)
+				{
+					int max = 1;
+					if (column.DataType.Name == "String")
+					{
+						foreach (DataRow row in table.Rows)
+						{
+							if (row.IsNull(column) == false)
+								max = Math.Max(max, ((string)row[column]).Length);
+						}
+					}
+
+					switch (column.DataType.Name)
+					{
+						case "String":
+							columnDefs.Add($"[{column.ColumnName}] NVARCHAR({max})");
+							break;
+
+						case "Int64":
+							columnDefs.Add($"[{column.ColumnName}] BIGINT" + (columnDefs.Count == 0 ? " NOT NULL" : ""));
+							break;
+
+						default:
+							throw new ApplicationException($"SQL Bulk Copy, Unknown datatype {column.DataType.Name}");
+					}
+				}
+
+				columnDefs.Add($"CONSTRAINT [PK_{table.TableName}] PRIMARY KEY NONCLUSTERED ([{table.Columns[0].ColumnName}])");
+
+				string createText = $"CREATE TABLE [{table.TableName}]({String.Join(", ", columnDefs.ToArray())});";
+
+				Console.WriteLine(createText);
+
+				ExecuteNonQuery(targetConnection, createText);
+
+				BulkInsert(targetConnection, table);
+			}
+		}
+
+		public static int MakeForeignKeys(string serverConnectionString, string databaseName)
+		{
+			using (var connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			{
+				DataTable table = ExecuteFill(connection, "SELECT * FROM INFORMATION_SCHEMA.COLUMNS");
+
+				foreach (DataRow row in table.Rows)
+				{
+					string TABLE_NAME = (string)row["TABLE_NAME"];
+					string COLUMN_NAME = (string)row["COLUMN_NAME"];
+					int ORDINAL_POSITION = (int)row["ORDINAL_POSITION"];
+					string DATA_TYPE = (string)row["DATA_TYPE"];
+
+					if (ORDINAL_POSITION > 1 && COLUMN_NAME.EndsWith("_id") && DATA_TYPE == "bigint")
+					{
+						string parentTableName = COLUMN_NAME.Substring(0, COLUMN_NAME.Length - 3);
+
+						string commandText =
+							$"ALTER TABLE [{TABLE_NAME}] ADD CONSTRAINT [FK_{parentTableName}_{TABLE_NAME}] FOREIGN KEY ([{COLUMN_NAME}]) REFERENCES [{parentTableName}] ([{COLUMN_NAME}])";
+
+						Console.WriteLine(commandText);
+						ExecuteNonQuery(connection, commandText);
+
+						commandText = $"CREATE INDEX [IX_{TABLE_NAME}_{COLUMN_NAME}] ON [{TABLE_NAME}] ([{COLUMN_NAME}])";
+
+						Console.WriteLine(commandText);
+						ExecuteNonQuery(connection, commandText);
+					}
+				}
+			}
+
+			return 0;
+		}
+
 		public static bool TableExists(SQLiteConnection connection, string tableName)
 		{
 			object obj = ExecuteScalar(connection, $"SELECT name FROM sqlite_master WHERE type='table' AND name='{tableName}'");
