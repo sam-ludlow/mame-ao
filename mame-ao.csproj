@@ -59,9 +59,11 @@
     <Compile Include="source\Artwork.cs" />
     <Compile Include="source\BitTorrent.cs" />
     <Compile Include="source\Cheats.cs" />
+    <Compile Include="source\CoreFbNeo.cs" />
     <Compile Include="source\CoreHbMame.cs" />
     <Compile Include="source\CoreMame.cs" />
     <Compile Include="source\Cores.cs" />
+    <Compile Include="source\CoreTosec.cs" />
     <Compile Include="source\Database.cs" />
     <Compile Include="source\Export.cs" />
     <Compile Include="source\Favorites.cs" />
@@ -73,6 +75,7 @@
     <Compile Include="source\MameAO.cs" />
     <Compile Include="source\MameChdMan.cs" />
     <Compile Include="source\Operations.cs" />
+    <Compile Include="source\OperationsHtml.cs" />
     <Compile Include="source\PhoneHome.cs" />
     <Compile Include="source\Place.cs" />
     <Compile Include="source\Program.cs" />

@@ -142,7 +142,23 @@ namespace Spludlow.MameAO
 
 			Cores.ExtractXML(Path.Combine(_CoreDirectory, "hbmame.exe"));
 		}
-		private static string LatestLocalVersion(string directory)
+
+		void ICore.Json()
+		{
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			foreach (string xmlFilename in new string[] { Path.Combine(_CoreDirectory, "_machine.xml"), Path.Combine(_CoreDirectory, "_software.xml") })
+			{
+				string jsonFilename = xmlFilename.Substring(0, xmlFilename.Length - 4) + ".json";
+
+				if (File.Exists(jsonFilename) == false)
+					Tools.XML2JSON(xmlFilename, jsonFilename);
+			}
+		}
+
+		public static string LatestLocalVersion(string directory)
 		{
 			SortedDictionary<int, string> versions = new SortedDictionary<int, string>();
 			string version;
@@ -172,6 +188,7 @@ namespace Spludlow.MameAO
 
 			return version;
 		}
+
 
 		void ICore.SQLite()
 		{

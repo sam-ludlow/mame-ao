@@ -12,6 +12,7 @@ using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 
 using Newtonsoft.Json;
@@ -688,6 +689,100 @@ namespace Spludlow.MameAO
 				jsonSerializer.Serialize(customJsonWriter, element);
 
 				return writer.ToString();
+			}
+		}
+		public static void XML2JSON(string inputXmlFilename, string outputJsonFilename)
+		{
+			XmlDocument xmlDocument = new XmlDocument();
+			xmlDocument.Load(inputXmlFilename);
+
+			JsonSerializerSettings serializerSettings = new JsonSerializerSettings
+			{
+				Formatting = Newtonsoft.Json.Formatting.Indented
+			};
+
+			using (StreamWriter streamWriter = new StreamWriter(outputJsonFilename, false, new UTF8Encoding(false)))
+			{
+				CustomJsonWriter customJsonWriter = new CustomJsonWriter(streamWriter);
+
+				JsonSerializer jsonSerializer = JsonSerializer.Create(serializerSettings);
+				jsonSerializer.Serialize(customJsonWriter, xmlDocument);
+			}
+		}
+
+		public static void DataFileMoveHeader(DataSet dataSet)
+		{
+			DataTable headerTable = dataSet.Tables["header"];
+			DataTable datafileTable = dataSet.Tables["datafile"];
+
+			if (headerTable == null || headerTable.Rows.Count != 1)
+				throw new ApplicationException("Did not find one headerTable row");
+
+			if (datafileTable == null || datafileTable.Rows.Count != 1)
+				throw new ApplicationException("Did not find one datafileTable row");
+
+			foreach (DataColumn column in headerTable.Columns)
+			{
+				if (column.ColumnName.EndsWith("_id") == true)
+					continue;
+
+				if (datafileTable.Columns.Contains(column.ColumnName) == false)
+					datafileTable.Columns.Add(column.ColumnName, typeof(string));
+
+				datafileTable.Rows[0][column.ColumnName] = headerTable.Rows[0][column.ColumnName];
+			}
+
+			dataSet.Tables.Remove("header");
+		}
+
+		public static void DataFileMergeDataSet(DataSet sourceDataSet, DataSet targetDataSet)
+		{
+			foreach (DataTable sourceTable in sourceDataSet.Tables)
+			{
+				sourceTable.PrimaryKey = new DataColumn[0];
+
+				DataTable targetTable = null;
+				if (targetDataSet.Tables.Contains(sourceTable.TableName) == false)
+				{
+					targetTable = new DataTable(sourceTable.TableName);
+					targetDataSet.Tables.Add(targetTable);
+				}
+				else
+				{
+					targetTable = targetDataSet.Tables[sourceTable.TableName];
+				}
+
+				foreach (DataColumn column in sourceTable.Columns)
+				{
+					column.Unique = false;
+
+					if (targetTable.Columns.Contains(column.ColumnName) == false)
+					{
+						DataColumn targetColumn = targetTable.Columns.Add(column.ColumnName, column.DataType);
+						targetColumn.Unique = false;
+					}
+				}
+			}
+
+			Dictionary<string, long> addIds = new Dictionary<string, long>();
+			foreach (DataTable sourceTable in sourceDataSet.Tables)
+				addIds.Add(sourceTable.TableName + "_id", targetDataSet.Tables[sourceTable.TableName].Rows.Count);
+
+			foreach (DataTable sourceTable in sourceDataSet.Tables)
+			{
+				foreach (DataColumn column in sourceTable.Columns)
+				{
+					if (column.ColumnName.EndsWith("_id") == false)
+						continue;
+
+					foreach (DataRow row in sourceTable.Rows)
+						row[column] = (long)row[column] + addIds[column.ColumnName];
+				}
+
+				DataTable targetTable = targetDataSet.Tables[sourceTable.TableName];
+
+				foreach (DataRow row in sourceTable.Rows)
+					targetTable.ImportRow(row);
 			}
 		}
 

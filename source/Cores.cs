@@ -22,6 +22,7 @@ namespace Spludlow.MameAO
 		void Initialize(string directory, string version);
 		int Get();
 		void Xml();
+		void Json();
 		void SQLiteAo();
 		void AllSHA1(HashSet<string> hashSet);
 
@@ -163,7 +164,7 @@ namespace Spludlow.MameAO
 
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
-			Database.DatabaseFromXML(document.Name.LocalName, connectionString, dataSet);
+			Database.DataSet2SQLite(document.Name.LocalName, connectionString, dataSet);
 		}
 
 		public static void AllSHA1(HashSet<string> hashSet, string connectionString, string[] tableNames)

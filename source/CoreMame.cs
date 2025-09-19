@@ -75,12 +75,27 @@ namespace Spludlow.MameAO
 		{
 			if (_Version == null)
 				_Version = LatestLocalVersion(_RootDirectory);
-
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
 			Cores.ExtractXML(Path.Combine(_CoreDirectory, "mame.exe"));
 		}
-		private static string LatestLocalVersion(string directory)
+
+		void ICore.Json()
+		{
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			foreach (string xmlFilename in new string[] { Path.Combine(_CoreDirectory, "_machine.xml"), Path.Combine(_CoreDirectory, "_software.xml") })
+			{
+				string jsonFilename = xmlFilename.Substring(0, xmlFilename.Length - 4) + ".json";
+
+				if (File.Exists(jsonFilename) == false)
+					Tools.XML2JSON(xmlFilename, jsonFilename);
+			}
+		}
+
+		public static string LatestLocalVersion(string directory)
 		{
 			List<string> versions = new List<string>();
 

@@ -142,7 +142,7 @@ namespace Spludlow.MameAO
 			return found;
 		}
 
-		public static void DatabaseFromXML(string name, string connectionString, DataSet dataSet)
+		public static void DataSet2SQLite(string name, string connectionString, DataSet dataSet)
 		{
 			using (SQLiteConnection connection = new SQLiteConnection(connectionString))
 			{
