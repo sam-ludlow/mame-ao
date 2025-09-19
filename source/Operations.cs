@@ -178,6 +178,9 @@ namespace Spludlow.MameAO
 					break;
 
 				case "tosec-json":
+					core = new CoreTosec();
+					core.Initialize(parameters["directory"], parameters["version"]);
+					core.Json();
 					exitCode = 0;
 					break;
 

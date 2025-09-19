@@ -4,6 +4,7 @@ using System.Data;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace Spludlow.MameAO
@@ -118,7 +119,6 @@ namespace Spludlow.MameAO
 		{
 			if (_Version == null)
 				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
-
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
 			if (Directory.Exists(Path.Combine(_CoreDirectory, "CUEs")) == true)
@@ -129,11 +129,61 @@ namespace Spludlow.MameAO
 			Console.Write($"Extract ZIP {zipFilename} {_CoreDirectory} ...");
 			ZipFile.ExtractToDirectory(zipFilename, _CoreDirectory);
 			Console.WriteLine("...done");
+
+			string[] categories = new string[] { "TOSEC", "TOSEC-ISO", "TOSEC-PIX" };
+
+			foreach (string category in categories)
+			{
+				string categoryDirectory = Path.Combine(_CoreDirectory, category);
+
+				XmlDocument categoryDocument = new XmlDocument();
+
+				XmlElement categoryElement = categoryDocument.CreateElement("category");
+				categoryElement.SetAttribute("name", category);
+				categoryDocument.AppendChild(categoryElement);
+
+				foreach (string filename in Directory.GetFiles(categoryDirectory, "*.dat"))
+				{
+					Console.WriteLine($"{filename}");
+
+					XmlDocument datafileDocument = new XmlDocument();
+					datafileDocument.Load(filename);
+
+					XmlNode sourceNode = datafileDocument.GetElementsByTagName("datafile").Cast<XmlNode>().Single();
+					XmlNode targetNode = categoryDocument.ImportNode(sourceNode, true);
+
+					categoryElement.AppendChild(targetNode);
+				}
+
+				string targetFilename = Path.Combine(_CoreDirectory, category.ToLower() + ".xml");
+
+				XmlWriterSettings settings = new XmlWriterSettings
+				{
+					OmitXmlDeclaration = false,
+					Indent = true,
+					IndentChars = "\t",
+				};
+
+				using (XmlWriter xmlWriter = XmlWriter.Create(targetFilename, settings))
+				{
+					categoryDocument.Save(xmlWriter);
+				}
+			}
 		}
 
 		void ICore.Json()
 		{
-			throw new NotImplementedException();
+			if (_Version == null)
+				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			foreach (string xmlFilename in Directory.GetFiles(_CoreDirectory, "*.xml"))
+			{
+				string jsonFilename = xmlFilename.Substring(0, xmlFilename.Length - 4) + ".json";
+
+				if (File.Exists(jsonFilename) == false)
+					Tools.XML2JSON(xmlFilename, jsonFilename);
+			}
 		}
 
 		void ICore.SQLite()
