@@ -89,7 +89,6 @@ namespace Spludlow.MameAO
 		{
 			if (_Version == null)
 				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
-
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
 			string iniFileData = $"nIniVersion 0x7FFFFF{Environment.NewLine}bSkipStartupCheck 1{Environment.NewLine}";
@@ -98,17 +97,22 @@ namespace Spludlow.MameAO
 			File.WriteAllText(Path.Combine(configDirectory, "fbneo64.ini"), iniFileData);
 
 			//	https://github.com/finalburnneo/FBNeo/blob/master/src/burner/win32/main.cpp
+			string[] listInfos = new string[] { "arcade", "channelf", "coleco", "fds", "gg", "md", "msx", "neogeo", "nes", "ngp", "pce", "sg1000", "sgx", "sms", "snes", "spectrum", "tg16" };
 
-			string[] systems = new string[] { "arcade", "channelf", "coleco", "fds", "gg", "md", "msx", "neogeo", "nes", "ngp", "pce", "sg1000", "sgx", "sms", "snes", "spectrum", "tg16" };
-
-			foreach (string system in systems)
+			foreach (string listInfo in listInfos)
 			{
+				string system = listInfo;
+				if (system == "gg")
+					system = "gamegear";
+				if (system == "md")
+					system = "megadrive";
+
 				string filename = Path.Combine(_CoreDirectory, $"_{system}.xml");
 
 				if (File.Exists(filename) == true)
 					continue;
 
-				string arguments = system == "arcade" ? "-listinfo" : $"-listinfo{system}only";
+				string arguments = listInfo == "arcade" ? "-listinfo" : $"-listinfo{listInfo}only";
 
 				StringBuilder output = new StringBuilder();
 
@@ -163,7 +167,6 @@ namespace Spludlow.MameAO
 		{
 			if (_Version == null)
 				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
-
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
 			string sqlLiteFilename = Path.Combine(_CoreDirectory, "_fbneo.sqlite");
@@ -230,17 +233,9 @@ namespace Spludlow.MameAO
 
 				Tools.DataFileMoveHeader(fileDataSet);
 
-				string key = name;
-				if (key == "gg")
-					key = "gamegear";
-				if (key == "md")
-					key = "megadrive";
-
 				DataTable datafileTable = fileDataSet.Tables["datafile"];
-				datafileTable.Columns.Add("key_argument", typeof(string));
-				datafileTable.Rows[0]["key_argument"] = name;
 				datafileTable.Columns.Add("key", typeof(string));
-				datafileTable.Rows[0]["key"] = key;
+				datafileTable.Rows[0]["key"] = name;
 
 				foreach (DataTable table in dataSet.Tables)
 					foreach (DataColumn column in table.Columns)

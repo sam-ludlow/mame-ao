@@ -155,7 +155,7 @@ namespace Spludlow.MameAO
 					categoryElement.AppendChild(targetNode);
 				}
 
-				string targetFilename = Path.Combine(_CoreDirectory, category.ToLower() + ".xml");
+				string targetFilename = Path.Combine(_CoreDirectory, $"_{category.ToLower()}.xml");
 
 				XmlWriterSettings settings = new XmlWriterSettings
 				{

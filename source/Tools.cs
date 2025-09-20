@@ -8,6 +8,7 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
+using System.Reflection;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -550,6 +551,37 @@ namespace Spludlow.MameAO
 					process.WaitForExit();
 				}
 			}
+		}
+
+		public static void LinkMsAccess(string sourceFilename, string targetFilename)
+		{
+			string exeFilename = Path.Combine(Globals.RootDirectory, "access-linker.exe");
+			if (File.Exists(exeFilename) == false)
+				throw new ApplicationException($"Access Linker not found: {exeFilename}, install from here: https://github.com/sam-ludlow/access-linker/releases/latest");
+
+			Version version = AssemblyName.GetAssemblyName(exeFilename).Version;
+			string localVersion = $"{version.Major}.{version.Minor}";
+
+			ConsoleHeading(1, new string[] { $"Create MS Access databases linked to SQLite", exeFilename, localVersion });
+
+			ProcessStartInfo startInfo = new ProcessStartInfo(exeFilename)
+			{
+				Arguments = $"access-link-new filename=\"{targetFilename}\" odbc=\"{sourceFilename}\"",
+				UseShellExecute = true,
+			};
+
+			using (Process process = new Process())
+			{
+				process.StartInfo = startInfo;
+
+				process.Start();
+				process.WaitForExit();
+
+				if (process.ExitCode != 0)
+					throw new ApplicationException("access-linker.exe Bad exit code");
+			}
+
+			ConsoleHeading(2, new string[] { "MS Access linked database created", sourceFilename, "=>", targetFilename });
 		}
 
 		public static DateTime FromEpochDate(string epoch)

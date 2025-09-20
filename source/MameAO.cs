@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text;
 using System.Net.Http;
 using System.IO;
@@ -756,7 +755,9 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						return;
 
 					case ".accdb":
-						LinkMsAccess();
+						parts = args.Arguments(2);
+						foreach (string filename in Directory.GetFiles(parts.Length > 1 ? parts[1] : Globals.Core.Directory, "*.sqlite"))
+							Tools.LinkMsAccess(filename, filename + ".accdb");
 						return;
 
 					case ".core":
@@ -866,41 +867,5 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			Console.WriteLine();
 		}
 
-		public void LinkMsAccess()
-		{
-			string exeFilename = Path.Combine(Globals.RootDirectory, "access-linker.exe");
-
-			if (File.Exists(exeFilename) == false)
-				throw new ApplicationException($"Access Linker not found: {exeFilename}, install from here: https://github.com/sam-ludlow/access-linker/releases/latest");
-
-			Version version = AssemblyName.GetAssemblyName(exeFilename).Version;
-			string localVersion = $"{version.Major}.{version.Minor}";
-
-			Tools.ConsoleHeading(1, new string[] { $"Create MS Access databases linked to SQLite", exeFilename, localVersion });
-
-			foreach (string filename in Directory.GetFiles(Globals.Core.Directory, "*.sqlite"))
-			{
-				string targetFilename = filename + ".accdb";
-
-				ProcessStartInfo startInfo = new ProcessStartInfo(exeFilename)
-				{
-					Arguments = $"access-link-new filename=\"{targetFilename}\" odbc=\"{filename}\"",
-					UseShellExecute = true,
-				};
-
-				using (Process process = new Process())
-				{
-					process.StartInfo = startInfo;
-
-					process.Start();
-					process.WaitForExit();
-
-					if (process.ExitCode != 0)
-						throw new ApplicationException("access-linker.exe Bad exit code");
-				}
-
-				Tools.ConsoleHeading(2, new string[] { "MS Access linked database created", filename, "=>", targetFilename });
-			}
-		}
 	}
 }

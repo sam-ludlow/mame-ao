@@ -529,13 +529,11 @@ namespace Spludlow.MameAO
 			if (version == "0")
 				version = CoreFbNeo.FBNeoGetLatestDownloadedVersion(directory);
 
+			directory = Path.Combine(directory, version);
+
 			string agent = $"mame-ao/{assemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
 
-			//
-			//	Metadata table
-			//
 			DataTable table = CreateMetaDataTable(serverConnectionString, databaseName);
-
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
 			{
 				int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
@@ -556,29 +554,59 @@ namespace Spludlow.MameAO
 				"datafile_key	game_name	title	xml		json	html",
 				"String			String		String	String	String	String");
 
-			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
 			{
-				DataTable datafileTable = Database.ExecuteFill(connection, $"SELECT * FROM [datafile] ORDER BY [name]");
-				DataTable gameTable = Database.ExecuteFill(connection, $"SELECT * FROM [game] ORDER BY [name]");
+				string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
 
-				foreach (DataRow dataFileRow in datafileTable.Rows)
+				using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
 				{
-					long datafile_id = (long)dataFileRow["datafile_id"];
-					string datafile_key = (string)dataFileRow["key"];
+					reader.MoveToContent();
 
-					foreach (DataRow gameRow in gameTable.Select($"datafile_id = {datafile_id}"))
+					while (reader.Read())
 					{
-						string game_name = (string)gameRow["name"];
+						while (reader.NodeType == XmlNodeType.Element && reader.Name == "header")
+						{
+							if (XElement.ReadFrom(reader) is XElement headerElement)
+							{
+								Console.WriteLine(headerElement.ToString());
 
-						game_payload_table.Rows.Add(datafile_key, game_name, "", "", "", "");
+								datafile_payload_table.Rows.Add(datafile_key, "", "", "", "");
+							}
+						}
 					}
-
-					datafile_payload_table.Rows.Add(datafile_key, "", "", "", "");
 				}
-
-				MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "key" });
-				MakeMSSQLPayloadsInsert(game_payload_table, serverConnectionString, databaseName, new string[] { "datafile_key", "game_name" });
 			}
+
+			foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
+			{
+				Console.WriteLine(xmlFilename);
+
+				string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
+
+				using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+				{
+					reader.MoveToContent();
+
+					while (reader.Read())
+					{
+						while (reader.NodeType == XmlNodeType.Element && reader.Name == "game")
+						{
+							if (XElement.ReadFrom(reader) is XElement gameElement)
+							{
+								string game_name = gameElement.Attribute("name").Value;
+
+								string xml = gameElement.ToString();
+								string json = Tools.XML2JSON(gameElement);
+
+								game_payload_table.Rows.Add(datafile_key, game_name, "", xml, json, "");
+							}
+						}
+					}
+				}
+			}
+
+			MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "key" });
+			MakeMSSQLPayloadsInsert(game_payload_table, serverConnectionString, databaseName, new string[] { "datafile_key", "game_name" });
 
 			return 0;
 		}
@@ -587,6 +615,8 @@ namespace Spludlow.MameAO
 		{
 			if (version == "0")
 				version = CoreTosec.TosecGetLatestDownloadedVersion(directory);
+
+			directory = Path.Combine(directory, version);
 
 			string agent = $"mame-ao/{assemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
 
@@ -610,92 +640,69 @@ namespace Spludlow.MameAO
 			DataTable category_payload_table = Tools.MakeDataTable("category_payload",
 				"category	title	xml		json	html",
 				"String		String	String	String	String");
-			//category_payload_table.Columns["category"].MaxLength = 9;
+			category_payload_table.Columns["category"].MaxLength = 9;
 
 			DataTable datafile_payload_table = Tools.MakeDataTable("datafile_payload",
 				"category	name	title	xml		json	html",
 				"String		String	String	String	String	String");
-			//datafile_payload_table.Columns["category"].MaxLength = 9;
-			//datafile_payload_table.Columns["name"].MaxLength = 128;
+			datafile_payload_table.Columns["category"].MaxLength = 9;
+			datafile_payload_table.Columns["name"].MaxLength = 128;
 
 			DataTable game_payload_table = Tools.MakeDataTable("game_payload",
 				"category	datafile_name	game_name	title	xml		json	html",
 				"String		String			String		String	String	String	String");
-			//game_payload_table.Columns["category"].MaxLength = 9;
-			//game_payload_table.Columns["datafile_name"].MaxLength = 128;
-			//game_payload_table.Columns["game_name"].MaxLength = 256;
+			game_payload_table.Columns["category"].MaxLength = 9;
+			game_payload_table.Columns["datafile_name"].MaxLength = 128;
+			game_payload_table.Columns["game_name"].MaxLength = 256;
 
-			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
 			{
-				//
-				//	Datafix for duplicates in source data
-				//
-				DataTable dupTable = Database.ExecuteFill(connection,
-					"SELECT datafile.category, datafile.name AS datafile_name, game.name AS game_name FROM datafile INNER JOIN game ON datafile.datafile_id = game.datafile_id " +
-					"GROUP BY datafile.category, datafile.name, game.name HAVING (COUNT(*) > 1)");
+				Console.WriteLine(xmlFilename);
 
-				List<long> dup_game_ids = new List<long>();
-				foreach (DataRow dupRow in dupTable.Rows)
+				string category = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
+
+				category_payload_table.Rows.Add(category, "", "", "", "");
+
+				using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
 				{
-					using (SqlCommand command = new SqlCommand("SELECT game.game_id FROM datafile INNER JOIN game ON datafile.datafile_id = game.datafile_id "
-						+ "WHERE ((datafile.category = @category) AND (datafile.[name] = @datafile_name) AND (game.[name] = @game_name))", connection))
+					reader.MoveToContent();
+
+					while (reader.Read())
 					{
-						command.Parameters.AddWithValue("@category", (string)dupRow["category"]);
-						command.Parameters.AddWithValue("@datafile_name", (string)dupRow["datafile_name"]);
-						command.Parameters.AddWithValue("@game_name", (string)dupRow["game_name"]);
-
-						DataTable dupIdTable = new DataTable();
-						using (SqlDataAdapter adapter = new SqlDataAdapter(command))
-							adapter.Fill(dupIdTable);
-
-						for (int index = 1; index < dupIdTable.Rows.Count; ++index)
-							dup_game_ids.Add((long)dupIdTable.Rows[index]["game_id"]);
-					}
-				}
-
-				string game_commandText = "SELECT * from [game] @WHERE ORDER BY [name]";
-				if (dup_game_ids.Count > 0)
-				{
-					Console.WriteLine($"!!! Warning Duplicate TOSEC games: {String.Join(", ", dup_game_ids)}");
-					game_commandText = game_commandText.Replace("@WHERE", $"WHERE ([game_id] NOT IN ({String.Join(", ", dup_game_ids)}))");
-				}
-				else
-				{
-					game_commandText = game_commandText.Replace("@WHERE", "");
-				}
-
-				DataTable datafileTable = Database.ExecuteFill(connection, "SELECT * FROM [datafile] ORDER BY [name]");
-				DataTable gameTable = Database.ExecuteFill(connection, game_commandText);
-
-				foreach (string category in new string[] { "TOSEC", "TOSEC-ISO", "TOSEC-PIX" })
-				{
-					foreach (DataRow datafileRow in datafileTable.Select($"[category] = '{category}'"))
-					{
-						long datafile_id = (long)datafileRow["datafile_id"];
-						string datafile_name = (string)datafileRow["name"];
-
-						foreach (DataRow gameRow in gameTable.Select($"[datafile_id] = {datafile_id}"))
+						while (reader.NodeType == XmlNodeType.Element && reader.Name == "datafile")
 						{
-							string game_name = (string)gameRow["name"];
+							if (XElement.ReadFrom(reader) is XElement datafileElement)
+							{
+								string datafile_name = datafileElement.Element("header").Element("name").Value;
+								
+								string xml = datafileElement.ToString();
+								string json = Tools.XML2JSON(datafileElement);
 
-							game_payload_table.Rows.Add(category.ToLower(), datafile_name, game_name, "", "", "", "");
+								datafile_payload_table.Rows.Add(category, datafile_name, "", xml, json, "");
+
+								HashSet<string> gameNames = new HashSet<string>();	// Duplicates in source data fix
+
+								foreach (XElement element in datafileElement.Elements("game"))
+								{
+									string game_name = element.Attribute("name").Value;
+
+									xml = element.ToString();
+									json = Tools.XML2JSON(element);
+
+									if (gameNames.Add(game_name) == true)
+										game_payload_table.Rows.Add(category, datafile_name, game_name, "", xml, json, "");
+									else
+										Console.WriteLine($"Duplicate game: {category}, {datafile_name}, {game_name}");
+								}
+							}
 						}
-
-						datafile_payload_table.Rows.Add(category.ToLower(), datafile_name, "", "", "", "");
 					}
-
-					category_payload_table.Rows.Add(category.ToLower(), "", "", "", "");
 				}
-
-				datafileTable = null;
-				gameTable = null;
-
-				GC.Collect();
-
-				MakeMSSQLPayloadsInsert(category_payload_table, serverConnectionString, databaseName, new string[] { "category" });
-				MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "category", "name" });
-				MakeMSSQLPayloadsInsert(game_payload_table, serverConnectionString, databaseName, new string[] { "category", "datafile_name", "game_name" });
 			}
+
+			MakeMSSQLPayloadsInsert(category_payload_table, serverConnectionString, databaseName, new string[] { "category" });
+			MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "category", "name" });
+			MakeMSSQLPayloadsInsert(game_payload_table, serverConnectionString, databaseName, new string[] { "category", "datafile_name", "game_name" });
 
 			return 0;
 		}
