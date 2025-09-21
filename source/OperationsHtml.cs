@@ -1162,7 +1162,7 @@ namespace Spludlow.MameAO
 			return 0;
 		}
 
-		private static string TosecExtentionsLink(Dictionary<string, int> sourceExtentions)
+		public static string TosecExtentionsLink(Dictionary<string, int> sourceExtentions)
 		{
 			var extentions = sourceExtentions.OrderByDescending(pair => pair.Value).Cast<KeyValuePair<string, int>>();
 			if (extentions.Count() > 10)
@@ -1187,7 +1187,7 @@ namespace Spludlow.MameAO
 		{
 			Dictionary<string, string[]> categorySources = new Dictionary<string, string[]>() {
 				{ "TOSEC", new string[] { "tosec-main" } },
-				{ "TOSEC-PIX", new string[] { "tosec-pix", "tosec-pix-part2" } }
+				{ "TOSEC-PIX", new string[] { "tosec-pix-part2", "tosec-pix" } }
 			};
 
 			Dictionary<long, string> datafileUrls = new Dictionary<long, string>();

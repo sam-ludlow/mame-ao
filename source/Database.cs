@@ -248,6 +248,7 @@ namespace Spludlow.MameAO
 				return;
 
 			ExecuteNonQuery(targetConnection, $"CREATE DATABASE[{databaseName}]");
+			ExecuteNonQuery(targetConnection, $"ALTER DATABASE [{databaseName}] SET RECOVERY SIMPLE");
 
 			targetConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';");
 

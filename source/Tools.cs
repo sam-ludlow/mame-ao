@@ -109,6 +109,11 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static void ConsolePrintMemory()
+		{
+			Console.WriteLine($"Memory Usage: {Tools.DataSize(Process.GetCurrentProcess().PrivateMemorySize64)}");
+		}
+
 		public static string CleanWhiteSpace(string text)
 		{
 			return Regex.Replace(text, @"\s+", " ").Trim();
