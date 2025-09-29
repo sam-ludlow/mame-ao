@@ -55,7 +55,7 @@ namespace Spludlow.MameAO
 			if (File.Exists(Path.Combine(_CoreDirectory, "mame.exe")) == true)
 				return 0;
 			
-			string binariesUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_64bit.exe";
+			string binariesUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_x64.exe";
 			binariesUrl = binariesUrl.Replace("@VERSION@", _Version);
 
 			string binariesFilename = Path.Combine(_CoreDirectory, Path.GetFileName(binariesUrl));

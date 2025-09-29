@@ -159,8 +159,9 @@ namespace Spludlow.MameAO
 					break;
 
 				case "fbneo-mssql-payload-html":
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					exitCode = OperationsHtml.FBNeoMSSQLPayloadHtml(parameters["server"], parameters["names"]);
+					exitCode = 0;
+					//ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					//exitCode = OperationsHtml.FBNeoMSSQLPayloadHtml(parameters["server"], parameters["names"]);
 					break;
 
 				//
@@ -534,18 +535,18 @@ namespace Spludlow.MameAO
 
 			string agent = $"mame-ao/{assemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
 
-			DataTable table = CreateMetaDataTable(serverConnectionString, databaseName);
-			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
-			{
-				int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
-				int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
-				int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
+			//DataTable metadataTable = CreateMetaDataTable(serverConnectionString, databaseName);
+			//using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			//{
+			//	int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
+			//	int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
+			//	int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
 
-				string info = $"FBNeo: {version} - datafiles: {datafileCount} - games: {gameCount} - roms: {softRomCount}";
+			//	string info = $"FBNeo: {version} - datafiles: {datafileCount} - games: {gameCount} - roms: {softRomCount}";
 
-				table.Rows.Add(1L, "fbneo", "", version, info, DateTime.Now, agent);
-				Database.BulkInsert(connection, table);
-			}
+			//	metadataTable.Rows.Add(1L, "fbneo", "", version, info, DateTime.Now, agent);
+			//	Database.BulkInsert(connection, metadataTable);
+			//}
 
 			DataTable datafile_payload_table = Tools.MakeDataTable("datafile_payload",
 				"key	title	xml		json	html",
@@ -555,61 +556,120 @@ namespace Spludlow.MameAO
 				"datafile_key	game_name	title	xml		json	html",
 				"String			String		String	String	String	String");
 
-			foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
+
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
 			{
-				string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
-
-				using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+				foreach (string datafile_key in Database.ExecuteFill(connection, "SELECT [key] FROM [datafile] ORDER BY [key]").Rows.Cast<DataRow>().Select(row => (string)row["key"]))
 				{
-					reader.MoveToContent();
 
-					while (reader.Read())
-					{
-						while (reader.NodeType == XmlNodeType.Element && reader.Name == "header")
-						{
-							if (XElement.ReadFrom(reader) is XElement headerElement)
-							{
-								Console.WriteLine(headerElement.ToString());
-
-								datafile_payload_table.Rows.Add(datafile_key, "", "", "", "");
-							}
-						}
-					}
 				}
 			}
 
-			foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
-			{
-				Console.WriteLine(xmlFilename);
 
-				string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
+//			SELECT[key] FROM[datafile] ORDER BY[key];
 
-				using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
-				{
-					reader.MoveToContent();
+			//foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
+			//{
+			//	string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
 
-					while (reader.Read())
-					{
-						while (reader.NodeType == XmlNodeType.Element && reader.Name == "game")
-						{
-							if (XElement.ReadFrom(reader) is XElement gameElement)
-							{
-								string game_name = gameElement.Attribute("name").Value;
+			//	using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+			//	{
+			//		reader.MoveToContent();
 
-								string xml = gameElement.ToString();
-								string json = Tools.XML2JSON(gameElement);
+			//		while (reader.Read())
+			//		{
+			//			while (reader.NodeType == XmlNodeType.Element && reader.Name == "header")
+			//			{
+			//				if (XElement.ReadFrom(reader) is XElement headerElement)
+			//				{
+			//					Console.WriteLine(headerElement.ToString());
 
-								game_payload_table.Rows.Add(datafile_key, game_name, "", xml, json, "");
-							}
-						}
-					}
-				}
-			}
+			//					datafile_payload_table.Rows.Add(datafile_key, "", "", "", "");
+			//				}
+			//			}
+			//		}
+			//	}
+			//}
 
-			MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "key" });
-			MakeMSSQLPayloadsInsert(game_payload_table, serverConnectionString, databaseName, new string[] { "datafile_key", "game_name" });
+			//foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
+			//{
+			//	Console.WriteLine(xmlFilename);
+
+			//	string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
+
+			//	using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+			//	{
+			//		reader.MoveToContent();
+
+			//		while (reader.Read())
+			//		{
+			//			while (reader.NodeType == XmlNodeType.Element && reader.Name == "game")
+			//			{
+			//				if (XElement.ReadFrom(reader) is XElement gameElement)
+			//				{
+			//					string game_name = gameElement.Attribute("name").Value;
+
+			//					string xml = gameElement.ToString();
+			//					string json = Tools.XML2JSON(gameElement);
+
+			//					game_payload_table.Rows.Add(datafile_key, game_name, "", xml, json, "");
+			//				}
+			//			}
+			//		}
+			//	}
+			//}
+
+			//MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "key" });
+			//MakeMSSQLPayloadsInsert(game_payload_table, serverConnectionString, databaseName, new string[] { "datafile_key", "game_name" });
 
 			return 0;
+		}
+
+		public static Dictionary<string, string[]>[] FbNeoMSSQLPayloadsGetDatafileGameXmlJsonPayloads(string directory, string category)
+		{
+			string xmlFilename = Path.Combine(directory, $"_{category}.xml");
+			Console.WriteLine(xmlFilename);
+
+			Dictionary<string, string[]> datafilePayloads = new Dictionary<string, string[]>();
+			Dictionary<string, string[]> gamePayloads = new Dictionary<string, string[]>();
+
+			using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+			{
+				reader.MoveToContent();
+
+				while (reader.Read())
+				{
+					while (reader.NodeType == XmlNodeType.Element && reader.Name == "datafile")
+					{
+						if (XElement.ReadFrom(reader) is XElement datafileElement)
+						{
+							string datafile_name = datafileElement.Element("header").Element("name").Value;
+
+							string xml = datafileElement.ToString();
+							string json = Tools.XML2JSON(datafileElement);
+
+							datafilePayloads.Add(datafile_name, new string[] { xml, json });
+
+							HashSet<string> gameNames = new HashSet<string>();  // Duplicates in source data fix
+
+							foreach (XElement element in datafileElement.Elements("game"))
+							{
+								string game_name = element.Attribute("name").Value;
+
+								xml = element.ToString();
+								json = Tools.XML2JSON(element);
+
+								if (gameNames.Add(game_name) == true)
+									gamePayloads.Add($"{datafile_name}\t{game_name}", new string[] { xml, json });
+								else
+									Console.WriteLine($"!!! Warning XML Duplicate TOSEC game: {category}, {datafile_name}, {game_name}");
+							}
+						}
+					}
+				}
+			}
+
+			return new Dictionary<string, string[]>[] { datafilePayloads, gamePayloads };
 		}
 
 		public static int TosecMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName, string assemblyVersion)
