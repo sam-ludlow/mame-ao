@@ -159,9 +159,9 @@ namespace Spludlow.MameAO
 					break;
 
 				case "fbneo-mssql-payload-html":
-					exitCode = 0;
-					//ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					//exitCode = OperationsHtml.FBNeoMSSQLPayloadHtml(parameters["server"], parameters["names"]);
+					//exitCode = 0;
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					exitCode = OperationsHtml.FBNeoMSSQLPayloadHtml(parameters["server"], parameters["names"]);
 					break;
 
 				//
@@ -535,18 +535,18 @@ namespace Spludlow.MameAO
 
 			string agent = $"mame-ao/{assemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
 
-			//DataTable metadataTable = CreateMetaDataTable(serverConnectionString, databaseName);
-			//using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
-			//{
-			//	int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
-			//	int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
-			//	int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
+			DataTable metadataTable = CreateMetaDataTable(serverConnectionString, databaseName);
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			{
+				int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
+				int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
+				int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
 
-			//	string info = $"FBNeo: {version} - datafiles: {datafileCount} - games: {gameCount} - roms: {softRomCount}";
+				string info = $"FBNeo: {version} - datafiles: {datafileCount} - games: {gameCount} - roms: {softRomCount}";
 
-			//	metadataTable.Rows.Add(1L, "fbneo", "", version, info, DateTime.Now, agent);
-			//	Database.BulkInsert(connection, metadataTable);
-			//}
+				metadataTable.Rows.Add(1L, "fbneo", "", version, info, DateTime.Now, agent);
+				Database.BulkInsert(connection, metadataTable);
+			}
 
 			DataTable datafile_payload_table = Tools.MakeDataTable("datafile_payload",
 				"key	title	xml		json	html",
@@ -557,70 +557,69 @@ namespace Spludlow.MameAO
 				"String			String		String	String	String	String");
 
 
-			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
-			{
-				foreach (string datafile_key in Database.ExecuteFill(connection, "SELECT [key] FROM [datafile] ORDER BY [key]").Rows.Cast<DataRow>().Select(row => (string)row["key"]))
-				{
+			//using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			//{
+			//	foreach (string datafile_key in Database.ExecuteFill(connection, "SELECT [key] FROM [datafile] ORDER BY [key]").Rows.Cast<DataRow>().Select(row => (string)row["key"]))
+			//	{
 
+			//	}
+			//}
+
+
+
+			foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
+			{
+				string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
+
+				using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+				{
+					reader.MoveToContent();
+
+					while (reader.Read())
+					{
+						while (reader.NodeType == XmlNodeType.Element && reader.Name == "header")
+						{
+							if (XElement.ReadFrom(reader) is XElement headerElement)
+							{
+								Console.WriteLine(headerElement.ToString());
+
+								datafile_payload_table.Rows.Add(datafile_key, "", "", "", "");
+							}
+						}
+					}
 				}
 			}
 
+			foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
+			{
+				Console.WriteLine(xmlFilename);
 
-//			SELECT[key] FROM[datafile] ORDER BY[key];
+				string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
 
-			//foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
-			//{
-			//	string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
+				using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+				{
+					reader.MoveToContent();
 
-			//	using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
-			//	{
-			//		reader.MoveToContent();
+					while (reader.Read())
+					{
+						while (reader.NodeType == XmlNodeType.Element && reader.Name == "game")
+						{
+							if (XElement.ReadFrom(reader) is XElement gameElement)
+							{
+								string game_name = gameElement.Attribute("name").Value;
 
-			//		while (reader.Read())
-			//		{
-			//			while (reader.NodeType == XmlNodeType.Element && reader.Name == "header")
-			//			{
-			//				if (XElement.ReadFrom(reader) is XElement headerElement)
-			//				{
-			//					Console.WriteLine(headerElement.ToString());
+								string xml = gameElement.ToString();
+								string json = Tools.XML2JSON(gameElement);
 
-			//					datafile_payload_table.Rows.Add(datafile_key, "", "", "", "");
-			//				}
-			//			}
-			//		}
-			//	}
-			//}
+								game_payload_table.Rows.Add(datafile_key, game_name, "", xml, json, "");
+							}
+						}
+					}
+				}
+			}
 
-			//foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
-			//{
-			//	Console.WriteLine(xmlFilename);
-
-			//	string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
-
-			//	using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
-			//	{
-			//		reader.MoveToContent();
-
-			//		while (reader.Read())
-			//		{
-			//			while (reader.NodeType == XmlNodeType.Element && reader.Name == "game")
-			//			{
-			//				if (XElement.ReadFrom(reader) is XElement gameElement)
-			//				{
-			//					string game_name = gameElement.Attribute("name").Value;
-
-			//					string xml = gameElement.ToString();
-			//					string json = Tools.XML2JSON(gameElement);
-
-			//					game_payload_table.Rows.Add(datafile_key, game_name, "", xml, json, "");
-			//				}
-			//			}
-			//		}
-			//	}
-			//}
-
-			//MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "key" });
-			//MakeMSSQLPayloadsInsert(game_payload_table, serverConnectionString, databaseName, new string[] { "datafile_key", "game_name" });
+			MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "key" });
+			MakeMSSQLPayloadsInsert(game_payload_table, serverConnectionString, databaseName, new string[] { "datafile_key", "game_name" });
 
 			return 0;
 		}

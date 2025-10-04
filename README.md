@@ -12,9 +12,16 @@ Easiest way to use MAME & HBMAME. Automatic download and setup of all files from
 - perform option 1 OR 2 below
 - click image to start machine
 
-TIP: Run command `.upany` after initial setup, this will stop the Microsoft Defender notice.
+NOTE: First time it has to extract MAME's data, this will take a moment, next time it will start quickly, version bumps in MAME or MAME-AO will trigger further data initializations.
 
-NOTE: First time it has to extract MAME's data, this will take a moment, next time it will start quickly, although version bumps in MAME or MAME-AO will trigger another data initialization.
+## Virus Detected
+This software can be falsely reported as malicious software. 
+
+You only have my word that it is Kosher. The release ZIPs available here are manually built by me. I hope to implement GitHub builds soon so you at least know the downloads match the source code.
+
+Your Web browser, Windows, and other security software may attempt to block downloading and running MAME-AO & DOME-BT, check the pop-ups carefully there will be an option somewhere to allow.
+
+The command `.upany` after initial setup may help with Microsoft Defender notices.
 
 ## Enter your Archive.org credentials (Option 1)
 If you intend on using BitTorrent you can skip this step, press `ENTER` twice. You can enter your credentials later with the command `.creds`.
@@ -382,11 +389,30 @@ You can run `Source Exists` reports to see if the items are missing anything.
 ## Credits
 
 ### MAME
-Emulator software
+Multi-purpose emulation framework.
 
 https://www.mamedev.org/
 
 https://github.com/mamedev/mame
+
+## HBMAME
+Derivative of MAME containing various hacks and homebrews.
+
+https://hbmame.1emulation.com/
+
+https://github.com/Robbbert/hbmame
+
+## FBNeo
+Emulator for Arcade Games & Select Consoles.
+
+https://neo-source.com/
+
+https://github.com/finalburnneo/FBNeo
+
+## TOSEC
+Cataloguing and preservation of software and other computer resources.
+
+https://www.tosecdev.org/
 
 ### Archive.org
 Asset preservation
