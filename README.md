@@ -5,7 +5,7 @@ Easiest way to use MAME & HBMAME. Automatic download and setup of all files from
 
 ## Installation & Usage
 - create an empty directory e.g. `C:\MameAO`
-- download latest release ZIP from https://github.com/sam-ludlow/mame-ao/releases/latest
+- download latest release ZIP from https://github.com/sam-ludlow/mame-ao/releases/latest (Do not use `_x64`)
 - put ZIP in empty directory and extract
 - double click "mame-ao.exe"
 - wait for the MAME-AO to start
@@ -17,7 +17,7 @@ NOTE: First time it has to extract MAME's data, this will take a moment, next ti
 ## Virus Detected
 This software can be falsely reported as malicious software. 
 
-You only have my word that it is Kosher. The release ZIPs available here are manually built by me. I hope to implement GitHub builds soon so you at least know the downloads match the source code.
+You have my word that it is Kosher. The binaries are built using GitHub Actions.
 
 Your Web browser, Windows, and other security software may attempt to block downloading and running MAME-AO & DOME-BT, check the pop-ups carefully there will be an option somewhere to allow.
 
