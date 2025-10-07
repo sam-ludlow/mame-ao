@@ -1,0 +1,99 @@
+name: Build & Release
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_description:
+        description: 'Release Notes (Optional)'
+        required: false
+        type: string
+
+env:
+  APP_NAME: mame-ao
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Get Version from AssemblyInfo
+        shell: pwsh
+        run: |
+          $content = Get-Content -Path "Properties/AssemblyInfo.cs" -Raw
+          if ($content -match 'AssemblyVersion\("([^"]+)"\)') {
+            $version = $Matches[1]
+            Write-Host "Found version: $version"
+
+            "TAG_NAME=$version" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+
+          } else {
+            Write-Host "::error::Could not find AssemblyVersion in AssemblyInfo.cs"
+            exit 1
+          }
+
+      - name: Validate Tag
+        shell: pwsh
+        run: |
+          Write-Host "Tag Requested '$env:TAG_NAME'.'"
+
+          git ls-remote --exit-code --tags origin "refs/tags/$env:TAG_NAME" *> $null
+
+          if ($LASTEXITCODE -eq 0) {
+            Write-Host "Tag EXISTS '$env:TAG_NAME'."
+            exit 1
+          }
+
+          $global:LASTEXITCODE = 0
+
+          Write-Host "Tag OK '$env:TAG_NAME'."
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v2
+
+      - name: Restore NuGet packages
+        run: nuget restore ${{ env.APP_NAME }}.sln
+
+      - name: Build the solution
+        run: |
+          msbuild ${{ env.APP_NAME }}.csproj /p:Configuration=Release /p:Platform=x86 /p:OutputPath=bin\Release32\
+          msbuild ${{ env.APP_NAME }}.csproj /p:Configuration=Release /p:Platform=x64 /p:OutputPath=bin\Release64\
+
+      - name: Create ZIP of binaries
+        run: |
+          mkdir release32
+          xcopy /s /y /i "bin\Release32" release32
+
+          copy "release32\x86\*" "release32"
+          Remove-Item -Recurse -Force -Path "release32\x86"
+          Remove-Item -Recurse -Force -Path "release32\x64"
+          del "release32\*.xml"
+          del "release32\*.pdb"
+          del "release32\*.config"
+
+          powershell Compress-Archive -Path release32\* -DestinationPath "${{ env.APP_NAME }}-${env:TAG_NAME}.zip"
+
+
+          mkdir release64
+          xcopy /s /y /i "bin\Release64" release64
+
+          copy "release64\x64\*" "release64"
+          Remove-Item -Recurse -Force -Path "release64\x86"
+          Remove-Item -Recurse -Force -Path "release64\x64"
+          del "release64\*.xml"
+          del "release64\*.pdb"
+          del "release64\*.config"
+
+          powershell Compress-Archive -Path release64\* -DestinationPath "${{ env.APP_NAME }}-${{ env.TAG_NAME }}_x64.zip"
+
+      - name: Create GitHub Release
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ env.TAG_NAME }}
+          name: ${{ env.TAG_NAME }}
+          body: ${{ github.event.inputs.release_description }}
+          artifacts: ${{ env.APP_NAME }}-${{ env.TAG_NAME }}.zip,${{ env.APP_NAME }}-${{ env.TAG_NAME }}_x64.zip
+          token: ${{ secrets.ACTIONS_PAT }}
