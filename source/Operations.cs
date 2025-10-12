@@ -159,9 +159,7 @@ namespace Spludlow.MameAO
 					break;
 
 				case "fbneo-mssql-payload-html":
-					//exitCode = 0;
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					exitCode = OperationsHtml.FBNeoMSSQLPayloadHtml(parameters["server"], parameters["names"]);
+					exitCode = 0;
 					break;
 
 				//
@@ -526,6 +524,10 @@ namespace Spludlow.MameAO
 			MakeMSSQLPayloadsInsert(listsTable, serverConnectionString, databaseName, new string[] { "key_1" });
 		}
 
+		//
+		//	FBNeo
+		//
+
 		public static int FBNeoMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName, string assemblyVersion)
 		{
 			if (version == "0")
@@ -548,6 +550,21 @@ namespace Spludlow.MameAO
 				Database.BulkInsert(connection, metadataTable);
 			}
 
+			Dictionary<string, string[]> payloadsXmlJson_datafile = FBNeoMSSQLPayloadsXmlJson_Datafile(directory);
+			Dictionary<string, string[]> payloadsXmlJson_game = FBNeoMSSQLPayloadsXmlJson_Game(directory);
+
+			DataSet dataSet = new DataSet();
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
+			{
+				foreach (string tableName in new string[] { "datafile", "driver", "game", "rom", "sample", "video" })
+				{
+					DataTable table = new DataTable(tableName);
+					using (SqlDataAdapter adapter = new SqlDataAdapter($"SELECT * FROM [{tableName}]", connection))
+						adapter.Fill(table);
+					dataSet.Tables.Add(table);
+				}
+			}
+
 			DataTable datafile_payload_table = Tools.MakeDataTable("datafile_payload",
 				"key	title	xml		json	html",
 				"String	String	String	String	String");
@@ -556,16 +573,121 @@ namespace Spludlow.MameAO
 				"datafile_key	game_name	title	xml		json	html",
 				"String			String		String	String	String	String");
 
+			foreach (DataRow dataFileRow in dataSet.Tables["datafile"].Rows)
+			{
+				long datafile_id = (long)dataFileRow["datafile_id"];
+				string datafile_key = (string)dataFileRow["key"];
+				string datafile_name = (string)dataFileRow["name"];
 
-			//using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';"))
-			//{
-			//	foreach (string datafile_key in Database.ExecuteFill(connection, "SELECT [key] FROM [datafile] ORDER BY [key]").Rows.Cast<DataRow>().Select(row => (string)row["key"]))
-			//	{
+				StringBuilder datafile_html = new StringBuilder();
+				string datafile_title = $"{datafile_name}";
 
-			//	}
-			//}
+				datafile_html.AppendLine("<br />");
+				datafile_html.AppendLine($"<div><h2 style=\"display:inline;\">datafile</h2> &bull; <a href=\"{datafile_key}.xml\">XML</a> &bull; <a href=\"{datafile_key}.json\">JSON</a></div>");
+				datafile_html.AppendLine("<br />");
 
+				datafile_html.AppendLine(Reports.MakeHtmlTable(dataFileRow.Table, new[] { dataFileRow }, null));
+				datafile_html.AppendLine("<hr />");
 
+				datafile_html.AppendLine("<h2>game</h2>");
+				datafile_html.AppendLine("<table>");
+				datafile_html.AppendLine("<tr><th>Name</th><th>Description</th><th>Year</th><th>Manufacturer</th><th>cloneof</th><th>romof</th></tr>");
+
+				foreach (DataRow gameRow in dataSet.Tables["game"].Select($"datafile_id = {datafile_id}"))
+				{
+					long game_id = (long)gameRow["game_id"];
+					string game_name = (string)gameRow["name"];
+					string game_description = (string)gameRow["description"];
+					string game_year = (string)gameRow["year"];
+					string game_manufacturer = (string)gameRow["manufacturer"];
+					string game_cloneof = Tools.DataRowValue(gameRow, "cloneof");
+					string game_romof = Tools.DataRowValue(gameRow, "romof");
+
+					DataRow[] driverRows = dataSet.Tables["driver"].Select($"game_id = {game_id}");
+					DataRow[] romRows = dataSet.Tables["rom"].Select($"game_id = {game_id}");
+					DataRow[] videoRows = dataSet.Tables["video"].Select($"game_id = {game_id}");
+					DataRow[] sampleRows = dataSet.Tables["sample"].Select($"game_id = {game_id}");
+
+					string game_cloneof_datafile_link = game_cloneof == null ? "" : $"<a href=\"{datafile_key}/{game_cloneof}\">{game_cloneof}</a>";
+					string game_romof_datafile_link = game_romof == null ? "" : $"<a href=\"{datafile_key}/{game_romof}\">{game_romof}</a>";
+	
+					datafile_html.AppendLine($"<tr><td><a href=\"{datafile_key}/{game_name}\">{game_name}</a></td><td>{game_description}</td><td>{game_year}</td><td>{game_manufacturer}</td><td>{game_cloneof_datafile_link}</td><td>{game_romof_datafile_link}</td></tr>");
+
+					StringBuilder game_html = new StringBuilder();
+					string game_title = $"{game_description} ({datafile_name})";
+
+					game_html.AppendLine("<br />");
+					game_html.AppendLine($"<div><h2 style=\"display:inline;\">game</h2> &bull; <a href=\"{game_name}.xml\">XML</a> &bull; <a href=\"{game_name}.json\">JSON</a></div>");
+					game_html.AppendLine("<br />");
+
+					DataTable table = gameRow.Table.Clone();
+					table.ImportRow(gameRow);
+					DataRow row = table.Rows[0];
+					if (game_cloneof != null)
+						row["cloneof"] = $"<a href=\"{game_cloneof}\">{game_cloneof}</a>";
+					if (game_romof != null)
+						row["romof"] = $"<a href=\"{game_cloneof}\">{game_cloneof}</a>";
+
+					game_html.AppendLine(Reports.MakeHtmlTable(table, null));
+					game_html.AppendLine("<hr />");
+
+					game_html.AppendLine("<h2>datafile</h2>");
+					game_html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["datafile"], new[] { dataFileRow }, null));
+					game_html.AppendLine("<hr />");
+
+					if (driverRows.Length > 0)
+					{
+						game_html.AppendLine("<h2>driver</h2>");
+						game_html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["driver"], driverRows, null));
+						game_html.AppendLine("<hr />");
+					}
+					if (romRows.Length > 0)
+					{
+						game_html.AppendLine("<h2>rom</h2>");
+						game_html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["rom"], romRows, null));
+						game_html.AppendLine("<hr />");
+					}
+					if (videoRows.Length > 0)
+					{
+						game_html.AppendLine("<h2>video</h2>");
+						game_html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["video"], videoRows, null));
+						game_html.AppendLine("<hr />");
+					}
+					if (sampleRows.Length > 0)
+					{
+						game_html.AppendLine("<h2>sample</h2>");
+						game_html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["sample"], sampleRows, null));
+						game_html.AppendLine("<hr />");
+					}
+
+					string gameKey = $"{datafile_key}\t{game_name}";
+					if (payloadsXmlJson_game.ContainsKey(gameKey) == false)
+						throw new ApplicationException($"payloadsXmlJson_game not found: {gameKey}");
+
+					string[] xmlJsonGame = payloadsXmlJson_game[gameKey];
+
+					game_payload_table.Rows.Add(datafile_key, game_name, game_title, xmlJsonGame[0], xmlJsonGame[1], game_html.ToString());
+				}
+
+				datafile_html.AppendLine("</table>");
+
+				if (payloadsXmlJson_datafile.ContainsKey(datafile_key) == false)
+					throw new ApplicationException($"payloadsXmlJson_datafile not found: {datafile_key}");
+
+				string[] xmlJsonDatafile = payloadsXmlJson_datafile[datafile_key];
+
+				datafile_payload_table.Rows.Add(datafile_key, datafile_title, xmlJsonDatafile[0], xmlJsonDatafile[1], datafile_html.ToString());
+			}
+
+			MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "key" });
+			MakeMSSQLPayloadsInsert(game_payload_table, serverConnectionString, databaseName, new string[] { "datafile_key", "game_name" });
+
+			return 0;
+		}
+
+		public static Dictionary<string, string[]> FBNeoMSSQLPayloadsXmlJson_Datafile(string directory)
+		{
+			Dictionary<string, string[]> payloads = new Dictionary<string, string[]>();
 
 			foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
 			{
@@ -575,25 +697,24 @@ namespace Spludlow.MameAO
 				{
 					reader.MoveToContent();
 
-					while (reader.Read())
-					{
-						while (reader.NodeType == XmlNodeType.Element && reader.Name == "header")
-						{
-							if (XElement.ReadFrom(reader) is XElement headerElement)
-							{
-								Console.WriteLine(headerElement.ToString());
+					XElement datafileElement = (XElement)XElement.ReadFrom(reader);
 
-								datafile_payload_table.Rows.Add(datafile_key, "", "", "", "");
-							}
-						}
-					}
+					string xml = datafileElement.ToString();
+					string json = Tools.XML2JSON(datafileElement);
+
+					payloads.Add(datafile_key, new string[] { xml, json });
 				}
 			}
 
+			return payloads;
+		}
+
+		public static Dictionary<string, string[]> FBNeoMSSQLPayloadsXmlJson_Game(string directory)
+		{
+			Dictionary<string, string[]> payloads = new Dictionary<string, string[]>();
+
 			foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
 			{
-				Console.WriteLine(xmlFilename);
-
 				string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
 
 				using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
@@ -611,65 +732,19 @@ namespace Spludlow.MameAO
 								string xml = gameElement.ToString();
 								string json = Tools.XML2JSON(gameElement);
 
-								game_payload_table.Rows.Add(datafile_key, game_name, "", xml, json, "");
+								payloads.Add($"{datafile_key}\t{game_name}", new string[] { xml, json });
 							}
 						}
 					}
 				}
 			}
 
-			MakeMSSQLPayloadsInsert(datafile_payload_table, serverConnectionString, databaseName, new string[] { "key" });
-			MakeMSSQLPayloadsInsert(game_payload_table, serverConnectionString, databaseName, new string[] { "datafile_key", "game_name" });
-
-			return 0;
+			return payloads;
 		}
 
-		public static Dictionary<string, string[]>[] FbNeoMSSQLPayloadsGetDatafileGameXmlJsonPayloads(string directory, string category)
-		{
-			string xmlFilename = Path.Combine(directory, $"_{category}.xml");
-			Console.WriteLine(xmlFilename);
-
-			Dictionary<string, string[]> datafilePayloads = new Dictionary<string, string[]>();
-			Dictionary<string, string[]> gamePayloads = new Dictionary<string, string[]>();
-
-			using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
-			{
-				reader.MoveToContent();
-
-				while (reader.Read())
-				{
-					while (reader.NodeType == XmlNodeType.Element && reader.Name == "datafile")
-					{
-						if (XElement.ReadFrom(reader) is XElement datafileElement)
-						{
-							string datafile_name = datafileElement.Element("header").Element("name").Value;
-
-							string xml = datafileElement.ToString();
-							string json = Tools.XML2JSON(datafileElement);
-
-							datafilePayloads.Add(datafile_name, new string[] { xml, json });
-
-							HashSet<string> gameNames = new HashSet<string>();  // Duplicates in source data fix
-
-							foreach (XElement element in datafileElement.Elements("game"))
-							{
-								string game_name = element.Attribute("name").Value;
-
-								xml = element.ToString();
-								json = Tools.XML2JSON(element);
-
-								if (gameNames.Add(game_name) == true)
-									gamePayloads.Add($"{datafile_name}\t{game_name}", new string[] { xml, json });
-								else
-									Console.WriteLine($"!!! Warning XML Duplicate TOSEC game: {category}, {datafile_name}, {game_name}");
-							}
-						}
-					}
-				}
-			}
-
-			return new Dictionary<string, string[]>[] { datafilePayloads, gamePayloads };
-		}
+		//
+		//	TOSEC
+		//
 
 		public static int TosecMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName, string assemblyVersion)
 		{
