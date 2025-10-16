@@ -789,7 +789,7 @@ namespace Spludlow.MameAO
 
 			foreach (string category in new string[] { "tosec", "tosec-iso", "tosec-pix" })
 			{
-				//if (category == "tosec")
+				//if (category != "tosec-pix")
 				//	continue;
 
 				Dictionary<string, string[]>[] payloadParts = TosecMSSQLPayloadsGetDatafileGameXmlJsonPayloads(directory, category);
@@ -891,8 +891,15 @@ namespace Spludlow.MameAO
 					StringBuilder game_html = new StringBuilder();
 
 					string game_title = $"{datafile_name} - {game_name} ({category} {datafile_version})";
-					game_html.AppendLine($"<h2>{game_title}</h2>");
 
+					game_html.AppendLine("<br />");
+					game_html.AppendLine($"<div><h2 style=\"display:inline;\">game</h2> &bull; <a href=\"{game_name_enc}.xml\">XML</a> &bull; <a href=\"{game_name_enc}.json\">JSON</a></div>");
+					game_html.AppendLine("<br />");
+
+					game_html.AppendLine(Reports.MakeHtmlTable(gameRow.Table, new[] { gameRow }, null));
+					game_html.AppendLine("<hr />");
+
+					game_html.AppendLine($"<h2>rom</h2>");
 					game_html.AppendLine("<table>");
 					game_html.AppendLine("<tr><th>Name</th><th>Size</th><th>Size Bytes</th><th>CRC32</th><th>MD5</th><th>SHA1</th><th>IA File</th></tr>");
 
@@ -1032,7 +1039,14 @@ namespace Spludlow.MameAO
 
 				string datafile_title = $"{datafile_name} ({category} {datafile_version})";
 
-				datafile_html.AppendLine($"<h2>{datafile_title}</h2>");
+				datafile_html.AppendLine("<br />");
+				datafile_html.AppendLine($"<div><h2 style=\"display:inline;\">datafile</h2> &bull; <a href=\"{datafile_name_enc}.xml\">XML</a> &bull; <a href=\"{datafile_name_enc}.json\">JSON</a></div>");
+				datafile_html.AppendLine("<br />");
+
+				datafile_html.AppendLine(Reports.MakeHtmlTable(datafileRow.Table, new[] { datafileRow }, null));
+				datafile_html.AppendLine("<hr />");
+
+				datafile_html.AppendLine($"<h2>game</h2>");
 				datafile_html.AppendLine("<table>");
 				datafile_html.AppendLine("<tr><th>Name</th><th>Rom Count</th><th>Rom Size</th><th>Rom Bytes</th><th>Extentions</th><th>IA Archive</th></tr>");
 
