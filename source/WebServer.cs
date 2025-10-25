@@ -6,6 +6,7 @@ using System.Net;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
+using System.Net.Sockets;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -51,7 +52,15 @@ namespace Spludlow.MameAO
 			}
 
 			HttpListener listener = new HttpListener();
-			listener.Prefixes.Add(Globals.ListenAddress);
+
+			string listenSufix = Globals.ListenAddress.Substring(Globals.ListenAddress.Length - 7);
+
+			if (Socket.OSSupportsIPv4 == true)
+				listener.Prefixes.Add($"http://127.0.0.1{listenSufix}");
+
+			if (Socket.OSSupportsIPv6 == true)
+				listener.Prefixes.Add($"http://[::1]{listenSufix}");
+
 			listener.Start();
 
 			Task listenTask = new Task(() => {
