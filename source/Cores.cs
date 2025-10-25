@@ -32,7 +32,7 @@ namespace Spludlow.MameAO
 		void MSSqlPayload();
 
 		DataRow GetMachine(string machine_name);
-		DataRow[] GetMachineRoms(DataRow machine);
+		DataRow[] GetMachineRoms(string machine_name);
 		DataRow[] GetMachineDisks(DataRow machine);
 		DataRow[] GetMachineSamples(DataRow machine);
 		DataRow[] GetMachineSoftwareLists(DataRow machine);
@@ -247,6 +247,12 @@ namespace Spludlow.MameAO
 			DataTable table = Database.ExecuteFill(connectionString, $"SELECT * FROM [rom] WHERE [machine_id] = {(long)machine["machine_id"]} AND [sha1] IS NOT NULL");
 			return table.Rows.Cast<DataRow>().ToArray();
 		}
+		public static DataRow[] GetMachineRoms(string connectionString, string machine_name)
+		{
+			DataTable table = Database.ExecuteFill(connectionString,
+				$"SELECT [rom].* FROM [machine] INNER JOIN rom ON machine.machine_id = rom.machine_id WHERE ([machine].[name] = '{machine_name}') AND ([sha1] IS NOT NULL)");
+			return table.Rows.Cast<DataRow>().ToArray();
+		}
 
 		public static DataRow[] GetMachineDisks(string connectionString, DataRow machine)
 		{
@@ -305,13 +311,10 @@ namespace Spludlow.MameAO
 
 			DataRow machineRow = core.GetMachine(machine_name) ?? throw new ApplicationException($"Machine not found (GetReferencedMachines): ${machine_name}");
 
-			if ((long)machineRow["ao_rom_count"] > 0)
-				requiredMachines.Add(machine_name);
+			requiredMachines.Add(machine_name);
 
-			string romof = machineRow.IsNull("romof") ? null : (string)machineRow["romof"];
-
-			if (romof != null)
-				GetReferencedMachines(core, romof, requiredMachines);
+			if (machineRow.IsNull("romof") == false)
+				GetReferencedMachines(core, (string)machineRow["romof"], requiredMachines);
 
 			foreach (DataRow row in core.GetMachineDeviceRefs(machine_name))
 				GetReferencedMachines(core, (string)row["name"], requiredMachines);

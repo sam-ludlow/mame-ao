@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -138,27 +139,36 @@ namespace Spludlow.MameAO
 			Console.WriteLine();
 		}
 
-		public static int PlaceMachineRoms(ICore core, string mainMachineName, bool placeFiles)
+		public static int PlaceMachineRoms(ICore core, string machine_name, bool placeFiles)
 		{
+			var requiredMachineAssets = new Dictionary<string, DataRow[]>();
+			foreach (string name in core.GetReferencedMachines(machine_name))
+			{
+				DataRow[] assetRows = core.GetMachineRoms(name);
+				if (assetRows.Length > 0)
+					requiredMachineAssets.Add(name, assetRows);
+			}
+
+			// Child has roms and parent does not, still need parent ZIP
+			DataRow machine = core.GetMachine(machine_name);
+			if (machine.IsNull("cloneof") == false)
+			{
+				string cloneof_machine_name = (string)machine["cloneof"];
+				if (requiredMachineAssets.ContainsKey(cloneof_machine_name) == false && requiredMachineAssets.ContainsKey(machine_name) == true)
+					requiredMachineAssets.Add(cloneof_machine_name, requiredMachineAssets[machine_name]);
+			}
+
+			Console.WriteLine($"Required Machines: {String.Join(", ", requiredMachineAssets.Select(pair => $"{pair.Key}({pair.Value.Length})"))}");
+
 			int missingCount = 0;
-
-			DataRow mainMachine = core.GetMachine(mainMachineName) ?? throw new ApplicationException($"Machine not found: ${mainMachineName}");
-
-			DataRow[] mainAssetRows = core.GetMachineRoms(mainMachine);
-
-			List<string> mainMachineNames = new List<string>(new string[] { mainMachineName });
-			if (mainMachine.IsNull("cloneof") == false)
-				mainMachineNames.Add((string)mainMachine["cloneof"]);
 
 			for (int pass = 0; pass < 2; ++pass)
 			{
-				foreach (string machineName in core.GetReferencedMachines(mainMachineName))
+				foreach (string requiredMachineName in requiredMachineAssets.Keys)
 				{
-					string[] info = new string[] { "machine rom", mainMachineName, machineName };
+					DataRow[] assetRows = requiredMachineAssets[requiredMachineName];
 
-					DataRow[] assetRows = mainAssetRows;
-					if (mainMachineNames.Contains(machineName) == false)
-						assetRows = core.GetMachineRoms(core.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: ${machineName}"));
+					string[] info = new string[] { "machine rom", machine_name, requiredMachineName };
 
 					if (pass == 0)
 					{
@@ -167,13 +177,13 @@ namespace Spludlow.MameAO
 							if (Globals.BitTorrentAvailable == false)
 							{
 								ArchiveOrgItem item = Globals.ArchiveOrgItems[ItemType.MachineRom][0];
-								ArchiveOrgFile file = item.GetFile(machineName);
+								ArchiveOrgFile file = item.GetFile(requiredMachineName);
 								if (file != null)
 									DownloadImportFiles(item.DownloadLink(file), file.size, info);
 							}
 							else
 							{
-								var btFile = BitTorrent.MachineRom(core.Name, machineName);
+								var btFile = BitTorrent.MachineRom(core.Name, requiredMachineName);
 								if (btFile != null)
 									DownloadImportFiles(btFile.Filename, btFile.Length, info);
 							}
@@ -183,7 +193,7 @@ namespace Spludlow.MameAO
 					{
 						if (placeFiles == true)
 						{
-							string targetDirectory = Path.Combine(core.Directory, "roms", machineName);
+							string targetDirectory = Path.Combine(core.Directory, "roms", requiredMachineName);
 							missingCount += PlaceAssetFiles(assetRows, Globals.RomHashStore, targetDirectory, null, info);
 						}
 					}

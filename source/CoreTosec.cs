@@ -294,7 +294,7 @@ namespace Spludlow.MameAO
 			throw new NotImplementedException();
 		}
 
-		DataRow[] ICore.GetMachineRoms(DataRow machine)
+		DataRow[] ICore.GetMachineRoms(string machine_name)
 		{
 			throw new NotImplementedException();
 		}
