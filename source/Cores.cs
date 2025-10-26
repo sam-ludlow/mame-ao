@@ -311,7 +311,8 @@ namespace Spludlow.MameAO
 
 			DataRow machineRow = core.GetMachine(machine_name) ?? throw new ApplicationException($"Machine not found (GetReferencedMachines): ${machine_name}");
 
-			requiredMachines.Add(machine_name);
+			if ((long)machineRow["ao_rom_count"] > 0)
+				requiredMachines.Add(machine_name);
 
 			if (machineRow.IsNull("romof") == false)
 				GetReferencedMachines(core, (string)machineRow["romof"], requiredMachines);

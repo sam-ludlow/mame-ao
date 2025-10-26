@@ -143,11 +143,7 @@ namespace Spludlow.MameAO
 		{
 			var requiredMachineAssets = new Dictionary<string, DataRow[]>();
 			foreach (string name in core.GetReferencedMachines(machine_name))
-			{
-				DataRow[] assetRows = core.GetMachineRoms(name);
-				if (assetRows.Length > 0)
-					requiredMachineAssets.Add(name, assetRows);
-			}
+				requiredMachineAssets.Add(name, core.GetMachineRoms(name));
 
 			// Child has roms and parent does not, still need parent ZIP
 			DataRow machine = core.GetMachine(machine_name);

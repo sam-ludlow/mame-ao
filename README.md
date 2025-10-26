@@ -55,7 +55,7 @@ NOTE: MAME-AO application is 32 bit to keep RAM usage down.
 https://github.com/sam-ludlow/mame-ao/issues
 
 ## HBMAME - HomeBrew MAME
-We now support HBMAME. To enable use the command `.core hbmame`.
+We now support HBMAME. To enable use the command `.core hbmame`. Only works with BitTorrent.
 
 ![HBMAME](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-hbmame.png)
 
