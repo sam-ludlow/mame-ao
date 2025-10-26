@@ -22,34 +22,32 @@ namespace Spludlow.MameAO
 		//
 		// Common
 		//
-		public static void CreateMetaDataTable(string serverConnectionString, string databaseName, string coreName, string version, string info)
+		public static void CreateMetaDataTable(SqlConnection connection, string coreName, string version, string info)
 		{
 			string agent = $"mame-ao/{Globals.AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
 
 			string tableName = "_metadata";
-			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
-			{
-				string[] columnDefs = new string[] {
-					$"[{tableName}_id] BIGINT NOT NULL PRIMARY KEY",
-					"[dataset] NVARCHAR(1024) NOT NULL",
-					"[subset] NVARCHAR(1024) NOT NULL",
-					"[version] NVARCHAR(1024) NOT NULL",
-					"[info] NVARCHAR(1024) NOT NULL",
-					"[processed] DATETIME NOT NULL",
-					"[agent] NVARCHAR(1024) NOT NULL",
-				};
-				string commandText = $"CREATE TABLE [{tableName}] ({String.Join(", ", columnDefs)});";
 
-				Console.WriteLine(commandText);
-				Database.ExecuteNonQuery(connection, commandText);
+			string[] columnDefs = new string[] {
+				$"[{tableName}_id] BIGINT NOT NULL PRIMARY KEY",
+				"[dataset] NVARCHAR(1024) NOT NULL",
+				"[subset] NVARCHAR(1024) NOT NULL",
+				"[version] NVARCHAR(1024) NOT NULL",
+				"[info] NVARCHAR(1024) NOT NULL",
+				"[processed] DATETIME NOT NULL",
+				"[agent] NVARCHAR(1024) NOT NULL",
+			};
+			string commandText = $"CREATE TABLE [{tableName}] ({String.Join(", ", columnDefs)});";
 
-				DataTable table = Database.ExecuteFill(connection, $"SELECT * FROM [{tableName}] WHERE (0 = 1)");
-				table.TableName = tableName;
+			Console.WriteLine(commandText);
+			Database.ExecuteNonQuery(connection, commandText);
 
-				table.Rows.Add(1L, coreName, "", version, info, DateTime.Now, agent);
+			DataTable table = Database.ExecuteFill(connection, $"SELECT * FROM [{tableName}] WHERE (0 = 1)");
+			table.TableName = tableName;
 
-				Database.BulkInsert(connection, table);
-			}
+			table.Rows.Add(1L, coreName, "", version, info, DateTime.Now, agent);
+
+			Database.BulkInsert(connection, table);
 		}
 
 		public static DataTable MakePayloadDataTable(string tableName, string[] keyNames)
@@ -70,7 +68,7 @@ namespace Spludlow.MameAO
 			return table;
 		}
 
-		public static void MakeMSSQLPayloadsInsert(string serverConnectionString, string databaseName, DataTable table)
+		public static void MakeMSSQLPayloadsInsert(SqlConnection connection, DataTable table)
 		{
 			List<string> columnDefs = new List<string>();
 			List<string> pkNames = new List<string>();
@@ -105,21 +103,908 @@ namespace Spludlow.MameAO
 
 			Console.WriteLine(commandText);
 
-			using (SqlConnection targetConnection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
-			{	
-				Database.ExecuteNonQuery(targetConnection, commandText);
-				Database.BulkInsert(targetConnection, table);
-			}
+			Database.ExecuteNonQuery(connection, commandText);
+			Database.BulkInsert(connection, table);
 		}
 
 		//
 		// MAME
 		//
 
+		public static int MameMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseNames)
+		{
+			if (version == "0")
+				version = CoreMame.LatestLocalVersion(directory);
+	
+			return MameishMSSQLPayloads(directory, version, serverConnectionString, databaseNames, "mame");
+		}
 		//
 		// HBMAME
 		//
+		public static int HbMameMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseNames)
+		{
+			if (version == "0")
+				version = CoreHbMame.LatestLocalVersion(directory);
 
+			return MameishMSSQLPayloads(directory, version, serverConnectionString, databaseNames, "hbmame");
+		}
+
+		//
+		// MAMEish
+		//
+
+		public static int MameishMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseNames, string coreName)
+		{
+			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' }).Cast<string>().Select(name => name.Trim()).ToArray();
+			if (databaseNamesEach.Length != 2)
+				throw new ApplicationException("database names must be 2 parts comma delimited");
+
+			string versionDirectory = Path.Combine(directory, version);
+
+			SqlConnection[] connections = new SqlConnection[]
+			{
+				new SqlConnection(serverConnectionString + $"Database='{databaseNamesEach[0]}';"),
+				new SqlConnection(serverConnectionString + $"Database='{databaseNamesEach[1]}';")
+			};
+			
+			string exePath = Path.Combine(versionDirectory, $"{coreName}.exe");
+			string exeTime = File.GetLastWriteTime(exePath).ToString("s");
+
+			MameishMSSQLMachinePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
+			
+			MameishMSSQLSoftwarePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
+
+			return 0;
+		}
+
+		public static void MameishMSSQLMachinePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime)
+		{
+			//
+			// Metadata
+			//
+			string info;
+
+			int machineCount = (int)Database.ExecuteScalar(connections[0], "SELECT COUNT(*) FROM machine");
+			int romCount = (int)Database.ExecuteScalar(connections[0], "SELECT COUNT(*) FROM rom");
+			int diskCount = Database.TableExists(connections[0], "disk") == true ? (int)Database.ExecuteScalar(connections[0], "SELECT COUNT(*) FROM disk") : 0;
+
+			info = $"{coreName.ToUpper()}: {version} - Released: {exeTime} - Machines: {machineCount} - rom: {romCount} - disk: {diskCount}";
+
+			CreateMetaDataTable(connections[0], coreName, version, info);
+
+			//
+			// JSON/XML
+			//
+			Dictionary<string, string[]> machine_XmlJsonPayloads = MameishMachineXmlJsonPayloads(Path.Combine(versionDirectory, "_machine.xml"));
+
+			//
+			// Source Data
+			//
+			DataSet dataSet = new DataSet();
+			List<string> conditionTableNames = new List<string>();
+
+			foreach (string tableName in Database.TableList(connections[0]))
+			{
+				if (tableName.EndsWith("_payload") == true || tableName == "sysdiagrams")
+					continue;
+
+				using (SqlDataAdapter adapter = new SqlDataAdapter($"SELECT * from [{tableName}]", connections[0]))
+					adapter.Fill(dataSet);
+
+				dataSet.Tables[dataSet.Tables.Count - 1].TableName = tableName;
+
+				if (tableName.EndsWith("_condition") == true)
+					conditionTableNames.Add(tableName);
+			}
+
+			//
+			// Source Data - Merge condition tables
+			//
+			foreach (string conditionTableName in conditionTableNames)
+			{
+				string parentTableName = conditionTableName.Substring(0, conditionTableName.Length - 10);
+
+				DataTable parentTable = dataSet.Tables[parentTableName];
+				DataTable conditionTable = dataSet.Tables[conditionTableName];
+
+				conditionTable.PrimaryKey = new DataColumn[] { conditionTable.Columns[1] };
+
+				foreach (DataColumn column in conditionTable.Columns)
+				{
+					string newColumnName = $"condition_{column.ColumnName}";
+					parentTable.Columns.Add(newColumnName, column.DataType);
+				}
+
+				string keyColumnName = parentTable.Columns[0].ColumnName;
+
+				foreach (DataRow parentRow in parentTable.Rows)
+				{
+					long key = (long)parentRow[0];
+
+					DataRow conditionRow = conditionTable.Rows.Find(key);
+
+					if (conditionRow == null)
+						continue;
+
+					foreach (DataColumn column in conditionTable.Columns)
+					{
+						string newColumnName = $"condition_{column.ColumnName}";
+						parentRow[newColumnName] = conditionRow[column];
+					}
+				}
+			}
+
+			//
+			// Payloads
+			//
+			DataTable machine_payload_table = MakePayloadDataTable("machine_payload", new string[] { "machine_name" });
+
+			string[] simpleTableNames = new string[] {
+				"machine",
+				"display",
+				"driver",
+				"rom",
+				"disk",
+				"chip",
+				"softwarelist",
+				"device_ref",
+				"sample",
+				"adjuster",
+				"biosset",
+				"sound",
+				"feature",
+				"ramoption",
+			};
+
+			foreach (DataRow machineRow in dataSet.Tables["machine"].Rows)
+			{
+				long machine_id = (long)machineRow["machine_id"];
+				string machine_name = (string)machineRow["name"];
+
+				//if (machine_name != "bbcb")
+				//	continue;
+
+				StringBuilder html = new StringBuilder();
+
+				//
+				// Simple joins
+				//
+				foreach (string tableName in simpleTableNames)
+				{
+					if (dataSet.Tables.Contains(tableName) == false)
+						continue;
+
+					DataTable sourceTable = dataSet.Tables[tableName];
+
+					DataRow[] rows = sourceTable.Select("machine_id = " + machine_id);
+
+					if (rows.Length == 0)
+						continue;
+
+					DataTable table = sourceTable.Clone();
+
+					foreach (DataRow row in rows)
+					{
+						table.ImportRow(row);
+
+						DataRow targetRow = table.Rows[table.Rows.Count - 1];
+
+						switch (tableName)
+						{
+							case "machine":
+								if (targetRow.IsNull("sourcefile") == false)
+								{
+									string value = (string)targetRow["sourcefile"];
+
+									string baseUrl;
+									switch (coreName)
+									{
+										case "mame":
+											baseUrl = $"https://github.com/mamedev/mame/blob/mame{version}/src";
+
+											if (value.Split(new char[] { '/' }).Length == 2 && value.StartsWith("emu/") == false)
+												value = $"<a href=\"{baseUrl}/{coreName}/{value}\" target=\"_blank\">{value}</a>";
+											else
+												value = $"<a href=\"{baseUrl}/{value}\" target=\"_blank\">{value}</a>";
+											break;
+										case "hbmame":
+											baseUrl = $"https://github.com/Robbbert/hbmame/blob/tag{version.Substring(2).Replace(".", "")}/src/hbmame/drivers";
+
+											value = $"<a href=\"{baseUrl}/{value}\" target=\"_blank\">{value}</a>";
+											break;
+
+										default:
+											throw new ApplicationException($"Unknown core: {coreName}");
+									}
+
+									targetRow["sourcefile"] = value;
+								}
+								if (targetRow.IsNull("romof") == false)
+								{
+									string value = (string)targetRow["romof"];
+									targetRow["romof"] = $"<a href=\"/{coreName}/machine/{value}\">{value}</a>";
+								}
+								if (targetRow.IsNull("cloneof") == false)
+								{
+									string value = (string)targetRow["cloneof"];
+									targetRow["cloneof"] = $"<a href=\"/{coreName}/machine/{value}\">{value}</a>";
+								}
+								break;
+
+							case "device_ref":
+								if (targetRow.IsNull("name") == false)
+								{
+									string value = (string)targetRow["name"];
+									targetRow["name"] = $"<a href=\"/{coreName}/machine/{value}\">{value}</a>";
+								}
+								break;
+
+
+							case "softwarelist":
+								if (targetRow.IsNull("name") == false)
+								{
+									string value = (string)targetRow["name"];
+									targetRow["name"] = $"<a href=\"/{coreName}/software/{value}\">{value}</a>";
+								}
+								break;
+						}
+					}
+
+					if (tableName == "machine")
+					{
+						html.AppendLine("<br />");
+						html.AppendLine($"<div><h2 style=\"display:inline;\">machine</h2> &bull; <a href=\"{machine_name}.xml\">XML</a> &bull; <a href=\"{machine_name}.json\">JSON</a> &bull; <a href=\"#\" onclick=\"mameAO('{machine_name}@{coreName}'); return false\">AO</a></div>");
+						html.AppendLine("<br />");
+					}
+					else
+					{
+						html.AppendLine("<hr />");
+						html.AppendLine($"<h2>{tableName}</h2>");
+					}
+
+					html.AppendLine(Reports.MakeHtmlTable(table, null));
+				}
+
+				DataRow[] deviceRows = dataSet.Tables["device"].Select("machine_id = " + machine_id);
+				if (deviceRows.Length > 0)
+				{
+					//	device, instance
+					DataTable table = new DataTable();
+					foreach (DataTable columnTable in new DataTable[] { dataSet.Tables["device"], dataSet.Tables["instance"] })
+						foreach (DataColumn column in columnTable.Columns)
+							if (column.ColumnName.EndsWith("_id") == false)
+								table.Columns.Add(column.ColumnName, typeof(string));
+
+					foreach (DataRow deviceRow in deviceRows)
+					{
+						long device_id = (long)deviceRow["device_id"];
+
+						DataRow[] instanceRows = dataSet.Tables["instance"].Select("device_id = " + device_id);
+						foreach (DataRow instanceRow in instanceRows)
+						{
+							DataRow row = table.NewRow();
+							foreach (DataColumn column in deviceRow.Table.Columns)
+								if (column.ColumnName.EndsWith("_id") == false)
+									row[column.ColumnName] = deviceRow[column.ColumnName];
+
+							foreach (DataColumn column in instanceRow.Table.Columns)
+								if (column.ColumnName.EndsWith("_id") == false)
+									row[column.ColumnName] = instanceRow[column.ColumnName];
+							table.Rows.Add(row);
+						}
+					}
+
+					if (table.Rows.Count > 0)
+					{
+						html.AppendLine("<hr />");
+						html.AppendLine("<h2>device, instance</h2>");
+						html.AppendLine(Reports.MakeHtmlTable(table, null));
+					}
+
+					//	device, extension
+					table = new DataTable();
+					foreach (DataColumn column in dataSet.Tables["device"].Columns)
+						if (column.ColumnName.EndsWith("_id") == false)
+							table.Columns.Add(column.ColumnName, typeof(string));
+					table.Columns.Add("extension_names", typeof(string));
+
+					foreach (DataRow deviceRow in deviceRows)
+					{
+						long device_id = (long)deviceRow["device_id"];
+
+						DataRow[] extensionRows = dataSet.Tables["extension"].Select("device_id = " + device_id);
+
+						DataRow row = table.NewRow();
+						foreach (DataColumn column in deviceRow.Table.Columns)
+							if (column.ColumnName.EndsWith("_id") == false)
+								row[column.ColumnName] = deviceRow[column.ColumnName];
+
+						row["extension_names"] = String.Join(", ", extensionRows.Select(r => (string)r["name"]));
+
+						table.Rows.Add(row);
+					}
+
+					if (table.Rows.Count > 0)
+					{
+						html.AppendLine("<hr />");
+						html.AppendLine("<h2>device, extension</h2>");
+						html.AppendLine(Reports.MakeHtmlTable(table, null));
+					}
+				}
+
+				//
+				// input, control
+				//
+				DataRow[] inputRows = dataSet.Tables["input"].Select("machine_id = " + machine_id);
+				if (inputRows.Length > 0)
+				{
+					if (inputRows.Length != 1)
+						throw new ApplicationException("Not one [input] row.");
+
+					long input_id = (long)inputRows[0]["input_id"];
+
+					html.AppendLine("<hr />");
+					html.AppendLine("<h2>input</h2>");
+					html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["input"], inputRows, null));
+
+					DataRow[] controlRows = dataSet.Tables["control"].Select("input_id = " + input_id);
+					if (controlRows.Length > 0)
+					{
+						html.AppendLine("<h3>control</h3>");
+						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["control"], controlRows, null));
+					}
+				}
+
+				//
+				// port, analog
+				//
+				DataRow[] portRows = dataSet.Tables["port"].Select("machine_id = " + machine_id);
+				if (portRows.Length > 0)
+				{
+					html.AppendLine("<hr />");
+					html.AppendLine("<h2>port, analog</h2>");
+
+					DataTable table = Tools.MakeDataTable(
+						"port_tag	analog_masks",
+						"String		String"
+					);
+					foreach (DataRow portRow in portRows)
+					{
+						long port_id = (long)portRow["port_id"];
+
+						DataRow[] analogRows = dataSet.Tables["analog"].Select("port_id = " + port_id);
+
+						string masks = String.Join(", ", analogRows.Select(row => (string)row["mask"]));
+
+						table.Rows.Add((string)portRow["tag"], masks);
+					}
+
+					html.AppendLine(Reports.MakeHtmlTable(table, null));
+				}
+
+				//
+				// slot, slotoption
+				//
+				DataRow[] slotRows = dataSet.Tables["slot"].Select("machine_id = " + machine_id);
+				if (slotRows.Length > 0)
+				{
+					html.AppendLine("<hr />");
+					html.AppendLine("<h2>slot, slotoption</h2>");
+
+					DataTable table = Tools.MakeDataTable(
+						"slot_name	slotoption_name	slotoption_devname	slotoption_default",
+						"String		String			String				String"
+					);
+
+					foreach (DataRow slotRow in slotRows)
+					{
+						long slot_id = (long)slotRow["slot_id"];
+						DataRow[] slotoptionRows = dataSet.Tables["slotoption"].Select("slot_id = " + slot_id);
+
+						if (slotoptionRows.Length == 0)
+							table.Rows.Add(slotRow["name"], null, null, null);
+
+						foreach (DataRow slotoptionRow in slotoptionRows)
+						{
+							DataRow row = table.Rows.Add(slotRow["name"], slotoptionRow["name"], slotoptionRow["devname"], slotoptionRow["default"]);
+
+							if (row.IsNull("slotoption_devname") == false)
+							{
+								string value = (string)row["slotoption_devname"];
+								row["slotoption_devname"] = $"<a href=\"/{coreName}/machine/{value}\">{value}</a>";
+							}
+						}
+					}
+
+					html.AppendLine(Reports.MakeHtmlTable(table, null));
+				}
+
+				//
+				// configuration
+				//
+				DataRow[] configurationRows = dataSet.Tables["configuration"].Select("machine_id = " + machine_id);
+				if (configurationRows.Length > 0)
+				{
+					html.AppendLine("<hr />");
+					html.AppendLine("<h2>configuration</h2>");
+
+					foreach (DataRow configurationRow in configurationRows)
+					{
+						long configuration_id = (long)configurationRow["configuration_id"];
+
+						html.AppendLine("<hr class='px2' />");
+
+						html.AppendLine($"<h3>{(string)configurationRow["name"]}</h3>");
+
+						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["configuration"], new[] { configurationRow }, null));
+
+						if (dataSet.Tables.Contains("conflocation") == true)
+						{
+							DataRow[] conflocationRows = dataSet.Tables["conflocation"].Select("configuration_id = " + configuration_id);
+							if (conflocationRows.Length > 0)
+							{
+								html.AppendLine("<h4>location</h4>");
+
+								html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["conflocation"], conflocationRows, null));
+							}
+						}
+
+						DataRow[] confsettingRows = dataSet.Tables["confsetting"].Select("configuration_id = " + configuration_id);
+						if (confsettingRows.Length > 0)
+						{
+							html.AppendLine("<h4>setting</h4>");
+
+							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["confsetting"], confsettingRows, null));
+						}
+
+					}
+				}
+
+				//
+				// dipswitch
+				//
+				DataRow[] dipswitchRows = dataSet.Tables["dipswitch"].Select("machine_id = " + machine_id);
+				if (dipswitchRows.Length > 0)
+				{
+					html.AppendLine("<hr />");
+					html.AppendLine("<h2>dipswitch</h2>");
+
+					foreach (DataRow dipswitchRow in dipswitchRows)
+					{
+						long dipswitch_id = (long)dipswitchRow["dipswitch_id"];
+
+						html.AppendLine("<hr class='px2' />");
+
+						html.AppendLine($"<h3>{(string)dipswitchRow["name"]}</h3>");
+
+						html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["dipswitch"], new[] { dipswitchRow }, null));
+
+						DataRow[] diplocationRows = dataSet.Tables["diplocation"].Select("dipswitch_id = " + dipswitch_id);
+						if (diplocationRows.Length > 0)
+						{
+							html.AppendLine("<h4>location</h4>");
+
+							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["diplocation"], diplocationRows, null));
+						}
+
+						DataRow[] dipvalueRows = dataSet.Tables["dipvalue"].Select("dipswitch_id = " + dipswitch_id);
+						if (dipvalueRows.Length > 0)
+						{
+							html.AppendLine("<h4>value</h4>");
+
+							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["dipvalue"], dipvalueRows, null));
+						}
+					}
+				}
+
+				string[] xmlJson = machine_XmlJsonPayloads[machine_name];
+
+				string title = $"{(string)machineRow["description"]} - {coreName} ({version}) machine";
+
+				machine_payload_table.Rows.Add(machine_name, title, xmlJson[0], xmlJson[1], html.ToString());
+			}
+
+			MakeMSSQLPayloadsInsert(connections[0], machine_payload_table);
+		}
+
+		public static void MameishMSSQLSoftwarePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime)
+		{
+			//
+			// Metadata
+			//
+			string info;
+
+			int softwarelistCount = (int)Database.ExecuteScalar(connections[1], "SELECT COUNT(*) FROM softwarelist");
+			int softwareCount = (int)Database.ExecuteScalar(connections[1], "SELECT COUNT(*) FROM software");
+			int softRomCount = (int)Database.ExecuteScalar(connections[1], "SELECT COUNT(*) FROM rom");
+			int softDiskCount = Database.TableExists(connections[1], "disk") == true ? (int)Database.ExecuteScalar(connections[1], "SELECT COUNT(*) FROM disk") : 0;
+
+			info = $"{coreName.ToUpper()}: {version} - Released: {exeTime} - Lists: {softwarelistCount} - Software: {softwareCount} - rom: {softRomCount} - disk: {softDiskCount}";
+
+			CreateMetaDataTable(connections[1], coreName, version, info);
+
+			//
+			// JSON/XML
+			//
+			Dictionary<string, string[]>[] payloads = MameishSoftwareXmlJsonPayloads(Path.Combine(versionDirectory, "_software.xml"));
+			Dictionary<string, string[]> softwarelist_XmlJsonPayloads = payloads[0];
+			Dictionary<string, string[]> software_XmlJsonPayloads = payloads[1];
+
+			//
+			// Source Data
+			//
+			DataSet dataSet = new DataSet();
+
+			foreach (string tableName in Database.TableList(connections[1]))
+			{
+				if (tableName.EndsWith("_payload") == true || tableName == "sysdiagrams")
+					continue;
+
+				using (SqlDataAdapter adapter = new SqlDataAdapter($"SELECT * from [{tableName}]", connections[1]))
+					adapter.Fill(dataSet);
+
+				dataSet.Tables[dataSet.Tables.Count - 1].TableName = tableName;
+			}
+
+			DataTable machineListTable = Database.ExecuteFill(connections[0], "SELECT machine.name AS machine_name, driver.status, softwarelist.name AS softwarelist_name " +
+				"FROM (machine LEFT JOIN driver ON machine.machine_id = driver.machine_id) INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id");
+
+			foreach (DataRow row in machineListTable.Rows)
+			{
+				if (row.IsNull("status") == true)
+					row["status"] = "no driver";
+			}
+
+			DataTable machineDetailTable = Database.ExecuteFill(connections[0], "SELECT machine.name, machine.description FROM machine");
+			machineDetailTable.PrimaryKey = new DataColumn[] { machineDetailTable.Columns["name"] };
+
+			//
+			// Payloads
+			//
+			DataTable softwarelists_payload_table = MakePayloadDataTable("softwarelists_payload", new string[] { "key_1" });
+			DataTable softwarelist_payload_table = MakePayloadDataTable("softwarelist_payload", new string[] { "softwarelist_name" });
+			DataTable software_payload_table = MakePayloadDataTable("software_payload", new string[] { "softwarelist_name", "software_name" });
+
+			DataTable romTable = new DataTable();
+			foreach (DataColumn column in dataSet.Tables["dataarea"].Columns)
+				if (column.ColumnName.EndsWith("_id") == false)
+					romTable.Columns.Add("data_" + column.ColumnName);
+			foreach (DataColumn column in dataSet.Tables["rom"].Columns)
+				if (column.ColumnName.EndsWith("_id") == false)
+					romTable.Columns.Add(column.ColumnName);
+
+			DataTable diskTable = new DataTable();
+			if (dataSet.Tables.Contains("diskarea") == true)
+			{
+				foreach (DataColumn column in dataSet.Tables["diskarea"].Columns)
+					if (column.ColumnName.EndsWith("_id") == false)
+						diskTable.Columns.Add("data_" + column.ColumnName);
+				foreach (DataColumn column in dataSet.Tables["disk"].Columns)
+					if (column.ColumnName.EndsWith("_id") == false)
+						diskTable.Columns.Add(column.ColumnName);
+			}
+
+			DataTable listTable = Tools.MakeDataTable(
+				"name	description",
+				"String	String"
+			);
+
+			foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Select(null, "description"))
+			{
+				long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
+				string softwarelist_name = (string)softwarelistRow["name"];
+				string softwarelist_description = (string)softwarelistRow["description"];
+
+				//if (softwarelist_name != "x68k_flop" && softwarelist_name != "amiga_cd")
+				//	continue;
+
+				DataRow[] softwareRows = dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}");
+
+				//
+				// SoftwareLists
+				//
+
+				StringBuilder html = new StringBuilder();
+
+				html.AppendLine("<br />");
+				html.AppendLine($"<div><h2 style=\"display:inline;\">softwarelist</h2> &bull; <a href=\"{softwarelist_name}.xml\">XML</a> &bull; <a href=\"{softwarelist_name}.json\">JSON</a> </div>");
+				html.AppendLine("<br />");
+				html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new DataRow[] { softwarelistRow }, null));
+
+				html.AppendLine("<hr />");
+				html.AppendLine("<h2>software</h2>");
+				DataTable softwareTable = dataSet.Tables["software"].Clone();
+				foreach (DataRow softwareRow in softwareRows)
+				{
+					softwareTable.ImportRow(softwareRow);
+					DataRow row = softwareTable.Rows[softwareTable.Rows.Count - 1];
+					string value = (string)row["name"];
+					row["name"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{value}\">{value}</a>";
+					if (softwareTable.Columns.Contains("cloneof") == true && row.IsNull("cloneof") == false)
+					{
+						value = (string)row["cloneof"];
+						row["cloneof"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{value}\">{value}</a>";
+					}
+				}
+				html.AppendLine(Reports.MakeHtmlTable(softwareTable, null));
+
+				listTable.Rows.Add($"<a href=\"/{coreName}/software/{softwarelist_name}\">{softwarelist_name}</a>", softwarelist_description);
+
+				string softwarelist_title = $"{softwarelist_description} - {coreName} ({version}) software list";
+				string[] xmlJson = softwarelist_XmlJsonPayloads[softwarelist_name];
+
+				softwarelist_payload_table.Rows.Add(softwarelist_name, softwarelist_title, xmlJson[0], xmlJson[1], html.ToString());
+
+				//
+				// Software
+				//
+
+				softwarelistRow["name"] = $"<a href=\"/{coreName}/software/{softwarelist_name}\">{softwarelist_name}</a>";
+
+				foreach (DataRow softwareRow in softwareRows)
+				{
+					long software_id = (long)softwareRow["software_id"];
+					string software_name = (string)softwareRow["name"];
+
+					if (softwareTable.Columns.Contains("cloneof") == true && softwareRow.IsNull("cloneof") == false)
+					{
+						string value = (string)softwareRow["cloneof"];
+						softwareRow["cloneof"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{value}\">{value}</a>";
+					}
+
+					html = new StringBuilder();
+
+					html.AppendLine("<br />");
+					html.AppendLine($"<div><h2 style=\"display:inline;\">software</h2> &bull; <a href=\"{software_name}.xml\">XML</a> &bull; <a href=\"{software_name}.json\">JSON</a> </div>");
+					html.AppendLine("<br />");
+					html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["software"], new[] { softwareRow }, null));
+
+					html.AppendLine("<hr />");
+
+					html.AppendLine("<h2>softwarelist</h2>");
+					html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new[] { softwarelistRow }, null));
+
+					DataRow[] rows;
+
+					if (dataSet.Tables.Contains("info") == true)
+					{
+						rows = dataSet.Tables["info"].Select($"software_id = {software_id}");
+						if (rows.Length > 0)
+						{
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>info</h2>");
+							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["info"], rows, null));
+						}
+					}
+
+					if (dataSet.Tables.Contains("sharedfeat") == true)
+					{
+						rows = dataSet.Tables["sharedfeat"].Select($"software_id = {software_id}");
+						if (rows.Length > 0)
+						{
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>sharedfeat</h2>");
+							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["sharedfeat"], rows, null));
+						}
+					}
+
+					DataRow[] partRows = dataSet.Tables["part"].Select($"software_id = {software_id}");
+					if (partRows.Length > 0)
+					{
+						DataTable table;
+
+						// part, feature
+						if (dataSet.Tables.Contains("feature") == true)
+						{
+							table = Tools.MakeDataTable(
+								"part_name	part_interface	feature_name	feature_value",
+								"String		String			String			String"
+							);
+
+							foreach (DataRow partRow in partRows)
+							{
+								long part_id = (long)partRow["part_id"];
+								string part_name = (string)partRow["name"];
+								string part_interface = (string)partRow["interface"];
+
+								foreach (DataRow featureRow in dataSet.Tables["feature"].Select($"part_id = {part_id}"))
+									table.Rows.Add(part_name, part_interface, featureRow["name"], featureRow["value"]);
+							}
+							if (table.Rows.Count > 0)
+							{
+								html.AppendLine("<hr />");
+								html.AppendLine("<h2>part, feature</h2>");
+								html.AppendLine(Reports.MakeHtmlTable(table, null));
+							}
+						}
+
+						// part, dataarea, rom
+						table = Tools.MakeDataTable(
+							"part_name	part_interface	dataarea_name	dataarea_size	dataarea_databits	dataarea_endian",
+							"String		String			String			String			String				String"
+						);
+						foreach (DataColumn column in dataSet.Tables["rom"].Columns)
+							if (column.ColumnName.EndsWith("_id") == false)
+								table.Columns.Add(column.ColumnName, typeof(string));
+
+						foreach (DataRow partRow in partRows)
+						{
+							long part_id = (long)partRow["part_id"];
+							string part_name = (string)partRow["name"];
+							string part_interface = (string)partRow["interface"];
+
+							foreach (DataRow dataareaRow in dataSet.Tables["dataarea"].Select($"part_id = {part_id}"))
+							{
+								long dataarea_id = (long)dataareaRow["dataarea_id"];
+
+								foreach (DataRow romRow in dataSet.Tables["rom"].Select($"dataarea_id = {dataarea_id}"))
+								{
+									DataRow row = table.Rows.Add(part_name, part_interface,
+										(string)dataareaRow["name"], (string)dataareaRow["size"], (string)dataareaRow["databits"], (string)dataareaRow["endian"]);
+
+									foreach (DataColumn column in dataSet.Tables["rom"].Columns)
+										if (column.ColumnName.EndsWith("_id") == false)
+											row[column.ColumnName] = romRow[column.ColumnName];
+								}
+							}
+						}
+						if (table.Rows.Count > 0)
+						{
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>part, dataarea, rom</h2>");
+							html.AppendLine(Reports.MakeHtmlTable(table, null));
+						}
+
+						// part, diskarea, disk
+						if (dataSet.Tables.Contains("disk") == true)
+						{
+							table = Tools.MakeDataTable(
+								"part_name	part_interface	diskarea_name",
+								"String		String			String"
+							);
+							foreach (DataColumn column in dataSet.Tables["disk"].Columns)
+								if (column.ColumnName.EndsWith("_id") == false)
+									table.Columns.Add(column.ColumnName, typeof(string));
+
+							foreach (DataRow partRow in partRows)
+							{
+								long part_id = (long)partRow["part_id"];
+								string part_name = (string)partRow["name"];
+								string part_interface = (string)partRow["interface"];
+
+								foreach (DataRow diskareaRow in dataSet.Tables["diskarea"].Select($"part_id = {part_id}"))
+								{
+									long diskarea_id = (long)diskareaRow["diskarea_id"];
+
+									foreach (DataRow diskRow in dataSet.Tables["disk"].Select($"diskarea_id = {diskarea_id}"))
+									{
+										DataRow row = table.Rows.Add(part_name, part_interface, (string)diskareaRow["name"]);
+
+										foreach (DataColumn column in dataSet.Tables["disk"].Columns)
+											if (column.ColumnName.EndsWith("_id") == false)
+												row[column.ColumnName] = diskRow[column.ColumnName];
+									}
+								}
+							}
+							if (table.Rows.Count > 0)
+							{
+								html.AppendLine("<hr />");
+								html.AppendLine("<h2>part, diskarea, disk</h2>");
+								html.AppendLine(Reports.MakeHtmlTable(table, null));
+							}
+						}
+					}
+
+					DataRow[] machineListRows = machineListTable.Select($"softwarelist_name = '{softwarelist_name}'");
+
+					foreach (string status in new string[] { "good", "imperfect", "preliminary", "no driver" })
+					{
+						DataRow[] statusRows = machineListRows.Where(row => (string)row["status"] == status).ToArray();
+
+						if (statusRows.Length > 0)
+						{
+							DataTable machinesTable = new DataTable();
+							machinesTable.Columns.Add("name", typeof(string));
+							machinesTable.Columns.Add("description (AO)", typeof(string));
+
+							foreach (DataRow statusRow in statusRows)
+							{
+								string name = (string)statusRow["machine_name"];
+								DataRow detailRow = machineDetailTable.Rows.Find(name);
+								string description = detailRow != null ? (string)detailRow["description"] : "not found";
+
+								machinesTable.Rows.Add($"<a href=\"/{coreName}/machine/{name}\">{name}</a>", $"<a href=\"#\" onclick=\"mameAO('{name}@{coreName} {software_name}@{softwarelist_name}'); return false\">{description}</a>");
+							}
+
+							html.AppendLine("<hr />");
+							html.AppendLine($"<h2>machines ({status})</h2>");
+							html.AppendLine(Reports.MakeHtmlTable(machinesTable, null));
+						}
+					}
+
+					string software_title = $"{(string)softwareRow["description"]} - {(string)softwarelistRow["description"]} - {coreName} ({version}) software";
+
+					xmlJson = software_XmlJsonPayloads[$"{softwarelist_name}\t{software_name}"];
+
+					software_payload_table.Rows.Add(softwarelist_name, software_name, software_title, xmlJson[0], xmlJson[1], html.ToString());
+				}
+			}
+
+			string softwarelists_title = $"Software Lists - {coreName} ({version}) software";
+			string softwarelists_html = Reports.MakeHtmlTable(listTable, null);
+
+			softwarelists_payload_table.Rows.Add('1', softwarelists_title, "", "", softwarelists_html);
+
+			MakeMSSQLPayloadsInsert(connections[1], softwarelists_payload_table);
+			MakeMSSQLPayloadsInsert(connections[1], softwarelist_payload_table);
+			MakeMSSQLPayloadsInsert(connections[1], software_payload_table);
+
+		}
+
+		public static Dictionary<string, string[]> MameishMachineXmlJsonPayloads(string xmlFilename)
+		{
+			Dictionary<string, string[]> payloads = new Dictionary<string, string[]>();
+
+			using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+			{
+				reader.MoveToContent();
+
+				while (reader.Read())
+				{
+					while (reader.NodeType == XmlNodeType.Element && reader.Name == "machine")
+					{
+						if (XElement.ReadFrom(reader) is XElement element)
+						{
+							string key = element.Attribute("name").Value;
+							string xml = element.ToString();
+							string json = Tools.XML2JSON(element);
+
+							payloads.Add(key, new string[] { xml, json });
+						}
+					}
+				}
+			}
+
+			return payloads;
+		}
+
+		public static Dictionary<string, string[]>[] MameishSoftwareXmlJsonPayloads(string xmlFilename)
+		{
+			Dictionary<string, string[]> softwarelist_payloads = new Dictionary<string, string[]>();
+			Dictionary<string, string[]> software_payloads = new Dictionary<string, string[]>();
+
+			using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+			{
+				reader.MoveToContent();
+
+				while (reader.Read())
+				{
+					while (reader.NodeType == XmlNodeType.Element && reader.Name == "softwarelist")
+					{
+						if (XElement.ReadFrom(reader) is XElement listElement)
+						{
+							string softwarelist_name = listElement.Attribute("name").Value;
+							string xml = listElement.ToString();
+							string json = Tools.XML2JSON(listElement);
+
+							softwarelist_payloads.Add(softwarelist_name, new string[] { xml, json });
+
+							foreach (XElement element in listElement.Elements("software"))
+							{
+								string software_name = element.Attribute("name").Value;
+								string key = $"{softwarelist_name}\t{software_name}";
+								xml = element.ToString();
+								json = Tools.XML2JSON(element);
+
+								software_payloads.Add(key, new string[] { xml, json });
+							}
+						}
+					}
+				}
+			}
+
+			return new Dictionary<string, string[]>[] { softwarelist_payloads, software_payloads };
+		}
 
 		//
 		// FBNeo
@@ -141,8 +1026,9 @@ namespace Spludlow.MameAO
 				int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
 
 				info = $"FBNeo: {version} - datafiles: {datafileCount} - games: {gameCount} - roms: {softRomCount}";
+
+				CreateMetaDataTable(connection, "fbneo", version, info);
 			}
-			CreateMetaDataTable(serverConnectionString, databaseName, "fbneo", version, info);
 
 			//
 			// JSON/XML
@@ -277,8 +1163,11 @@ namespace Spludlow.MameAO
 				datafile_payload_table.Rows.Add(datafile_key, datafile_title, xmlJsonDatafile[0], xmlJsonDatafile[1], datafile_html.ToString());
 			}
 
-			MakeMSSQLPayloadsInsert(serverConnectionString, databaseName, datafile_payload_table);
-			MakeMSSQLPayloadsInsert(serverConnectionString, databaseName, game_payload_table);
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
+			{
+				MakeMSSQLPayloadsInsert(connection, datafile_payload_table);
+				MakeMSSQLPayloadsInsert(connection, game_payload_table);
+			}
 
 			return 0;
 		}
@@ -361,8 +1250,9 @@ namespace Spludlow.MameAO
 				int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
 
 				info = $"TOSEC: {version} - Datafiles: {datafileCount} - Games: {gameCount} - rom: {softRomCount}";
+
+				CreateMetaDataTable(connection, "tosec", version, info);
 			}
-			CreateMetaDataTable(serverConnectionString, databaseName, "tosec", version, info);
 
 			//
 			// Archive.org URLs
@@ -572,9 +1462,12 @@ namespace Spludlow.MameAO
 				category_payload_table.Rows.Add(category, category_title, "", "", category_html.ToString());
 			}
 
-			MakeMSSQLPayloadsInsert(serverConnectionString, databaseName, category_payload_table);
-			MakeMSSQLPayloadsInsert(serverConnectionString, databaseName, datafile_payload_table);
-			MakeMSSQLPayloadsInsert(serverConnectionString, databaseName, game_payload_table);
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
+			{
+				MakeMSSQLPayloadsInsert(connection, category_payload_table);
+				MakeMSSQLPayloadsInsert(connection, datafile_payload_table);
+				MakeMSSQLPayloadsInsert(connection, game_payload_table);
+			}
 
 			return 0;
 		}
