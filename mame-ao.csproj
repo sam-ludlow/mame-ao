@@ -94,6 +94,7 @@
     <Compile Include="source\MameChdMan.cs" />
     <Compile Include="source\Operations.cs" />
     <Compile Include="source\OperationsHtml.cs" />
+    <Compile Include="source\OperationsPayload.cs" />
     <Compile Include="source\PhoneHome.cs" />
     <Compile Include="source\Place.cs" />
     <Compile Include="source\Program.cs" />
