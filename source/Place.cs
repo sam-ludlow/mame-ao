@@ -145,13 +145,18 @@ namespace Spludlow.MameAO
 			foreach (string name in core.GetReferencedMachines(machine_name))
 				requiredMachineAssets.Add(name, core.GetMachineRoms(name));
 
-			// Child has roms and parent does not, still need parent ZIP
 			DataRow machine = core.GetMachine(machine_name);
 			if (machine.IsNull("cloneof") == false)
 			{
 				string cloneof_machine_name = (string)machine["cloneof"];
+
+				// Child has roms and parent does not, still need parent ZIP
 				if (requiredMachineAssets.ContainsKey(cloneof_machine_name) == false && requiredMachineAssets.ContainsKey(machine_name) == true)
 					requiredMachineAssets.Add(cloneof_machine_name, requiredMachineAssets[machine_name]);
+
+				// Child needs new roms, already have the parent roms, still need parent ZIP
+				if (requiredMachineAssets.ContainsKey(cloneof_machine_name) == true && requiredMachineAssets.ContainsKey(machine_name) == true)
+					requiredMachineAssets[cloneof_machine_name] = requiredMachineAssets[machine_name];
 			}
 
 			Console.WriteLine($"Required Machines: {String.Join(", ", requiredMachineAssets.Select(pair => $"{pair.Key}({pair.Value.Length})"))}");
