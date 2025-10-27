@@ -289,7 +289,6 @@ For `get` operations if a new version if found the exit code will be set to 1.
 | mame-sqlite | Convert XML to SQLite. | `mame-ao.exe mame-sqlite directory="C:\ao-data\mame"` |
 | mame-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe mame-mssql directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
 | mame-mssql-payload | Create web payload tables. | `mame-ao.exe mame-mssql-payload directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
-| mame-mssql-payload-html | Create web HTML payloads. | `mame-ao.exe mame-mssql-payload-html directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
 
 ### HBMAME
 |Operation|Description|Example|
@@ -300,7 +299,6 @@ For `get` operations if a new version if found the exit code will be set to 1.
 | hbmame-sqlite | Convert XML to SQLite. | `mame-ao.exe hbmame-sqlite directory="C:\ao-data\hbmame"` |
 | hbmame-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe hbmame-mssql directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
 | hbmame-mssql-payload | Create web payload tables. | `mame-ao.exe hbmame-mssql-payload directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
-| hbmame-mssql-payload-html | Create web HTML payloads. | `mame-ao.exe hbmame-mssql-payload-html directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
 
 ### FBNeo
 |Operation|Description|Example|
@@ -311,7 +309,6 @@ For `get` operations if a new version if found the exit code will be set to 1.
 | fbneo-sqlite | Convert XML to SQLite. | `mame-ao.exe fbneo-sqlite directory="C:\ao-data\fbneo"` |
 | fbneo-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe fbneo-mssql directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
 | fbneo-mssql-payload | Create web payload tables. | `mame-ao.exe fbneo-mssql-payload directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
-| fbneo-mssql-payload-html | Create web HTML payloads. | `mame-ao.exe fbneo-mssql-payload-html directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
 
 ### TOSEC
 |Operation|Description|Example|
@@ -322,7 +319,6 @@ For `get` operations if a new version if found the exit code will be set to 1.
 | tosec-sqlite | Convert XML to SQLite. | `mame-ao.exe tosec-sqlite directory="C:\ao-data\tosec"` |
 | tosec-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe tosec-mssql directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
 | tosec-mssql-payload | Create web payload tables. | `mame-ao.exe tosec-mssql-payload directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
-| tosec-mssql-payload-html |  Create web HTML payloads. | `mame-ao.exe tosec-mssql-payload-html directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
 
 ## Internal Workings
 

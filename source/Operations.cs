@@ -57,10 +57,6 @@ namespace Spludlow.MameAO
 					exitCode = OperationsPayload.MameMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
 					break;
 
-				case "mame-mssql-payload-html":
-					exitCode = 0;
-					break;
-
 				//
 				// HBMAME
 				//
@@ -99,10 +95,6 @@ namespace Spludlow.MameAO
 				case "hbmame-mssql-payload":
 					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
 					exitCode = OperationsPayload.HbMameMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-					break;
-
-				case "hbmame-mssql-payload-html":
-					exitCode = 0;
 					break;
 
 				//
@@ -145,10 +137,6 @@ namespace Spludlow.MameAO
 					exitCode = OperationsPayload.FBNeoMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
 					break;
 
-				case "fbneo-mssql-payload-html":
-					exitCode = 0;
-					break;
-
 				//
 				// TOSEC
 				//
@@ -187,10 +175,6 @@ namespace Spludlow.MameAO
 				case "tosec-mssql-payload":
 					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
 					exitCode = OperationsPayload.TosecMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-					break;
-
-				case "tosec-mssql-payload-html":
-					exitCode = 0;
 					break;
 
 				default:
