@@ -107,6 +107,15 @@ namespace Spludlow.MameAO
 			Database.BulkInsert(connection, table);
 		}
 
+		public static void DeleteExistingPayloadTables(SqlConnection connection)
+		{
+			foreach (string tableName in Database.TableList(connection))
+			{
+				if (tableName == "_metadata" || tableName.EndsWith("_payload") == true)
+					Database.ExecuteNonQuery(connection, $"DROP TABLE [{tableName}]");
+			}
+		}
+
 		//
 		// MAME
 		//
@@ -159,6 +168,8 @@ namespace Spludlow.MameAO
 
 		public static void MameishMSSQLMachinePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime)
 		{
+			DeleteExistingPayloadTables(connections[0]);
+
 			//
 			// Metadata
 			//
@@ -605,10 +616,14 @@ namespace Spludlow.MameAO
 			}
 
 			MakeMSSQLPayloadsInsert(connections[0], machine_payload_table);
+
+			Tools.ConsolePrintMemory();
 		}
 
 		public static void MameishMSSQLSoftwarePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime)
 		{
+			DeleteExistingPayloadTables(connections[1]);
+
 			//
 			// Metadata
 			//
@@ -930,7 +945,7 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			string softwarelists_title = $"Software Lists - {coreName} ({version}) software";
+			string softwarelists_title = $"{coreName.ToUpper()} ({version}) software";
 			string softwarelists_html = Reports.MakeHtmlTable(listTable, null);
 
 			softwarelists_payload_table.Rows.Add('1', softwarelists_title, "", "", softwarelists_html);
@@ -939,6 +954,7 @@ namespace Spludlow.MameAO
 			MakeMSSQLPayloadsInsert(connections[1], softwarelist_payload_table);
 			MakeMSSQLPayloadsInsert(connections[1], software_payload_table);
 
+			Tools.ConsolePrintMemory();
 		}
 
 		public static Dictionary<string, string[]> MameishMachineXmlJsonPayloads(string xmlFilename)
@@ -1021,6 +1037,8 @@ namespace Spludlow.MameAO
 			string info;
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
 			{
+				DeleteExistingPayloadTables(connection);
+
 				int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
 				int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
 				int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
@@ -1062,9 +1080,11 @@ namespace Spludlow.MameAO
 				long datafile_id = (long)dataFileRow["datafile_id"];
 				string datafile_key = (string)dataFileRow["key"];
 				string datafile_name = (string)dataFileRow["name"];
+				datafile_name = datafile_name.Substring(16);
+				datafile_name = datafile_name.Substring(0, datafile_name.Length - 6);
 
 				StringBuilder datafile_html = new StringBuilder();
-				string datafile_title = $"{datafile_name}";
+				string datafile_title = $"FBNeo ({version}) {datafile_name}";
 
 				datafile_html.AppendLine("<br />");
 				datafile_html.AppendLine($"<div><h2 style=\"display:inline;\">datafile</h2> &bull; <a href=\"{datafile_key}.xml\">XML</a> &bull; <a href=\"{datafile_key}.json\">JSON</a></div>");
@@ -1167,6 +1187,8 @@ namespace Spludlow.MameAO
 			{
 				MakeMSSQLPayloadsInsert(connection, datafile_payload_table);
 				MakeMSSQLPayloadsInsert(connection, game_payload_table);
+
+				Tools.ConsolePrintMemory();
 			}
 
 			return 0;
@@ -1245,6 +1267,8 @@ namespace Spludlow.MameAO
 			string info;
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
 			{
+				DeleteExistingPayloadTables(connection);
+
 				int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
 				int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
 				int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
@@ -1286,7 +1310,7 @@ namespace Spludlow.MameAO
 
 				StringBuilder category_html = new StringBuilder();
 
-				string category_title = $"TOSEC Data Files ({category} {version})";
+				string category_title = $"{category.ToUpper()} ({version})";
 
 				category_html.AppendLine($"<h2>{category}</h2>");
 				category_html.AppendLine("<table>");
@@ -1467,6 +1491,8 @@ namespace Spludlow.MameAO
 				MakeMSSQLPayloadsInsert(connection, category_payload_table);
 				MakeMSSQLPayloadsInsert(connection, datafile_payload_table);
 				MakeMSSQLPayloadsInsert(connection, game_payload_table);
+
+				Tools.ConsolePrintMemory();
 			}
 
 			return 0;
