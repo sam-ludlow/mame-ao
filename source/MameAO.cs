@@ -247,6 +247,8 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			if (Globals.LinkingEnabled == false)
 				Tools.ConsoleHeading(3, "!!! You can save a lot of disk space by enabling symbolic links, see the README.");
+			else
+				Tools.ConsoleHeading(3, "Symbolic links are enabled, saving disk space.");
 
 			//
 			// GitHub Repos
