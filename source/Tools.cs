@@ -538,7 +538,7 @@ namespace Spludlow.MameAO
 				string batchFilename = tempDir.Path + @"\link.bat";
 				File.WriteAllText(batchFilename, batch.ToString(), new UTF8Encoding(false));
 
-				string input = "chcp 65001" + Environment.NewLine + batchFilename + Environment.NewLine;
+				string input = "chcp 65001" + Environment.NewLine + "\"" + batchFilename + "\"" + Environment.NewLine;
 
 				ProcessStartInfo startInfo = new ProcessStartInfo("cmd.exe")
 				{
