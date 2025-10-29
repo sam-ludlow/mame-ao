@@ -270,6 +270,8 @@ Options available on the UI settings page
 ## Data Operations
 MAME-AO has the capability to perform various Data operations by passing command line options when starting the program, it will exit immediately when finished.
 
+WARNING: The payload operations use a lot of RAM (MAME 5GB, TOSEC 9GB) you must use the x64 build of MAME-AO and have the RAM free.
+
 These are used by our sister project `Spludlow Data Web` located at https://data.spludlow.co.uk/
 
 These may be used for generating data sets in various formats, you could use it for data processing pipelines or just for looking at the data.
