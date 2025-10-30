@@ -10,6 +10,7 @@ using System.Net.Sockets;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
+using System.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -833,6 +834,41 @@ namespace Spludlow.MameAO
 			json.available_options = available_options;
 			json.option_descriptions = option_descriptions;
 			json.options = options;
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+		public void _api_sql_query(HttpListenerContext context, StreamWriter writer)
+		{
+			string database = context.Request.QueryString["database"];
+			bool save = Boolean.Parse(context.Request.QueryString["save"]);
+
+			string commandText;
+			using (var reader = new StreamReader(context.Request.InputStream, context.Request.ContentEncoding))
+			{
+				commandText = reader.ReadToEnd();
+			}
+
+			string connectionString = Globals.Core.ConnectionStrings[database == "machine" ? 0 : 1];
+
+			DataTable table = Database.ExecuteFill(connectionString, commandText);
+
+			if (save == true)
+				Globals.Reports.SaveHtmlReport(table, "SQL Query");
+
+			string[] columnNames = table.Columns.Cast<DataColumn>().Select(column => column.ColumnName).ToArray();
+			HashSet<string> keepColumnNames = new HashSet<string>(columnNames);
+
+			JArray results = new JArray(table.Rows.Cast<DataRow>().Select(row => RowToJson(row, keepColumnNames)));
+
+			dynamic json = new JObject();
+			json.offset = 0;
+			json.limit = 0;
+			json.total = results.Count;
+			json.count = results.Count;
+			json.results = results;
+
+			json.column_names = new JArray(columnNames);
 
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}

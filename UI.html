@@ -44,6 +44,11 @@
 								title: 'View Veports',
 								href: '/reports/view',
 							},
+							{
+								text: 'SQL Query',
+								title: 'SQL Query',
+								href: '/reports/sql',
+							},
 						],
 					},
 					{
@@ -334,6 +339,7 @@
 				'/saved': saved,
 				'/reports/run': runReports,
 				'/reports/view': viewReports,
+				'/reports/sql': sqlReports,
 				'/update': update,
 				'/store': storeOperations,
 				'/snaps': collectSnaps,
@@ -1023,6 +1029,86 @@
 		}
 
 		//
+		// SQL Query
+		//
+		const sqlReports = async () => {
+
+			const canvas = getCanvas();
+
+			let html = `<select id="commandDatabase">`;
+			['machine', 'software'].forEach((database) => {
+				html += `<option value="${database}">${database}</option>`;
+			});
+			html += '</select>';
+			html += '<button id="commandButton" type="submit" onclick="sqlReportsExecute(commandDatabase.value, commandText.value); return false;">Query</button>';
+			html += '<input type="checkbox" id="commandSaveReport">Save Report</input>';
+			html += '<hr /><textarea id="commandText" rows="20" style="width: 100%; box-sizing: border-box;"></textarea>';
+			html += '<hr /><div id="commandResult"></div>';
+
+			const div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+
+			const textarea = document.getElementById('commandText');
+			textarea.focus();
+		}
+		const sqlReportsExecute = async (database, commandText) => {
+
+			const button = document.getElementById('commandButton');
+			button.disabled = true;
+			button.innerHTML = 'Running Command...';
+
+			const checkboxSaveReport = document.getElementById('commandSaveReport');
+
+			const response = await fetch(`${_baseUrl}/api/sql_query?database=${database}&save=${checkboxSaveReport.checked}`, {
+				method: 'POST',
+				body: commandText,
+			});
+
+			const result = await response.json();
+
+			const resultDiv = document.getElementById("commandResult");
+			resultDiv.innerHTML = '';
+
+			if (result.results !== undefined) {
+
+				if (checkboxSaveReport.checked === false) {
+
+					const table = document.createElement('table');
+					resultDiv.appendChild(table);
+
+					const headRow = document.createElement('tr');
+					result.column_names.forEach((columnName) => {
+						const th = document.createElement('th');
+						th.innerHTML = columnName;
+						headRow.appendChild(th);
+					});
+					table.appendChild(headRow);
+
+					result.results.forEach(item => {
+
+						const row = document.createElement('tr');
+						result.column_names.forEach((columnName) => {
+							const td = document.createElement('td');
+							td.innerHTML = item[columnName] !== undefined ? htmlEncode(`${item[columnName]}`) : '';
+							row.appendChild(td);
+						});
+						table.appendChild(row);
+
+					});
+				} else {
+					resultDiv.innerHTML = `Report Saved, rows: ${result.results.length}`;
+				}
+
+			} else {
+				resultDiv.innerHTML = result.message;
+			}
+
+			button.disabled = false;
+			button.innerHTML = 'Query';
+		}
+
+		//
 		// Genres
 		//
 		const genres = async () => {
@@ -1483,57 +1569,6 @@
 				"'": '&#39;',
 				'"': '&quot;'
 			}[tag]));
-
-		const renderHtmlTable = (data) => {
-			if (data == null)
-				return 'null';
-
-			if (typeof data !== 'object')
-				return htmlEncode(JSON.stringify(data));
-
-			if (Array.isArray(data) === false) {
-				data = [data];
-			}
-
-			if (data.length === 0)
-				return '[]';
-
-			if (typeof data[0] !== 'object')
-				return htmlEncode(JSON.stringify(data));
-
-			const columnNames = [];
-			data.forEach((row) => {
-				Object.keys(row).forEach(columnName => {
-					if (columnNames.includes(columnName) === false)
-						columnNames.push(columnName);
-				});
-			});
-
-			let table = '';
-
-			table += '<table>';
-			table += '<tr>';
-			columnNames.forEach(columnName => {
-				table += `<th>${columnName}</th>`;
-			});
-			table += '</tr>';
-
-			data.forEach((row) => {
-				table += '<tr>';
-				columnNames.forEach(columnName => {
-					let value = '';
-					if (row[columnName] !== undefined)
-						value = renderHtmlTable(row[columnName]);
-
-					table += `<td>${value}</td>`;
-				});
-				table += '</tr>';
-			});
-
-			table += '</table>';
-
-			return table;
-		};
 
 		//
 		// Menu
