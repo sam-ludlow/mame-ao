@@ -260,12 +260,21 @@ namespace Spludlow.MameAO
 
 		public void SaveHtmlReport(DataTable table, string title)
 		{
+			SaveHtmlReport(table, title, false);
+		}
+		public void SaveHtmlReport(DataTable table, string title, bool keepIds)
+		{
 			DataSet dataSet = new DataSet();
 			dataSet.Tables.Add(table);
-			SaveHtmlReport(dataSet, title);
+			SaveHtmlReport(dataSet, title, keepIds);
 		}
 
 		public void SaveHtmlReport(DataSet dataSet, string title)
+		{
+			SaveHtmlReport(dataSet, title, false);
+		}
+
+		public void SaveHtmlReport(DataSet dataSet, string title, bool keepIds)
 		{
 			string name = DateTime.Now.ToString("s").Replace(":", "-") + "_" + Tools.ValidFileName(title);
 
@@ -287,7 +296,7 @@ namespace Spludlow.MameAO
 				html.AppendLine("<hr />");
 				if (table.TableName.StartsWith("Table") == false)
 					html.AppendLine($"<h2>{table.TableName} ({table.Rows.Count})</h2>");
-				html.AppendLine(MakeHtmlTable(table, "width:100%;"));
+				html.AppendLine(MakeHtmlTable(table, table.Rows.OfType<DataRow>(), "width:100%;", keepIds));
 			}
 
 			string footerInfo = $"MAME-AO {Globals.AssemblyVersion} - {Globals.Core.Name} {Globals.Core.Version} - {name}";
@@ -317,6 +326,11 @@ namespace Spludlow.MameAO
 
 		public static string MakeHtmlTable(DataTable table, IEnumerable<DataRow> rows, string tableStyle)
 		{
+			return MakeHtmlTable(table, rows, tableStyle, false);
+		}
+
+		public static string MakeHtmlTable(DataTable table, IEnumerable<DataRow> rows, string tableStyle, bool keepIds)
+		{
 			StringBuilder html = new StringBuilder();
 
 			html.Append("<table");
@@ -331,7 +345,7 @@ namespace Spludlow.MameAO
 			html.Append("<tr>");
 			foreach (DataColumn column in table.Columns)
 			{
-				if (column.ColumnName.EndsWith("_id") == true)
+				if (keepIds == false && column.ColumnName.EndsWith("_id") == true)
 					continue;
 
 				html.Append("<th>");

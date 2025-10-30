@@ -854,7 +854,7 @@ namespace Spludlow.MameAO
 			DataTable table = Database.ExecuteFill(connectionString, commandText);
 
 			if (save == true)
-				Globals.Reports.SaveHtmlReport(table, "SQL Query");
+				Globals.Reports.SaveHtmlReport(table, "SQL Query", true);
 
 			string[] columnNames = table.Columns.Cast<DataColumn>().Select(column => column.ColumnName).ToArray();
 			HashSet<string> keepColumnNames = new HashSet<string>(columnNames);
