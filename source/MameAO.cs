@@ -582,7 +582,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <target directory>");
 
-						Mame.CollectSnaps(Globals.RootDirectory, parts[1], Globals.Reports);
+						Mame.CollectSnaps(Path.GetDirectoryName(Globals.Core.Directory), parts[1], Globals.Reports);
 						return;
 
 					case ".svg":

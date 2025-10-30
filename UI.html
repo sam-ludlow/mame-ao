@@ -52,16 +52,6 @@
 						],
 					},
 					{
-						text: 'Store',
-						title: 'Hash Store Operations',
-						href: '/store',
-					},
-					{
-						text: 'Snaps',
-						title: 'Collect MAME snapshots into directory & Convert to SVG',
-						href: '/snaps',
-					},
-					{
 						text: 'Import',
 						title: 'Import ROM/CHD from directory',
 						href: '/import',
@@ -70,6 +60,11 @@
 						text: 'Export',
 						title: 'Export ROM/CHD for use outside MAME-AO',
 						href: '/export',
+					},
+					{
+						text: 'Tools',
+						title: 'Tools',
+						href: '/tools',
 					},
 					{
 						text: 'Settings',
@@ -336,16 +331,15 @@
 			}
 
 			const routeFunction = {
+				'/update': update,
+				'/genres': genres,
 				'/saved': saved,
 				'/reports/run': runReports,
 				'/reports/view': viewReports,
 				'/reports/sql': sqlReports,
-				'/update': update,
-				'/store': storeOperations,
-				'/snaps': collectSnaps,
 				'/import': importFiles,
 				'/export': exportFiles,
-				'/genres': genres,
+				'/tools': tools,
 				'/settings': settings,
 				'/bittorrent': bittorrent,
 				'/about': about,
@@ -794,46 +788,48 @@
 		}
 
 		//
-		// Store Operations
+		// Tools
 		//
-		const storeOperations = async () => {
+		const tools = async () => {
 			const canvas = getCanvas();
 
-			let html = '';
+			let html;
+			let div;
 
-			html += '<p>Validate the ROM Hash Store, each file will be SHA1 hashed and compared to the filename.</p>';
-			html += '<button type="submit" onclick="runCommand(\'.valid rom\'); return false;">Validate ROM</button><br />';
-
-			html += '<hr />';
-
-			html += '<p>Validate the DISK Hash Store, each file will have the SHA1 verified with chdman.exe and compared to the filename.</p>';
-			html += '<p>WARNING: This can take a while, each CHD will have its SHA1 calculated to verify it is correct.</p>'
-			html += '<button type="submit" onclick="runCommand(\'.valid disk\'); return false;">Validate DISK</button><br />';
-
-			const div = document.createElement('div');
-			div.innerHTML = html;
-			canvas.appendChild(div);
-		}
-
-		//
-		// Snaps
-		//
-		const collectSnaps = async () => {
-			const canvas = getCanvas();
-
-			let html = '';
-
+			// Snaps
+			html = '';
+			html += '<h2>Snaps Collection</h2>';
 			html += '<p>Copy and paste the directory path or filename here.</p>';
 			html += '<input id="directory" type="text" value="" style="width:480px;" /><br /><br />';
 			html += '<button type="submit" onclick="runCommand(\'.snap \' + directory.value); return false;">Collect and Move Snaps to Directory</button><br /><br />';
-			html += '<button type="submit" onclick="runCommand(\'.svg \' + directory.value); return false;">Convert bitmaps to SVG, single filename or directory for all files</button><br />';
-			html += '<p>A report will pop up in the browser when finished. Look at the console shell to check progress.</p>';
+			html += '<button type="submit" onclick="runCommand(\'.svg \' + directory.value); return false;">Convert bitmaps to SVG, single filename or directory for all files</button>';
 
-			const div = document.createElement('div');
+			div = document.createElement('div');
 			div.innerHTML = html;
 			canvas.appendChild(div);
 
 			document.getElementById('directory').focus();
+
+			// MS Access
+			html = '<hr />';
+			html += '<h2>Create Linked MS Access databases</h2>';
+			html += '<p>MS Access databases linked to SQLite machine & software databases. Requires <a href="https://github.com/sam-ludlow/access-linker/releases" target="_blank">access-linker.exe</a> in the MAME-AO directory.</p>';
+			html += '<button type="submit" onclick="runCommand(\'.accdb \'); return false;">Create databases</button>';
+
+			div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+
+			// Store
+			html = '<hr />';
+			html += '<h2>Store Validation</h2>';
+			html += '<p>WARNING: These can take a while if you have a lot of stuff.</p>';
+			html += '<p>Validate the ROM Hash Store, each file will be SHA1 hashed and compared to the filename. <button type="submit" onclick="runCommand(\'.valid rom\'); return false;">Validate ROM</button></p>';
+			html += '<p>Validate the DISK Hash Store, each file will have the SHA1 verified with chdman.exe and compared to the filename. <button type="submit" onclick="runCommand(\'.valid disk\'); return false;">Validate DISK</button></p>';
+
+			div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
 		}
 
 		//
@@ -1468,7 +1464,7 @@
 		}
 
 		//
-		// Tools
+		// Code Tools
 		//
 
 		const sleep = ms => new Promise(r => setTimeout(r, ms));

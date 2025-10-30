@@ -359,7 +359,7 @@ namespace Spludlow.MameAO
 				html.Append("<tr>");
 				foreach (DataColumn column in table.Columns)
 				{
-					if (column.ColumnName.EndsWith("_id") == true)
+					if (keepIds == false && column.ColumnName.EndsWith("_id") == true)
 						continue;
 
 					html.Append("<td>");
