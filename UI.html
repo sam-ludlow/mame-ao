@@ -625,21 +625,42 @@
 
 			const canvas = getCanvas();
 
-			let html =
-				`<h2>What's New in the latest MAME release</h2><a href="${_baseUrl}/api/what" target="_blank">Open whatsnew.txt</a><hr />` +
-				'<h2>MAME-AO README on github</h2><a href="https://github.com/sam-ludlow/mame-ao#mame-ao" target="_blank">View instructions</a><hr />';
+			let html = '';
+
+			// Links
+			html += `<h2>Further Info Links</h2><table><tr><th>Description</th><th>URL</th></tr>`;
+
+			html += `<tr><td>What's New in the latest MAME release</td><td><a href="${_baseUrl}/api/what" target="_blank">${_baseUrl}/api/what</a></td></tr>`;
+			html += `<tr><td>MAME Official Docs</td><td><a href="https://docs.mamedev.org/" target="_blank">https://docs.mamedev.org/</a></td></tr>`;
+			html += `<tr><td>MAME-AO README</td><td><a href="https://github.com/sam-ludlow/mame-ao" target="_blank">https://github.com/sam-ludlow/mame-ao</a></td></tr>`;
+			html += `<tr><td>Spludlow Data Web</td><td><a href="https://data.spludlow.co.uk/" target="_blank">https://data.spludlow.co.uk/</a></td></tr>`;
+
+			if (_info.bit_torrent_enabled === true)
+				html += `<tr><td>BitTorrent Client Info</td><td><a href="${_info.bit_torrent_url}/api/info" target="_blank">${_info.bit_torrent_url}/api/info</a></td></tr>`;
 
 			if (_info.linking_enabled !== true)
-				html += '<h2>Warning - Symbolic Links not enabled</h2><a href="https://github.com/sam-ludlow/mame-ao?tab=readme-ov-file#symbolic-links---save-disk-space" target="_blank">View instructions on enabling</a><hr />';
+				html += '<tr><td>Warning Symbolic Links are not enabled, you can save disk space, view instructions on enabling.</td><td><a href="https://github.com/sam-ludlow/mame-ao?tab=readme-ov-file#symbolic-links---save-disk-space" target="_blank">https://github.com/sam-ludlow/mame-ao?tab=readme-ov-file#symbolic-links---save-disk-space</a></td></tr>';
 
-			html += '<h2>System Information</h2>';
+			html += '</table><hr />';
+
+			// Cores
+			html += `<h2>Emulator Cores</h2><table><tr><th>Name</th><th>Status</th></tr><p>HBMAME only works with BitTorrent.</p>`;
+
+			_info.cores.forEach((core_name) => {
+				let coreStatus = core_name === _info.core_name ? `Currently running version: ${_info.core_version}` : `<button type="submit" onclick="runCommand('.core ${core_name}'); return false;">Enable</button>`;
+				html += `<tr><td>${core_name.toUpperCase()}</td><td>${coreStatus}</td></tr>`;
+			});
+
+			html += '</table>';
+			html += '<p><a href="javascript:window.location.href=window.location.href">Refresh this page to see changes</a></p>';
+
+			html += '<hr /><h2>System Information</h2>';
 
 			let div = document.createElement('div');
 			div.innerHTML = html;
 			canvas.appendChild(div);
 
 			// System Information
-
 			const infoData = [];
 
 			Object.keys(_info).forEach((key) => {

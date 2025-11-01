@@ -364,7 +364,7 @@ namespace Spludlow.MameAO
 					if (tableName == "machine")
 					{
 						html.AppendLine("<br />");
-						html.AppendLine($"<div><h2 style=\"display:inline;\">machine</h2> &bull; <a href=\"{machine_name}.xml\">XML</a> &bull; <a href=\"{machine_name}.json\">JSON</a> &bull; <a href=\"#\" onclick=\"mameAO('{machine_name}@{coreName}'); return false\">AO</a></div>");
+						html.AppendLine($"<div><h2 style=\"display:inline;\">machine</h2> &bull; <a href=\"{machine_name}.xml\">XML</a> &bull; <a href=\"{machine_name}.json\">JSON</a> &bull; <a href=\"#\" onclick=\"mameAO('{machine_name}@{coreName}'); return false\">RUN</a></div>");
 						html.AppendLine("<br />");
 					}
 					else
@@ -920,7 +920,7 @@ namespace Spludlow.MameAO
 						{
 							DataTable machinesTable = new DataTable();
 							machinesTable.Columns.Add("name", typeof(string));
-							machinesTable.Columns.Add("description (AO)", typeof(string));
+							machinesTable.Columns.Add("description (RUN on machine)", typeof(string));
 
 							foreach (DataRow statusRow in statusRows)
 							{

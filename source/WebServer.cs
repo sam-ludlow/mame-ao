@@ -457,6 +457,7 @@ namespace Spludlow.MameAO
 
 			json.time = DateTime.Now.ToString("s", System.Globalization.CultureInfo.InvariantCulture);
 			json.version = Globals.AssemblyVersion;
+			json.cores = new JArray(Globals.CoreNames);
 			json.core_name = Globals.Core.Name;
 			json.core_version = Globals.Core.Version;
 			json.directory = Globals.RootDirectory;

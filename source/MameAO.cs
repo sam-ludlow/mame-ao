@@ -98,6 +98,8 @@ namespace Spludlow.MameAO
 		public static PhoneHome PhoneHome;
 
 		public static ICore Core = null;
+
+		public static string[] CoreNames = new string[] { "mame", "hbmame" };
 	}
 
 	public class MameAOProcessor
