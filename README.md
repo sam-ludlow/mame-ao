@@ -55,9 +55,11 @@ NOTE: MAME-AO application is 32 bit to keep RAM usage down.
 https://github.com/sam-ludlow/mame-ao/issues
 
 ## HBMAME - HomeBrew MAME
-We now support HBMAME. To enable use the command `.core hbmame`. Only works with BitTorrent.
+Enable HBMAME from the about page or use the command `.core hbmame`. Only works with BitTorrent, DOME-BT will restart to enable new core.
 
-![HBMAME](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-hbmame.png)
+![MAME-AO About page Emulator Cores](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-about-emulator-cores.png)
+
+![MAME-AO using HBMAME](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-hbmame.png)
 
 ## Symbolic Links - Save disk space
 When MAME-AO downloads assets it keeps them in a "hash store", this makes keeping account of them very simple, you don’t have to keep grooming a bunch of ZIP files.
