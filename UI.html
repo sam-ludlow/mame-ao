@@ -597,6 +597,16 @@
 			});
 			canvas.appendChild(table);
 
+			// Restart & Stop
+
+			div = document.createElement('div');
+			div.innerHTML = '<hr /><h2>Restart & Stop BitTorrent</h2>' +
+				'<p>Cleanly shutdown or restart BitTorrent.</p>' +
+				'<button type="submit" onclick="runCommand(\'.btr\'); return false;">Restart BitTorrent</button>' +
+				'<button type="submit" onclick="runCommand(\'.bts\'); return false;">Stop BitTorrent</button>' +
+				refreshLink;
+			canvas.appendChild(div);
+
 			// Disable
 
 			div = document.createElement('div');
@@ -796,9 +806,9 @@
 			let html;
 			let div;
 
-			// Snaps
+			// Snaps & SVG
 			html = '';
-			html += '<h2>Snaps Collection</h2>';
+			html += '<h2>Snaps Collection & Convert PNG => SVG</h2>';
 			html += '<p>Copy and paste the directory path or filename here.</p>';
 			html += '<input id="directory" type="text" value="" style="width:480px;" /><br /><br />';
 			html += '<button type="submit" onclick="runCommand(\'.snap \' + directory.value); return false;">Collect and Move Snaps to Directory</button><br /><br />';
