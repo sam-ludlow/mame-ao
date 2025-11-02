@@ -47,7 +47,7 @@ To remove BitTorrent use the UI or command `.btx` then use the command `.creds` 
 - Windows 64-Bit with .net framework 4.8
 - 2 Gb RAM free
 - 2 Gb DISK free (absolute minimum)
-- CPU with x86-64-v2 functionality (MAME >= 0274)
+- CPU with x86-64-v2 functionality (MAME > 0273)
 
 NOTE: MAME-AO application is 32 bit to keep RAM usage down.
  

@@ -53,12 +53,12 @@
 					},
 					{
 						text: 'Import',
-						title: 'Import ROM/CHD from directory',
+						title: 'Import into MAME-AO',
 						href: '/import',
 					},
 					{
 						text: 'Export',
-						title: 'Export ROM/CHD for use outside MAME-AO',
+						title: 'Export from MAME-AO',
 						href: '/export',
 					},
 					{
@@ -634,12 +634,13 @@
 			html += `<tr><td>MAME Official Docs</td><td><a href="https://docs.mamedev.org/" target="_blank">https://docs.mamedev.org/</a></td></tr>`;
 			html += `<tr><td>MAME-AO README</td><td><a href="https://github.com/sam-ludlow/mame-ao" target="_blank">https://github.com/sam-ludlow/mame-ao</a></td></tr>`;
 			html += `<tr><td>Spludlow Data Web</td><td><a href="https://data.spludlow.co.uk/" target="_blank">https://data.spludlow.co.uk/</a></td></tr>`;
+			html += `<tr><td>MAME-AO API Information</td><td><a href="${_baseUrl}/api/info" target="_blank">${_baseUrl}/api/info</a></td></tr>`;
 
 			if (_info.bit_torrent_enabled === true)
-				html += `<tr><td>BitTorrent Client Info</td><td><a href="${_info.bit_torrent_url}/api/info" target="_blank">${_info.bit_torrent_url}/api/info</a></td></tr>`;
+				html += `<tr><td>DOME-BT API Information</td><td><a href="${_info.bit_torrent_url}/api/info" target="_blank">${_info.bit_torrent_url}/api/info</a></td></tr>`;
 
 			if (_info.linking_enabled !== true)
-				html += '<tr><td>Warning Symbolic Links are not enabled, you can save disk space, view instructions on enabling.</td><td><a href="https://github.com/sam-ludlow/mame-ao?tab=readme-ov-file#symbolic-links---save-disk-space" target="_blank">https://github.com/sam-ludlow/mame-ao?tab=readme-ov-file#symbolic-links---save-disk-space</a></td></tr>';
+				html += '<tr><td>WARNING Symbolic Links are not enabled, you can save disk space, view instructions on enabling.</td><td><a href="https://github.com/sam-ludlow/mame-ao?tab=readme-ov-file#symbolic-links---save-disk-space" target="_blank">https://github.com/sam-ludlow/mame-ao?tab=readme-ov-file#symbolic-links---save-disk-space</a></td></tr>';
 
 			html += '</table><hr />';
 
@@ -829,7 +830,7 @@
 
 			// Snaps & SVG
 			html = '';
-			html += '<h2>Snaps Collection & Convert PNG => SVG</h2>';
+			html += '<h2>Snaps Collection & Convert PNG into SVG</h2>';
 			html += '<p>Copy and paste the directory path or filename here.</p>';
 			html += '<input id="directory" type="text" value="" style="width:480px;" /><br /><br />';
 			html += '<button type="submit" onclick="runCommand(\'.snap \' + directory.value); return false;">Collect and Move Snaps to Directory</button><br /><br />';
@@ -851,12 +852,28 @@
 			div.innerHTML = html;
 			canvas.appendChild(div);
 
+			// Test
+			const dataProfiles = await fetchJson('/api/profiles');
+
+			html = '<hr />';
+			html += '<h2>Run MAME-AO asset place tests</h2>';
+			html += '<p>Randomly place assets and test with MAME verifyroms, Test will stop with a non zero exit code from MAME.</p>';
+			html += '<p><select id="testProfile">' + dataProfiles.results.map((profile) => `<option value="${profile.key}">${profile.text}</option>`).join() + '</select></p>';
+			html += '<p><select id="testCount">' + [1, 8, 16, 32, 64, 128, 256, 512, 1024, 4096, 0].map((count) => `<option value="${count}">${count}</option>`).join() + '</select></p>';
+			html += '<button type="submit" onclick="runCommand(\'.test \' + testProfile.value + \' \' + testCount.value); return false;">Run Tests</button>';
+
+			div = document.createElement('div');
+			div.innerHTML = html;
+			canvas.appendChild(div);
+
 			// Store
 			html = '<hr />';
 			html += '<h2>Store Validation</h2>';
 			html += '<p>WARNING: These can take a while if you have a lot of stuff.</p>';
-			html += '<p>Validate the ROM Hash Store, each file will be SHA1 hashed and compared to the filename. <button type="submit" onclick="runCommand(\'.valid rom\'); return false;">Validate ROM</button></p>';
-			html += '<p>Validate the DISK Hash Store, each file will have the SHA1 verified with chdman.exe and compared to the filename. <button type="submit" onclick="runCommand(\'.valid disk\'); return false;">Validate DISK</button></p>';
+			html += '<p>Validate the ROM Hash Store, each file will be SHA1 hashed and compared to the filename.</p>';
+			html += `<button type="submit" onclick="runCommand(\'.valid rom\'); return false;">Validate ROM</button>`;
+			html += '<p>Validate the DISK Hash Store, each file will have the SHA1 verified with chdman.exe and compared to the filename.</p>';
+			html += '<button type="submit" onclick="runCommand(\'.valid disk\'); return false;">Validate DISK</button>';
 
 			div = document.createElement('div');
 			div.innerHTML = html;
@@ -870,17 +887,29 @@
 
 			const canvas = getCanvas();
 
+			const softwarelistData = await fetchJson('/api/softwarelists');
+
 			let html = '';
-			html += '<p>Copy and paste the directory path to import from here.</p>';
-			html += '<input id="directory" type="text" value="" style="width:480px;" /><br />';
-			html += '<button type="submit" onclick="runCommand(\'.import \' + directory.value); return false;">Start Import</button><br />';
-			html += '<p>A report will pop up in the browser when finished. Look at the console shell to check progress.</p>';
+			html += '<h2>Import from Directory</h2>'
+			html += '<p>Copy and paste the directory path to import from here. Anything required in the current core will be imported to the store.</p>';
+			html += '<p><input id="importDirectory" type="text" value="" style="width:480px;" /></p>';
+			html += '<button type="submit" onclick="runCommand(\'.import \' + importDirectory.value); return false;">Import from Directory</button>';
+
+			html += `<hr /><h2>Fetch Complete Software List</h2>`;
+			html += '<p>Fetch a comlpete software list and place ready to use from within MAME.</p>';
+			html += '<p><select id="softwareListPlace">' + softwarelistData.results.map((list) => `<option value="${list.name}">${list.description}</option>`).join() + '</select></p>';
+			html += '<button type="submit" onclick="runCommand(\'.software \' + softwareListPlace.value); return false;">Fetch & Place</button>';
+
+			html += `<hr /><h2>Fetch Everything</h2>`;
+			html += '<p>If you are maintaining full sets use fetch to top-up the hash store. Nothing will be placed only stored.</p>';
+			html += '<p><select id="fetchType"><option value="MR">Machine ROM</option><option value="MD">Machine DISK</option><option value="SR">Software ROM</option><option value="SD">Software DISK</option><option value="*">Everything</option></select></p>';
+			html += '<button type="submit" onclick="runCommand(\'.fetch \' + fetchType.value); return false;">Fetch All</button>';
 
 			const div = document.createElement('div');
 			div.innerHTML = html;
 			canvas.appendChild(div);
 
-			document.getElementById('directory').focus();
+			document.getElementById('importDirectory').focus();
 		}
 
 		//
@@ -890,42 +919,30 @@
 
 			const canvas = getCanvas();
 
+			const softwarelistData = await fetchJson('/api/softwarelists');
+
 			let html = '';
 
-			html += '<h2>Target directory</h2>';
+			html += '<h2>Target Directory</h2>';
 			html += '<p>Copy and paste the directory path to here.</p>';
-			html += '<input id="directory" type="text" value="" style="width:480px;" />';
-			html += '<p>When finished a report will pop up. Check the console to view progress.</p>';
+			html += '<input id="targetDirectory" type="text" value="" style="width:480px;" />';
 
-			html += '<hr />';
-
-			html += '<h2>Standard MAME format (split set)</h2>';
-			html += '<p>Export everything currently in the store.</p>';
+			html += '<hr /><h2>Standard MAME format (split-set)</h2>';
+			html += '<p>Export everything in current core thats in the store. Machine ROMs will be in split-set format (separate parent ZIP & child diff ZIPs).</p>';
 			html += '<p><select id="exportType"><option value="*">Everything</option><option value="MR">Machine ROM</option><option value="MD">Machine DISK</option><option value="SR">Software ROM</option><option value="SD">Software DISK</option></select></p>';
-			html += '<button type="submit" onclick="runCommand(\'.export \' + exportType.value + \' \' + directory.value); return false;">Start</button>';
+			html += '<button type="submit" onclick="runCommand(\'.export \' + exportType.value + \' \' + targetDirectory.value); return false;">Start</button>';
 
-			html += '<hr />';
-
-			html += '<h2>Fetch complete software lists with friendly names</h2>';
-			html += '<p>Complete software list will be downloaded and exported to directory using friendly filenames.</p>';
-			html += '<p><select id="selectList"></select></p>';
+			html += '<hr /><h2>Fetch complete software lists with friendly names</h2>';
+			html += '<p>Complete software list will be downloaded and exported to directory with friendly filenames.</p>';
+			html += '<p><select id="selectList">' + softwarelistData.results.map((list) => `<option value="${list.name}">${list.description}</option>`).join() + '</select></p>';
 			html += '<p><input type="checkbox" id="inputUseDirs">Use directories for each software</input></p>';
-			html += '<button type="submit" onclick="runCommand(\'.softname\' + (inputUseDirs.checked ? \'d\' : \'\') + \' \' + selectList.value + \' \' + directory.value); return false;">Start</button>';
+			html += '<button type="submit" onclick="runCommand(\'.softname\' + (inputUseDirs.checked ? \'d\' : \'\') + \' \' + selectList.value + \' \' + targetDirectory.value); return false;">Start</button>';
 
 			const div = document.createElement('div');
 			div.innerHTML = html;
 			canvas.appendChild(div);
 			
-			document.getElementById('directory').focus();
-
-			const softwarelistData = await fetchJson('/api/softwarelists');
-			const selectList = document.getElementById('selectList')
-			softwarelistData.results.forEach((softwareList) => {
-				const option = document.createElement('option');
-				option.setAttribute('value', softwareList.name);
-				option.text = `${softwareList.description} (${softwareList.name})`;
-				selectList.appendChild(option);
-			});
+			document.getElementById('targetDirectory').focus();
 		}
 
 		//
