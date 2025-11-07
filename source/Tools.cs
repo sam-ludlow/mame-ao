@@ -558,7 +558,29 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static void LinkMsAccess(string sourceFilename, string targetFilename)
+		public static void MsAccessLinkSQLite(string sourceFilename)
+		{
+			string targetFilename = $"{sourceFilename}.accdb";
+
+			string arguments = $"access-link-new filename=\"{targetFilename}\" odbc=\"{sourceFilename}\"";
+
+			MsAccess(arguments, "Create MS Access databases linked to SQLite");
+
+			ConsoleHeading(2, new string[] { "MS Access linked database created", sourceFilename, "=>", targetFilename });
+		}
+
+		public static void MsAccessFromXML(string sourceFilename)
+		{
+			string targetFilename = $"{sourceFilename}.accdb";
+
+			string arguments = $"xml-insert-new filename=\"{sourceFilename}\"";
+
+			MsAccess(arguments, "Create MS Access databases from MAME XML");
+
+			ConsoleHeading(2, new string[] { "MS Access database created", sourceFilename, "=>", targetFilename });
+		}
+
+		public static void MsAccess(string arguments, string description)
 		{
 			string exeFilename = Path.Combine(Globals.RootDirectory, "access-linker.exe");
 			if (File.Exists(exeFilename) == false)
@@ -567,11 +589,11 @@ namespace Spludlow.MameAO
 			Version version = AssemblyName.GetAssemblyName(exeFilename).Version;
 			string localVersion = $"{version.Major}.{version.Minor}";
 
-			ConsoleHeading(1, new string[] { $"Create MS Access databases linked to SQLite", exeFilename, localVersion });
+			ConsoleHeading(1, new string[] { description, exeFilename, localVersion });
 
 			ProcessStartInfo startInfo = new ProcessStartInfo(exeFilename)
 			{
-				Arguments = $"access-link-new filename=\"{targetFilename}\" odbc=\"{sourceFilename}\"",
+				Arguments = arguments,
 				UseShellExecute = true,
 			};
 
@@ -585,8 +607,6 @@ namespace Spludlow.MameAO
 				if (process.ExitCode != 0)
 					throw new ApplicationException("access-linker.exe Bad exit code");
 			}
-
-			ConsoleHeading(2, new string[] { "MS Access linked database created", sourceFilename, "=>", targetFilename });
 		}
 
 		public static DateTime FromEpochDate(string epoch)

@@ -844,9 +844,14 @@
 
 			// MS Access
 			html = '<hr />';
-			html += '<h2>Create Linked MS Access databases</h2>';
-			html += '<p>MS Access databases linked to SQLite machine & software databases. Requires <a href="https://github.com/sam-ludlow/access-linker/releases" target="_blank">access-linker.exe</a> in the MAME-AO directory.</p>';
-			html += '<button type="submit" onclick="runCommand(\'.accdb \'); return false;">Create databases</button>';
+			html += '<h2>Create MS Access databases</h2>';
+			html += '<p>Requires <a href="https://github.com/sam-ludlow/access-linker/releases" target="_blank">access-linker.exe</a> in the MAME-AO directory, and other dependencies (ODBC & OLE DB drivers) see the <a href="https://github.com/sam-ludlow/access-linker" target="_blank">access-linker README</a>.</p>';
+
+			html += '<p>MS Access databases from complete MAME XML. Usfull for looking at the MAME data.</p>';
+			html += '<button type="submit" onclick="runCommand(\'.accdbxml\'); return false;">Create from MAME XML</button>';
+
+			html += '<p>MS Access databases linked to MAME-AO SQLite. Usfull for debugging MAME-AO.</p>';
+			html += '<button type="submit" onclick="runCommand(\'.accdb\'); return false;">Link to MAME-AO SQLite</button>';
 
 			div = document.createElement('div');
 			div.innerHTML = html;

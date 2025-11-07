@@ -761,7 +761,13 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 					case ".accdb":
 						parts = args.Arguments(2);
 						foreach (string filename in Directory.GetFiles(parts.Length > 1 ? parts[1] : Globals.Core.Directory, "*.sqlite"))
-							Tools.LinkMsAccess(filename, filename + ".accdb");
+							Tools.MsAccessLinkSQLite(filename);
+						return;
+
+					case ".accdbxml":
+						parts = args.Arguments(2);
+						foreach (string filename in Directory.GetFiles(parts.Length > 1 ? parts[1] : Globals.Core.Directory, "*.xml"))
+							Tools.MsAccessFromXML(filename);
 						return;
 
 					case ".core":
