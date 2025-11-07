@@ -23,6 +23,8 @@ Your Web browser, Windows, and other security software may attempt to block down
 
 The command `.upany` after initial setup may help with Microsoft Defender notices.
 
+NOTE: Some software list items are infected. MAME-AO will download them if asked, this may trigger alters if the software is DOS/Windows based. This is not dangerous to your computer, only to the system being emulated within MAME.
+
 ## Enter your Archive.org credentials (Option 1)
 If you intend on using BitTorrent you can skip this step, press `ENTER` twice. You can enter your credentials later with the command `.creds`.
 
