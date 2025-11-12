@@ -242,6 +242,15 @@ namespace Spludlow.MameAO
 						foreach (DataColumn column in table.Columns)
 							column.AutoIncrement = false;
 
+					foreach (DataRow row in fileDataSet.Tables["datafile"].Rows)
+					{
+						if ((string)row["category"] != category)
+						{
+							row["category"] = category;
+							Console.WriteLine($"Bad datafile category: {filename}");
+                        }
+					}
+
 					Tools.DataFileMergeDataSet(fileDataSet, dataSet);
 				}
 			}
