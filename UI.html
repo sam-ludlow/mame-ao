@@ -832,9 +832,11 @@
 			html = '';
 			html += '<h2>Snaps Collection & Convert PNG into SVG</h2>';
 			html += '<p>Copy and paste the directory path or filename here.</p>';
-			html += '<input id="directory" type="text" value="" style="width:480px;" /><br /><br />';
-			html += '<button type="submit" onclick="runCommand(\'.snap \' + directory.value); return false;">Collect and Move Snaps to Directory</button><br /><br />';
-			html += '<button type="submit" onclick="runCommand(\'.svg \' + directory.value); return false;">Convert bitmaps to SVG, single filename or directory for all files</button>';
+			html += '<input id="directory" type="text" value="" style="width:480px;" />';
+			html += '<p>Collect and Move Snaps (F12 pictures) to directory.</p>';
+			html += '<button type="submit" onclick="runCommand(\'.snap \' + directory.value); return false;">Collect Snaps</button>';
+			html += '<p>Convert bitmaps to SVG, single filename or directory for all files</p>';
+			html += '<button type="submit" onclick="runCommand(\'.svg \' + directory.value); return false;">Convert to SVG</button>';
 
 			div = document.createElement('div');
 			div.innerHTML = html;

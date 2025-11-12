@@ -23,7 +23,7 @@ Your Web browser, Windows, and other security software may attempt to block down
 
 The command `.upany` after initial setup may help with Microsoft Defender notices.
 
-NOTE: Some software list items are infected. MAME-AO will download them if asked, this may trigger alters if the software is DOS/Windows based. This is not dangerous to your computer, only to the system being emulated within MAME.
+NOTE: Some software list items are infected. MAME-AO will download them if asked, this may trigger alerts if the software is DOS/Windows based. This is not dangerous to your computer, only to the system being emulated within MAME.
 
 ## Enter your Archive.org credentials (Option 1)
 If you intend on using BitTorrent you can skip this step, press `ENTER` twice. You can enter your credentials later with the command `.creds`.
@@ -140,6 +140,7 @@ There are also commands available they all start with a dot `.`
 |.|Run MAME directly without placing files, use it start MAME's built in UI or pass arguments to MAME|`. a2600 -cart et`|
 |.0000|Run a previous version of MAME directly , without placing files, useful for going back to saved state from previous sessions |`.0123 gaunt2`|
 |.accdb|Create MS Access databases (machine & software) linked to SQLite, usfull for looking at MAME-AO data|`.accdb`|
+|.accdbxml|Create MS Access databases (machine & software) from XML, usfull for looking at complete MAME data|`.accdbxml`|
 |.bt|Enable the bit torrent client|`.bt`|
 |.btr|Restart the bit torrent client|`.btr`|
 |.bts|Stop the bit torrent client|`.bts`|
