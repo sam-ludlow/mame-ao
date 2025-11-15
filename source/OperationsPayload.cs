@@ -1095,7 +1095,8 @@ namespace Spludlow.MameAO
 
 				datafile_html.AppendLine("<h2>game</h2>");
 				datafile_html.AppendLine("<table>");
-				datafile_html.AppendLine("<tr><th>Name</th><th>Description</th><th>Year</th><th>Manufacturer</th><th>cloneof</th><th>romof</th></tr>");
+				datafile_html.AppendLine("<tr><th>Name</th><th>Description</th><th>Year</th><th>Manufacturer</th>" +
+					"<th>cloneof</th><th>romof</th><th>roms</th><th>bytes</th><th>size</th></tr>");
 
 				foreach (DataRow gameRow in dataSet.Tables["game"].Select($"datafile_id = {datafile_id}"))
 				{
@@ -1115,7 +1116,7 @@ namespace Spludlow.MameAO
 					string game_cloneof_datafile_link = game_cloneof == null ? "" : $"<a href=\"{datafile_key}/{game_cloneof}\">{game_cloneof}</a>";
 					string game_romof_datafile_link = game_romof == null ? "" : $"<a href=\"{datafile_key}/{game_romof}\">{game_romof}</a>";
 
-					datafile_html.AppendLine($"<tr><td><a href=\"{datafile_key}/{game_name}\">{game_name}</a></td><td>{game_description}</td><td>{game_year}</td><td>{game_manufacturer}</td><td>{game_cloneof_datafile_link}</td><td>{game_romof_datafile_link}</td></tr>");
+					long rom_size_total = 0;
 
 					StringBuilder game_html = new StringBuilder();
 					string game_title = $"{game_description} ({datafile_name})";
@@ -1147,6 +1148,9 @@ namespace Spludlow.MameAO
 					}
 					if (romRows.Length > 0)
 					{
+						foreach (long size in romRows.Cast<DataRow>().Where(romRow => romRow.IsNull("size") == false).Select(romRow => Int64.Parse((string)romRow["size"])))
+							rom_size_total += size;
+
 						game_html.AppendLine("<h2>rom</h2>");
 						game_html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["rom"], romRows, null));
 						game_html.AppendLine("<hr />");
@@ -1171,6 +1175,9 @@ namespace Spludlow.MameAO
 					string[] xmlJsonGame = payloadsXmlJson_game[gameKey];
 
 					game_payload_table.Rows.Add(datafile_key, game_name, game_title, xmlJsonGame[0], xmlJsonGame[1], game_html.ToString());
+
+					datafile_html.AppendLine($"<tr><td><a href=\"{datafile_key}/{game_name}\">{game_name}</a></td><td>{game_description}</td><td>{game_year}</td><td>{game_manufacturer}</td>" +
+						$"<td>{game_cloneof_datafile_link}</td><td>{game_romof_datafile_link}</td><td>{romRows.Length}</td><td>{rom_size_total}</td><td>{Tools.DataSize(rom_size_total)}</td></tr>");
 				}
 
 				datafile_html.AppendLine("</table>");
