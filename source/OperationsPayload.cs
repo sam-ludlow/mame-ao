@@ -1069,11 +1069,22 @@ namespace Spludlow.MameAO
 				}
 			}
 
+			dataSet.Tables["rom"].Columns.Add("data_size", typeof(string));
+			foreach (DataRow romRow in dataSet.Tables["rom"].Select("[size] IS NOT NULL"))
+				romRow["data_size"] = Tools.DataSize(Int64.Parse((string)romRow["size"]));
+
 			//
 			// Payloads
 			//
+			DataTable root_payload_table = MakePayloadDataTable("root_payload", new string[] { "key_1" });
 			DataTable datafile_payload_table = MakePayloadDataTable("datafile_payload", new string[] { "key" });
 			DataTable game_payload_table = MakePayloadDataTable("game_payload", new string[] { "datafile_key", "game_name" });
+
+			StringBuilder root_html = new StringBuilder();
+			string root_title = $"FBNeo ({version})";
+			root_html.AppendLine("<h2>FBNeo Systems</h2>");
+			root_html.AppendLine("<table>");
+			root_html.AppendLine("<tr><th>Name</th><th>Game Count</th><th>Rom Count</th><th>Bytes</th><th>Size</th></tr>");
 
 			foreach (DataRow dataFileRow in dataSet.Tables["datafile"].Rows)
 			{
@@ -1082,6 +1093,10 @@ namespace Spludlow.MameAO
 				string datafile_name = (string)dataFileRow["name"];
 				datafile_name = datafile_name.Substring(16);
 				datafile_name = datafile_name.Substring(0, datafile_name.Length - 6);
+
+				long datafile_size_total = 0;
+				long datafile_game_count = 0;
+				long datafile_rom_count = 0;
 
 				StringBuilder datafile_html = new StringBuilder();
 				string datafile_title = $"FBNeo ({version}) {datafile_name}";
@@ -1107,6 +1122,9 @@ namespace Spludlow.MameAO
 					string game_manufacturer = (string)gameRow["manufacturer"];
 					string game_cloneof = Tools.DataRowValue(gameRow, "cloneof");
 					string game_romof = Tools.DataRowValue(gameRow, "romof");
+
+					long game_size_total = 0;
+					long game_rom_count = 0;
 
 					DataRow[] driverRows = dataSet.Tables["driver"].Select($"game_id = {game_id}");
 					DataRow[] romRows = dataSet.Tables["rom"].Select($"game_id = {game_id}");
@@ -1148,8 +1166,8 @@ namespace Spludlow.MameAO
 					}
 					if (romRows.Length > 0)
 					{
-						foreach (long size in romRows.Cast<DataRow>().Where(romRow => romRow.IsNull("size") == false).Select(romRow => Int64.Parse((string)romRow["size"])))
-							rom_size_total += size;
+						foreach (DataRow romRow in romRows.Where(r => r.IsNull("size") == false))
+							rom_size_total += Int64.Parse((string)romRow["size"]);
 
 						game_html.AppendLine("<h2>rom</h2>");
 						game_html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["rom"], romRows, null));
@@ -1167,6 +1185,13 @@ namespace Spludlow.MameAO
 						game_html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["sample"], sampleRows, null));
 						game_html.AppendLine("<hr />");
 					}
+
+					game_size_total += rom_size_total;
+					game_rom_count += romRows.Length;
+
+					datafile_size_total += game_size_total;
+					datafile_game_count += 1;
+					datafile_rom_count += game_rom_count;
 
 					string gameKey = $"{datafile_key}\t{game_name}";
 					if (payloadsXmlJson_game.ContainsKey(gameKey) == false)
@@ -1188,10 +1213,16 @@ namespace Spludlow.MameAO
 				string[] xmlJsonDatafile = payloadsXmlJson_datafile[datafile_key];
 
 				datafile_payload_table.Rows.Add(datafile_key, datafile_title, xmlJsonDatafile[0], xmlJsonDatafile[1], datafile_html.ToString());
+
+				root_html.AppendLine($"<tr><td><a href=\"/fbneo/{datafile_key}\">{datafile_name}</a></td><td>{datafile_game_count}</td><td>{datafile_rom_count}</td><td>{datafile_size_total}</td><td>{Tools.DataSize(datafile_size_total)}</td></tr>");
 			}
+
+			root_html.AppendLine("</table>");
+			root_payload_table.Rows.Add("1", root_title, "", "", root_html.ToString());
 
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
 			{
+				MakeMSSQLPayloadsInsert(connection, root_payload_table);
 				MakeMSSQLPayloadsInsert(connection, datafile_payload_table);
 				MakeMSSQLPayloadsInsert(connection, game_payload_table);
 
