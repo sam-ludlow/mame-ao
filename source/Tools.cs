@@ -5,6 +5,7 @@ using System.Data;
 using System.Diagnostics;
 using System.Drawing;
 using System.IO;
+using System.IO.Compression;
 using System.Linq;
 using System.Net;
 using System.Net.Http;
@@ -582,9 +583,23 @@ namespace Spludlow.MameAO
 
 		public static void MsAccess(string arguments, string description)
 		{
-			string exeFilename = Path.Combine(Globals.RootDirectory, "access-linker.exe");
-			if (File.Exists(exeFilename) == false)
-				throw new ApplicationException($"Access Linker not found: {exeFilename}, install from here: https://github.com/sam-ludlow/access-linker/releases/latest");
+			string[] locations = new string[] {
+				Path.Combine(Globals.RootDirectory, "access-linker.exe"),
+				Path.Combine(Path.GetDirectoryName(Assembly.GetEntryAssembly().Location), "access-linker.exe"),
+			};
+
+			string exeFilename = null;
+			foreach (string location in locations)
+			{
+				if (File.Exists(location) == true)
+				{
+					exeFilename = location;
+					break;
+				}
+			}
+
+			if (exeFilename == null)
+				throw new ApplicationException($"Access Linker not found: \"{String.Join(", ", locations)}\". Install from here: https://github.com/sam-ludlow/access-linker/releases/latest");
 
 			Version version = AssemblyName.GetAssemblyName(exeFilename).Version;
 			string localVersion = $"{version.Major}.{version.Minor}";
@@ -690,6 +705,50 @@ namespace Spludlow.MameAO
 
 					writer.WriteLine("</svg>");
 				}
+			}
+		}
+
+		public static void CompressSingleFile(string filename, string zipFilename)
+		{
+			using (FileStream fileStream = new FileStream(zipFilename, FileMode.Create))
+				using (ZipArchive zipArchive = new ZipArchive(fileStream, ZipArchiveMode.Create))
+					zipArchive.CreateEntryFromFile(filename, Path.GetFileName(filename));
+		}
+
+		public static void Compress7Zip(string sourcePath, string targetFilename)
+		{
+			string programFilename = @"C:\Program Files\7-Zip\7z.exe";
+
+			if (File.Exists(programFilename) == false)
+				throw new ApplicationException($"7-Zip Program required: {programFilename}");
+
+			string arguments = $"a -y \"{targetFilename}\" \"{sourcePath}\"";
+
+			Console.WriteLine(arguments);
+
+			ProcessStartInfo startInfo = new ProcessStartInfo(programFilename)
+			{
+				Arguments = arguments,
+				UseShellExecute = false,
+				RedirectStandardOutput = true,
+				RedirectStandardError = true,
+				StandardOutputEncoding = Encoding.UTF8,
+			};
+
+			using (Process process = new Process())
+			{
+				process.StartInfo = startInfo;
+
+				process.OutputDataReceived += new DataReceivedEventHandler((sender, e) => Console.WriteLine(e.Data));
+				process.ErrorDataReceived += new DataReceivedEventHandler((sender, e) => Console.WriteLine(e.Data));
+
+				process.Start();
+				process.BeginOutputReadLine();
+				process.BeginErrorReadLine();
+				process.WaitForExit();
+
+				if (process.ExitCode != 0)
+					throw new ApplicationException($"Z-Zip bad exit code: {process.ExitCode}");
 			}
 		}
 

@@ -275,7 +275,14 @@ namespace Spludlow.MameAO
 		}
 
 
-
+		void ICore.MsAccess()
+		{
+			throw new NotImplementedException();
+		}
+		void ICore.Zips()
+		{
+			throw new NotImplementedException();
+		}
 
 
 		void ICore.AllSHA1(HashSet<string> hashSet)

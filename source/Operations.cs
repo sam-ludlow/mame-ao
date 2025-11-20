@@ -10,175 +10,116 @@ namespace Spludlow.MameAO
 	{
 		public static int ProcessOperation(Dictionary<string, string> parameters)
 		{
-			int exitCode;
-			ICore core;
+			int exitCode = 0;
 
 			DateTime timeStart = DateTime.Now;
 
-			switch (parameters["operation"])
+			string operation = parameters["operation"];
+
+			int index = operation.IndexOf("-");
+			if (index == -1)
+				throw new ApplicationException("Bad operation, usage: 'core-operation'.");
+
+			string coreName = operation.Substring(0, index);
+			operation = operation.Substring(index + 1);
+
+			ICore core;
+			switch (coreName)
 			{
-				//
-				//	MAME
-				//
-				case "mame-get":
+				case "mame":
 					core = new CoreMame();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					exitCode = core.Get();
 					break;
 
-				case "mame-xml":
-					core = new CoreMame();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.Xml();
-					exitCode = 0;
-					break;
-
-				case "mame-json":
-					core = new CoreMame();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.Json();
-					exitCode = 0;
-					break;
-
-				case "mame-sqlite":
-					core = new CoreMame();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.SQLite();
-					exitCode = 0;
-					break;
-
-				case "mame-mssql":
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					exitCode = MameMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-					break;
-
-				case "mame-mssql-payload":
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					exitCode = OperationsPayload.MameMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-					break;
-
-				//
-				// HBMAME
-				//
-				case "hbmame-get":
+				case "hbmame":
 					core = new CoreHbMame();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					exitCode = core.Get();
 					break;
 
-				case "hbmame-xml":
-					core = new CoreHbMame();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.Xml();
-					exitCode = 0;
-					break;
-
-				case "hbmame-json":
-					core = new CoreHbMame();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.Json();
-					exitCode = 0;
-					break;
-
-				case "hbmame-sqlite":
-					core = new CoreHbMame();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.SQLite();
-					exitCode = 0;
-					break;
-
-				case "hbmame-mssql":
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					exitCode = HbMameMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-					break;
-
-				case "hbmame-mssql-payload":
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					exitCode = OperationsPayload.HbMameMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-					break;
-
-				//
-				// FBNeo
-				//
-				case "fbneo-get":
+				case "fbneo":
 					core = new CoreFbNeo();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					exitCode = core.Get();
 					break;
 
-				case "fbneo-xml":
-					core = new CoreFbNeo();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.Xml();
-					exitCode = 0;
-					break;
-
-				case "fbneo-json":
-					core = new CoreFbNeo();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.Json();
-					exitCode = 0;
-					break;
-
-				case "fbneo-sqlite":
-					core = new CoreFbNeo();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.SQLite();
-					exitCode = 0;
-					break;
-
-				case "fbneo-mssql":
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					exitCode = FBNeoMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-					break;
-
-				case "fbneo-mssql-payload":
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					exitCode = OperationsPayload.FBNeoMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-					break;
-
-				//
-				// TOSEC
-				//
-				case "tosec-get":
+				case "tosec":
 					core = new CoreTosec();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					exitCode = core.Get();
-					break;
-
-				case "tosec-xml":
-					core = new CoreTosec();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.Xml();
-					exitCode = 0;
-					break;
-
-				case "tosec-json":
-					core = new CoreTosec();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.Json();
-					exitCode = 0;
-					break;
-
-				case "tosec-sqlite":
-					core = new CoreTosec();
-					core.Initialize(parameters["directory"], parameters["version"]);
-					core.SQLite();
-					exitCode = 0;
-					break;
-
-				case "tosec-mssql":
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					exitCode = TosecMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-					break;
-
-				case "tosec-mssql-payload":
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					exitCode = OperationsPayload.TosecMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
 					break;
 
 				default:
-					throw new ApplicationException($"Unknown Operation {parameters["operation"]}");
+					throw new ApplicationException($"Bad core: {coreName}");
+			}
+
+			core.Initialize(parameters["directory"], parameters["version"]);
+
+			switch (operation)
+			{
+				case "get":
+					exitCode = core.Get();
+					break;
+
+				case "xml":
+					core.Xml();
+					break;
+
+				case "json":
+					core.Json();
+					break;
+
+				case "sqlite":
+					core.SQLite();
+					break;
+
+				case "msaccess":
+					core.MsAccess();
+					break;
+
+				case "zips":
+					core.Zips();
+					break;
+
+				case "mssql":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					switch (coreName)
+					{
+						case "mame":
+							MameMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
+							break;
+
+						case "hbmame":
+							HbMameMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
+							break;
+
+						case "fbneo":
+							FBNeoMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
+							break;
+
+						case "tosec":
+							TosecMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
+							break;
+					}
+					break;
+
+				case "mssql-payload":
+					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+					switch (coreName)
+					{
+						case "mame":
+							OperationsPayload.MameMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
+							break;
+
+						case "hbmame":
+							OperationsPayload.HbMameMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
+							break;
+
+						case "fbneo":
+							OperationsPayload.FBNeoMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
+							break;
+
+						case "tosec":
+							OperationsPayload.TosecMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
+							break;
+					}
+					break;
+
+				default:
+					throw new ApplicationException($"Bad operation: {operation}");
 			}
 
 			TimeSpan timeTook = DateTime.Now - timeStart;

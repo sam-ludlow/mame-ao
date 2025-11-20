@@ -183,8 +183,14 @@ namespace Spludlow.MameAO
 			Console.WriteLine("... done");
 		}
 
-
-
+        void ICore.MsAccess()
+        {
+            throw new NotImplementedException();
+        }
+        void ICore.Zips()
+        {
+            throw new NotImplementedException();
+        }
 
 
 		public static string FBNeoGetLatestDownloadedVersion(string directory)

@@ -28,6 +28,8 @@ namespace Spludlow.MameAO
 
 		void SQLite();
 		void MSSql();
+		void MsAccess();
+		void Zips();
 		void MSSqlHtml();
 		void MSSqlPayload();
 
@@ -165,6 +167,28 @@ namespace Spludlow.MameAO
 			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
 
 			Database.DataSet2SQLite(document.Name.LocalName, connectionString, dataSet);
+		}
+
+		public static void MsAccess(string directory)
+		{
+			foreach (string filename in Directory.GetFiles(directory, "_*.xml"))
+				Tools.MsAccessFromXML(filename);
+		}
+
+		public static void Zips(string directory)
+		{
+			HashSet<string> extentions = new HashSet<string>(new string[] { ".accdb", ".json", ".sqlite", ".xml" });
+			foreach (string filename in Directory.GetFiles(directory))
+			{
+				if (Path.GetFileName(filename).StartsWith("_") == false || extentions.Contains(Path.GetExtension(filename)) == false)
+					continue;
+
+				Console.WriteLine(filename);
+
+				Tools.CompressSingleFile(filename, filename + ".zip");
+
+				Tools.Compress7Zip(filename, filename + ".7z");
+			}
 		}
 
 		public static void AllSHA1(HashSet<string> hashSet, string connectionString, string[] tableNames)

@@ -189,6 +189,23 @@ namespace Spludlow.MameAO
 			return version;
 		}
 
+		void ICore.MsAccess()
+		{
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			Cores.MsAccess(_CoreDirectory);
+		}
+		void ICore.Zips()
+		{
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			Cores.Zips(_CoreDirectory);
+		}
+
 
 		void ICore.SQLite()
 		{
