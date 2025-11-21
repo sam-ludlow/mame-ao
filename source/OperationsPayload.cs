@@ -1236,20 +1236,24 @@ namespace Spludlow.MameAO
 		{
 			Dictionary<string, string[]> payloads = new Dictionary<string, string[]>();
 
-			foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
+			using (XmlReader reader = XmlReader.Create(Path.Combine(directory, "_fbneo.xml"), _XmlReaderSettings))
 			{
-				string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
+				reader.MoveToContent();
 
-				using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+				while (reader.Read())
 				{
-					reader.MoveToContent();
+					while (reader.NodeType == XmlNodeType.Element && reader.Name == "datafile")
+					{
+						if (XElement.ReadFrom(reader) is XElement datafileElement)
+						{
+							string datafile_key = datafileElement.Attribute("key").Value;
 
-					XElement datafileElement = (XElement)XElement.ReadFrom(reader);
+							string xml = datafileElement.ToString();
+							string json = Tools.XML2JSON(datafileElement);
 
-					string xml = datafileElement.ToString();
-					string json = Tools.XML2JSON(datafileElement);
-
-					payloads.Add(datafile_key, new string[] { xml, json });
+							payloads.Add(datafile_key, new string[] { xml, json });
+						}
+					}
 				}
 			}
 
@@ -1260,19 +1264,19 @@ namespace Spludlow.MameAO
 		{
 			Dictionary<string, string[]> payloads = new Dictionary<string, string[]>();
 
-			foreach (string xmlFilename in Directory.GetFiles(directory, "_*.xml"))
+			using (XmlReader reader = XmlReader.Create(Path.Combine(directory, "_fbneo.xml"), _XmlReaderSettings))
 			{
-				string datafile_key = Path.GetFileNameWithoutExtension(xmlFilename).Substring(1);
+				reader.MoveToContent();
 
-				using (XmlReader reader = XmlReader.Create(xmlFilename, _XmlReaderSettings))
+				while (reader.Read())
 				{
-					reader.MoveToContent();
-
-					while (reader.Read())
+					while (reader.NodeType == XmlNodeType.Element && reader.Name == "datafile")
 					{
-						while (reader.NodeType == XmlNodeType.Element && reader.Name == "game")
+						if (XElement.ReadFrom(reader) is XElement datafileElement)
 						{
-							if (XElement.ReadFrom(reader) is XElement gameElement)
+							string datafile_key = datafileElement.Attribute("key").Value;
+
+							foreach (XElement gameElement in datafileElement.Descendants("game"))
 							{
 								string game_name = gameElement.Attribute("name").Value;
 

@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Text;
+using System.Xml;
 using System.Xml.Linq;
 
 using Newtonsoft.Json;
@@ -91,21 +92,26 @@ namespace Spludlow.MameAO
 				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
+			//	https://github.com/finalburnneo/FBNeo/blob/master/src/burner/win32/main.cpp
+			string[] listInfos = new string[] { "arcade", "channelf", "coleco", "fds", "gg", "md", "msx", "neogeo", "nes", "ngp", "pce", "sg1000", "sgx", "sms", "snes", "spectrum", "tg16" };
+
+			var fixNames = new Dictionary<string, string>()
+            {
+                { "gg", "gamegear" },
+                { "md", "megadrive" }
+            };
+
+			//
+			// Extract XML
+			//
 			string iniFileData = $"nIniVersion 0x7FFFFF{Environment.NewLine}bSkipStartupCheck 1{Environment.NewLine}";
 			string configDirectory = Path.Combine(_CoreDirectory, "config");
 			Directory.CreateDirectory(configDirectory);
 			File.WriteAllText(Path.Combine(configDirectory, "fbneo64.ini"), iniFileData);
 
-			//	https://github.com/finalburnneo/FBNeo/blob/master/src/burner/win32/main.cpp
-			string[] listInfos = new string[] { "arcade", "channelf", "coleco", "fds", "gg", "md", "msx", "neogeo", "nes", "ngp", "pce", "sg1000", "sgx", "sms", "snes", "spectrum", "tg16" };
-
 			foreach (string listInfo in listInfos)
 			{
-				string system = listInfo;
-				if (system == "gg")
-					system = "gamegear";
-				if (system == "md")
-					system = "megadrive";
+				string system = fixNames.ContainsKey(listInfo) == true ? fixNames[listInfo] : listInfo;
 
 				string filename = Path.Combine(_CoreDirectory, $"_{system}.xml");
 
@@ -143,6 +149,55 @@ namespace Spludlow.MameAO
 				}
 
 				File.WriteAllText(filename, output.ToString(), Encoding.UTF8);
+			}
+
+			//
+			// Combine XML
+			//
+			XmlDocument xmlDocument = new XmlDocument();
+
+			XmlElement datafilesElement = xmlDocument.CreateElement("datafiles");
+			xmlDocument.AppendChild(datafilesElement);
+
+			XmlAttribute attribute = xmlDocument.CreateAttribute("version");
+			attribute.Value = _Version;
+			datafilesElement.Attributes.Append(attribute);
+
+			foreach (string listInfo in listInfos)
+			{
+				string system = fixNames.ContainsKey(listInfo) == true ? fixNames[listInfo] : listInfo;
+
+				string systemFilename = Path.Combine(_CoreDirectory, $"_{system}.xml");
+
+				XmlDocument systemDocument = new XmlDocument();
+				systemDocument.Load(systemFilename);
+
+				foreach (XmlNode sourceNode in systemDocument.GetElementsByTagName("datafile"))
+				{
+					XmlNode targetNode = xmlDocument.ImportNode(sourceNode, true);
+
+					attribute = xmlDocument.CreateAttribute("key");
+					attribute.Value = system;
+					targetNode.Attributes.Append(attribute);
+
+					datafilesElement.AppendChild(targetNode);
+				}
+
+				File.Delete(systemFilename);
+			}
+
+			string completeFilename = Path.Combine(_CoreDirectory, "_fbneo.xml");
+			File.Delete(completeFilename);
+
+			XmlWriterSettings settings = new XmlWriterSettings
+			{
+				OmitXmlDeclaration = false,
+				Indent = true,
+				IndentChars = "\t",
+			};
+			using (XmlWriter xmlWriter = XmlWriter.Create(completeFilename, settings))
+			{
+				xmlDocument.Save(xmlWriter);
 			}
 		}
 
@@ -185,13 +240,20 @@ namespace Spludlow.MameAO
 
         void ICore.MsAccess()
         {
-            throw new NotImplementedException();
+			if (_Version == null)
+				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			Cores.MsAccess(new string[] { Path.Combine(_CoreDirectory, "_fbneo.xml") });
         }
         void ICore.Zips()
         {
-            throw new NotImplementedException();
-        }
+			if (_Version == null)
+				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
+			Cores.Zips(_CoreDirectory);
+		}
 
 		public static string FBNeoGetLatestDownloadedVersion(string directory)
 		{
@@ -219,29 +281,18 @@ namespace Spludlow.MameAO
 		{
 			DataSet dataSet = new DataSet();
 
-			foreach (string filename in Directory.GetFiles(directory, "*.xml"))
+			XElement mainDocument = XElement.Load(Path.Combine(directory, "_fbneo.xml"));
+
+			foreach (var datafileElement in mainDocument.Elements("datafile"))
 			{
-				string name = Path.GetFileNameWithoutExtension(filename);
-				if (name.StartsWith("_") == false)
-					continue;
-				name = name.Substring(1);
-
-				Console.WriteLine(name);
-
-				XElement document = XElement.Load(filename);
-
-				XElement clrmamepro = document.Element("header").Element("clrmamepro");
+				XElement clrmamepro = datafileElement.Element("header").Element("clrmamepro");
 				if (clrmamepro != null)
 					clrmamepro.Remove();
 
 				DataSet fileDataSet = new DataSet();
-				ReadXML.ImportXMLWork(document, fileDataSet, null, null);
+				ReadXML.ImportXMLWork(datafileElement, fileDataSet, null, null);
 
 				Tools.DataFileMoveHeader(fileDataSet);
-
-				DataTable datafileTable = fileDataSet.Tables["datafile"];
-				datafileTable.Columns.Add("key", typeof(string));
-				datafileTable.Rows[0]["key"] = name;
 
 				foreach (DataTable table in dataSet.Tables)
 					foreach (DataColumn column in table.Columns)
@@ -252,11 +303,6 @@ namespace Spludlow.MameAO
 
 			return dataSet;
 		}
-
-
-
-
-
 
 		void ICore.MSSql()
 		{

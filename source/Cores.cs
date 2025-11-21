@@ -171,8 +171,22 @@ namespace Spludlow.MameAO
 
 		public static void MsAccess(string directory)
 		{
-			foreach (string filename in Directory.GetFiles(directory, "_*.xml"))
+			MsAccess(Directory.GetFiles(directory, "_*.xml"));
+		}
+		public static void MsAccess(string[] filenames)
+		{
+			foreach (string filename in filenames)
+			{
+				string resultFilename = filename + ".accdb";
+				string targetFilename = Path.Combine(Path.GetDirectoryName(filename), Path.GetFileNameWithoutExtension(filename) + ".accdb");
+
+				File.Delete(resultFilename);
+				File.Delete(targetFilename);
+
 				Tools.MsAccessFromXML(filename);
+
+				File.Move(resultFilename, targetFilename);
+			}
 		}
 
 		public static void Zips(string directory)
@@ -184,10 +198,15 @@ namespace Spludlow.MameAO
 					continue;
 
 				Console.WriteLine(filename);
+				string targetFilename;
 
-				Tools.CompressSingleFile(filename, filename + ".zip");
+				targetFilename = filename + ".zip";
+				File.Delete(targetFilename);
+				Tools.CompressSingleFile(filename, targetFilename);
 
-				Tools.Compress7Zip(filename, filename + ".7z");
+				targetFilename = filename + ".7z";
+				File.Delete(targetFilename);
+				Tools.Compress7Zip(filename, targetFilename);
 			}
 		}
 
