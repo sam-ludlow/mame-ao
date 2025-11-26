@@ -190,7 +190,6 @@ namespace Spludlow.MameAO
 		{
 			if (_Version == null)
 				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
-
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
 			string sqlLiteFilename = Path.Combine(_CoreDirectory, "_tosec.sqlite");
@@ -205,6 +204,23 @@ namespace Spludlow.MameAO
 			Console.Write($"Creating SQLite database {sqlLiteFilename} ...");
 			Database.DataSet2SQLite("tosec", connectionString, dataSet);
 			Console.WriteLine("... done");
+		}
+
+		void ICore.MsAccess()
+		{
+			if (_Version == null)
+				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			Cores.MsAccess(_CoreDirectory);
+		}
+		void ICore.Zips()
+		{
+			if (_Version == null)
+				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			Cores.Zips(_CoreDirectory);
 		}
 
 		public static DataSet TosecDataSet(string directory)
@@ -273,17 +289,6 @@ namespace Spludlow.MameAO
 
 			return versions[versions.Count - 1];
 		}
-
-
-		void ICore.MsAccess()
-		{
-			throw new NotImplementedException();
-		}
-		void ICore.Zips()
-		{
-			throw new NotImplementedException();
-		}
-
 
 		void ICore.AllSHA1(HashSet<string> hashSet)
 		{

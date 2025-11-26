@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -700,8 +701,8 @@ namespace Spludlow.MameAO
 			}
 
 			DataTable listTable = Tools.MakeDataTable(
-				"name	description",
-				"String	String"
+				"name	description	roms	disks	rom_size	rom_size_text",
+				"String	String		Int32	Int32	Int64		String"
 			);
 
 			foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Select(null, "description"))
@@ -719,36 +720,25 @@ namespace Spludlow.MameAO
 				// SoftwareLists
 				//
 
-				StringBuilder html = new StringBuilder();
+				StringBuilder softwarelist_html = new StringBuilder();
 
-				html.AppendLine("<br />");
-				html.AppendLine($"<div><h2 style=\"display:inline;\">softwarelist</h2> &bull; <a href=\"{softwarelist_name}.xml\">XML</a> &bull; <a href=\"{softwarelist_name}.json\">JSON</a> </div>");
-				html.AppendLine("<br />");
-				html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new DataRow[] { softwarelistRow }, null));
+				softwarelist_html.AppendLine("<br />");
+				softwarelist_html.AppendLine($"<div><h2 style=\"display:inline;\">softwarelist</h2> &bull; <a href=\"{softwarelist_name}.xml\">XML</a> &bull; <a href=\"{softwarelist_name}.json\">JSON</a> </div>");
+				softwarelist_html.AppendLine("<br />");
+				softwarelist_html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new DataRow[] { softwarelistRow }, null));
 
-				html.AppendLine("<hr />");
-				html.AppendLine("<h2>software</h2>");
+				softwarelist_html.AppendLine("<hr />");
+				softwarelist_html.AppendLine("<h2>software</h2>");
 				DataTable softwareTable = dataSet.Tables["software"].Clone();
-				foreach (DataRow softwareRow in softwareRows)
-				{
-					softwareTable.ImportRow(softwareRow);
-					DataRow row = softwareTable.Rows[softwareTable.Rows.Count - 1];
-					string value = (string)row["name"];
-					row["name"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{value}\">{value}</a>";
-					if (softwareTable.Columns.Contains("cloneof") == true && row.IsNull("cloneof") == false)
-					{
-						value = (string)row["cloneof"];
-						row["cloneof"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{value}\">{value}</a>";
-					}
-				}
-				html.AppendLine(Reports.MakeHtmlTable(softwareTable, null));
+				softwareTable.Columns.Add("roms", typeof(int));
+				softwareTable.Columns.Add("disks", typeof(int));
+				softwareTable.Columns.Add("rom_size", typeof(int));
+				softwareTable.Columns.Add("rom_size_text", typeof(string));
 
-				listTable.Rows.Add($"<a href=\"/{coreName}/software/{softwarelist_name}\">{softwarelist_name}</a>", softwarelist_description);
-
-				string softwarelist_title = $"{softwarelist_description} - {coreName} ({version}) software list";
-				string[] xmlJson = softwarelist_XmlJsonPayloads[softwarelist_name];
-
-				softwarelist_payload_table.Rows.Add(softwarelist_name, softwarelist_title, xmlJson[0], xmlJson[1], html.ToString());
+				long softwarelist_rom_count = 0;
+				long softwarelist_rom_size = 0;
+				long softwarelist_disk_count = 0;
+				//long softwarelist_disk_size = 0;
 
 				//
 				// Software
@@ -761,13 +751,18 @@ namespace Spludlow.MameAO
 					long software_id = (long)softwareRow["software_id"];
 					string software_name = (string)softwareRow["name"];
 
+					long software_rom_count = 0;
+					long software_rom_size = 0;
+					long software_disk_count = 0;
+					//long software_disk_size = 0;
+
 					if (softwareTable.Columns.Contains("cloneof") == true && softwareRow.IsNull("cloneof") == false)
 					{
 						string value = (string)softwareRow["cloneof"];
 						softwareRow["cloneof"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{value}\">{value}</a>";
 					}
 
-					html = new StringBuilder();
+					StringBuilder html = new StringBuilder();
 
 					html.AppendLine("<br />");
 					html.AppendLine($"<div><h2 style=\"display:inline;\">software</h2> &bull; <a href=\"{software_name}.xml\">XML</a> &bull; <a href=\"{software_name}.json\">JSON</a> </div>");
@@ -842,6 +837,8 @@ namespace Spludlow.MameAO
 							if (column.ColumnName.EndsWith("_id") == false)
 								table.Columns.Add(column.ColumnName, typeof(string));
 
+						table.Columns.Add("size_text", typeof(string));
+
 						foreach (DataRow partRow in partRows)
 						{
 							long part_id = (long)partRow["part_id"];
@@ -854,8 +851,16 @@ namespace Spludlow.MameAO
 
 								foreach (DataRow romRow in dataSet.Tables["rom"].Select($"dataarea_id = {dataarea_id}"))
 								{
+									string rom_size_string = (string)romRow["size"];
+									long rom_size = rom_size_string.StartsWith("0x") == true ? Int64.Parse(rom_size_string.Substring(2), NumberStyles.HexNumber) : Int64.Parse(rom_size_string);
+
+									software_rom_count += 1;
+									software_rom_size += rom_size;
+
 									DataRow row = table.Rows.Add(part_name, part_interface,
 										(string)dataareaRow["name"], (string)dataareaRow["size"], (string)dataareaRow["databits"], (string)dataareaRow["endian"]);
+
+									row["size_text"] = Tools.DataSize(rom_size);
 
 									foreach (DataColumn column in dataSet.Tables["rom"].Columns)
 										if (column.ColumnName.EndsWith("_id") == false)
@@ -893,6 +898,8 @@ namespace Spludlow.MameAO
 
 									foreach (DataRow diskRow in dataSet.Tables["disk"].Select($"diskarea_id = {diskarea_id}"))
 									{
+										software_disk_count += 1;
+
 										DataRow row = table.Rows.Add(part_name, part_interface, (string)diskareaRow["name"]);
 
 										foreach (DataColumn column in dataSet.Tables["disk"].Columns)
@@ -908,6 +915,28 @@ namespace Spludlow.MameAO
 								html.AppendLine(Reports.MakeHtmlTable(table, null));
 							}
 						}
+
+						softwarelist_rom_count += software_rom_count;
+						softwarelist_rom_size += software_rom_size;
+						softwarelist_disk_count += software_disk_count;
+
+						//
+						// Software on SoftwareList
+						//
+						softwareTable.ImportRow(softwareRow);
+						DataRow software_row = softwareTable.Rows[softwareTable.Rows.Count - 1];
+						string value = (string)software_row["name"];
+						software_row["name"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{value}\">{value}</a>";
+						if (softwareTable.Columns.Contains("cloneof") == true && software_row.IsNull("cloneof") == false)
+						{
+							value = (string)software_row["cloneof"];
+							software_row["cloneof"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{value}\">{value}</a>";
+						}
+
+						software_row["roms"] = software_rom_count;
+						software_row["disks"] = software_disk_count;
+						software_row["rom_size"] = software_rom_size;
+						software_row["rom_size_text"] = Tools.DataSize(software_rom_size);
 					}
 
 					DataRow[] machineListRows = machineListTable.Select($"softwarelist_name = '{softwarelist_name}'");
@@ -939,10 +968,20 @@ namespace Spludlow.MameAO
 
 					string software_title = $"{(string)softwareRow["description"]} - {(string)softwarelistRow["description"]} - {coreName} ({version}) software";
 
-					xmlJson = software_XmlJsonPayloads[$"{softwarelist_name}\t{software_name}"];
+					string[] software_xmlJson = software_XmlJsonPayloads[$"{softwarelist_name}\t{software_name}"];
 
-					software_payload_table.Rows.Add(softwarelist_name, software_name, software_title, xmlJson[0], xmlJson[1], html.ToString());
+					software_payload_table.Rows.Add(softwarelist_name, software_name, software_title, software_xmlJson[0], software_xmlJson[1], html.ToString());
 				}
+
+				softwarelist_html.AppendLine(Reports.MakeHtmlTable(softwareTable, null));
+
+				listTable.Rows.Add($"<a href=\"/{coreName}/software/{softwarelist_name}\">{softwarelist_name}</a>", softwarelist_description,
+					softwarelist_rom_count, softwarelist_disk_count, softwarelist_rom_size, Tools.DataSize(softwarelist_rom_size));
+
+				string softwarelist_title = $"{softwarelist_description} - {coreName} ({version}) software list";
+				string[] xmlJson = softwarelist_XmlJsonPayloads[softwarelist_name];
+
+				softwarelist_payload_table.Rows.Add(softwarelist_name, softwarelist_title, xmlJson[0], xmlJson[1], softwarelist_html.ToString());
 			}
 
 			string softwarelists_title = $"{coreName.ToUpper()} ({version}) software";
