@@ -925,14 +925,7 @@ namespace Spludlow.MameAO
 						//
 						softwareTable.ImportRow(softwareRow);
 						DataRow software_row = softwareTable.Rows[softwareTable.Rows.Count - 1];
-						string value = (string)software_row["name"];
-						software_row["name"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{value}\">{value}</a>";
-						if (softwareTable.Columns.Contains("cloneof") == true && software_row.IsNull("cloneof") == false)
-						{
-							value = (string)software_row["cloneof"];
-							software_row["cloneof"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{value}\">{value}</a>";
-						}
-
+						software_row["name"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{software_name}\">{software_name}</a>";
 						software_row["roms"] = software_rom_count;
 						software_row["disks"] = software_disk_count;
 						software_row["rom_size"] = software_rom_size;
