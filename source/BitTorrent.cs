@@ -178,12 +178,16 @@ namespace Spludlow.MameAO
 		{
 			Stop();
 			Start();
+			WaitReady();
+		}
 
+		public static void WaitReady()
+		{
 			Console.Write("Waiting for DOME-BT to be ready ...");
 
 			bool ready = false;
-			do {
-
+			do
+			{
 				Thread.Sleep(5000);
 
 				dynamic info = JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/info"));

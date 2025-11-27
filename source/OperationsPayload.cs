@@ -9,6 +9,8 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
+using Newtonsoft.Json.Linq;
+
 namespace Spludlow.MameAO
 {
 	public class OperationsPayload
@@ -625,6 +627,33 @@ namespace Spludlow.MameAO
 		{
 			DeleteExistingPayloadTables(connections[1]);
 
+			bool usingDisk = Database.TableExists(connections[1], "disk");
+
+			//
+			//	CHD Sizes
+			//
+			Dictionary<string, long> torrentDiskSizes = new Dictionary<string, long>();
+			if (usingDisk == true)
+			{
+				Globals.GitHubRepos.Add("dome-bt", new GitHubRepo("sam-ludlow", "dome-bt"));
+
+				Globals.BitTorrentDirectory = Path.Combine(Globals.RootDirectory, "_BT");
+				Directory.CreateDirectory(Globals.BitTorrentDirectory);
+
+				BitTorrent.Initialize();
+				BitTorrent.WaitReady();
+
+				var torrentHashes = BitTorrent.TorrentHashes();
+				string torrentHash = torrentHashes["SoftwareDisk"];
+
+				JArray torrentFiles = BitTorrent.Files(torrentHash);
+
+				foreach (dynamic torrentFile in torrentFiles)
+					torrentDiskSizes.Add((string)torrentFile.path, (long)torrentFile.length);
+
+				BitTorrent.Stop();
+			}
+
 			//
 			// Metadata
 			//
@@ -633,7 +662,7 @@ namespace Spludlow.MameAO
 			int softwarelistCount = (int)Database.ExecuteScalar(connections[1], "SELECT COUNT(*) FROM softwarelist");
 			int softwareCount = (int)Database.ExecuteScalar(connections[1], "SELECT COUNT(*) FROM software");
 			int softRomCount = (int)Database.ExecuteScalar(connections[1], "SELECT COUNT(*) FROM rom");
-			int softDiskCount = Database.TableExists(connections[1], "disk") == true ? (int)Database.ExecuteScalar(connections[1], "SELECT COUNT(*) FROM disk") : 0;
+			int softDiskCount = usingDisk == true ? (int)Database.ExecuteScalar(connections[1], "SELECT COUNT(*) FROM disk") : 0;
 
 			info = $"{coreName.ToUpper()}: {version} - Released: {exeTime} - Lists: {softwarelistCount} - Software: {softwareCount} - rom: {softRomCount} - disk: {softDiskCount}";
 
@@ -701,8 +730,8 @@ namespace Spludlow.MameAO
 			}
 
 			DataTable listTable = Tools.MakeDataTable(
-				"name	description	roms	disks	rom_size	rom_size_text",
-				"String	String		Int32	Int32	Int64		String"
+				"name	description	roms	disks	rom_size	rom_size_text	disk_size	disk_size_text",
+				"String	String		Int32	Int32	Int64		String			Int64		String"
 			);
 
 			foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Select(null, "description"))
@@ -732,13 +761,15 @@ namespace Spludlow.MameAO
 				DataTable softwareTable = dataSet.Tables["software"].Clone();
 				softwareTable.Columns.Add("roms", typeof(int));
 				softwareTable.Columns.Add("disks", typeof(int));
-				softwareTable.Columns.Add("rom_size", typeof(int));
+				softwareTable.Columns.Add("rom_size", typeof(long));
 				softwareTable.Columns.Add("rom_size_text", typeof(string));
+				softwareTable.Columns.Add("disk_size", typeof(long));
+				softwareTable.Columns.Add("disk_size_text", typeof(string));
 
 				long softwarelist_rom_count = 0;
 				long softwarelist_rom_size = 0;
 				long softwarelist_disk_count = 0;
-				//long softwarelist_disk_size = 0;
+				long softwarelist_disk_size = 0;
 
 				//
 				// Software
@@ -754,7 +785,7 @@ namespace Spludlow.MameAO
 					long software_rom_count = 0;
 					long software_rom_size = 0;
 					long software_disk_count = 0;
-					//long software_disk_size = 0;
+					long software_disk_size = 0;
 
 					if (softwareTable.Columns.Contains("cloneof") == true && softwareRow.IsNull("cloneof") == false)
 					{
@@ -886,6 +917,9 @@ namespace Spludlow.MameAO
 								if (column.ColumnName.EndsWith("_id") == false)
 									table.Columns.Add(column.ColumnName, typeof(string));
 
+							table.Columns.Add("chd_size", typeof(long));
+							table.Columns.Add("chd_size_text", typeof(string));
+
 							foreach (DataRow partRow in partRows)
 							{
 								long part_id = (long)partRow["part_id"];
@@ -898,13 +932,24 @@ namespace Spludlow.MameAO
 
 									foreach (DataRow diskRow in dataSet.Tables["disk"].Select($"diskarea_id = {diskarea_id}"))
 									{
-										software_disk_count += 1;
-
 										DataRow row = table.Rows.Add(part_name, part_interface, (string)diskareaRow["name"]);
 
 										foreach (DataColumn column in dataSet.Tables["disk"].Columns)
 											if (column.ColumnName.EndsWith("_id") == false)
 												row[column.ColumnName] = diskRow[column.ColumnName];
+
+										long disk_size = 0;
+										string disk_name = (string)diskRow["name"];
+										string torrentKey = $"{softwarelist_name}\\{software_name}\\{disk_name}.chd";
+										if (torrentDiskSizes.ContainsKey(torrentKey) == true)
+										{
+											disk_size = torrentDiskSizes[torrentKey];
+											row["chd_size"] = disk_size;
+											row["chd_size_text"] = Tools.DataSize(disk_size);
+										}
+
+										software_disk_count += 1;
+										software_disk_size += disk_size;
 									}
 								}
 							}
@@ -919,6 +964,7 @@ namespace Spludlow.MameAO
 						softwarelist_rom_count += software_rom_count;
 						softwarelist_rom_size += software_rom_size;
 						softwarelist_disk_count += software_disk_count;
+						softwarelist_disk_size += software_disk_size;
 
 						//
 						// Software on SoftwareList
@@ -926,10 +972,18 @@ namespace Spludlow.MameAO
 						softwareTable.ImportRow(softwareRow);
 						DataRow software_row = softwareTable.Rows[softwareTable.Rows.Count - 1];
 						software_row["name"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{software_name}\">{software_name}</a>";
-						software_row["roms"] = software_rom_count;
-						software_row["disks"] = software_disk_count;
-						software_row["rom_size"] = software_rom_size;
-						software_row["rom_size_text"] = Tools.DataSize(software_rom_size);
+						if (software_rom_count > 0)
+						{
+							software_row["roms"] = software_rom_count;
+							software_row["rom_size"] = software_rom_size;
+							software_row["rom_size_text"] = Tools.DataSize(software_rom_size);
+						}
+						if (software_disk_count > 0)
+						{
+							software_row["disks"] = software_disk_count;
+							software_row["disk_size"] = software_disk_size;
+							software_row["disk_size_text"] = Tools.DataSize(software_disk_size);
+						}
 					}
 
 					DataRow[] machineListRows = machineListTable.Select($"softwarelist_name = '{softwarelist_name}'");
@@ -968,8 +1022,20 @@ namespace Spludlow.MameAO
 
 				softwarelist_html.AppendLine(Reports.MakeHtmlTable(softwareTable, null));
 
-				listTable.Rows.Add($"<a href=\"/{coreName}/software/{softwarelist_name}\">{softwarelist_name}</a>", softwarelist_description,
-					softwarelist_rom_count, softwarelist_disk_count, softwarelist_rom_size, Tools.DataSize(softwarelist_rom_size));
+				DataRow softwarelist_row = listTable.Rows.Add($"<a href=\"/{coreName}/software/{softwarelist_name}\">{softwarelist_name}</a>", softwarelist_description);
+
+				if (softwarelist_rom_count > 0)
+				{
+					softwarelist_row["roms"] = softwarelist_rom_count;
+					softwarelist_row["rom_size"] = softwarelist_rom_size;
+					softwarelist_row["rom_size_text"] = Tools.DataSize(softwarelist_rom_size);
+				}
+				if (softwarelist_disk_count > 0)
+				{
+					softwarelist_row["disks"] = softwarelist_disk_count;
+					softwarelist_row["disk_size"] = softwarelist_disk_size;
+					softwarelist_row["disk_size_text"] = Tools.DataSize(softwarelist_disk_size);
+				}
 
 				string softwarelist_title = $"{softwarelist_description} - {coreName} ({version}) software list";
 				string[] xmlJson = softwarelist_XmlJsonPayloads[softwarelist_name];
