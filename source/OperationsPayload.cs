@@ -740,7 +740,7 @@ namespace Spludlow.MameAO
 				string softwarelist_name = (string)softwarelistRow["name"];
 				string softwarelist_description = (string)softwarelistRow["description"];
 
-				//if (softwarelist_name != "x68k_flop" && softwarelist_name != "amiga_cd")
+				//if (softwarelist_name != "x68k_flop" && softwarelist_name != "cdtv")
 				//	continue;
 
 				DataRow[] softwareRows = dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}");
@@ -787,11 +787,12 @@ namespace Spludlow.MameAO
 					long software_disk_count = 0;
 					long software_disk_size = 0;
 
+					string software_cloneof = null;
 					if (softwareTable.Columns.Contains("cloneof") == true && softwareRow.IsNull("cloneof") == false)
-					{
-						string value = (string)softwareRow["cloneof"];
-						softwareRow["cloneof"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{value}\">{value}</a>";
-					}
+						software_cloneof = (string)softwareRow["cloneof"];
+
+					if (software_cloneof != null)
+						softwareRow["cloneof"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{software_cloneof}\">{software_cloneof}</a>";
 
 					StringBuilder html = new StringBuilder();
 
@@ -940,13 +941,20 @@ namespace Spludlow.MameAO
 
 										long disk_size = 0;
 										string disk_name = (string)diskRow["name"];
-										string torrentKey = $"{softwarelist_name}\\{software_name}\\{disk_name}.chd";
-										if (torrentDiskSizes.ContainsKey(torrentKey) == true)
+										foreach (string try_software_name in (new string[] { software_name, software_cloneof }).Where(name => name != null))
 										{
-											disk_size = torrentDiskSizes[torrentKey];
-											row["chd_size"] = disk_size;
-											row["chd_size_text"] = Tools.DataSize(disk_size);
+											string torrentKey = $"{softwarelist_name}\\{try_software_name}\\{disk_name}.chd";
+											if (torrentDiskSizes.ContainsKey(torrentKey) == true)
+											{
+												disk_size = torrentDiskSizes[torrentKey];
+												row["chd_size"] = disk_size;
+												row["chd_size_text"] = Tools.DataSize(disk_size);
+												break;
+											}
 										}
+
+										if (disk_size == 0)
+											Console.WriteLine($"!!! Did not find software disk in torrents: {softwarelist_name}/{software_name}/{disk_name}");
 
 										software_disk_count += 1;
 										software_disk_size += disk_size;
