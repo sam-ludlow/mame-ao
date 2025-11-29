@@ -104,7 +104,7 @@ namespace Spludlow.MameAO
 
 	public class MameAOProcessor
 	{
-		private IntPtr ConsoleHandle;
+		public IntPtr ConsoleHandle = IntPtr.Zero;
 
 		private readonly string WelcomeText = @"@VERSION
 

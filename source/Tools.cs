@@ -57,6 +57,9 @@ namespace Spludlow.MameAO
 
 		public static void ConsoleRule(int head)
 		{
+			if (Globals.AO == null || Globals.AO.ConsoleHandle == IntPtr.Zero)
+				return;
+
 			Console.WriteLine(new String(_HeadingChars[head], Console.WindowWidth - 1));
 		}
 
@@ -66,6 +69,9 @@ namespace Spludlow.MameAO
 		}
 		public static void ConsoleHeading(int head, string[] lines)
 		{
+			if (Globals.AO == null || Globals.AO.ConsoleHandle == IntPtr.Zero)
+				return;
+
 			ConsoleRule(head);
 
 			char ch = _HeadingChars[head];
