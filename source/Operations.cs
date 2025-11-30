@@ -1,8 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
-using System.IO;
-using System.Xml.Linq;
+using System.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -76,46 +75,12 @@ namespace Spludlow.MameAO
 
 				case "mssql":
 					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					switch (coreName)
-					{
-						case "mame":
-							MameMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-							break;
-
-						case "hbmame":
-							HbMameMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-							break;
-
-						case "fbneo":
-							FBNeoMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-							break;
-
-						case "tosec":
-							TosecMSSQL(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-							break;
-					}
+					core.MSSql(parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
 					break;
 
 				case "mssql-payload":
 					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					switch (coreName)
-					{
-						case "mame":
-							OperationsPayload.MameMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-							break;
-
-						case "hbmame":
-							OperationsPayload.HbMameMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-							break;
-
-						case "fbneo":
-							OperationsPayload.FBNeoMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-							break;
-
-						case "tosec":
-							OperationsPayload.TosecMSSQLPayloads(parameters["directory"], parameters["version"], parameters["server"], parameters["names"]);
-							break;
-					}
+					core.MSSqlPayload(parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
 					break;
 
 				default:
@@ -140,111 +105,5 @@ namespace Spludlow.MameAO
 			if (missing.Count > 0)
 				throw new ApplicationException($"This operation requires these parameters '{String.Join(", ", missing)}'.");
 		}
-
-		//
-		// MS SQL
-		//
-		public static int MameMSSQL(string directory, string version, string serverConnectionString, string databaseNames)
-		{
-			if (version == "0")
-				version = CoreMame.LatestLocalVersion(directory);
-
-			directory = Path.Combine(directory, version);
-
-			string[] xmlFilenames = new string[] {
-				Path.Combine(directory, "_machine.xml"),
-				Path.Combine(directory, "_software.xml"),
-			};
-
-			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' });
-
-			if (databaseNamesEach.Length != 2)
-				throw new ApplicationException("database names must be 2 parts comma delimited");
-
-			for (int index = 0; index < 2; ++index)
-			{
-				string sourceXmlFilename = xmlFilenames[index];
-				string targetDatabaseName = databaseNamesEach[index].Trim();
-
-				XElement document = XElement.Load(sourceXmlFilename);
-				DataSet dataSet = new DataSet();
-				ReadXML.ImportXMLWork(document, dataSet, null, null);
-
-				Database.DataSet2MSSQL(dataSet, serverConnectionString, targetDatabaseName);
-
-				Database.MakeForeignKeys(serverConnectionString, targetDatabaseName);
-			}
-
-			return 0;
-		}
-
-		public static int HbMameMSSQL(string directory, string version, string serverConnectionString, string databaseNames)
-		{
-			if (version == "0")
-				version = CoreHbMame.LatestLocalVersion(directory);
-
-			directory = Path.Combine(directory, version);
-
-			string[] xmlFilenames = new string[] {
-				Path.Combine(directory, "_machine.xml"),
-				Path.Combine(directory, "_software.xml"),
-			};
-
-			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' });
-
-			if (databaseNamesEach.Length != 2)
-				throw new ApplicationException("database names must be 2 parts comma delimited");
-
-			for (int index = 0; index < 2; ++index)
-			{
-				string sourceXmlFilename = xmlFilenames[index];
-				string targetDatabaseName = databaseNamesEach[index].Trim();
-
-				XElement document = XElement.Load(sourceXmlFilename);
-				DataSet dataSet = new DataSet();
-				ReadXML.ImportXMLWork(document, dataSet, null, null);
-
-				Database.DataSet2MSSQL(dataSet, serverConnectionString, targetDatabaseName);
-
-				Database.MakeForeignKeys(serverConnectionString, targetDatabaseName);
-			}
-
-			return 0;
-		}
-
-		public static int FBNeoMSSQL(string directory, string version, string serverConnectionString, string databaseName)
-		{
-			if (version == "0")
-				version = CoreFbNeo.FBNeoGetLatestDownloadedVersion(directory);
-
-			directory = Path.Combine(directory, version);
-
-			DataSet dataSet = CoreFbNeo.FBNeoDataSet(directory);
-
-			Database.DataSet2MSSQL(dataSet, serverConnectionString, databaseName);
-
-			Database.MakeForeignKeys(serverConnectionString, databaseName);
-
-			return 0;
-		}
-
-		public static int TosecMSSQL(string directory, string version, string serverConnectionString, string databaseName)
-		{
-			if (version == "0")
-				version = CoreTosec.TosecGetLatestDownloadedVersion(directory);
-
-			directory = Path.Combine(directory, version);
-
-			DataSet dataSet = CoreTosec.TosecDataSet(directory);
-
-			Database.DataSet2MSSQL(dataSet, serverConnectionString, databaseName);
-
-			Database.MakeForeignKeys(serverConnectionString, databaseName);
-
-			return 0;
-		}
-
-
 	}
 }
-

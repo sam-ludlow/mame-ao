@@ -27,11 +27,11 @@ namespace Spludlow.MameAO
 		void AllSHA1(HashSet<string> hashSet);
 
 		void SQLite();
-		void MSSql();
+		void MSSql(string serverConnectionString, string[] databaseNames);
+		void MSSqlPayload(string serverConnectionString, string[] databaseNames);
 		void MsAccess();
 		void Zips();
-		void MSSqlHtml();
-		void MSSqlPayload();
+
 
 		DataRow GetMachine(string machine_name);
 		DataRow[] GetMachineRoms(string machine_name);

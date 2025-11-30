@@ -375,19 +375,25 @@ namespace Spludlow.MameAO
 			throw new NotImplementedException();
 		}
 
-		void ICore.MSSql()
+		void ICore.MSSql(string serverConnectionString, string[] databaseNames)
 		{
-			throw new NotImplementedException();
+			if (_Version == null)
+				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			DataSet dataSet = CoreTosec.TosecDataSet(_CoreDirectory);
+
+			Database.DataSet2MSSQL(dataSet, serverConnectionString, databaseNames[0]);
+
+			Database.MakeForeignKeys(serverConnectionString, databaseNames[0]);
 		}
 
-		void ICore.MSSqlHtml()
+		void ICore.MSSqlPayload(string serverConnectionString, string[] databaseNames)
 		{
-			throw new NotImplementedException();
-		}
+			if (_Version == null)
+				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
 
-		void ICore.MSSqlPayload()
-		{
-			throw new NotImplementedException();
+			OperationsPayload.TosecMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
 		DataTable ICore.QueryMachines(DataQueryProfile profile, int offset, int limit, string search)

@@ -1,10 +1,10 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.SQLite;
 using System.IO;
 using System.Linq;
-
-using System.Data.SQLite;
+using System.Xml.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -298,19 +298,37 @@ namespace Spludlow.MameAO
 		}
 
 
-		void ICore.MSSql()
+		void ICore.MSSql(string serverConnectionString, string[] databaseNames)
 		{
-			throw new NotImplementedException();
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			string[] datasetNames = new string[] { "machine", "software" };
+
+			for (int index = 0; index < 2; ++index)
+			{
+				string datasetName = datasetNames[index];
+				string targetDatabaseName = databaseNames[index];
+
+				string sourceXmlFilename = Path.Combine(_CoreDirectory, $"_{datasetName}.xml");
+
+				XElement document = XElement.Load(sourceXmlFilename);
+				DataSet dataSet = new DataSet();
+				ReadXML.ImportXMLWork(document, dataSet, null, null);
+
+				Database.DataSet2MSSQL(dataSet, serverConnectionString, targetDatabaseName);
+
+				Database.MakeForeignKeys(serverConnectionString, targetDatabaseName);
+			}
 		}
 
-		void ICore.MSSqlHtml()
+		void ICore.MSSqlPayload(string serverConnectionString, string[] databaseNames)
 		{
-			throw new NotImplementedException();
-		}
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
 
-		void ICore.MSSqlPayload()
-		{
-			throw new NotImplementedException();
+			OperationsPayload.HbMameMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames);
 		}
 
 

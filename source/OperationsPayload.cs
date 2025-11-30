@@ -123,21 +123,15 @@ namespace Spludlow.MameAO
 		// MAME
 		//
 
-		public static int MameMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseNames)
+		public static int MameMSSQLPayloads(string directory, string version, string serverConnectionString, string[] databaseNames)
 		{
-			if (version == "0")
-				version = CoreMame.LatestLocalVersion(directory);
-	
 			return MameishMSSQLPayloads(directory, version, serverConnectionString, databaseNames, "mame");
 		}
 		//
 		// HBMAME
 		//
-		public static int HbMameMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseNames)
+		public static int HbMameMSSQLPayloads(string directory, string version, string serverConnectionString, string[] databaseNames)
 		{
-			if (version == "0")
-				version = CoreHbMame.LatestLocalVersion(directory);
-
 			return MameishMSSQLPayloads(directory, version, serverConnectionString, databaseNames, "hbmame");
 		}
 
@@ -145,18 +139,14 @@ namespace Spludlow.MameAO
 		// MAMEish
 		//
 
-		public static int MameishMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseNames, string coreName)
+		public static int MameishMSSQLPayloads(string directory, string version, string serverConnectionString, string[] databaseNames, string coreName)
 		{
-			string[] databaseNamesEach = databaseNames.Split(new char[] { ',' }).Cast<string>().Select(name => name.Trim()).ToArray();
-			if (databaseNamesEach.Length != 2)
-				throw new ApplicationException("database names must be 2 parts comma delimited");
-
 			string versionDirectory = Path.Combine(directory, version);
 
 			SqlConnection[] connections = new SqlConnection[]
 			{
-				new SqlConnection(serverConnectionString + $"Database='{databaseNamesEach[0]}';"),
-				new SqlConnection(serverConnectionString + $"Database='{databaseNamesEach[1]}';")
+				new SqlConnection(serverConnectionString + $"Database='{databaseNames[0]}';"),
+				new SqlConnection(serverConnectionString + $"Database='{databaseNames[1]}';")
 			};
 			
 			string exePath = Path.Combine(versionDirectory, $"{coreName}.exe");
@@ -1133,8 +1123,6 @@ namespace Spludlow.MameAO
 		//
 		public static int FBNeoMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName)
 		{
-			if (version == "0")
-				version = CoreFbNeo.FBNeoGetLatestDownloadedVersion(directory);
 			directory = Path.Combine(directory, version);
 
 			//
@@ -1405,8 +1393,6 @@ namespace Spludlow.MameAO
 
 		public static int TosecMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName)
 		{
-			if (version == "0")
-				version = CoreTosec.TosecGetLatestDownloadedVersion(directory);
 			directory = Path.Combine(directory, version);
 
 			//
