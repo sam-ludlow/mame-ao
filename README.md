@@ -294,6 +294,8 @@ For `get` operations if a new version if found the exit code will be set to 1.
 | mame-xml | Extract XML from MAME. | `mame-ao.exe mame-xml directory="C:\ao-data\mame"` |
 | mame-json | Convert XML to JSON. | `mame-ao.exe mame-json directory="C:\ao-data\mame"` |
 | mame-sqlite | Convert XML to SQLite. | `mame-ao.exe mame-sqlite directory="C:\ao-data\mame"` |
+| mame-msaccess | Convert XML to MS Access. | `mame-ao.exe mame-msaccess directory="C:\ao-data\mame"` |
+| mame-zips | Compress things. | `mame-ao.exe mame-zips directory="C:\ao-data\mame"` |
 | mame-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe mame-mssql directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
 | mame-mssql-payload | Create web payload tables. | `mame-ao.exe mame-mssql-payload directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
 
@@ -304,6 +306,8 @@ For `get` operations if a new version if found the exit code will be set to 1.
 | hbmame-xml | Extract XML from HBMAME. | `mame-ao.exe hbmame-xml directory="C:\ao-data\hbmame"` |
 | hbmame-json | Convert XML to JSON. | `mame-ao.exe hbmame-json directory="C:\ao-data\hbmame"` |
 | hbmame-sqlite | Convert XML to SQLite. | `mame-ao.exe hbmame-sqlite directory="C:\ao-data\hbmame"` |
+| hbmame-msaccess | Convert XML to MS Access. | `mame-ao.exe hbmame-msaccess directory="C:\ao-data\mame"` |
+| hbmame-zips | Compress things. | `mame-ao.exe hbmame-zips directory="C:\ao-data\mame"` |
 | hbmame-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe hbmame-mssql directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
 | hbmame-mssql-payload | Create web payload tables. | `mame-ao.exe hbmame-mssql-payload directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
 
@@ -314,6 +318,8 @@ For `get` operations if a new version if found the exit code will be set to 1.
 | fbneo-xml | Extract XML from FBNeo. | `mame-ao.exe fbneo-xml directory="C:\ao-data\fbneo"` |
 | fbneo-json | Convert XML to JSON. | `mame-ao.exe fbneo-json directory="C:\ao-data\fbneo"` |
 | fbneo-sqlite | Convert XML to SQLite. | `mame-ao.exe fbneo-sqlite directory="C:\ao-data\fbneo"` |
+| fbneo-msaccess | Convert XML to MS Access. | `mame-ao.exe fbneo-msaccess directory="C:\ao-data\mame"` |
+| fbneo-zips | Compress things. | `mame-ao.exe fbneo-zips directory="C:\ao-data\mame"` |
 | fbneo-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe fbneo-mssql directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
 | fbneo-mssql-payload | Create web payload tables. | `mame-ao.exe fbneo-mssql-payload directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
 
@@ -324,6 +330,8 @@ For `get` operations if a new version if found the exit code will be set to 1.
 | tosec-xml | Extract XML from FBNeo. | `mame-ao.exe tosec-xml directory="C:\ao-data\tosec"` |
 | tosec-json | Convert XML to JSON. | `mame-ao.exe tosec-json directory="C:\ao-data\tosec"` |
 | tosec-sqlite | Convert XML to SQLite. | `mame-ao.exe tosec-sqlite directory="C:\ao-data\tosec"` |
+| tosec-msaccess | Convert XML to MS Access. | `mame-ao.exe tosec-msaccess directory="C:\ao-data\mame"` |
+| tosec-zips | Compress things. | `mame-ao.exe tosec-zips directory="C:\ao-data\mame"` |
 | tosec-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe tosec-mssql directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
 | tosec-mssql-payload | Create web payload tables. | `mame-ao.exe tosec-mssql-payload directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
 
