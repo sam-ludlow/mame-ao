@@ -7,7 +7,6 @@ using System.Data;
 using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
-using System.Runtime.InteropServices;
 using System.Net;
 
 namespace Spludlow.MameAO
@@ -126,13 +125,6 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 ";
 
-		[DllImport("user32.dll")]
-		[return: MarshalAs(UnmanagedType.Bool)]
-		static extern bool SetForegroundWindow(IntPtr hWnd);
-
-		[DllImport("user32.dll", EntryPoint = "FindWindow", SetLastError = true)]
-		static extern IntPtr FindWindowByCaption(IntPtr zeroOnly, string lpWindowName);
-
 		public MameAOProcessor(string rootDirectory)
 		{
 			Globals.RootDirectory = rootDirectory;
@@ -162,22 +154,21 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			}
 		}
 
-		public void BringToFront()
-		{
-			if (ConsoleHandle == IntPtr.Zero)
-				Console.WriteLine("!!! Wanring can't get handle on Console Window.");
-			else
-				SetForegroundWindow(ConsoleHandle);
-		}
+
 
 		public void Initialize()
 		{
-			Console.Title = $"MAME-AO {Globals.AssemblyVersion}";
+			ConsoleHandle = Tools.GetConsoleWindow();
+
+			string title = $"MAME-AO {Globals.AssemblyVersion}";
+
+			if (ConsoleHandle == IntPtr.Zero)
+				Console.WriteLine($"{title} (No Console Window)");
+			else
+				Console.Title = title;
 
 			Console.Write(WelcomeText.Replace("@VERSION", Globals.AssemblyVersion));
 			Tools.ConsoleHeading(1, "Initializing");
-
-			Globals.AO = this;
 
 			Globals.Settings = new Settings();
 
@@ -313,8 +304,6 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			// Bits & Bobs
 			//
 
-			ConsoleHandle = FindWindowByCaption(IntPtr.Zero, Console.Title);
-
 			Globals.Samples = new Samples();
 			Globals.Artwork = new Artwork();
 			Globals.Genre = new Genre();
@@ -414,7 +403,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			if (Globals.WorkerTask != null && Globals.WorkerTask.Status != TaskStatus.RanToCompletion)
 				return false;
 
-			BringToFront();
+			Tools.ConsoleToFront();
 
 			Globals.WorkerTask = new Task(() => {
 				try

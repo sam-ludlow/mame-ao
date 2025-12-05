@@ -10,6 +10,7 @@ using System.Linq;
 using System.Net;
 using System.Net.Http;
 using System.Reflection;
+using System.Runtime.InteropServices;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -24,6 +25,12 @@ namespace Spludlow.MameAO
 {
 	public class Tools
 	{
+		[DllImport("kernel32.dll")]
+		public static extern IntPtr GetConsoleWindow();
+
+		[DllImport("user32.dll")]
+		private static extern bool SetForegroundWindow(IntPtr hWnd);
+
 		private static readonly string[] _SystemOfUnits =
 		{
 			"Bytes (B)",
@@ -55,12 +62,15 @@ namespace Spludlow.MameAO
 			return table;
 		}
 
+		public static void ConsoleToFront()
+		{
+			if (Globals.AO.ConsoleHandle != IntPtr.Zero)
+				SetForegroundWindow(Globals.AO.ConsoleHandle);
+		}
+
 		public static void ConsoleRule(int head)
 		{
-			if (Globals.AO == null || Globals.AO.ConsoleHandle == IntPtr.Zero)
-				return;
-
-			Console.WriteLine(new String(_HeadingChars[head], Console.WindowWidth - 1));
+			Console.WriteLine(new String(_HeadingChars[head], GetWindowWidth() - 1));
 		}
 
 		public static void ConsoleHeading(int head, string line)
@@ -69,16 +79,13 @@ namespace Spludlow.MameAO
 		}
 		public static void ConsoleHeading(int head, string[] lines)
 		{
-			if (Globals.AO == null || Globals.AO.ConsoleHandle == IntPtr.Zero)
-				return;
-
 			ConsoleRule(head);
 
 			char ch = _HeadingChars[head];
 
 			foreach (string line in lines)
 			{
-				int pad = Console.WindowWidth - 3 - line.Length;
+				int pad = GetWindowWidth() - 3 - line.Length;
 				if (pad < 1)
 					pad = 1;
 				int odd = pad % 2;
@@ -93,6 +100,14 @@ namespace Spludlow.MameAO
 			}
 
 			ConsoleRule(head);
+		}
+
+		private static int GetWindowWidth()
+		{
+			if (Globals.AO.ConsoleHandle == IntPtr.Zero)
+				return 120;
+
+			return Console.WindowWidth;
 		}
 
 		public static void ReportError(Exception e, string title, bool fatal)
