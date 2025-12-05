@@ -174,6 +174,13 @@ namespace Spludlow.MameAO
 		{
 			PopText(TextTable(table));
 		}
+		public static void PopText(IEnumerable<string> lines)
+		{
+			StringBuilder text = new StringBuilder();
+			foreach (string line in lines)
+				text.AppendLine(line);
+			PopText(text.ToString());
+		}
 		public static void PopText(string text)
 		{
 			string filename = Path.GetTempFileName();

@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.Globalization;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
@@ -96,8 +97,19 @@ namespace Spludlow.MameAO
 			}
 			foreach (DataColumn column in table.Columns)
 			{
-				if (column.MaxLength == -1)
-					columnDefs.Add($"[{column.ColumnName}] NVARCHAR(MAX)");
+				if (pkNames.Contains(column.ColumnName) == true)
+					continue;
+
+				switch (Type.GetTypeCode(column.DataType))
+				{
+					case TypeCode.Int32:
+						columnDefs.Add($"[{column.ColumnName}] [int]");
+						break;
+
+					default:
+						columnDefs.Add($"[{column.ColumnName}] nvarchar({(column.MaxLength == -1 ? "max" : column.MaxLength.ToString())})");
+						break;
+				}		
 			}
 
 			columnDefs.Add($"CONSTRAINT [PK_{table.TableName}] PRIMARY KEY NONCLUSTERED ([{String.Join("], [", pkNames)}])");
@@ -152,11 +164,264 @@ namespace Spludlow.MameAO
 			string exePath = Path.Combine(versionDirectory, $"{coreName}.exe");
 			string exeTime = File.GetLastWriteTime(exePath).ToString("s");
 
-			MameishMSSQLMachinePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
-			
-			MameishMSSQLSoftwarePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
+			//MameishMSSQLMachinePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
+
+			//MameishMSSQLSoftwarePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
+
+			MameishMSSQLMachinePayloadsSearch(directory, version, connections, coreName, versionDirectory, exeTime);
 
 			return 0;
+		}
+
+		public static void MameishMSSQLMachinePayloadsSearch(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime)
+		{
+
+			//	feature 0-5	TODO
+			//	chip ?
+
+
+
+			DataTable table;
+			string commandText;
+
+
+			//
+			// machine, driver, sound, input
+			//
+			commandText = @"
+SELECT
+    machine.name,
+    machine.sourcefile,
+    machine.sampleof,
+    machine.isbios,
+    machine.isdevice,
+    machine.ismechanical,
+    machine.runnable,
+    machine.description,
+    machine.year,
+    machine.manufacturer,
+    machine.cloneof,
+    machine.romof,
+    driver.status,
+    driver.emulation,
+    driver.savestate,
+    driver.requiresartwork,
+    driver.unofficial,
+    driver.nosoundhardware,
+    driver.incomplete,
+    driver.cocktail,
+    sound.channels,
+    input.players,
+    input.coins,
+    input.service,
+    input.tilt
+FROM
+    (
+        (
+            machine
+            LEFT JOIN driver ON machine.machine_id = driver.machine_id
+        )
+        LEFT JOIN sound ON machine.machine_id = sound.machine_id
+    )
+    LEFT JOIN [input] ON machine.machine_id = input.machine_id;
+";
+
+			DataTable searchTable = new DataTable("machine_search_payload");
+			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
+				adapter.Fill(searchTable);
+			searchTable.PrimaryKey = new DataColumn[] { searchTable.Columns["name"] };
+
+			//
+			// display
+			//
+			commandText = @"
+SELECT
+    machine.name,
+    display.tag,
+    display.type,
+    display.rotate,
+    display.width,
+    display.height,
+    display.refresh,
+    display.pixclock,
+    display.htotal,
+    display.hbend,
+    display.hbstart,
+    display.vtotal,
+    display.vbend,
+    display.vbstart,
+    display.flipx
+FROM
+    machine
+    INNER JOIN display ON machine.machine_id = display.machine_id
+ORDER BY
+    machine.name,
+    display.type,
+    display.tag;
+";
+
+			DataTable displayTable = new DataTable();
+			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
+				adapter.Fill(displayTable);
+
+			commandText = "SELECT [type] FROM [display] GROUP BY [type] ORDER BY [type]";
+			table = new DataTable();
+			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
+				adapter.Fill(table);
+			List<string> displayTypes = table.Rows.Cast<DataRow>().Select(row => (string)row[0]).ToList();
+
+			foreach (string displayType in displayTypes)
+				searchTable.Columns.Add($"{displayType}", typeof(int));
+
+			foreach (DataRow searchRow in searchTable.Rows)
+			{
+				string name = (string)searchRow["name"];
+
+				Dictionary<string, int> displayTypeCount = new Dictionary<string, int>();
+
+				foreach (DataRow displayRow in displayTable.Select($"[name] = '{name}'"))
+				{
+					string type = (string)displayRow["type"];
+
+					if (displayTypeCount.ContainsKey(type) == false)
+					{
+						displayTypeCount.Add(type, 1);
+					}
+					else
+					{
+						displayTypeCount[type] += 1;
+					}
+				}
+
+				foreach (string type in displayTypeCount.Keys)
+				{
+					searchRow[type] = displayTypeCount[type];
+				}
+			}
+
+			//
+			//	control (input)
+			//
+			commandText = @"
+SELECT
+    machine.name,
+    control.type,
+    control.player,
+    control.buttons,
+    control.ways,
+    control.reverse,
+    control.minimum,
+    control.maximum,
+    control.sensitivity,
+    control.keydelta,
+    control.ways2,
+    control.ways3
+FROM
+    (
+        machine
+        INNER JOIN [input] ON machine.machine_id = input.machine_id
+    )
+    INNER JOIN control ON input.input_id = control.input_id
+ORDER BY
+    machine.name,
+    control.type,
+    control.player;
+";
+			DataTable inputControlTable = new DataTable();
+			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
+				adapter.Fill(inputControlTable);
+
+			commandText = "SELECT [type] FROM [control] GROUP BY [type] ORDER BY [type]";
+			table = new DataTable();
+			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
+				adapter.Fill(table);
+			List<string> controlTypes = table.Rows.Cast<DataRow>().Select(row => (string)row[0]).ToList();
+
+			foreach (string controlType in controlTypes)
+				searchTable.Columns.Add($"{controlType}", typeof(int));
+
+			foreach (DataRow searchRow in searchTable.Rows)
+			{
+				string name = (string)searchRow["name"];
+
+				Dictionary<string, int> controlTypeButtonCount = new Dictionary<string, int>();
+
+				foreach (DataRow controlRow in inputControlTable.Select($"[name] = '{name}'"))
+				{
+					string type = (string)controlRow["type"];
+					int buttons = controlRow.IsNull("buttons") == true ? 0 : Int32.Parse((string)controlRow["buttons"]);
+
+					if (controlTypeButtonCount.ContainsKey(type) == false)
+					{
+						controlTypeButtonCount.Add(type, buttons);
+					}
+					else
+					{
+						if (controlTypeButtonCount[type] < buttons)
+							controlTypeButtonCount[type] = buttons;
+					}	
+				}
+
+				foreach (string type in controlTypeButtonCount.Keys)
+				{
+					searchRow[type] = controlTypeButtonCount[type];
+				}
+			}
+
+			//
+			// column lengths for database columns
+			//
+			foreach (DataColumn column in searchTable.Columns)
+			{
+				if (column.DataType != typeof(string))
+					continue;
+
+				int max = 1;
+				foreach (DataRow row in searchTable.Rows)
+				{
+					if (row.IsNull(column) == false)
+					{
+						int len = ((string)row[column]).Length;
+						if (len > max)
+							max = len;
+					}
+				}
+				column.MaxLength = max;
+			}
+
+			//
+			// Build line payloads
+			//
+			foreach (string name in new string[] { "xml", "json", "html" })
+				searchTable.Columns.Add(name, typeof(string));
+
+			foreach (DataRow row in searchTable.Rows)
+			{
+				StringBuilder tr = new StringBuilder();
+				tr.Append("<tr>");
+
+				foreach (DataColumn column in searchTable.Columns)
+				{
+					tr.Append("<td>");
+					if (row.IsNull(column) == false)
+						tr.Append(WebUtility.HtmlEncode(Convert.ToString(row[column])));
+					tr.Append("</td>");
+				}
+
+				tr.Append("</tr>");
+				row["html"] = tr.ToString();
+			}
+
+			//
+			// Insert database table
+			//
+			foreach (string tableName in Database.TableList(connections[0]))
+			{
+				if (tableName == searchTable.TableName)
+					Database.ExecuteNonQuery(connections[0], $"DROP TABLE [{tableName}]");
+			}
+
+			MakeMSSQLPayloadsInsert(connections[0], searchTable);
 		}
 
 		public static void MameishMSSQLMachinePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime)
