@@ -164,67 +164,62 @@ namespace Spludlow.MameAO
 			string exePath = Path.Combine(versionDirectory, $"{coreName}.exe");
 			string exeTime = File.GetLastWriteTime(exePath).ToString("s");
 
-			//MameishMSSQLMachinePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
+			MameishMSSQLMachinePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
+			
+			MameishMSSQLMachinePayloadsSearch(connections, coreName);
 
-			//MameishMSSQLSoftwarePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
-
-			MameishMSSQLMachinePayloadsSearch(directory, version, connections, coreName, versionDirectory, exeTime);
+			MameishMSSQLSoftwarePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
 
 			return 0;
 		}
 
-		public static void MameishMSSQLMachinePayloadsSearch(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime)
+		public static void MameishMSSQLMachinePayloadsSearch(SqlConnection[] connections, string coreName)
 		{
-
-			//	feature 0-5	TODO
-			//	chip ?
-
-
+			//	TODO:	feature 0-5, chip
 
 			DataTable table;
 			string commandText;
-
 
 			//
 			// machine, driver, sound, input
 			//
 			commandText = @"
-SELECT
-    machine.name,
-    machine.sourcefile,
-    machine.sampleof,
-    machine.isbios,
-    machine.isdevice,
-    machine.ismechanical,
-    machine.runnable,
-    machine.description,
-    machine.year,
-    machine.manufacturer,
-    machine.cloneof,
-    machine.romof,
-    driver.status,
-    driver.emulation,
-    driver.savestate,
-    driver.requiresartwork,
-    driver.unofficial,
-    driver.nosoundhardware,
-    driver.incomplete,
-    driver.cocktail,
-    sound.channels,
-    input.players,
-    input.coins,
-    input.service,
-    input.tilt
-FROM
-    (
-        (
-            machine
-            LEFT JOIN driver ON machine.machine_id = driver.machine_id
-        )
-        LEFT JOIN sound ON machine.machine_id = sound.machine_id
-    )
-    LEFT JOIN [input] ON machine.machine_id = input.machine_id;
-";
+				SELECT
+					machine.name,
+					machine.sourcefile,
+					machine.sampleof,
+					machine.isbios,
+					machine.isdevice,
+					machine.ismechanical,
+					machine.runnable,
+					machine.description,
+					machine.year,
+					machine.manufacturer,
+					machine.cloneof,
+					machine.romof,
+					driver.status,
+					driver.emulation,
+					driver.savestate,
+					driver.requiresartwork,
+					driver.unofficial,
+					driver.nosoundhardware,
+					driver.incomplete,
+					driver.cocktail,
+					sound.channels,
+					input.players,
+					input.coins,
+					input.service,
+					input.tilt
+				FROM
+					(
+						(
+							machine
+							LEFT JOIN driver ON machine.machine_id = driver.machine_id
+						)
+						LEFT JOIN sound ON machine.machine_id = sound.machine_id
+					)
+					LEFT JOIN [input] ON machine.machine_id = input.machine_id;
+			";
 
 			DataTable searchTable = new DataTable("machine_search_payload");
 			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
@@ -235,30 +230,30 @@ FROM
 			// display
 			//
 			commandText = @"
-SELECT
-    machine.name,
-    display.tag,
-    display.type,
-    display.rotate,
-    display.width,
-    display.height,
-    display.refresh,
-    display.pixclock,
-    display.htotal,
-    display.hbend,
-    display.hbstart,
-    display.vtotal,
-    display.vbend,
-    display.vbstart,
-    display.flipx
-FROM
-    machine
-    INNER JOIN display ON machine.machine_id = display.machine_id
-ORDER BY
-    machine.name,
-    display.type,
-    display.tag;
-";
+				SELECT
+					machine.name,
+					display.tag,
+					display.type,
+					display.rotate,
+					display.width,
+					display.height,
+					display.refresh,
+					display.pixclock,
+					display.htotal,
+					display.hbend,
+					display.hbstart,
+					display.vtotal,
+					display.vbend,
+					display.vbstart,
+					display.flipx
+				FROM
+					machine
+					INNER JOIN display ON machine.machine_id = display.machine_id
+				ORDER BY
+					machine.name,
+					display.type,
+					display.tag;
+			";
 
 			DataTable displayTable = new DataTable();
 			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
@@ -303,30 +298,31 @@ ORDER BY
 			//	control (input)
 			//
 			commandText = @"
-SELECT
-    machine.name,
-    control.type,
-    control.player,
-    control.buttons,
-    control.ways,
-    control.reverse,
-    control.minimum,
-    control.maximum,
-    control.sensitivity,
-    control.keydelta,
-    control.ways2,
-    control.ways3
-FROM
-    (
-        machine
-        INNER JOIN [input] ON machine.machine_id = input.machine_id
-    )
-    INNER JOIN control ON input.input_id = control.input_id
-ORDER BY
-    machine.name,
-    control.type,
-    control.player;
-";
+				SELECT
+					machine.name,
+					control.type,
+					control.player,
+					control.buttons,
+					control.ways,
+					control.reverse,
+					control.minimum,
+					control.maximum,
+					control.sensitivity,
+					control.keydelta,
+					control.ways2,
+					control.ways3
+				FROM
+					(
+						machine
+						INNER JOIN [input] ON machine.machine_id = input.machine_id
+					)
+					INNER JOIN control ON input.input_id = control.input_id
+				ORDER BY
+					machine.name,
+					control.type,
+					control.player;
+			";
+
 			DataTable inputControlTable = new DataTable();
 			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
 				adapter.Fill(inputControlTable);
@@ -369,7 +365,46 @@ ORDER BY
 			}
 
 			//
-			// column lengths for database columns
+			// Build line payloads
+			//
+			foreach (string name in new string[] { "xml", "json", "html" })
+				searchTable.Columns.Add(name, typeof(string));
+
+			string[] columnNames = new string[] { "name", "description", "year", "manufacturer", "cloneof", "romof" };
+
+			foreach (DataRow row in searchTable.Rows)
+			{
+				StringBuilder tr = new StringBuilder();
+				tr.Append("<tr>");
+
+				foreach (string columnName in columnNames)
+				{
+					DataColumn column = searchTable.Columns[columnName];
+					tr.Append("<td>");
+					if (row.IsNull(column) == false)
+					{
+						switch (columnName)
+						{
+							case "name":
+							case "cloneof":
+							case "romof":
+								tr.Append($"<a href=\"/{coreName}/machine/{row[column]}\">{row[column]}</a>");
+								break;
+							default:
+								tr.Append(WebUtility.HtmlEncode(Convert.ToString(row[column])));
+								break;
+						}
+					}
+
+					tr.Append("</td>");
+				}
+
+				tr.Append("</tr>");
+				row["html"] = tr.ToString();
+			}
+
+			//
+			// Insert database table
 			//
 			foreach (DataColumn column in searchTable.Columns)
 			{
@@ -389,32 +424,6 @@ ORDER BY
 				column.MaxLength = max;
 			}
 
-			//
-			// Build line payloads
-			//
-			foreach (string name in new string[] { "xml", "json", "html" })
-				searchTable.Columns.Add(name, typeof(string));
-
-			foreach (DataRow row in searchTable.Rows)
-			{
-				StringBuilder tr = new StringBuilder();
-				tr.Append("<tr>");
-
-				foreach (DataColumn column in searchTable.Columns)
-				{
-					tr.Append("<td>");
-					if (row.IsNull(column) == false)
-						tr.Append(WebUtility.HtmlEncode(Convert.ToString(row[column])));
-					tr.Append("</td>");
-				}
-
-				tr.Append("</tr>");
-				row["html"] = tr.ToString();
-			}
-
-			//
-			// Insert database table
-			//
 			foreach (string tableName in Database.TableList(connections[0]))
 			{
 				if (tableName == searchTable.TableName)
@@ -422,6 +431,25 @@ ORDER BY
 			}
 
 			MakeMSSQLPayloadsInsert(connections[0], searchTable);
+
+			//
+			// Create serach index
+			//
+			commandText = @"
+				CREATE FULLTEXT INDEX ON [machine_search_payload]
+				(
+					[name],
+					[description],
+					[year],
+					[manufacturer]
+				)
+				KEY INDEX [PK_machine_search_payload]
+				ON [ao_catalog]
+				WITH CHANGE_TRACKING AUTO;
+			";
+
+			Database.ExecuteNonQuery(connections[0], commandText);
+
 		}
 
 		public static void MameishMSSQLMachinePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime)
