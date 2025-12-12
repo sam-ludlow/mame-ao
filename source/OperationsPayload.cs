@@ -300,17 +300,7 @@ namespace Spludlow.MameAO
 			commandText = @"
 				SELECT
 					machine.name,
-					control.type,
-					control.player,
-					control.buttons,
-					control.ways,
-					control.reverse,
-					control.minimum,
-					control.maximum,
-					control.sensitivity,
-					control.keydelta,
-					control.ways2,
-					control.ways3
+					control.*
 				FROM
 					(
 						machine
