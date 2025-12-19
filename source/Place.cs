@@ -30,9 +30,11 @@ namespace Spludlow.MameAO
 			if (Globals.BitTorrentAvailable == false && core.Name != "mame")
 				throw new ApplicationException("Archive.org downloads are only supported for MAME");
 
-			if (Globals.BitTorrentAvailable == true && BitTorrent.DomeInfo() == null)
+			if (Globals.BitTorrentAvailable == true)
 			{
-				BitTorrent.Start();
+				if (BitTorrent.DomeInfo() == null)
+					BitTorrent.Start();
+
 				BitTorrent.WaitReady();
 			}
 
