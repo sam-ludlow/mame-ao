@@ -189,6 +189,9 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			Globals.MameArguments = Globals.Config.ContainsKey("MameArguments") == true ? Globals.Config["MameArguments"] : "";
 
+			if (Globals.Config.ContainsKey("BitTorrentUrl") == true)
+				BitTorrent.ClientUrl = Globals.Config["BitTorrentUrl"];
+
 			//
 			// Fixes
 			//

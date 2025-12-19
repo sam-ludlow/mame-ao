@@ -30,6 +30,12 @@ namespace Spludlow.MameAO
 			if (Globals.BitTorrentAvailable == false && core.Name != "mame")
 				throw new ApplicationException("Archive.org downloads are only supported for MAME");
 
+			if (Globals.BitTorrentAvailable == true && BitTorrent.DomeInfo() == null)
+			{
+				BitTorrent.Start();
+				BitTorrent.WaitReady();
+			}
+
 			DataRow machine = core.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: {machineName}");
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
