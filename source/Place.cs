@@ -36,6 +36,8 @@ namespace Spludlow.MameAO
 					BitTorrent.Start();
 
 				BitTorrent.WaitReady();
+
+				BitTorrent.EnableCore(core.Name);
 			}
 
 			DataRow machine = core.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: {machineName}");

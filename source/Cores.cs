@@ -92,9 +92,6 @@ namespace Spludlow.MameAO
 			Globals.Genre.InitializeCore(core);
 
 			Globals.Favorites = new Favorites();
-
-			if (Globals.BitTorrentAvailable == true)
-				BitTorrent.EnableCore(core.Name);
 		}
 
 		public static void ExtractXML(string exeFilename)

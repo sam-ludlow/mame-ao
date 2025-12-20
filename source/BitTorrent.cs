@@ -6,6 +6,7 @@ using System.IO.Compression;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web;
 
 using Newtonsoft.Json;
@@ -37,6 +38,10 @@ namespace Spludlow.MameAO
 			{
 				string info = Tools.Query($"{ClientUrl}/api/info");
 				return JsonConvert.DeserializeObject<dynamic>(info);
+			}
+			catch (TaskCanceledException)
+			{
+				return null;
 			}
 			catch (HttpRequestException)
 			{
@@ -184,17 +189,33 @@ namespace Spludlow.MameAO
 		public static void WaitReady()
 		{
 			Console.Write("Waiting for DOME-BT to be ready ...");
+			
+			dynamic info = null;
+
+			for (int retry = 0; retry < 12; ++retry)
+			{
+				info = DomeInfo();
+				if (info != null)
+					break;
+
+				Console.Write("o");
+				Thread.Sleep(2000);
+			}
+
+			if (info == null)
+				throw new ApplicationException("Failed to connect to DOME-BT");
 
 			while (true)
 			{
-				dynamic info = JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/info"));
-
-				Console.Write(".");
+				info = DomeInfo();
+				if (info == null)
+					throw new ApplicationException("Lost connection to DOME-BT");
 
 				if (info.ready_minutes != null)
 					break;
 
-				Thread.Sleep(5000);
+				Console.Write(".");
+				Thread.Sleep(4000);
 			}
 
 			Console.WriteLine("...done");
