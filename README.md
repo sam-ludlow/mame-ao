@@ -52,7 +52,19 @@ To remove BitTorrent use the UI or command `.btx` then use the command `.creds` 
 - CPU with x86-64-v2 functionality (MAME > 0273)
 
 NOTE: MAME-AO application is 32 bit to keep RAM usage down.
- 
+
+## Legal Notice
+- MAME-AO is not affiliated with MAME or any other copyright holders.
+- MAME-AO does not contain any copyrighted material and is not a copyright circumvention tool.
+- Ensure you have the legal right to use any software with this program.
+
+## Legal Opinion
+- What is so bad about showing your kids the games you used to play decades ago.
+- Software that is commercially unavailable means you can’t buy it if you wanted to.
+- Obsolete software's remaining value is educational, archival, and technical not commercial.
+- There is no economic harm when software generates no revenue and has no active market.
+- Preservation prevents obsolete software from being lost, the copyright holders are less bothered than the community.
+
 ## Reporting issues
 https://github.com/sam-ludlow/mame-ao/issues
 
