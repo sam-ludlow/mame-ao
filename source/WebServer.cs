@@ -21,8 +21,8 @@ namespace Spludlow.MameAO
 
 		private string _StyleSheetFilename = Path.Combine(Globals.RootDirectory, "_styles.css");
 
-		private readonly string MACHINE_IMAGE_URL = "https://mame.spludlow.co.uk/snap/machine/@machine.jpg";
-		private readonly string SOFTWARE_IMAGE_URL = "https://mame.spludlow.co.uk/snap/software/@softwarelist/@software.jpg";
+		private readonly string MACHINE_IMAGE_URL = "https://data.spludlow.co.uk/@core/machine/@machine.jpg";
+		private readonly string SOFTWARE_IMAGE_URL = "https://data.spludlow.co.uk/@core/software/@softwarelist/@software.jpg";
 
 		public WebServer()
 		{
@@ -310,7 +310,7 @@ namespace Spludlow.MameAO
 
 				string name = (string)row["name"];
 
-				result.ao_image = MACHINE_IMAGE_URL.Replace("@machine", name);
+				result.ao_image = MACHINE_IMAGE_URL.Replace("@machine", name).Replace("@core", Globals.Core.Name);
 
 				results.Add(result);
 			}
@@ -344,7 +344,7 @@ namespace Spludlow.MameAO
 
 			dynamic json = RowToJson(machine);
 
-			json.ao_image = MACHINE_IMAGE_URL.Replace("@machine", machine_name);
+			json.ao_image = MACHINE_IMAGE_URL.Replace("@machine", machine_name).Replace("@core", Globals.Core.Name);
 
 			if (machineSoftwareListRows.Length > 0)
 			{
@@ -411,7 +411,8 @@ namespace Spludlow.MameAO
 
 				result.ao_image = SOFTWARE_IMAGE_URL
 					.Replace("@softwarelist", softwarelist == "@fav" ? (string)row["softwarelist_name"] : softwarelist)
-					.Replace("@software", name);
+					.Replace("@software", name)
+					.Replace("@core", Globals.Core.Name);
 
 				results.Add(result);
 			}
