@@ -105,6 +105,7 @@
     <Compile Include="source\Samples.cs" />
     <Compile Include="source\SelfUpdate.cs" />
     <Compile Include="source\Settings.cs" />
+    <Compile Include="source\Snap.cs" />
     <Compile Include="source\Test.cs" />
     <Compile Include="source\Tools.cs" />
     <Compile Include="source\Upload.cs" />

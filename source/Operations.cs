@@ -17,74 +17,87 @@ namespace Spludlow.MameAO
 
 			int index = operation.IndexOf("-");
 			if (index == -1)
-				throw new ApplicationException("Bad operation, usage: 'core-operation'.");
-
-			string coreName = operation.Substring(0, index);
-			operation = operation.Substring(index + 1);
-
-			ICore core;
-			switch (coreName)
 			{
-				case "mame":
-					core = new CoreMame();
-					break;
+				switch (operation)
+				{
+					case "snap_import":
+						ValidateRequiredParameters(parameters, new string[] { "source", "target" });
+						Snap.ImportSnap(parameters["source"], parameters["target"]);
+						break;
 
-				case "hbmame":
-					core = new CoreHbMame();
-					break;
-
-				case "fbneo":
-					core = new CoreFbNeo();
-					break;
-
-				case "tosec":
-					core = new CoreTosec();
-					break;
-
-				default:
-					throw new ApplicationException($"Bad core: {coreName}");
+					default:
+						throw new ApplicationException($"Bad operation: {operation}");
+				}
 			}
-
-			core.Initialize(parameters["directory"], parameters["version"]);
-
-			switch (operation)
+			else
 			{
-				case "get":
-					exitCode = core.Get();
-					break;
+				string coreName = operation.Substring(0, index);
+				operation = operation.Substring(index + 1);
 
-				case "xml":
-					core.Xml();
-					break;
+				ICore core;
+				switch (coreName)
+				{
+					case "mame":
+						core = new CoreMame();
+						break;
 
-				case "json":
-					core.Json();
-					break;
+					case "hbmame":
+						core = new CoreHbMame();
+						break;
 
-				case "sqlite":
-					core.SQLite();
-					break;
+					case "fbneo":
+						core = new CoreFbNeo();
+						break;
 
-				case "msaccess":
-					core.MsAccess();
-					break;
+					case "tosec":
+						core = new CoreTosec();
+						break;
 
-				case "zips":
-					core.Zips();
-					break;
+					default:
+						throw new ApplicationException($"Bad core: {coreName}");
+				}
 
-				case "mssql":
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					core.MSSql(parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
-					break;
+				core.Initialize(parameters["directory"], parameters["version"]);
 
-				case "mssql-payload":
-					ValidateRequiredParameters(parameters, new string[] { "server", "names" });
-					core.MSSqlPayload(parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
-					break;
+				switch (operation)
+				{
+					case "get":
+						exitCode = core.Get();
+						break;
 
-				default:
-					throw new ApplicationException($"Bad operation: {operation}");
+					case "xml":
+						core.Xml();
+						break;
+
+					case "json":
+						core.Json();
+						break;
+
+					case "sqlite":
+						core.SQLite();
+						break;
+
+					case "msaccess":
+						core.MsAccess();
+						break;
+
+					case "zips":
+						core.Zips();
+						break;
+
+					case "mssql":
+						ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+						core.MSSql(parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
+						break;
+
+					case "mssql-payload":
+						ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+						core.MSSqlPayload(parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
+						break;
+
+					default:
+						throw new ApplicationException($"Bad operation: {operation}");
+				}
 			}
 
 			TimeSpan timeTook = DateTime.Now - timeStart;
