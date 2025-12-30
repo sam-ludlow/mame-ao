@@ -20,9 +20,18 @@ namespace Spludlow.MameAO
 			{
 				switch (operation)
 				{
-					case "snap_import":
+					case "snap_machine":
 						ValidateRequiredParameters(parameters, new string[] { "source", "target" });
-						Snap.ImportSnap(parameters["source"], parameters["target"]);
+						Snap.ImportSnapMachine(parameters["source"], parameters["target"]);
+						break;
+
+					case "snap_software":
+						ValidateRequiredParameters(parameters, new string[] { "source", "target" });
+						Snap.ImportSnapSoftware(parameters["source"], parameters["target"]);
+						break;
+
+					case "snap_index":
+						Snap.IndexSnapDirectory(parameters["directory"]);
 						break;
 
 					default:

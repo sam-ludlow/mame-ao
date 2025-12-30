@@ -31,7 +31,7 @@ namespace Spludlow.MameAO
 				throw new ApplicationException("Bitmaps; Can not find Jpeg Encoder");
 			}
 		}
-		public static void ImportSnap(string sourceDirectory, string targetDirectory)
+		public static void ImportSnapMachine(string sourceDirectory, string targetDirectory)
 		{
 			Size size = new Size(128, 128);
 
@@ -44,21 +44,12 @@ namespace Spludlow.MameAO
 			Tools.ClearAttributes(sourceDirectory);
 			Console.WriteLine("...done");
 
-			int processCount;
-			int skipCount;
-			DateTime startTime;
-			string[] sourceFilenames;
-			int count;
+			int processCount = 0;
+			int skipCount = 0;
+			int count = 0;
+			DateTime startTime = DateTime.Now;
 
-			//
-			// Machine (snap)
-			//
-			processCount = 0;
-			skipCount = 0;
-			startTime = DateTime.Now;
-
-			count = 0;
-			sourceFilenames = Directory.GetFiles(Path.Combine(sourceDirectory, "snap"), "*.png");
+			string[] sourceFilenames = Directory.GetFiles(sourceDirectory, "*.png");
 			foreach (string sourceFilename in sourceFilenames)
 			{
 				if (ImportSnapFile(sourceFilename, targetDirectoryPNG, targetDirectoryJPG, size) == true)
@@ -70,13 +61,25 @@ namespace Spludlow.MameAO
 					Console.WriteLine($"machine: {count}/{sourceFilenames.Length}");
 			}
 			Console.WriteLine($"Machine process:{processCount}, skip: {skipCount}, took:{(DateTime.Now - startTime).TotalMinutes}");
+		}
 
-			//
-			// Software (software list name)
-			//
-			processCount = 0;
-			skipCount = 0;
-			startTime = DateTime.Now;
+		public static void ImportSnapSoftware(string sourceDirectory, string targetDirectory)
+		{
+			Size size = new Size(128, 128);
+
+			string targetDirectoryPNG = Path.Combine(targetDirectory, "png");
+			Directory.CreateDirectory(targetDirectoryPNG);
+			string targetDirectoryJPG = Path.Combine(targetDirectory, "jpg");
+			Directory.CreateDirectory(targetDirectoryJPG);
+
+			Console.Write("Clearing Attributes...");
+			Tools.ClearAttributes(sourceDirectory);
+			Console.WriteLine("...done");
+
+			int processCount = 0;
+			int skipCount = 0;
+			int count = 0;
+			DateTime startTime = DateTime.Now;
 
 			foreach (string softwareDirectory in Directory.GetDirectories(sourceDirectory))
 			{
@@ -86,7 +89,7 @@ namespace Spludlow.MameAO
 					continue;
 
 				count = 0;
-				sourceFilenames = Directory.GetFiles(softwareDirectory, "*.png");
+				string[] sourceFilenames = Directory.GetFiles(softwareDirectory, "*.png");
 
 				if (sourceFilenames.Length == 0)
 					continue;
@@ -109,13 +112,8 @@ namespace Spludlow.MameAO
 				}
 			}
 			Console.WriteLine($"Software process:{processCount}, skip: {skipCount}, took:{(DateTime.Now - startTime).TotalMinutes}");
-
-			//
-			// Index
-			//
-			IndexSnapDirectory(targetDirectoryPNG);
-
 		}
+
 		public static bool ImportSnapFile(string sourceFilename, string targetDirectoryPNG, string targetDirectoryJPG, Size size)
 		{
 			FileInfo sourceInfo = new FileInfo(sourceFilename);
@@ -161,15 +159,12 @@ namespace Spludlow.MameAO
 				string name = info.FullName.Substring(directory.Length + 1);
 				name = name.Substring(0, name.Length - 4);
 
-
 				using (Image image = Image.FromFile(filename))
 				{
-					string propertyItems = String.Join(", ", image.PropertyItems.Select((PropertyItem item) => {
-						string itemResult = $"{item.Id}({item.Type}/{item.Len})";
-						if (item.Type == 2)
-							itemResult += ":" + new string(item.Value.Select(b => (b >= 32 && b <= 126) ? (char)b : ' ').ToArray()).Trim();
-						return itemResult;
-					}));
+					string propertyItems = String.Join(", ",
+							image.PropertyItems.Where(item => item.Type == 2)
+							.Select(item => item.Id + ":" + new string(item.Value.Select(b => (b >= 32 && b <= 126) ? (char)b : ' ').ToArray()).Trim())
+						);
 
 					table.Rows.Add(name, info.Length, info.LastWriteTime,
 						image.Width, image.Height, image.HorizontalResolution, image.VerticalResolution,
