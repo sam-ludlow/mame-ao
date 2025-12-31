@@ -522,6 +522,23 @@ namespace Spludlow.MameAO
 			}
 
 			//
+			//	Snaps
+			//
+
+			DataTable snapTable = null;
+			string snapIndexFilename = Path.Combine(directory + "-snap", "png", "_index.txt");
+			if (File.Exists(snapIndexFilename) == true)
+			{
+				snapTable = Tools.TextTableReadFile(snapIndexFilename);
+				Console.WriteLine($"Snaps loaded: {snapIndexFilename}");
+			}
+			else
+			{
+				Console.WriteLine($"Snaps NOT FOUND: {snapIndexFilename}");
+			}
+
+
+			//
 			// Payloads
 			//
 			DataTable machine_payload_table = MakePayloadDataTable("machine_payload", new string[] { "machine_name" });
@@ -650,6 +667,23 @@ namespace Spludlow.MameAO
 					}
 
 					html.AppendLine(Reports.MakeHtmlTable(table, null));
+
+					if (tableName == "machine" && snapTable != null)
+					{
+						html.AppendLine("<hr />");
+						html.AppendLine("<h2>snap</h2>");
+						DataRow snapRow = snapTable.Rows.Find(machine_name);
+						if (snapRow == null)
+						{
+							html.AppendLine("<p>Snap not available.</p>");
+						}
+						else
+						{
+							html.AppendLine($"<img src=\"/{coreName}/machine/{machine_name}.png\" alt=\"{(string)machineRow["description"]} png snap\">");
+							html.AppendLine($"<img src=\"/{coreName}/machine/{machine_name}.jpg\" alt=\"{(string)machineRow["description"]} jpg snap thumbnail\">");
+							html.AppendLine(Reports.MakeHtmlTable(snapTable, new DataRow[] { snapRow }, null));
+						}
+					}
 				}
 
 				DataRow[] deviceRows = dataSet.Tables["device"].Select("machine_id = " + machine_id);

@@ -131,7 +131,7 @@ You can set advanced configuration options using the file `_config.txt`, each li
 | MameVersion | Run MAME-AO on a fixed MAME version (for old CPUs use this example) | | `MameVersion	0273` |
 | SoftwareListSkip | Skip these software lists when running `.fetch` command for software disks, comma delimited | | `SoftwareListSkip	psx, saturn, dc` |
 | BitTorrentRestartMinutes | Minutes to wait until restarting DOME-BT if no asset data has downloaded | 5 | `BitTorrentRestartMinutes	2.5` |
-| BitTorrentUrl | Override default DOME-BT URL | http://localhost:12381 | http://[::1]:12381 |
+| BitTorrentUrl | Override default DOME-BT URL | http://localhost:12381 | `BitTorrentUrl	http://[::1]:12381` |
 
 MAME-AO must be restarted for changes to `_config.txt` to take affect.
 
