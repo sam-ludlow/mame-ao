@@ -1746,7 +1746,7 @@ namespace Spludlow.MameAO
 
 		public void Report_SNAPCOV()
 		{
-			string snapDirectory = @"C:\ao-data\mame-snap";	//	TODO: paramterize
+			string snapDirectory = @"C:\ao-data\mame-snap"; //	TODO: paramterize
 
 			DataTable snapTable = Snap.LoadSnapIndex(snapDirectory);
 
@@ -1805,6 +1805,8 @@ namespace Spludlow.MameAO
 				software_list_row["software_have"] = software_have_count;
 				software_list_row["software_missing"] = software_count - software_have_count;
 				software_list_row["software_coverage"] = Math.Round(((decimal)software_have_count / (decimal)software_count) * 100.0M, 2);
+
+				software_list_row["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/software/{softwarelist_name}\" target=\"_blank\" >{softwarelist_name}</a>";
 			}
 
 			DataSet dataSet = new DataSet();
