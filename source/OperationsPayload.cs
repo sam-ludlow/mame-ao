@@ -524,7 +524,6 @@ namespace Spludlow.MameAO
 			//
 			//	Snaps
 			//
-
 			DataTable snapTable = null;
 			string snapIndexFilename = Path.Combine(directory + "-snap", "png", "_index.txt");
 			if (File.Exists(snapIndexFilename) == true)
@@ -536,7 +535,6 @@ namespace Spludlow.MameAO
 			{
 				Console.WriteLine($"Snaps NOT FOUND: {snapIndexFilename}");
 			}
-
 
 			//
 			// Payloads
@@ -1011,6 +1009,21 @@ namespace Spludlow.MameAO
 			machineDetailTable.PrimaryKey = new DataColumn[] { machineDetailTable.Columns["name"] };
 
 			//
+			//	Snaps
+			//
+			DataTable snapTable = null;
+			string snapIndexFilename = Path.Combine(directory + "-snap", "png", "_index.txt");
+			if (File.Exists(snapIndexFilename) == true)
+			{
+				snapTable = Tools.TextTableReadFile(snapIndexFilename);
+				Console.WriteLine($"Snaps loaded: {snapIndexFilename}");
+			}
+			else
+			{
+				Console.WriteLine($"Snaps NOT FOUND: {snapIndexFilename}");
+			}
+
+			//
 			// Payloads
 			//
 			DataTable softwarelists_payload_table = MakePayloadDataTable("softwarelists_payload", new string[] { "key_1" });
@@ -1047,7 +1060,7 @@ namespace Spludlow.MameAO
 				string softwarelist_name = (string)softwarelistRow["name"];
 				string softwarelist_description = (string)softwarelistRow["description"];
 
-				//if (softwarelist_name != "x68k_flop" && softwarelist_name != "cdtv")
+				//if (softwarelist_name != "a5200")
 				//	continue;
 
 				DataRow[] softwareRows = dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}");
@@ -1107,6 +1120,23 @@ namespace Spludlow.MameAO
 					html.AppendLine($"<div><h2 style=\"display:inline;\">software</h2> &bull; <a href=\"{software_name}.xml\">XML</a> &bull; <a href=\"{software_name}.json\">JSON</a> </div>");
 					html.AppendLine("<br />");
 					html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["software"], new[] { softwareRow }, null));
+
+					if (snapTable != null)
+					{
+						html.AppendLine("<hr />");
+						html.AppendLine("<h2>snap</h2>");
+						DataRow snapRow = snapTable.Rows.Find($"{softwarelist_name}\\{software_name}");
+						if (snapRow == null)
+						{
+							html.AppendLine("<p>Snap not available.</p>");
+						}
+						else
+						{
+							html.AppendLine($"<img src=\"/{coreName}/software/{softwarelist_name}/{software_name}.png\" alt=\"{softwarelist_name}/{software_name} png snap\">");
+							html.AppendLine($"<img src=\"/{coreName}/software/{softwarelist_name}/{software_name}.jpg\" alt=\"{softwarelist_name}/{software_name} jpg snap thumbnail\">");
+							html.AppendLine(Reports.MakeHtmlTable(snapTable, new DataRow[] { snapRow }, null));
+						}
+					}
 
 					html.AppendLine("<hr />");
 
