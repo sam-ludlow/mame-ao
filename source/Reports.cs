@@ -178,6 +178,13 @@ namespace Spludlow.MameAO
 				Text = "Silly Names",
 				Decription = "ROM & DISK Silly Names.",
 			},
+			new ReportType(){
+				Key = "snap-coverage",
+				Group = "interesting",
+				Code = "SNAPCOV",
+				Text = "Snap Coverage",
+				Decription = "What snaps are covered and required.",
+			},
 
 		};
 
@@ -1735,6 +1742,77 @@ namespace Spludlow.MameAO
 			}
 
 			SaveHtmlReport(dataSet, "Silly Names");
+		}
+
+		public void Report_SNAPCOV()
+		{
+			string snapDirectory = @"C:\ao-data\mame-snap";	//	TODO: paramterize
+
+			DataTable snapTable = Snap.LoadSnapIndex(snapDirectory);
+
+			if (snapTable == null)
+				throw new ApplicationException("Snap index not available");
+
+			DataTable software_list_table = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"
+				SELECT
+					softwarelist.softwarelist_id,
+					softwarelist.name,
+					softwarelist.description,
+					Count(software.software_id) AS software_count
+				FROM
+					softwarelist
+					INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id
+				GROUP BY
+					softwarelist.softwarelist_id,
+					softwarelist.name,
+					softwarelist.description
+				ORDER BY
+					softwarelist.name;
+			");
+
+			DataTable software_table = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"
+				SELECT
+					software.*
+				FROM
+					software
+				ORDER BY
+					software.name;
+			");
+
+			software_list_table.Columns.Add("software_have", typeof(int));
+			software_list_table.Columns.Add("software_missing", typeof(int));
+			software_list_table.Columns.Add("software_coverage", typeof(decimal));
+
+			foreach (DataRow software_list_row in software_list_table.Rows)
+			{
+				var softwarelist_id = (long)software_list_row["softwarelist_id"];
+				var softwarelist_name = (string)software_list_row["name"];
+
+				int software_have_count = 0;
+
+				foreach (DataRow software_row in software_table.Select($"softwarelist_id = {softwarelist_id}"))
+				{
+					var software_name = (string)software_row["name"];
+
+					DataRow snapRow = snapTable.Rows.Find($"{softwarelist_name}\\{software_name}");
+
+					if (snapRow != null)
+						++software_have_count;
+				}
+
+				var software_count = (long)software_list_row["software_count"];
+
+				software_list_row["software_have"] = software_have_count;
+				software_list_row["software_missing"] = software_count - software_have_count;
+				software_list_row["software_coverage"] = Math.Round(((decimal)software_have_count / (decimal)software_count) * 100.0M, 2);
+			}
+
+			DataSet dataSet = new DataSet();
+
+			software_list_table.TableName = "Software List Coverage";
+			dataSet.Tables.Add(software_list_table);
+
+			SaveHtmlReport(dataSet, "Snap Coverage");
 		}
 	}
 }

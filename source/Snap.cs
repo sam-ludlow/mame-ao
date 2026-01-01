@@ -13,7 +13,7 @@ namespace Spludlow.MameAO
 {
     public class Snap
     {
-		private static ImageCodecInfo JpegCodecInfo;
+		private static ImageCodecInfo JpegCodecInfo = null;
 
 		static Snap()
 		{
@@ -21,16 +21,29 @@ namespace Spludlow.MameAO
 			foreach (ImageCodecInfo imageCodecInfo in imageDecoders)
 			{
 				if (imageCodecInfo.FormatID == ImageFormat.Jpeg.Guid)
-				{
 					JpegCodecInfo = imageCodecInfo;
-				}
 			}
-
 			if (JpegCodecInfo == null)
-			{
-				throw new ApplicationException("Bitmaps; Can not find Jpeg Encoder");
-			}
+				throw new ApplicationException("Can not find Jpeg Encoder");
 		}
+
+		public static DataTable LoadSnapIndex(string snapDirectory)
+		{
+			DataTable table = null;
+			string snapIndexFilename = Path.Combine(snapDirectory, "png", "_index.txt");
+			if (File.Exists(snapIndexFilename) == true)
+			{
+				table = Tools.TextTableReadFile(snapIndexFilename);
+				table.TableName = "snap";
+				Console.WriteLine($"Snaps loaded: {snapIndexFilename}");
+			}
+			else
+			{
+				Console.WriteLine($"Snaps NOT FOUND: {snapIndexFilename}");
+			}
+			return table;
+		}
+
 		public static void ImportSnapMachine(string sourceDirectory, string targetDirectory)
 		{
 			Size size = new Size(128, 128);

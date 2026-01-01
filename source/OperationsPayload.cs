@@ -524,17 +524,7 @@ namespace Spludlow.MameAO
 			//
 			//	Snaps
 			//
-			DataTable snapTable = null;
-			string snapIndexFilename = Path.Combine(directory + "-snap", "png", "_index.txt");
-			if (File.Exists(snapIndexFilename) == true)
-			{
-				snapTable = Tools.TextTableReadFile(snapIndexFilename);
-				Console.WriteLine($"Snaps loaded: {snapIndexFilename}");
-			}
-			else
-			{
-				Console.WriteLine($"Snaps NOT FOUND: {snapIndexFilename}");
-			}
+			DataTable snapTable = Snap.LoadSnapIndex(directory + "-snap");
 
 			//
 			// Payloads
@@ -1011,17 +1001,7 @@ namespace Spludlow.MameAO
 			//
 			//	Snaps
 			//
-			DataTable snapTable = null;
-			string snapIndexFilename = Path.Combine(directory + "-snap", "png", "_index.txt");
-			if (File.Exists(snapIndexFilename) == true)
-			{
-				snapTable = Tools.TextTableReadFile(snapIndexFilename);
-				Console.WriteLine($"Snaps loaded: {snapIndexFilename}");
-			}
-			else
-			{
-				Console.WriteLine($"Snaps NOT FOUND: {snapIndexFilename}");
-			}
+			DataTable snapTable = Snap.LoadSnapIndex(directory + "-snap");
 
 			//
 			// Payloads
