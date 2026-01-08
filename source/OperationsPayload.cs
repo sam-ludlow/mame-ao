@@ -973,6 +973,11 @@ namespace Spludlow.MameAO
 			//
 			// Source Data
 			//
+			Dictionary<string, string> tableOrderBys = new Dictionary<string, string>()
+			{
+				{ "softwarelist",	"description" },
+				{ "software",		"description" },
+			};
 			DataSet dataSet = new DataSet();
 
 			foreach (string tableName in Database.TableList(connections[1]))
@@ -980,7 +985,11 @@ namespace Spludlow.MameAO
 				if (tableName.EndsWith("_payload") == true || tableName == "sysdiagrams")
 					continue;
 
-				using (SqlDataAdapter adapter = new SqlDataAdapter($"SELECT * from [{tableName}]", connections[1]))
+				string commandText = $"SELECT * FROM [{tableName}]";
+				if (tableOrderBys.ContainsKey(tableName) == true)
+					commandText += $" ORDER BY [{tableOrderBys[tableName]}]";
+
+				using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[1]))
 					adapter.Fill(dataSet);
 
 				dataSet.Tables[dataSet.Tables.Count - 1].TableName = tableName;
@@ -1478,13 +1487,23 @@ namespace Spludlow.MameAO
 			//
 			// Source data
 			//
+			Dictionary<string, string> tableOrderBys = new Dictionary<string, string>()
+			{
+				{ "datafile",   "description" },
+				{ "game",       "description" },
+			};
 			DataSet dataSet = new DataSet();
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
 			{
 				foreach (string tableName in new string[] { "datafile", "driver", "game", "rom", "sample", "video" })
 				{
 					DataTable table = new DataTable(tableName);
-					using (SqlDataAdapter adapter = new SqlDataAdapter($"SELECT * FROM [{tableName}]", connection))
+
+					string commandText = $"SELECT * FROM [{tableName}]";
+					if (tableOrderBys.ContainsKey(tableName) == true)
+						commandText += $" ORDER BY [{tableOrderBys[tableName]}]";
+
+					using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connection))
 						adapter.Fill(table);
 					dataSet.Tables.Add(table);
 				}
