@@ -1,5 +1,7 @@
 ﻿using System;
+using System.IO;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 
@@ -35,15 +37,15 @@ namespace Spludlow.MameAO
 			ReadyTime = DateTime.Now;
 		}
 
-		public void Success()
+		public void Success(string snapFilename)
 		{
-			Submit();
+			Submit(snapFilename);
 		}
 
 		public void Error(Exception exception)
 		{
 			Exception = exception;
-			Submit();
+			Submit(null);
 		}
 
 		public void MameOutputLine(string line)
@@ -63,7 +65,7 @@ namespace Spludlow.MameAO
 			_arguments = arguments;
 		}
 
-		private void Submit()
+		private void Submit(string snapFilename)
 		{
 			if (Globals.Settings.Options["PhoneHome"] == "No" || _MameExitCode == null)
 				return;
@@ -71,6 +73,8 @@ namespace Spludlow.MameAO
 			EndTime = DateTime.Now;
 
 			bool verbose = Globals.Settings.Options["PhoneHome"] == "YesVerbose";
+
+			string url = "https://data.spludlow.co.uk/api/phone-home";
 
 			Task task = new Task(() => {
 				try
@@ -112,15 +116,42 @@ namespace Spludlow.MameAO
 						Console.WriteLine(body);
 					}
 
-					using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, "https://mame.spludlow.co.uk/mame-ao-phone-home.aspx"))
+					string token = null;
+
+					using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, url))
 					{
-						requestMessage.Content = new StringContent(body);
+						requestMessage.Content = new StringContent(body, Encoding.UTF8, "application/json");
 
 						Task<HttpResponseMessage> requestTask = Globals.HttpClient.SendAsync(requestMessage);
 						requestTask.Wait();
 						HttpResponseMessage responseMessage = requestTask.Result;
 
 						responseMessage.EnsureSuccessStatusCode();
+
+						Task<string> responseBody = responseMessage.Content.ReadAsStringAsync();
+						responseBody.Wait();
+						dynamic responseData = JsonConvert.DeserializeObject<dynamic>(responseBody.Result);
+						token = responseData.token;
+					}
+
+					if (snapFilename != null && token != null)
+					{
+						using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, url))
+						{
+							requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+							using (var fileStream = new FileStream(snapFilename, FileMode.Open))
+							{
+								requestMessage.Content = new StreamContent(fileStream);
+								requestMessage.Content.Headers.ContentType = new MediaTypeHeaderValue("image/png");
+
+								Task<HttpResponseMessage> requestTask = Globals.HttpClient.SendAsync(requestMessage);
+								requestTask.Wait();
+								HttpResponseMessage responseMessage = requestTask.Result;
+
+								responseMessage.EnsureSuccessStatusCode();
+							}
+						}
 					}
 				}
 				catch (Exception e)

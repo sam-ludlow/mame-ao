@@ -15,6 +15,7 @@ namespace Spludlow.MameAO
 			{ "Cheats", new List<string>(new string[] { "No", "Yes" }) },
 			{ "PlaceReport", new List<string>(new string[] { "No", "Yes" }) },
 			{ "PhoneHome", new List<string>(new string[] { "Yes", "YesVerbose", "No" }) },
+			{ "SnapHome", new List<string>(new string[] { "No", "Yes" }) },
 		};
 
 		public Dictionary<string, string> OptionDescriptions = new Dictionary<string, string>() {
@@ -22,6 +23,7 @@ namespace Spludlow.MameAO
 			{ "Cheats", "Use Pugsy's Cheats." },
 			{ "PlaceReport", "Report on placing files (rom, disk, samples, artwork)." },
 			{ "PhoneHome", "Help the project by submitting usage data. Switch to \"No\" if you do not want. To see exaclty what's being sent switch to \"YesVerbose\"." },
+			{ "SnapHome", "Submit F12 snaps to the mother ship. PhoneHome must be enabled. See the README ..." },
 		};
 
 		public Dictionary<string, string> Options = new Dictionary<string, string>();

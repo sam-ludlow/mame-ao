@@ -1,9 +1,9 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Text;
-using System.Collections.Generic;
 
 namespace Spludlow.MameAO
 {
@@ -217,7 +217,7 @@ namespace Spludlow.MameAO
 
 		}
 
-		public static void CollectSnaps(string rootDirectory, string targetDirectory, Reports reports)
+		public static void CollectSnaps(string rootDirectory, string targetDirectory)
 		{
 			DataTable table = Tools.MakeDataTable(
 				"Version	Machine	LastWriteTime	SourceFilename	TargetFilename",
@@ -244,27 +244,38 @@ namespace Spludlow.MameAO
 				{
 					string machineName = Path.GetFileName(machineDirectory);
 
-					foreach (string snapFilename in Directory.GetFiles(machineDirectory, "*.png"))
-					{
-						DateTime lastWriteTime = File.GetLastWriteTime(snapFilename);
-
-						string stamp = lastWriteTime.ToString("s").Replace(":", "-");
-
-						string name = Path.GetFileNameWithoutExtension(snapFilename);
-
-						string targetFilename = Path.Combine(targetDirectory, $"{machineName}.{version}.{stamp}.{name}.png");
-
-						File.Move(snapFilename, targetFilename);
-
-						table.Rows.Add(version, machineName, lastWriteTime, snapFilename, targetFilename);
-					}
+					CollectSnaps(Directory.GetFiles(machineDirectory, "*.png"), targetDirectory, machineName, version, table);
 				}
 			}
 
 			if (table.Rows.Count > 0)
-				reports.SaveHtmlReport(table, $"Collect Snaps ({table.Rows.Count})");
+				Globals.Reports.SaveHtmlReport(table, $"Collect Snaps ({table.Rows.Count})");
 
 			Console.WriteLine($"Collected {table.Rows.Count} Snaps.");
+		}
+
+		public static string[] CollectSnaps(string[] sourceFilenames, string targetDirectory, string machineName, string version, DataTable table)
+		{
+			var targetFilenames = new List<string>();
+
+			foreach (string snapFilename in sourceFilenames)
+			{
+				DateTime lastWriteTime = File.GetLastWriteTime(snapFilename);
+
+				string stamp = lastWriteTime.ToString("s").Replace(":", "-");
+
+				string name = Path.GetFileNameWithoutExtension(snapFilename);
+
+				string targetFilename = Path.Combine(targetDirectory, $"{machineName}.{version}.{stamp}.{name}.png");
+
+				File.Move(snapFilename, targetFilename);
+				targetFilenames.Add(targetFilename);
+
+				if (table != null)
+					table.Rows.Add(version, machineName, lastWriteTime, snapFilename, targetFilename);
+			}
+
+			return targetFilenames.ToArray();
 		}
 
 

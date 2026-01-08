@@ -8,6 +8,7 @@ using System.Diagnostics;
 using System.Reflection;
 using System.Threading.Tasks;
 using System.Net;
+using System.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -65,6 +66,7 @@ namespace Spludlow.MameAO
 		public static string CacheDirectory;
 		public static string ReportDirectory;
 		public static string BitTorrentDirectory;
+		public static string SnapDirectory;
 
 		public static string MameArguments = "";
 
@@ -138,6 +140,8 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			Globals.ReportDirectory = Path.Combine(Globals.RootDirectory, "_REPORTS");
 			Directory.CreateDirectory(Globals.ReportDirectory);
+
+			Globals.SnapDirectory = Path.Combine(Globals.RootDirectory, "_SNAP");
 		}
 
 		public void Run()
@@ -413,9 +417,31 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 				{
 					Globals.PhoneHome = new PhoneHome(line);
 
-					RunLine(line);
+					string machine_name = RunLine(line);
 
-					Globals.PhoneHome.Success();
+					string snapFilename = null;
+					if (machine_name != null && Globals.Settings.Options["SnapHome"] == "Yes")
+					{
+						string snapDirectory = Path.Combine(Globals.Core.Directory, "snap", machine_name);
+						if (Directory.Exists(snapDirectory) == true)
+						{
+							var sourceSnapFilenames = new DirectoryInfo(snapDirectory).GetFiles("*.png").OrderByDescending(fileInfo => fileInfo.LastWriteTime).Select(fileInfo => fileInfo.FullName).ToArray();
+							if (sourceSnapFilenames.Length > 0)
+							{
+								string snapTargetDirectory = Path.Combine(Globals.SnapDirectory, Globals.Core.Name, machine_name);
+								Directory.CreateDirectory(snapTargetDirectory);
+
+								string[] snapFilenames = Mame.CollectSnaps(sourceSnapFilenames, snapTargetDirectory, machine_name, Globals.Core.Version, null);
+								
+								if (snapFilenames.Length > 1)
+									Console.WriteLine($"WARNING multiple snaps, using newest.");
+
+								snapFilename = snapFilenames[0];
+							}
+						}
+					}
+					
+					Globals.PhoneHome.Success(snapFilename);
 				}
 				catch (ApplicationException e)
 				{
@@ -454,7 +480,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			return true;
 		}
 
-		public void RunLine(string line)
+		public string RunLine(string line)
 		{
 			LineArguments args = new LineArguments(line);
 			string[] parts;
@@ -469,22 +495,22 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 				{
 					case ".list":
 						ListSavedState();
-						return;
+						return null;
 
 					case ".import":
 						parts = args.Arguments(2);
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <source directory>");
 						Import.ImportDirectory(parts[1]);
-						return;
+						return null;
 
 					case ".up":
 						SelfUpdate.Update(0);
-						return;
+						return null;
 
 					case ".upany":
 						SelfUpdate.Update(-1);
-						return;
+						return null;
 
 					case ".favm":
 					case ".favmx":
@@ -501,7 +527,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						else
 							Globals.Favorites.AddMachine(machine);
 
-						return;
+						return null;
 
 					case ".favs":
 					case ".favsx":
@@ -520,7 +546,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						else
 							Globals.Favorites.AddSoftware(machine, list, software);
 
-						return;
+						return null;
 
 					case ".export":
 						parts = args.Arguments(3);
@@ -558,7 +584,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 								throw new ApplicationException("Export Unknown type not (MR, MD, SR, SD, *).");
 
 						}
-						return;
+						return null;
 
 					case ".report":
 						parts = args.Arguments(2);
@@ -569,15 +595,15 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 						if (Globals.Reports.RunReport(parts[1]) == false)
 							throw new ApplicationException("Report Unknown type.");
-						return;
+						return null;
 
 					case ".snap":
 						parts = args.Arguments(2);
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <target directory>");
 
-						Mame.CollectSnaps(Path.GetDirectoryName(Globals.Core.Directory), parts[1], Globals.Reports);
-						return;
+						Mame.CollectSnaps(Path.GetDirectoryName(Globals.Core.Directory), parts[1]);
+						return null;
 
 					case ".svg":
 						parts = args.Arguments(2);
@@ -585,19 +611,19 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 							throw new ApplicationException($"Usage: {parts[0]} <filename or directory>");
 
 						Tools.Bitmap2SVG(parts[1]);
-						return;
+						return null;
 
 					case ".ui":
 						Process.Start(Globals.ListenAddress);
-						return;
+						return null;
 
 					case ".r":
 						Globals.WebServer.RefreshAssets();
-						return;
+						return null;
 
 					case ".readme":
 						Process.Start("https://github.com/sam-ludlow/mame-ao#mame-ao");
-						return;
+						return null;
 
 					case ".valid":
 						parts = args.Arguments(2);
@@ -617,18 +643,18 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 							default:
 								throw new ApplicationException("Valid Unknown store type (row, disk).");
 						}
-						return;
+						return null;
 
 					case ".what":
 						Process.Start(Globals.ListenAddress + "api/what");
-						return;
+						return null;
 
 					case ".set":
 						parts = args.Arguments(3);
 						if (parts.Length != 3)
 							throw new ApplicationException($"Usage: {parts[0]} <key> <value>");
 						Globals.Settings.Set(parts[1], parts[2]);
-						return;
+						return null;
 
 					case ".dbm":
 					case ".dbs":
@@ -637,7 +663,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 							throw new ApplicationException($"Usage: {parts[0]} <command text>");
 
 						Database.ConsoleQuery(Globals.Core, parts[0].Substring(3), parts[1]);
-						return;
+						return null;
 
 					case ".upload":
 						parts = args.Arguments(5);
@@ -659,7 +685,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 							default:
 								throw new ApplicationException("Upload Unknown type not (MR, MD, SR, SD).");
 						}
-						return;
+						return null;
 
 					case ".aodel":
 						parts = args.Arguments(3);
@@ -667,36 +693,36 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 							throw new ApplicationException($"Usage: {parts[0]} <archive.org item name> <filename>");
 
 						Upload.DeleteFile(parts[1], parts[2]);
-						return;
+						return null;
 
 					case ".bt":
 						BitTorrent.Initialize();
-						return;
+						return null;
 
 					case ".btx":
 						BitTorrent.Remove();
 						Tools.ConsoleHeading(1, "To use with archive.org enter the command '.creds' if you have not already entered your credentials");
-						return;
+						return null;
 
 					case ".btr":
 						BitTorrent.Restart();
-						return;
+						return null;
 
 					case ".bts":
 						BitTorrent.Stop();
-						return;
+						return null;
 
 					case ".creds":
 						File.Delete(ArchiveOrgAuth.CacheFilename);
 						Globals.AuthCookie = ArchiveOrgAuth.GetCookie();
-						return;
+						return null;
 
 					case ".test":
 						parts = args.Arguments(3);
 						if (parts.Length != 3)
 							throw new ApplicationException($"Usage: {parts[0]} <profile> <count>");
 						Test.Run(parts[1], Int32.Parse(parts[2]));
-						return;
+						return null;
 
 					case ".fetch":
 						parts = args.Arguments(2);
@@ -729,14 +755,14 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 								throw new ApplicationException("Upload Unknown type not (MR, MD, SR, SD, *).");
 
 						}
-						return;
+						return null;
 
 					case ".software":
 						parts = args.Arguments(2);
 						if (parts.Length != 2)
 							throw new ApplicationException($"Usage: {parts[0]} <software list name>");
 						Import.PlaceSoftwareList(parts[1], true);
-						return;
+						return null;
 
 					case ".softname":
 					case ".softnamed":
@@ -744,23 +770,23 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						if (parts.Length != 3)
 							throw new ApplicationException($"Usage: {parts[0]} <software list name> <target directory>");
 						Export.SoftwareListNamedExport(parts[1], parts[2], parts[0].EndsWith("d"));
-						return;
+						return null;
 
 					case ".style":
 						Globals.WebServer.SaveStyle();
-						return;
+						return null;
 
 					case ".accdb":
 						parts = args.Arguments(2);
 						foreach (string filename in Directory.GetFiles(parts.Length > 1 ? parts[1] : Globals.Core.Directory, "*.sqlite"))
 							Tools.MsAccessLinkSQLite(filename);
-						return;
+						return null;
 
 					case ".accdbxml":
 						parts = args.Arguments(2);
 						foreach (string filename in Directory.GetFiles(parts.Length > 1 ? parts[1] : Globals.Core.Directory, "*.xml"))
 							Tools.MsAccessFromXML(filename);
-						return;
+						return null;
 
 					case ".core":
 						parts = args.Arguments(3);
@@ -768,7 +794,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 							throw new ApplicationException($"Usage: {parts[0]} <core name> [version]");
 
 						Cores.EnableCore(parts[1], parts.Length == 3 ? parts[2] : null);
-						return;
+						return null;
 
 					case ".":
 					default:
@@ -785,7 +811,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 						Globals.PhoneHome.Ready();
 						Mame.RunMame(binFilename, arguments);
-						return;
+						return null;
 				}
 			}
 
@@ -836,6 +862,8 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			Globals.PhoneHome.Ready();
 			Mame.RunMame(Path.Combine(Globals.Core.Directory, $"{Globals.Core.Name}.exe"), $"{machine} {software} {arguments}");
+
+			return machine;
 		}
 
 		public void ListSavedState()
