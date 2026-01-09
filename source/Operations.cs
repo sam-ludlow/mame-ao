@@ -35,6 +35,11 @@ namespace Spludlow.MameAO
 						Snap.IndexSnapDirectory(Path.Combine(parameters["directory"], "png"));
 						break;
 
+					case "process_phone_home":
+						ValidateRequiredParameters(parameters, new string[] { "database" });
+						PhoneHome.ProcessPhoneHome(parameters["directory"], parameters["database"]);
+						break;
+
 					default:
 						throw new ApplicationException($"Bad operation: {operation}");
 				}

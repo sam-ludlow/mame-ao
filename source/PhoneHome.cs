@@ -1,4 +1,7 @@
 ﻿using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Data.SqlClient;
 using System.IO;
 using System.Net.Http;
 using System.Net.Http.Headers;
@@ -166,6 +169,86 @@ namespace Spludlow.MameAO
 			});
 
 			task.Start();
+		}
+
+		public static void ProcessPhoneHome(string directory, string connectionString)
+		{
+			string snapHomeDirectory = Path.Combine(directory, "snap-home");
+			string snapSubmitDirectory = Path.Combine(directory, "snap-submit");
+
+			Dictionary<string, DataTable> snapIndexTables = new Dictionary<string, DataTable>();
+			foreach (string core in new string[] { "mame", "hbmame" })
+			{
+				DataTable table = Snap.LoadSnapIndex(Path.Combine(directory, "snap"), core);
+				if (table == null)
+					throw new ApplicationException($"Snap index not available for core: {core}");
+				snapIndexTables.Add(core, table);
+			}
+
+			SqlConnection connection = new SqlConnection(connectionString);
+
+			DataTable phoneHomesTable = new DataTable();
+			using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT * FROM [PhoneHomes] WHERE ([ProcessTime] IS NULL AND [token] IS NOT NULL) ORDER BY [PhoneHomeId]", connection))
+				adapter.Fill(phoneHomesTable);
+
+			DataTable targetTable = new DataTable("snap_submit");
+			using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT TOP 0 * FROM [snap_submit]", connection))
+				adapter.Fill(targetTable);
+
+			foreach (DataRow phoneHomeRow in phoneHomesTable.Rows)
+			{
+				string token = (string)phoneHomeRow["token"];
+				string snapFilename = Path.Combine(snapHomeDirectory, token + ".png");
+
+				if (File.Exists(snapFilename) == false)
+					continue;
+
+				long PhoneHomeId = (long)phoneHomeRow["PhoneHomeId"];
+				DateTime RequestTime = (DateTime)phoneHomeRow["RequestTime"];
+
+				dynamic json = JsonConvert.DeserializeObject<dynamic>((string)phoneHomeRow["Body"]);
+
+				string line = json.line;
+				string core_version = json.core_version;
+
+				string[] parts = line.Split(new char[] { ' ', '@' });
+				if (parts.Length != 2 && parts.Length != 4)
+					throw new ApplicationException("Bad line");
+
+				string machine = parts[0];
+				string core = parts[1];
+				string software = parts.Length == 4 ? parts[2] : null;
+				string softwarelist = parts.Length == 4 ? parts[3] : null;
+
+				DataTable indexTable = snapIndexTables[core];
+				DataRow indexRow = indexTable.Rows.Find(software == null ? machine : $"{softwarelist}\\{software}");
+
+				string existingSnapPngUrl = null;
+				if (indexRow != null)
+				{
+					if (software == null)
+						existingSnapPngUrl = $"https://data.spludlow.co.uk/{core}/machine/{machine}.png";
+					else
+						existingSnapPngUrl = $"https://data.spludlow.co.uk/{core}/software/{softwarelist}/{software}.png";
+				}
+
+				string image_token = Guid.NewGuid().ToString();
+
+				Console.WriteLine($"{machine}\t{core}\t{core_version}\t{software}\t{softwarelist}\t{snapFilename}\t{existingSnapPngUrl}\t{image_token}");
+
+				targetTable.Clear();
+
+				//	snap_submit_id	snap_uploaded	core_name	core_version	machine_name	softwarelist_name	software_name	existing	image_token
+				targetTable.Rows.Add(DBNull.Value, RequestTime, core, core_version, machine, softwarelist, software, indexRow != null, image_token);
+
+				Database.BulkInsert(connection, targetTable);
+
+				string targetFilename = Path.Combine(snapSubmitDirectory, image_token + ".png");
+
+				Database.ExecuteNonQuery(connection, $"UPDATE [PhoneHomes] SET [ProcessTime] = SYSDATETIME() WHERE ([PhoneHomeId] = {PhoneHomeId})");
+
+				File.Move(snapFilename, targetFilename);
+			}
 		}
 	}
 }

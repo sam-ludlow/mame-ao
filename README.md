@@ -289,10 +289,12 @@ Options available on the UI settings page under `PhoneHome`
 ## Snap Home
 On the settings UI page you can set `SnapHome` to `Yes` this will send F12 snaps up to the mother ship.
 
-- You must have `PhoneHome` enabled (see above)
-- You must have `Artwork` set to `No`
-- Only ONE snap, the lastest taken, will be uploaded
+- You must have `PhoneHome` enabled (see above).
+- You must have `Artwork` set to `No`.
+- Only ONE snap, the lastest taken, will be uploaded.
 - Snaps are uploaded when MAME exists, so you can manipulate them in the MAME snap directory if you don't like the last snap taken.
+- Snaps for the machine are moved from the MAME snap directory to `_SNAP`.
+- If you are launching from the shell use full format `machine@core software@list` this helps identify snaps, the UI does this anyway.
 
 The plan here is to make it easy for people to contribute snaps especially for software lists.
 
