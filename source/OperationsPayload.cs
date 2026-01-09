@@ -524,7 +524,7 @@ namespace Spludlow.MameAO
 			//
 			//	Snaps
 			//
-			DataTable snapTable = Snap.LoadSnapIndex(directory + "-snap");
+			DataTable snapTable = Snap.LoadSnapIndex(Path.Combine(Path.GetDirectoryName(directory), "snap"), coreName);
 
 			//
 			// Payloads
@@ -1010,7 +1010,7 @@ namespace Spludlow.MameAO
 			//
 			//	Snaps
 			//
-			DataTable snapTable = Snap.LoadSnapIndex(directory + "-snap");
+			DataTable snapTable = Snap.LoadSnapIndex(Path.Combine(Path.GetDirectoryName(directory), "snap"), coreName);
 
 			//
 			// Payloads

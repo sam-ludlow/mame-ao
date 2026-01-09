@@ -132,6 +132,7 @@ You can set advanced configuration options using the file `_config.txt`, each li
 | SoftwareListSkip | Skip these software lists when running `.fetch` command for software disks, comma delimited | | `SoftwareListSkip	psx, saturn, dc` |
 | BitTorrentRestartMinutes | Minutes to wait until restarting DOME-BT if no asset data has downloaded | 5 | `BitTorrentRestartMinutes	2.5` |
 | BitTorrentUrl | Override default DOME-BT URL | http://localhost:12381 | `BitTorrentUrl	http://[::1]:12381` |
+| SnapServerPath | Snap Directory used for reporting |  | `SnapServerPath	C:\ao-data\snap` |
 
 MAME-AO must be restarted for changes to `_config.txt` to take affect.
 
@@ -280,10 +281,22 @@ MAME-AO will send MAME usage data up to the mother ship.
 
 By default, data is sent, if you do not want that you can switch it off.
 
-Options available on the UI settings page
+Options available on the UI settings page under `PhoneHome`
 - `Yes` Send data
 - `Yes Verbose` Send data and show payload in console.
 - `No` Do not send data.
+
+## Snap Home
+On the settings UI page you can set `SnapHome` to `Yes` this will send F12 snaps up to the mother ship.
+
+- You must have `PhoneHome` enabled (see above)
+- You must have `Artwork` set to `No`
+- Only ONE snap, the lastest taken, will be uploaded
+- Snaps are uploaded when MAME exists, so you can manipulate them in the MAME snap directory if you don't like the last snap taken.
+
+The plan here is to make it easy for people to contribute snaps especially for software lists.
+
+Building on the excelent work done here https://www.progettosnaps.net/snapshots/
 
 ## Data Operations
 MAME-AO has the capability to perform various Data operations by passing command line options when starting the program, it will exit immediately when finished.

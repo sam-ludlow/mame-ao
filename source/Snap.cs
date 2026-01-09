@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 using System.Data;
 using System.Drawing;
 using System.Drawing.Drawing2D;
@@ -7,7 +6,6 @@ using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 
 namespace Spludlow.MameAO
 {
@@ -27,10 +25,10 @@ namespace Spludlow.MameAO
 				throw new ApplicationException("Can not find Jpeg Encoder");
 		}
 
-		public static DataTable LoadSnapIndex(string snapDirectory)
+		public static DataTable LoadSnapIndex(string snapDirectory, string coreName)
 		{
 			DataTable table = null;
-			string snapIndexFilename = Path.Combine(snapDirectory, "png", "_index.txt");
+			string snapIndexFilename = Path.Combine(snapDirectory, coreName, "png", "_index.txt");
 			if (File.Exists(snapIndexFilename) == true)
 			{
 				table = Tools.TextTableReadFile(snapIndexFilename);

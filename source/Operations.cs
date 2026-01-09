@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.IO;
 using System.Linq;
 
 namespace Spludlow.MameAO
@@ -31,7 +32,7 @@ namespace Spludlow.MameAO
 						break;
 
 					case "snap_index":
-						Snap.IndexSnapDirectory(parameters["directory"]);
+						Snap.IndexSnapDirectory(Path.Combine(parameters["directory"], "png"));
 						break;
 
 					default:

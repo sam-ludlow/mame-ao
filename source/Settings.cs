@@ -22,8 +22,8 @@ namespace Spludlow.MameAO
 			{ "Artwork", "Place Artwork Files. Note when set to \"No\" the machine artwork directories will be deleted. If changing artwork types run the machne with \"No\" first." },
 			{ "Cheats", "Use Pugsy's Cheats." },
 			{ "PlaceReport", "Report on placing files (rom, disk, samples, artwork)." },
-			{ "PhoneHome", "Help the project by submitting usage data. Switch to \"No\" if you do not want. To see exaclty what's being sent switch to \"YesVerbose\"." },
-			{ "SnapHome", "Submit F12 snaps to the mother ship. PhoneHome must be enabled. See the README ..." },
+			{ "PhoneHome", "Help the project by submitting usage data. Switch to \"No\" if you do not want. To see exaclty what's being sent switch to \"YesVerbose\". See the <a href=\"https://github.com/sam-ludlow/mame-ao#phone-home\" target=\"_blank\">README</a>." },
+			{ "SnapHome", "Submit F12 snaps to the mother ship. PhoneHome must be enabled. See the <a href=\"https://github.com/sam-ludlow/mame-ao#snap-home\" target=\"_blank\">README</a>." },
 		};
 
 		public Dictionary<string, string> Options = new Dictionary<string, string>();

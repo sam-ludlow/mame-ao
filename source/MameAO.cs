@@ -422,22 +422,29 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 					string snapFilename = null;
 					if (machine_name != null && Globals.Settings.Options["SnapHome"] == "Yes")
 					{
-						string snapDirectory = Path.Combine(Globals.Core.Directory, "snap", machine_name);
-						if (Directory.Exists(snapDirectory) == true)
+						if (Globals.Settings.Options["Artwork"] == "No")
 						{
-							var sourceSnapFilenames = new DirectoryInfo(snapDirectory).GetFiles("*.png").OrderByDescending(fileInfo => fileInfo.LastWriteTime).Select(fileInfo => fileInfo.FullName).ToArray();
-							if (sourceSnapFilenames.Length > 0)
+							string snapDirectory = Path.Combine(Globals.Core.Directory, "snap", machine_name);
+							if (Directory.Exists(snapDirectory) == true)
 							{
-								string snapTargetDirectory = Path.Combine(Globals.SnapDirectory, Globals.Core.Name, machine_name);
-								Directory.CreateDirectory(snapTargetDirectory);
+								var sourceSnapFilenames = new DirectoryInfo(snapDirectory).GetFiles("*.png").OrderByDescending(fileInfo => fileInfo.LastWriteTime).Select(fileInfo => fileInfo.FullName).ToArray();
+								if (sourceSnapFilenames.Length > 0)
+								{
+									string snapTargetDirectory = Path.Combine(Globals.SnapDirectory, Globals.Core.Name, machine_name);
+									Directory.CreateDirectory(snapTargetDirectory);
 
-								string[] snapFilenames = Mame.CollectSnaps(sourceSnapFilenames, snapTargetDirectory, machine_name, Globals.Core.Version, null);
-								
-								if (snapFilenames.Length > 1)
-									Console.WriteLine($"WARNING multiple snaps, using newest.");
+									string[] snapFilenames = Mame.CollectSnaps(sourceSnapFilenames, snapTargetDirectory, machine_name, Globals.Core.Version, null);
 
-								snapFilename = snapFilenames[0];
+									if (snapFilenames.Length > 1)
+										Console.WriteLine($"WARNING multiple snaps, using newest.");
+
+									snapFilename = snapFilenames[0];
+								}
 							}
+						}
+						else
+						{
+							Console.WriteLine("!!! Snap Home does not work with Artwork enabled.");
 						}
 					}
 					

@@ -1746,9 +1746,10 @@ namespace Spludlow.MameAO
 
 		public void Report_SNAPCOV()
 		{
-			string snapDirectory = @"C:\ao-data\mame-snap"; //	TODO: paramterize
+			if (Globals.Config.ContainsKey("SnapServerPath") == false)
+				throw new ApplicationException("You must have SnapServerPath set in _config.txt");
 
-			DataTable snapTable = Snap.LoadSnapIndex(snapDirectory);
+			DataTable snapTable = Snap.LoadSnapIndex(Globals.Config["SnapServerPath"], Globals.Core.Name);
 
 			if (snapTable == null)
 				throw new ApplicationException("Snap index not available");
