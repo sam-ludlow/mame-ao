@@ -132,6 +132,7 @@ You can set advanced configuration options using the file `_config.txt`, each li
 | SoftwareListSkip | Skip these software lists when running `.fetch` command for software disks, comma delimited | | `SoftwareListSkip	psx, saturn, dc` |
 | BitTorrentRestartMinutes | Minutes to wait until restarting DOME-BT if no asset data has downloaded | 5 | `BitTorrentRestartMinutes	2.5` |
 | BitTorrentUrl | Override default DOME-BT URL | http://localhost:12381 | `BitTorrentUrl	http://[::1]:12381` |
+| DisplayName | Public display name used to cedit snap home (max length 32) | Your time zone, e.g. `GMT Standard Time` | `DisplayName	Michael Knight` |
 | SnapServerPath | Snap Directory used for reporting |  | `SnapServerPath	C:\ao-data\snap` |
 
 MAME-AO must be restarted for changes to `_config.txt` to take affect.
@@ -294,7 +295,8 @@ On the settings UI page you can set `SnapHome` to `Yes` this will send F12 snaps
 - Only ONE snap, the lastest taken, will be uploaded.
 - Snaps are uploaded when MAME exists, so you can manipulate them in the MAME snap directory if you don't like the last snap taken.
 - Snaps for the machine are moved from the MAME snap directory to `_SNAP`.
-- If you are launching from the shell use full format `machine@core software@list` this helps identify snaps, the UI does this anyway.
+- If you are launching from the shell use full format `machine@core software@list` to identify snaps, the UI does this anyway.
+- If you set the config `DisplayName` we will try to credit your snaps.
 
 The plan here is to make it easy for people to contribute snaps especially for software lists.
 

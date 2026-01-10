@@ -100,6 +100,8 @@ namespace Spludlow.MameAO
 					json.bt_available = Globals.BitTorrentAvailable;
 					json.linking_enabled = Globals.LinkingEnabled;
 
+					json.display_name = Globals.DisplayName;
+
 					if (Exception != null)
 						json.exception = Exception.ToString();
 
@@ -139,6 +141,15 @@ namespace Spludlow.MameAO
 
 					if (snapFilename != null && token != null)
 					{
+						if (verbose == true)
+						{
+							Tools.ConsoleHeading(2, new string[] {
+								"Snap Home",
+								$"Your Display Name: {Globals.DisplayName}",
+								snapFilename,
+							});
+						}
+
 						using (HttpRequestMessage requestMessage = new HttpRequestMessage(HttpMethod.Post, url))
 						{
 							requestMessage.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
@@ -208,46 +219,66 @@ namespace Spludlow.MameAO
 
 				dynamic json = JsonConvert.DeserializeObject<dynamic>((string)phoneHomeRow["Body"]);
 
-				string line = json.line;
-				string core_version = json.core_version;
+				int status = -1;
 
-				string[] parts = line.Split(new char[] { ' ', '@' });
-				if (parts.Length != 2 && parts.Length != 4)
-					throw new ApplicationException("Bad line");
-
-				string machine = parts[0];
-				string core = parts[1];
-				string software = parts.Length == 4 ? parts[2] : null;
-				string softwarelist = parts.Length == 4 ? parts[3] : null;
-
-				DataTable indexTable = snapIndexTables[core];
-				DataRow indexRow = indexTable.Rows.Find(software == null ? machine : $"{softwarelist}\\{software}");
-
-				string existingSnapPngUrl = null;
-				if (indexRow != null)
+				try
 				{
-					if (software == null)
-						existingSnapPngUrl = $"https://data.spludlow.co.uk/{core}/machine/{machine}.png";
-					else
-						existingSnapPngUrl = $"https://data.spludlow.co.uk/{core}/software/{softwarelist}/{software}.png";
+					string line = json.line;
+					string core_version = json.core_version;
+
+					string display_name = json.display_name ?? "anonymous";
+					if (display_name.Length > 32)
+						display_name = display_name.Substring(0, 32);
+
+					string[] parts = line.Split(new char[] { ' ', '@' });
+					if (parts.Length != 2 && parts.Length != 4)
+						throw new ApplicationException("Bad line");
+
+					string machine = parts[0];
+					string core = parts[1];
+					string software = parts.Length == 4 ? parts[2] : null;
+					string softwarelist = parts.Length == 4 ? parts[3] : null;
+
+					DataTable indexTable = snapIndexTables[core];
+					DataRow indexRow = indexTable.Rows.Find(software == null ? machine : $"{softwarelist}\\{software}");
+
+					string existingSnapPngUrl = null;
+					if (indexRow != null)
+					{
+						if (software == null)
+							existingSnapPngUrl = $"https://data.spludlow.co.uk/{core}/machine/{machine}.png";
+						else
+							existingSnapPngUrl = $"https://data.spludlow.co.uk/{core}/software/{softwarelist}/{software}.png";
+					}
+
+					string image_token = Guid.NewGuid().ToString();
+
+					Console.WriteLine($"{machine}\t{core}\t{core_version}\t{software}\t{softwarelist}\t{snapFilename}\t{existingSnapPngUrl}\t{image_token}");
+
+					targetTable.Clear();
+
+					targetTable.Rows.Add(DBNull.Value, RequestTime, display_name, core, core_version, machine, softwarelist, software, indexRow != null, image_token);
+
+					Database.BulkInsert(connection, targetTable);
+
+					string targetFilename = Path.Combine(snapSubmitDirectory, image_token + ".png");
+
+					File.Copy(snapFilename, targetFilename);
+
+					status = 1;
+				}
+				catch (Exception e)
+				{
+					Console.WriteLine(e.ToString());
+				}
+				finally
+				{
+					Database.ExecuteNonQuery(connection, $"UPDATE [PhoneHomes] SET [ProcessTime] = SYSDATETIME(), Status = {status} WHERE ([PhoneHomeId] = {PhoneHomeId})");
+
+					File.Delete(snapFilename);
 				}
 
-				string image_token = Guid.NewGuid().ToString();
 
-				Console.WriteLine($"{machine}\t{core}\t{core_version}\t{software}\t{softwarelist}\t{snapFilename}\t{existingSnapPngUrl}\t{image_token}");
-
-				targetTable.Clear();
-
-				//	snap_submit_id	snap_uploaded	core_name	core_version	machine_name	softwarelist_name	software_name	existing	image_token
-				targetTable.Rows.Add(DBNull.Value, RequestTime, core, core_version, machine, softwarelist, software, indexRow != null, image_token);
-
-				Database.BulkInsert(connection, targetTable);
-
-				string targetFilename = Path.Combine(snapSubmitDirectory, image_token + ".png");
-
-				Database.ExecuteNonQuery(connection, $"UPDATE [PhoneHomes] SET [ProcessTime] = SYSDATETIME() WHERE ([PhoneHomeId] = {PhoneHomeId})");
-
-				File.Move(snapFilename, targetFilename);
 			}
 		}
 	}

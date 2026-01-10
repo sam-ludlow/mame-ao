@@ -59,6 +59,8 @@ namespace Spludlow.MameAO
 		public static HttpClient HttpClient;
 		public static string AuthCookie = null;
 
+		public static string DisplayName = TimeZoneInfo.Local.StandardName;
+
 		public static Dictionary<string, string> Config = new Dictionary<string, string>();
 
 		public static string RootDirectory;
@@ -195,6 +197,9 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 			if (Globals.Config.ContainsKey("BitTorrentUrl") == true)
 				BitTorrent.ClientUrl = Globals.Config["BitTorrentUrl"];
+
+			if (Globals.Config.ContainsKey("DisplayName") == true)
+				Globals.DisplayName = Globals.Config["DisplayName"];
 
 			//
 			// Fixes
