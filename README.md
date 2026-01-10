@@ -290,6 +290,8 @@ Options available on the UI settings page under `PhoneHome`
 ## Snap Home
 On the settings UI page you can set `SnapHome` to `Yes` this will send F12 snaps up to the mother ship.
 
+You can see submitted snaps here https://data.spludlow.co.uk/snap
+
 - You must have `PhoneHome` enabled (see above).
 - You must have `Artwork` set to `No`.
 - Only ONE snap, the lastest taken, will be uploaded.
