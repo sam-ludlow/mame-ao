@@ -187,24 +187,14 @@ namespace Spludlow.MameAO
 			string snapHomeDirectory = Path.Combine(directory, "snap-home");
 			string snapSubmitDirectory = Path.Combine(directory, "snap-submit");
 
-			Dictionary<string, DataTable> snapIndexTables = new Dictionary<string, DataTable>();
-			foreach (string core in new string[] { "mame", "hbmame" })
-			{
-				DataTable table = Snap.LoadSnapIndex(Path.Combine(directory, "snap"), core);
-				if (table == null)
-					throw new ApplicationException($"Snap index not available for core: {core}");
-				snapIndexTables.Add(core, table);
-			}
-
 			SqlConnection connection = new SqlConnection(connectionString);
 
 			DataTable phoneHomesTable = new DataTable();
 			using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT * FROM [PhoneHomes] WHERE ([ProcessTime] IS NULL AND [token] IS NOT NULL) ORDER BY [PhoneHomeId]", connection))
 				adapter.Fill(phoneHomesTable);
 
-			DataTable targetTable = new DataTable("snap_submit");
-			using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT TOP 0 * FROM [snap_submit]", connection))
-				adapter.Fill(targetTable);
+			DataTable targetTable = null;
+			Dictionary<string, DataTable> snapIndexTables = null;
 
 			foreach (DataRow phoneHomeRow in phoneHomesTable.Rows)
 			{
@@ -213,6 +203,22 @@ namespace Spludlow.MameAO
 
 				if (File.Exists(snapFilename) == false)
 					continue;
+
+				if (snapIndexTables == null)
+				{
+					snapIndexTables = new Dictionary<string, DataTable>();
+					foreach (string core in new string[] { "mame", "hbmame" })
+					{
+						DataTable table = Snap.LoadSnapIndex(Path.Combine(directory, "snap"), core);
+						if (table == null)
+							throw new ApplicationException($"Snap index not available for core: {core}");
+						snapIndexTables.Add(core, table);
+					}
+
+					targetTable = new DataTable("snap_submit");
+					using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT TOP 0 * FROM [snap_submit]", connection))
+						adapter.Fill(targetTable);
+				}
 
 				long PhoneHomeId = (long)phoneHomeRow["PhoneHomeId"];
 				DateTime RequestTime = (DateTime)phoneHomeRow["RequestTime"];
