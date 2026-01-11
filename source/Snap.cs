@@ -11,6 +11,8 @@ namespace Spludlow.MameAO
 {
     public class Snap
     {
+		public static Size ThumbSize = new Size(128, 128);
+
 		private static ImageCodecInfo JpegCodecInfo = null;
 
 		static Snap()
@@ -76,8 +78,6 @@ namespace Spludlow.MameAO
 
 		public static void ImportSnapSoftware(string sourceDirectory, string targetDirectory)
 		{
-			Size size = new Size(128, 128);
-
 			string targetDirectoryPNG = Path.Combine(targetDirectory, "png");
 			Directory.CreateDirectory(targetDirectoryPNG);
 			string targetDirectoryJPG = Path.Combine(targetDirectory, "jpg");
@@ -113,7 +113,7 @@ namespace Spludlow.MameAO
 
 				foreach (string sourceFilename in sourceFilenames)
 				{
-					if (ImportSnapFile(sourceFilename, targetDirectorySoftwarePNG, targetDirectorySoftwareJPG, size) == true)
+					if (ImportSnapFile(sourceFilename, targetDirectorySoftwarePNG, targetDirectorySoftwareJPG, ThumbSize) == true)
 						++processCount;
 					else
 						++skipCount;
@@ -279,6 +279,19 @@ namespace Spludlow.MameAO
 			graphics.SmoothingMode = SmoothingMode.HighQuality;
 			graphics.InterpolationMode = InterpolationMode.HighQualityBicubic;
 			graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
+		}
+
+		public static void UtilMakeThumbs()
+		{
+			string directory = @"";
+
+			foreach (string pngFilename in Directory.GetFiles(directory, "*.png"))
+			{
+				string jpgFilename = Path.Combine(Path.GetDirectoryName(pngFilename), Path.GetFileNameWithoutExtension(pngFilename) + ".jpg");
+
+				if (File.Exists(jpgFilename) == false)
+					Snap.Resize(pngFilename, Snap.ThumbSize, jpgFilename, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 72);
+			}
 		}
 	}
 }

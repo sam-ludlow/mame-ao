@@ -422,6 +422,8 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 				{
 					Globals.PhoneHome = new PhoneHome(line);
 
+					// TODO: clear dir before of old files
+
 					string machine_name = RunLine(line);
 
 					string snapFilename = null;

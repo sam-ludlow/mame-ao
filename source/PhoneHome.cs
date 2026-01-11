@@ -7,6 +7,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
+using System.Drawing.Imaging;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -144,7 +145,7 @@ namespace Spludlow.MameAO
 						if (verbose == true)
 						{
 							Tools.ConsoleHeading(2, new string[] {
-								"Snap Home",
+								"Snap Home https://data.spludlow.co.uk/snap",
 								$"Your Display Name: {Globals.DisplayName}",
 								snapFilename,
 							});
@@ -268,8 +269,11 @@ namespace Spludlow.MameAO
 					Database.BulkInsert(connection, targetTable);
 
 					string targetFilename = Path.Combine(snapSubmitDirectory, image_token + ".png");
+					string thumbFilename = Path.Combine(snapSubmitDirectory, image_token + ".jpg");
 
 					File.Copy(snapFilename, targetFilename);
+					
+					Snap.Resize(targetFilename, Snap.ThumbSize, thumbFilename, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 72);
 
 					status = 1;
 				}
