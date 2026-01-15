@@ -1632,6 +1632,7 @@
 
 			displayMenuWalk(_rootMenu);
 
+			// Shuffle down the menu on the left
 			if (_currentMenu && _currentMenu.menu && _currentMenu.menu[0].href)
 				document.location = `${_baseUrl}${_currentMenu.menu[0].href}`;
 		}
@@ -1686,6 +1687,13 @@
 		//
 
 		window.onload = main;
+
+		window.addEventListener('pageshow', (event) => {
+
+			// Handle going back from solftware lists, forward will not work
+			if (event.persisted && _pathParts.length === 4 && _pathParts[1] === '/machines' && history.length > 1)
+				history.back();
+		});
 
 	</script>
 

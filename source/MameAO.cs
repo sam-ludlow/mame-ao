@@ -422,37 +422,16 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 				{
 					Globals.PhoneHome = new PhoneHome(line);
 
-					// TODO: clear dir before of old files
-
 					string machine_name = RunLine(line);
 
 					string snapFilename = null;
+
 					if (machine_name != null && Globals.Settings.Options["SnapHome"] == "Yes")
 					{
 						if (Globals.Settings.Options["Artwork"] == "No")
-						{
-							string snapDirectory = Path.Combine(Globals.Core.Directory, "snap", machine_name);
-							if (Directory.Exists(snapDirectory) == true)
-							{
-								var sourceSnapFilenames = new DirectoryInfo(snapDirectory).GetFiles("*.png").OrderByDescending(fileInfo => fileInfo.LastWriteTime).Select(fileInfo => fileInfo.FullName).ToArray();
-								if (sourceSnapFilenames.Length > 0)
-								{
-									string snapTargetDirectory = Path.Combine(Globals.SnapDirectory, Globals.Core.Name, machine_name);
-									Directory.CreateDirectory(snapTargetDirectory);
-
-									string[] snapFilenames = Mame.CollectSnaps(sourceSnapFilenames, snapTargetDirectory, machine_name, Globals.Core.Version, null);
-
-									if (snapFilenames.Length > 1)
-										Console.WriteLine($"WARNING multiple snaps, using newest.");
-
-									snapFilename = snapFilenames[0];
-								}
-							}
-						}
+							snapFilename = Snap.CollectSnaps(machine_name);
 						else
-						{
 							Console.WriteLine("!!! Snap Home does not work with Artwork enabled.");
-						}
 					}
 					
 					Globals.PhoneHome.Success(snapFilename);
@@ -874,7 +853,11 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			if (Globals.Settings.Options["Cheats"] == "Yes")
 				arguments += " -cheat";
 
+			if (Globals.Settings.Options["SnapHome"] == "Yes")
+				Snap.CollectSnaps(machine);
+
 			Globals.PhoneHome.Ready();
+
 			Mame.RunMame(Path.Combine(Globals.Core.Directory, $"{Globals.Core.Name}.exe"), $"{machine} {software} {arguments}");
 
 			return machine;

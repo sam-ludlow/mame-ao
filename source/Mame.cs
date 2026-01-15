@@ -271,6 +271,8 @@ namespace Spludlow.MameAO
 				File.Move(snapFilename, targetFilename);
 				targetFilenames.Add(targetFilename);
 
+				Console.WriteLine($"{snapFilename}\t=>\t{targetFilename}");
+
 				if (table != null)
 					table.Rows.Add(version, machineName, lastWriteTime, snapFilename, targetFilename);
 			}

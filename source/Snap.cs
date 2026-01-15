@@ -17,14 +17,32 @@ namespace Spludlow.MameAO
 
 		static Snap()
 		{
-			ImageCodecInfo[] imageDecoders = ImageCodecInfo.GetImageDecoders();
-			foreach (ImageCodecInfo imageCodecInfo in imageDecoders)
+			ImageCodecInfo[] imageDecoders = ImageCodecInfo.GetImageDecoders()
+				.Where(imageCodecInfo => imageCodecInfo.FormatID == ImageFormat.Jpeg.Guid).ToArray();
+
+			if (imageDecoders.Length > 0)
+				JpegCodecInfo = imageDecoders[0];
+		}
+
+		public static string CollectSnaps(string machine_name)
+		{
+			string snapFilename = null;
+
+			string snapDirectory = Path.Combine(Globals.Core.Directory, "snap", machine_name);
+			if (Directory.Exists(snapDirectory) == true)
 			{
-				if (imageCodecInfo.FormatID == ImageFormat.Jpeg.Guid)
-					JpegCodecInfo = imageCodecInfo;
+				var sourceSnapFilenames = new DirectoryInfo(snapDirectory).GetFiles("*.png").OrderByDescending(fileInfo => fileInfo.LastWriteTime).Select(fileInfo => fileInfo.FullName).ToArray();
+				if (sourceSnapFilenames.Length > 0)
+				{
+					string snapTargetDirectory = Path.Combine(Globals.SnapDirectory, Globals.Core.Name, machine_name);
+					Directory.CreateDirectory(snapTargetDirectory);
+
+					string[] snapFilenames = Mame.CollectSnaps(sourceSnapFilenames, snapTargetDirectory, machine_name, Globals.Core.Version, null);
+					snapFilename = snapFilenames[0];
+				}
 			}
-			if (JpegCodecInfo == null)
-				throw new ApplicationException("Can not find Jpeg Encoder");
+
+			return snapFilename;
 		}
 
 		public static DataTable LoadSnapIndex(string snapDirectory, string coreName)
@@ -215,9 +233,16 @@ namespace Spludlow.MameAO
 
 		public static void QualitySaveJpeg(Bitmap bitmap, string filename, int qualityPercent)
 		{
-			EncoderParameters encoderParameters = new EncoderParameters(1);
-			encoderParameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, qualityPercent);
-			bitmap.Save(filename, JpegCodecInfo, encoderParameters);
+			if (JpegCodecInfo != null)
+			{
+				EncoderParameters encoderParameters = new EncoderParameters(1);
+				encoderParameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, qualityPercent);
+				bitmap.Save(filename, JpegCodecInfo, encoderParameters);
+			}
+			else
+			{
+				bitmap.Save(filename, ImageFormat.Jpeg);
+			}
 		}
 
 		public static Bitmap Resize(Image image, Size size, PixelFormat pixelFormat, int dpi)
