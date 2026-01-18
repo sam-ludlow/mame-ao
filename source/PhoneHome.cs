@@ -191,7 +191,7 @@ namespace Spludlow.MameAO
 			SqlConnection connection = new SqlConnection(connectionString);
 
 			DataTable phoneHomesTable = new DataTable();
-			using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT * FROM [PhoneHomes] WHERE ([ProcessTime] IS NULL AND [token] IS NOT NULL) ORDER BY [PhoneHomeId]", connection))
+			using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT * FROM [phone_home] WHERE ([process_time] IS NULL AND [token] IS NOT NULL) ORDER BY [phone_home_id]", connection))
 				adapter.Fill(phoneHomesTable);
 
 			DataTable targetTable = null;
@@ -221,10 +221,10 @@ namespace Spludlow.MameAO
 						adapter.Fill(targetTable);
 				}
 
-				long PhoneHomeId = (long)phoneHomeRow["PhoneHomeId"];
-				DateTime RequestTime = (DateTime)phoneHomeRow["RequestTime"];
+				long phone_home_id = (long)phoneHomeRow["phone_home_id"];
+				DateTime request_time = (DateTime)phoneHomeRow["request_time"];
 
-				dynamic json = JsonConvert.DeserializeObject<dynamic>((string)phoneHomeRow["Body"]);
+				dynamic json = JsonConvert.DeserializeObject<dynamic>((string)phoneHomeRow["body"]);
 
 				int status = -1;
 
@@ -264,7 +264,7 @@ namespace Spludlow.MameAO
 
 					targetTable.Clear();
 
-					targetTable.Rows.Add(DBNull.Value, RequestTime, display_name, core, core_version, machine, softwarelist, software, indexRow != null, image_token);
+					targetTable.Rows.Add(DBNull.Value, request_time, display_name, core, core_version, machine, softwarelist, software, indexRow != null, image_token, 0, DBNull.Value, phone_home_id);
 
 					Database.BulkInsert(connection, targetTable);
 
@@ -283,7 +283,7 @@ namespace Spludlow.MameAO
 				}
 				finally
 				{
-					Database.ExecuteNonQuery(connection, $"UPDATE [PhoneHomes] SET [ProcessTime] = SYSDATETIME(), Status = {status} WHERE ([PhoneHomeId] = {PhoneHomeId})");
+					Database.ExecuteNonQuery(connection, $"UPDATE [phone_home] SET [process_time] = SYSDATETIME(), status = {status} WHERE ([phone_home_id] = {phone_home_id})");
 
 					File.Delete(snapFilename);
 				}

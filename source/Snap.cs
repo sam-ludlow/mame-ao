@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Data;
+using System.Data.SqlClient;
 using System.Drawing;
 using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
@@ -316,6 +317,47 @@ namespace Spludlow.MameAO
 
 				if (File.Exists(jpgFilename) == false)
 					Snap.Resize(pngFilename, Snap.ThumbSize, jpgFilename, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 72);
+			}
+		}
+
+		public static void UtilCopyDatabaseRows(string sourceConnectionString, string targetConnectionString, string sourceTableName, string targetTableName)
+		{
+			SqlConnection sourceConnection = new SqlConnection(sourceConnectionString);
+			SqlConnection targetConnection = new SqlConnection(targetConnectionString);
+
+
+			Database.ExecuteNonQuery(targetConnection, $"SET IDENTITY_INSERT [{targetTableName}] ON");
+
+			try
+			{
+				sourceConnection.Open();
+				targetConnection.Open();
+				try
+				{
+					using (SqlCommand command = new SqlCommand($"SELECT * FROM [{sourceTableName}]", sourceConnection))
+					{
+						using (SqlDataReader reader = command.ExecuteReader())
+						{
+							using (SqlBulkCopy bulkCopy = new SqlBulkCopy(targetConnection, SqlBulkCopyOptions.KeepIdentity, null))
+							{
+								bulkCopy.DestinationTableName = targetTableName;
+								bulkCopy.BatchSize = 4096;
+								bulkCopy.BulkCopyTimeout = 0;
+
+								bulkCopy.WriteToServer(reader);
+							}
+						}
+					}
+				}
+				finally
+				{
+					sourceConnection.Close();
+					targetConnection.Close();
+				}
+			}
+			finally
+			{
+				Database.ExecuteNonQuery(targetConnection, $"SET IDENTITY_INSERT [{targetTableName}] OFF");
 			}
 		}
 	}
