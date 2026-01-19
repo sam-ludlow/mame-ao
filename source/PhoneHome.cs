@@ -291,5 +291,53 @@ namespace Spludlow.MameAO
 
 			}
 		}
+
+		public static void ApprovePhoneHome(string directory, string connectionString)
+		{
+			string snapSubmitDirectory = Path.Combine(directory, "snap-submit");	//	GUID.png in top directory
+			string snapTempDirectory = Path.Combine(directory, "snap-temp");        //	Core name below
+
+			SqlConnection connection = new SqlConnection(connectionString);
+
+			DataTable snapSubmitTable = new DataTable();
+			using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT * FROM snap_submit WHERE (process_time IS NULL AND snap_submit.[status] <> 0) ORDER BY snap_submit_id;", connection))
+				adapter.Fill(snapSubmitTable);
+
+			foreach (DataRow row in snapSubmitTable.Rows)
+			{
+				long snap_submit_id = (long)row["snap_submit_id"];
+				int status = (int)row["status"];
+				string core_name = (string)row["core_name"];
+				string machine_name = (string)row["machine_name"];
+				string softwarelist_name = row.IsNull("softwarelist_name") == false ? (string)row["softwarelist_name"] : null;
+				string software_name = row.IsNull("software_name") == false ? (string)row["software_name"] : null;
+				string image_token = (string)row["image_token"];
+
+				string sourceFilename = Path.Combine(snapSubmitDirectory, image_token + ".png");
+				if (File.Exists(sourceFilename) == false)
+					throw new ApplicationException($"sourceFilename not found: {sourceFilename}");
+
+				switch (status)
+				{
+					case -1:	// Rejected
+						break;
+
+					case 1:     // Aproved
+						string targetFilename = softwarelist_name == null ?
+							Path.Combine(snapTempDirectory, core_name, machine_name + ".png") : Path.Combine(snapTempDirectory, core_name, softwarelist_name, software_name + ".png");
+
+						Console.WriteLine($"{snap_submit_id}\t{sourceFilename}\t=>\t{targetFilename}");
+						Directory.CreateDirectory(Path.GetDirectoryName(targetFilename));
+						File.Copy(sourceFilename, targetFilename);
+						break;
+
+					default:
+						throw new ApplicationException($"Unknown status: {status}");
+				}
+
+				Database.ExecuteNonQuery(connection, $"UPDATE [snap_submit] SET [process_time] = SYSDATETIME() WHERE ([snap_submit_id] = {snap_submit_id})");
+			}
+
+		}
 	}
 }

@@ -89,8 +89,12 @@ namespace Spludlow.MameAO
 				else
 					++skipCount;
 
-				if ((count++ % 4096) == 0)
-					Console.WriteLine($"machine: {count}/{sourceFilenames.Length}");
+				if (sourceFilenames.Length < 1024)
+					Console.WriteLine($"machine: {count}/{sourceFilename}");
+				else
+					if ((count % 4096) == 0)
+						Console.WriteLine($"machine: {count}/{sourceFilenames.Length}");
+				++count;
 			}
 			Console.WriteLine($"Machine process:{processCount}, skip: {skipCount}, took:{(DateTime.Now - startTime).TotalMinutes}");
 		}
@@ -136,9 +140,11 @@ namespace Spludlow.MameAO
 						++processCount;
 					else
 						++skipCount;
-
-					if ((count++ % 4096) == 0)
-						Console.WriteLine($"{softwarelist_name}: {count}/{sourceFilenames.Length}");
+					if (sourceFilenames.Length < 1024)
+						Console.WriteLine($"software: {count}/{sourceFilename}");
+					else
+						if ((count % 4096) == 0)
+							Console.WriteLine($"{softwarelist_name}: {count}/{sourceFilenames.Length}");
 				}
 			}
 			Console.WriteLine($"Software process:{processCount}, skip: {skipCount}, took:{(DateTime.Now - startTime).TotalMinutes}");
@@ -180,25 +186,41 @@ namespace Spludlow.MameAO
 				"String*	Int64	DateTime		Int32	Int32	Single					Single				Int64			String		String"
 			);
 
+			DataTable existingTable = table.Clone();
+			if (File.Exists(indexFilename) == true)
+				existingTable = Tools.TextTableReadFile(indexFilename);
+
 			int count = 0;
 			string[] filenames = Directory.GetFiles(directory, "*.png", SearchOption.AllDirectories);
 			foreach (string filename in filenames)
 			{
 				FileInfo info = new FileInfo(filename);
 
+				DateTime lastWriteTime = info.LastWriteTime;
+				lastWriteTime = new DateTime(lastWriteTime.Ticks - (lastWriteTime.Ticks % TimeSpan.TicksPerSecond), lastWriteTime.Kind);
+
 				string name = info.FullName.Substring(directory.Length + 1);
 				name = name.Substring(0, name.Length - 4);
 
-				using (Image image = Image.FromFile(filename))
-				{
-					string propertyItems = String.Join(", ",
-							image.PropertyItems.Where(item => item.Type == 2)
-							.Select(item => item.Id + ":" + new string(item.Value.Select(b => (b >= 32 && b <= 126) ? (char)b : ' ').ToArray()).Trim())
-						);
+				DataRow existingRow = existingTable.Rows.Find(name);
 
-					table.Rows.Add(name, info.Length, info.LastWriteTime,
-						image.Width, image.Height, image.HorizontalResolution, image.VerticalResolution,
-						image.Palette.Entries.LongLength, image.PixelFormat.ToString(), propertyItems);
+				if (existingRow == null || (DateTime)existingRow["LastWriteTime"] != lastWriteTime)
+				{
+					using (Image image = Image.FromFile(filename))
+					{
+						string propertyItems = String.Join(", ",
+								image.PropertyItems.Where(item => item.Type == 2)
+								.Select(item => item.Id + ":" + new string(item.Value.Select(b => (b >= 32 && b <= 126) ? (char)b : ' ').ToArray()).Trim())
+							);
+
+						table.Rows.Add(name, info.Length, info.LastWriteTime,
+							image.Width, image.Height, image.HorizontalResolution, image.VerticalResolution,
+							image.Palette.Entries.LongLength, image.PixelFormat.ToString(), propertyItems);
+					}
+				}
+				else
+				{
+					table.ImportRow(existingRow);
 				}
 
 				if ((count++ % 4096) == 0)
