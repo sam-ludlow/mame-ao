@@ -160,7 +160,7 @@ namespace Spludlow.MameAO
 			if (File.Exists(targetFilename) == true)
 				targetInfo = new FileInfo(targetFilename);
 
-			if (targetInfo != null && targetInfo.LastWriteTime <= sourceInfo.LastWriteTime)
+			if (targetInfo != null && targetInfo.LastWriteTime >= sourceInfo.LastWriteTime)
 				return false;
 
 			// PNG
