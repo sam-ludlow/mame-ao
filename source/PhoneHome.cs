@@ -322,7 +322,7 @@ namespace Spludlow.MameAO
 					case -1:	// Rejected
 						break;
 
-					case 1:     // Aproved
+					case 1:		// Aproved
 						string targetFilename = softwarelist_name == null ?
 							Path.Combine(snapTempDirectory, core_name, machine_name + ".png") : Path.Combine(snapTempDirectory, core_name, softwarelist_name, software_name + ".png");
 
@@ -336,6 +336,53 @@ namespace Spludlow.MameAO
 				}
 
 				Database.ExecuteNonQuery(connection, $"UPDATE [snap_submit] SET [process_time] = SYSDATETIME() WHERE ([snap_submit_id] = {snap_submit_id})");
+			}
+
+			//
+			//	Update web snap stats
+			//
+			string commandText = @"
+				SELECT
+					display_name AS [Display Name],
+					CONVERT(varchar(24), MIN(snap_uploaded), 120) AS [First Upload],
+					CONVERT(varchar(24), MAX(snap_uploaded), 120) AS [Last Upload],
+					SUM(CASE WHEN [status] = 1  THEN 1 ELSE 0 END) AS [Approved],
+					SUM(CASE WHEN [status] = -1 THEN 1 ELSE 0 END) AS [Rejected],
+					COUNT(*) AS [Total]
+				FROM snap_submit
+				GROUP BY display_name
+				ORDER BY [Approved] DESC;
+			";
+
+			DataTable table = Database.ExecuteFill(connection, commandText);
+
+			StringBuilder html = new StringBuilder();
+
+			html.AppendLine("<h2>Top Submitters</h2>");
+			html.AppendLine(Reports.MakeHtmlTable(table, null));
+
+			connection.Open();
+			SqlTransaction transaction = connection.BeginTransaction();
+			try
+			{
+				SqlCommand command = new SqlCommand("DELETE FROM [payload] WHERE [payload_key] = 'snap-stats';", connection, transaction);
+				command.ExecuteNonQuery();
+
+				command = new SqlCommand("INSERT INTO [payload] ([payload_key], [title], [xml], [json], [html]) VALUES('snap-stats', @title, '', '', @html);", connection, transaction);
+				command.Parameters.AddWithValue("@title", $"Last Assimilation: {DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss")}");
+				command.Parameters.AddWithValue("@html", html.ToString());
+				command.ExecuteNonQuery();
+
+				transaction.Commit();
+			}
+			catch
+			{
+				transaction?.Rollback();
+				throw;
+			}
+			finally
+			{
+				connection.Close(); 
 			}
 
 		}
