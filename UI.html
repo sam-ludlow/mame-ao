@@ -345,8 +345,15 @@
 				'/about': about,
 			}[_path];
 
-			if (routeFunction !== undefined)
+			if (routeFunction !== undefined) {
 				await routeFunction();
+			} else {
+				// Handle going back to dead pages
+				window.addEventListener('pageshow', () => {
+					if (event.persisted)
+						history.back();
+				});
+			}
 		}
 
 		//
@@ -1687,13 +1694,6 @@
 		//
 
 		window.onload = main;
-
-		window.addEventListener('pageshow', (event) => {
-
-			// Handle going back from solftware lists, forward will not work
-			if (event.persisted && _pathParts.length === 4 && _pathParts[1] === '/machines' && history.length > 1)
-				history.back();
-		});
 
 	</script>
 
