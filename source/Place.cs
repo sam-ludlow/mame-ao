@@ -9,6 +9,21 @@ namespace Spludlow.MameAO
 {
 	public class Place
 	{
+		private static bool _BtStarted;
+		private static void StartBitTorrent()
+		{
+			if (_BtStarted == true)
+				return;
+
+			if (BitTorrent.DomeInfo() == null)
+				BitTorrent.Start();
+
+			BitTorrent.WaitReady();
+
+			BitTorrent.EnableCore(Globals.Core.Name);
+
+			_BtStarted = true;
+		}
 		public static void PlaceAssets(ICore core, string machineName, string softwareName)
 		{
 			Tools.ConsoleHeading(1, "Asset Acquisition");
@@ -30,15 +45,7 @@ namespace Spludlow.MameAO
 			if (Globals.BitTorrentAvailable == false && core.Name != "mame")
 				throw new ApplicationException("Archive.org downloads are only supported for MAME");
 
-			if (Globals.BitTorrentAvailable == true)
-			{
-				if (BitTorrent.DomeInfo() == null)
-					BitTorrent.Start();
-
-				BitTorrent.WaitReady();
-
-				BitTorrent.EnableCore(core.Name);
-			}
+			_BtStarted = false;
 
 			DataRow machine = core.GetMachine(machineName) ?? throw new ApplicationException($"Machine not found: {machineName}");
 
@@ -194,6 +201,7 @@ namespace Spludlow.MameAO
 							}
 							else
 							{
+								StartBitTorrent();
 								var btFile = BitTorrent.MachineRom(core.Name, requiredMachineName);
 								if (btFile != null)
 									DownloadImportFiles(btFile.Filename, btFile.Length, info);
@@ -245,6 +253,7 @@ namespace Spludlow.MameAO
 						}
 						else
 						{
+							StartBitTorrent();
 							var btFile = BitTorrent.MachineDisk(core.Name, availableMachineName, availableDiskName);
 							if (btFile != null)
 								DownloadImportDisk(btFile.Filename, btFile.Length, sha1, info);
@@ -332,6 +341,7 @@ namespace Spludlow.MameAO
 				}
 				else
 				{
+					StartBitTorrent();
 					var btFile = BitTorrent.SoftwareRom(core.Name, softwareListName, requiredSoftwareName);
 					if (btFile != null)
 						DownloadImportFiles(btFile.Filename, btFile.Length, info);
@@ -392,6 +402,7 @@ namespace Spludlow.MameAO
 						}
 						else
 						{
+							StartBitTorrent();
 							var btFile = BitTorrent.SoftwareDisk(core.Name, softwareListName, downloadSoftwareName, name);
 							if (btFile != null)
 								DownloadImportDisk(btFile.Filename, btFile.Length, sha1, info);
