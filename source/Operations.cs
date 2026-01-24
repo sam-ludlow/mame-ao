@@ -45,6 +45,10 @@ namespace Spludlow.MameAO
 						PhoneHome.ApprovePhoneHome(parameters["directory"], parameters["database"]);
 						break;
 
+					case "update_pugsys_cheats":
+						exitCode = Cheats.UpdateFromPugsy(Path.Combine(parameters["directory"]));
+						break;
+
 					default:
 						throw new ApplicationException($"Bad operation: {operation}");
 				}
