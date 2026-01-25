@@ -144,12 +144,6 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			if (File.Exists(targetZipFilename) == false)
-			{
-				ZipFile.CreateFromDirectory(targetDirectory, targetZipFilename);
-				File.WriteAllText(Path.Combine(directory, "latest.txt"), version, Encoding.ASCII);
-			}
-
 			SqlConnection[] connections = new SqlConnection[] {
 				new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNames[0]}';"),
 				new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseNames[1]}';"),
@@ -163,16 +157,13 @@ namespace Spludlow.MameAO
 			if (Database.TableExists(connections[1], "cheat_software_version") == true)
 				softwareVersion = (string)Database.ExecuteScalar(connections[1], "SELECT [version] FROM [cheat_software_version] WHERE [key_1] = 1");
 
-			if (machineVersion == version && softwareVersion == version)
-			{
-				Console.WriteLine("Database already up to date.");
-				return 0;
-			}
-
-			DataSet[] dataSets = MameCheatsData(targetDirectory, version);
-
+			DataSet[] dataSets = null;
+			
 			if (machineVersion != version)
 			{
+				if (dataSets == null)
+					dataSets = MameCheatsData(targetDirectory, version);
+
 				foreach (DataTable table in dataSets[0].Tables)
 					Database.ExecuteNonQuery(connections[0], $"DROP TABLE IF EXISTS [{table.TableName}];");
 
@@ -191,6 +182,9 @@ namespace Spludlow.MameAO
 
 			if (softwareVersion != version)
 			{
+				if (dataSets == null)
+					dataSets = MameCheatsData(targetDirectory, version);
+
 				foreach (DataTable table in dataSets[1].Tables)
 					Database.ExecuteNonQuery(connections[1], $"DROP TABLE IF EXISTS [{table.TableName}];");
 
@@ -207,6 +201,11 @@ namespace Spludlow.MameAO
 				");
 			}
 
+			if (File.Exists(targetZipFilename) == false)
+			{
+				ZipFile.CreateFromDirectory(targetDirectory, targetZipFilename);
+				File.WriteAllText(Path.Combine(directory, "latest.txt"), version, Encoding.ASCII);
+			}
 
 			return 1;
         }
@@ -236,7 +235,7 @@ namespace Spludlow.MameAO
 
 			DataTable softwareVersionTable = Tools.MakeDataTable("cheat_software_version",
 				"key_1	version",
-				"Int64	String");
+				"Int64*	String");
 			softwareVersionTable.Rows.Add(1L, version);
 			dataSets[1].Tables.Add(softwareVersionTable);
 
