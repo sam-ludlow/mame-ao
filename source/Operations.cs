@@ -46,7 +46,8 @@ namespace Spludlow.MameAO
 						break;
 
 					case "update_pugsys_cheats":
-						exitCode = Cheats.UpdateFromPugsy(Path.Combine(parameters["directory"]));
+						ValidateRequiredParameters(parameters, new string[] { "server", "names" });
+						exitCode = Cheats.UpdateFromPugsy(parameters["directory"], parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
 						break;
 
 					default:

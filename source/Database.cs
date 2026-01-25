@@ -5,6 +5,7 @@ using System.Text;
 
 using System.Data.SqlClient;
 using System.Data.SQLite;
+using System.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -252,6 +253,10 @@ namespace Spludlow.MameAO
 
 			targetConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{databaseName}';");
 
+			DataSet2MSSQLTables(dataSet, targetConnection);
+		}
+		public static void DataSet2MSSQLTables(DataSet dataSet, SqlConnection targetConnection)
+		{
 			foreach (DataTable table in dataSet.Tables)
 			{
 				List<string> columnDefs = new List<string>();
@@ -268,10 +273,16 @@ namespace Spludlow.MameAO
 						}
 					}
 
+					string length = max == -1 || max > 4096 ? "max" : max.ToString();
+
 					switch (column.DataType.Name)
 					{
 						case "String":
-							columnDefs.Add($"[{column.ColumnName}] NVARCHAR({max})");
+							columnDefs.Add($"[{column.ColumnName}] NVARCHAR({length})");
+							break;
+
+						case "Int32":
+							columnDefs.Add($"[{column.ColumnName}] INT");
 							break;
 
 						case "Int64":
@@ -283,7 +294,12 @@ namespace Spludlow.MameAO
 					}
 				}
 
-				columnDefs.Add($"CONSTRAINT [PK_{table.TableName}] PRIMARY KEY NONCLUSTERED ([{table.Columns[0].ColumnName}])");
+				string[] pkNames = new string[] { table.Columns[0].ColumnName };
+
+				if (table.PrimaryKey != null && table.PrimaryKey.Length > 0)
+					pkNames = table.PrimaryKey.Select(column => column.ColumnName).ToArray();
+
+				columnDefs.Add($"CONSTRAINT [PK_{table.TableName}] PRIMARY KEY NONCLUSTERED ({String.Join(", ", pkNames.Select(name => $"[{name}]"))})");
 
 				string createText = $"CREATE TABLE [{table.TableName}]({String.Join(", ", columnDefs.ToArray())});";
 
