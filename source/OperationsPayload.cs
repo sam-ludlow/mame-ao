@@ -164,16 +164,18 @@ namespace Spludlow.MameAO
 			string exePath = Path.Combine(versionDirectory, $"{coreName}.exe");
 			string exeTime = File.GetLastWriteTime(exePath).ToString("s");
 
-			MameishMSSQLMachinePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
+			DataTable snapTable = Snap.LoadSnapIndex(Path.Combine(Path.GetDirectoryName(directory), "snap"), coreName);
+
+			MameishMSSQLMachinePayloads(directory, version, connections, coreName, versionDirectory, exeTime, snapTable);
 			
-			MameishMSSQLMachinePayloadsSearch(connections, coreName);
+			MameishMSSQLMachinePayloadsSearch(connections, coreName, snapTable);
 
 			MameishMSSQLSoftwarePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
 
 			return 0;
 		}
 
-		public static void MameishMSSQLMachinePayloadsSearch(SqlConnection[] connections, string coreName)
+		public static void MameishMSSQLMachinePayloadsSearch(SqlConnection[] connections, string coreName, DataTable snapTable)
 		{
 			//	TODO:	feature 0-5, chip
 
@@ -357,20 +359,25 @@ namespace Spludlow.MameAO
 			//
 			// Build line payloads
 			//
-			foreach (string name in new string[] { "xml", "json", "html" })
+			foreach (string name in new string[] { "xml", "json", "html", "html_card" })
 				searchTable.Columns.Add(name, typeof(string));
 
 			string[] columnNames = new string[] { "name", "description", "year", "manufacturer", "cloneof", "romof" };
 
 			foreach (DataRow row in searchTable.Rows)
 			{
-				StringBuilder tr = new StringBuilder();
-				tr.Append("<tr>");
+				StringBuilder item;
+
+				//
+				// Table row
+				//
+				item = new StringBuilder();
+				item.Append("<tr>");
 
 				foreach (string columnName in columnNames)
 				{
 					DataColumn column = searchTable.Columns[columnName];
-					tr.Append("<td>");
+					item.Append("<td>");
 					if (row.IsNull(column) == false)
 					{
 						switch (columnName)
@@ -378,19 +385,48 @@ namespace Spludlow.MameAO
 							case "name":
 							case "cloneof":
 							case "romof":
-								tr.Append($"<a href=\"/{coreName}/machine/{row[column]}\">{row[column]}</a>");
+								item.Append($"<a href=\"/{coreName}/machine/{row[column]}\">{row[column]}</a>");
 								break;
 							default:
-								tr.Append(WebUtility.HtmlEncode(Convert.ToString(row[column])));
+								item.Append(WebUtility.HtmlEncode(Convert.ToString(row[column])));
 								break;
 						}
 					}
 
-					tr.Append("</td>");
+					item.Append("</td>");
 				}
 
-				tr.Append("</tr>");
-				row["html"] = tr.ToString();
+				item.Append("</tr>");
+				row["html"] = item.ToString();
+
+				//
+				// Div card
+				//
+				string machine_name = (string)row["name"];
+				string machine_description = (string)row["description"];
+				string machine_year = row.IsNull("year") ? "" : (string)row["year"];
+				string machine_manufacturer = row.IsNull("manufacturer") ? "" : (string)row["manufacturer"];
+				DataRow snapRow = snapTable == null ? null : snapTable.Rows.Find(machine_name);
+
+				item = new StringBuilder();
+				item.Append("<div class=\"card\">");
+
+				item.Append($"<div class=\"card-thumb\"><a href=\"/{coreName}/machine/{machine_name}\" class=\"card-link\">");
+				if (snapRow == null)
+					item.Append($"<p>{machine_name}</p><p>snap not available</p>");
+				else
+					item.Append($"<img src=\"/{coreName}/machine/{machine_name}.jpg\" alt=\"{machine_description}\" loading=\"lazy\" class=\"card-img\" />");
+				item.Append("</a></div>");
+
+				item.Append("<div class=\"card-body\">");
+				item.Append($"<div class=\"card-name\">{machine_name}</div>");
+				item.Append($"<div class=\"card-description\">{machine_description}</div>");
+				item.Append($"<div class=\"card-year\">{machine_year}</div>");
+				item.Append($"<div class=\"card-manufacturer\">{machine_manufacturer}</div>");
+				item.Append("</div>");
+
+				item.Append("</div>");
+				row["html_card"] = item.ToString();
 			}
 
 			//
@@ -423,9 +459,9 @@ namespace Spludlow.MameAO
 			MakeMSSQLPayloadsInsert(connections[0], searchTable);
 
 			//
-			// Create serach index
+			// Create indexes
 			//
-			commandText = @"
+			Database.ExecuteNonQuery(connections[0], @"
 				CREATE FULLTEXT INDEX ON [machine_search_payload]
 				(
 					[name],
@@ -436,13 +472,14 @@ namespace Spludlow.MameAO
 				KEY INDEX [PK_machine_search_payload]
 				ON [ao_catalog]
 				WITH CHANGE_TRACKING AUTO;
-			";
+			");
 
-			Database.ExecuteNonQuery(connections[0], commandText);
-
+			Database.ExecuteNonQuery(connections[0], @"
+				CREATE INDEX [IX_machine_search_payload_description] ON [machine_search_payload] ([description]);
+			");
 		}
 
-		public static void MameishMSSQLMachinePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime)
+		public static void MameishMSSQLMachinePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime, DataTable snapTable)
 		{
 			DeleteExistingPayloadTables(connections[0]);
 
@@ -520,11 +557,6 @@ namespace Spludlow.MameAO
 					}
 				}
 			}
-
-			//
-			//	Snaps
-			//
-			DataTable snapTable = Snap.LoadSnapIndex(Path.Combine(Path.GetDirectoryName(directory), "snap"), coreName);
 
 			//
 			// Payloads
@@ -658,15 +690,11 @@ namespace Spludlow.MameAO
 
 					if (tableName == "machine" && snapTable != null)
 					{
-						html.AppendLine("<hr />");
-						html.AppendLine("<h2>snap</h2>");
 						DataRow snapRow = snapTable.Rows.Find(machine_name);
-						if (snapRow == null)
+						if (snapRow != null)
 						{
-							html.AppendLine("<p>Snap not available.</p>");
-						}
-						else
-						{
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>snap</h2>");
 							html.AppendLine($"<img src=\"/{coreName}/machine/{machine_name}.png\" alt=\"{(string)machineRow["description"]} png snap\">");
 							html.AppendLine($"<img src=\"/{coreName}/machine/{machine_name}.jpg\" alt=\"{(string)machineRow["description"]} jpg snap thumbnail\">");
 							html.AppendLine(Reports.MakeHtmlTable(snapTable, new DataRow[] { snapRow }, null));
@@ -1112,15 +1140,11 @@ namespace Spludlow.MameAO
 
 					if (snapTable != null)
 					{
-						html.AppendLine("<hr />");
-						html.AppendLine("<h2>snap</h2>");
 						DataRow snapRow = snapTable.Rows.Find($"{softwarelist_name}\\{software_name}");
-						if (snapRow == null)
+						if (snapRow != null)
 						{
-							html.AppendLine("<p>Snap not available.</p>");
-						}
-						else
-						{
+							html.AppendLine("<hr />");
+							html.AppendLine("<h2>snap</h2>");
 							html.AppendLine($"<img src=\"/{coreName}/software/{softwarelist_name}/{software_name}.png\" alt=\"{softwarelist_name}/{software_name} png snap\">");
 							html.AppendLine($"<img src=\"/{coreName}/software/{softwarelist_name}/{software_name}.jpg\" alt=\"{softwarelist_name}/{software_name} jpg snap thumbnail\">");
 							html.AppendLine(Reports.MakeHtmlTable(snapTable, new DataRow[] { snapRow }, null));
@@ -1128,7 +1152,6 @@ namespace Spludlow.MameAO
 					}
 
 					html.AppendLine("<hr />");
-
 					html.AppendLine("<h2>softwarelist</h2>");
 					html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new[] { softwarelistRow }, null));
 
