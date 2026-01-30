@@ -406,16 +406,26 @@ namespace Spludlow.MameAO
 				string machine_description = (string)row["description"];
 				string machine_year = row.IsNull("year") ? "" : (string)row["year"];
 				string machine_manufacturer = row.IsNull("manufacturer") ? "" : (string)row["manufacturer"];
+				string machine_isdevice = (string)row["isdevice"];
+
 				DataRow snapRow = snapTable == null ? null : snapTable.Rows.Find(machine_name);
 
 				item = new StringBuilder();
 				item.Append("<div class=\"card\">");
 
 				item.Append($"<div class=\"card-thumb\"><a href=\"/{coreName}/machine/{machine_name}\" class=\"card-link\">");
-				if (snapRow == null)
-					item.Append($"<p>{machine_name}</p><p>snap not available</p>");
-				else
+				if (snapRow != null)
+				{
 					item.Append($"<img src=\"/{coreName}/machine/{machine_name}.jpg\" alt=\"{machine_description}\" loading=\"lazy\" class=\"card-img\" />");
+				}
+				else
+				{
+					if (machine_isdevice == "yes")
+						item.Append($"<p>DEVICE</p>");
+					else
+						item.Append($"<p>NO SNAP</p>");
+				}
+					
 				item.Append("</a></div>");
 
 				item.Append("<div class=\"card-body\">");

@@ -382,5 +382,36 @@ namespace Spludlow.MameAO
 				Database.ExecuteNonQuery(targetConnection, $"SET IDENTITY_INSERT [{targetTableName}] OFF");
 			}
 		}
+
+		public static void UtilDeleteDeviceThumbs(string connectionString, string snapCoreDirectory)
+		{
+			SqlConnection connection = new SqlConnection(connectionString);
+
+			DataTable table = Database.ExecuteFill(connection, "SELECT [name] FROM [machine] WHERE ([isdevice] = 'yes') ORDER BY [name];");
+
+			foreach (DataRow row in table.Rows)
+			{
+				string machine_name = (string)row["name"];
+
+				string filename;
+
+				filename = Path.Combine(snapCoreDirectory, "png", machine_name + ".png");
+
+				if (File.Exists(filename) == true)
+				{
+					File.Delete(filename);
+					Console.WriteLine(filename);
+				}
+
+				filename = Path.Combine(snapCoreDirectory, "jpg", machine_name + ".jpg");
+				if (File.Exists(filename) == true)
+				{
+					File.Delete(filename);
+					Console.WriteLine(filename);
+				}
+			}
+		}
+
+
 	}
 }
