@@ -25,6 +25,83 @@ namespace Spludlow.MameAO
 				JpegCodecInfo = imageDecoders[0];
 		}
 
+		public static void TestAspect()
+		{
+			string commandText = @"
+				SELECT
+					machine.name,
+					display.tag,
+					display.type,
+					display.rotate,
+					display.width,
+					display.height,
+					display.refresh,
+					display.pixclock,
+					display.htotal,
+					display.hbend,
+					display.hbstart,
+					display.vtotal,
+					display.vbend,
+					display.vbstart,
+					display.flipx
+				FROM
+					machine
+					INNER JOIN display ON machine.machine_id = display.machine_id
+				ORDER BY
+					machine.name;
+			";
+
+			SqlConnection connection = new SqlConnection("Server='my-mssql-server';Database='ao-mame-machine';Integrated Security=True;TrustServerCertificate=True;");
+
+			DataTable displayTable = Database.ExecuteFill(connection, commandText);
+
+			foreach (DataRow row in displayTable.Rows)
+			{
+				string type = (string)row["type"];
+
+				string rotate = (string)row["rotate"];
+
+				int width = 0;
+				int height = 0;
+				if (type != "vector")
+				{
+					width = Int32.Parse((string)row["width"]);
+					height = Int32.Parse((string)row["height"]);
+				}
+
+				double refresh = Double.Parse((string)row["refresh"]);
+
+				bool flipx = false;
+				if ((string)row["flipx"] == "yes")
+					flipx = true;
+
+
+				//	pixclock or nothing from here
+
+				//string type = (string)row["type"];
+				//string type = (string)row["type"];
+				//string type = (string)row["type"];
+
+
+				//				visible_width = hbstart - hbend
+				//visible_height = vbstart - vbend
+
+
+				//	pixel_aspect = (htotal / vtotal)
+
+
+				//	target_AR = (visible_width / visible_height) × (vtotal / htotal)
+
+
+			}
+
+
+			Tools.PopText(displayTable);
+
+
+
+		}
+
 		public static string CollectSnaps(string machine_name)
 		{
 			string snapFilename = null;

@@ -49,7 +49,7 @@ namespace Spludlow.MameAO
 
 			foreach (dynamic release in releases)
 			{
-				if ((string)release.name == "nightly builds")
+				if ((string)release.name == "nightly release")
 				{
 					_Version = ((DateTime)release.published_at).ToString("s").Replace(":", "-");
 
