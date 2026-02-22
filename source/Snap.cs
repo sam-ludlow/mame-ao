@@ -414,6 +414,61 @@ namespace Spludlow.MameAO
 
 		public static void UtilFixAspectThumbsMachine(string connectionString, string snapCoreDirectory)
 		{
+			DataTable displayTable = GetDisplayTable(new SqlConnection(connectionString));
+
+			string pngDirectory = Path.Combine(snapCoreDirectory, "png");
+			string jpgDirectory = Path.Combine(snapCoreDirectory, "jpg");
+
+			int count = 0;
+			string[] pngFilenames = Directory.GetFiles(pngDirectory, "*.png");
+			foreach (string pngFilename in pngFilenames)
+			{
+				if ((count++ % 1024) == 0)
+					Console.WriteLine($"{count}/{pngFilenames.Length}");
+
+				string machine_name = Path.GetFileNameWithoutExtension(pngFilename);
+
+				string jpgFilename = Path.Combine(jpgDirectory, machine_name + ".jpg");
+
+				Size targetSize = FixedSize(machine_name, displayTable);
+
+				CreateThumbnail(pngFilename, jpgFilename, targetSize);
+			}
+		}
+
+		public static void CreateThumbnail(string pngFilename, string jpgFilename, Size targetSize)
+		{
+			using (var image = Image.FromFile(pngFilename))
+			{
+				if (targetSize.IsEmpty == true)
+					targetSize = new Size(image.Width, image.Height);
+
+				//string targetDirectory = @"C:\tmp\test snap";
+
+				//string testFilename1 = Path.Combine(targetDirectory, machine_name + "@1.png");
+				//string testFilename2 = Path.Combine(targetDirectory, machine_name + "@2.jpg");
+
+				//File.Copy(pngFilename, testFilename1);
+
+				using (Bitmap bitmap = new Bitmap(targetSize.Width, targetSize.Height, PixelFormat.Format24bppRgb))
+				{
+					bitmap.SetResolution(96, 96);
+					using (Graphics graphics = Graphics.FromImage(bitmap))
+					{
+						ConfigureGraphicsPixel(graphics);
+						graphics.DrawImage(image, new Rectangle(0, 0, targetSize.Width, targetSize.Height));
+					}
+
+					//Resize(bitmap, ThumbSize, testFilename2, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 96);
+
+					File.Delete(jpgFilename);
+					Resize(bitmap, ThumbSize, jpgFilename, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 96);
+				}
+			}
+		}
+
+		public static DataTable GetDisplayTable(SqlConnection connection)
+		{
 			string commandText = @"
 				SELECT
 					machine.name,
@@ -438,170 +493,49 @@ namespace Spludlow.MameAO
 					machine.name;
 			";
 
-			SqlConnection connection = new SqlConnection(connectionString);
-
-			DataTable displayTable = Database.ExecuteFill(connection, commandText);
-
-			string pngDirectory = Path.Combine(snapCoreDirectory, "png");
-			string jpgDirectory = Path.Combine(snapCoreDirectory, "jpg");
-
-			DataTable resultTable = displayTable.Clone();
-			resultTable.Columns.Add("status", typeof(string));
-			resultTable.Columns.Add("width_snap", typeof(string));
-			resultTable.Columns.Add("height_snap", typeof(string));
-			resultTable.Columns.Add("aspect_snap", typeof(double));
-			resultTable.Columns.Add("width_visible", typeof(string));
-			resultTable.Columns.Add("height_visible", typeof(string));
-			resultTable.Columns.Add("aspect_visible", typeof(double));
-			resultTable.Columns.Add("aspect_diff", typeof(double));
-
-			int count = 0;
-			string[] pngFilenames = Directory.GetFiles(pngDirectory, "*.png");
-			foreach (string pngFilename in pngFilenames)
-			{
-				if ((count++ % 1024) == 0)
-					Console.WriteLine($"{count}/{pngFilenames.Length}");
-
-				string machine_name = Path.GetFileNameWithoutExtension(pngFilename);
-
-				string jpgFilename = Path.Combine(jpgDirectory, machine_name + ".jpg");
-
-				DataRow resultRow = resultTable.Rows.Add(machine_name);
-
-				DataRow[] displayRows = displayTable.Select($"[name] = '{machine_name}'");
-
-				if (displayRows.Length != 1)
-				{
-					resultRow["status"] = $"DISPLAYS:{displayRows.Length}";
-					continue;
-				}
-
-				DataRow row = displayRows[0];
-
-				foreach (DataColumn column in displayTable.Columns)
-					resultRow[column.ColumnName] = row[column];
-
-				string type = (string)row["type"];
-
-				if (type != "raster")
-				{
-					resultRow["status"] = "NOT RASTER";
-					continue;
-				}
-
-				if (row.IsNull("pixclock") == true)
-				{
-					resultRow["status"] = "NO PIXCLOCK";
-					continue;
-				}
-
-				int rotate = Int32.Parse((string)row["rotate"]);
-				int width = Int32.Parse((string)row["width"]);
-				int height = Int32.Parse((string)row["height"]);
-
-				double refresh = Double.Parse((string)row["refresh"]);
-
-				bool flipx = false;
-				if ((string)row["flipx"] == "yes")
-					flipx = true;
-
-				double pixclock = Double.Parse((string)row["pixclock"]);
-				int htotal = Int32.Parse((string)row["htotal"]);
-				int hbend = Int32.Parse((string)row["hbend"]);
-				int hbstart = Int32.Parse((string)row["hbstart"]);
-				int vtotal = Int32.Parse((string)row["vtotal"]);
-				int vbend = Int32.Parse((string)row["vbend"]);
-				int vbstart = Int32.Parse((string)row["vbstart"]);
-
-				int width_visible = hbstart - hbend;
-				int height_visible = vbstart - vbend;
-
-				if (rotate == 90 || rotate == 270)
-				{
-					int tmp = width_visible;
-					width_visible = height_visible;
-					height_visible = tmp;
-				}
-
-				double dar;
-
-				if (width_visible >= 640)
-				{
-					dar = (double)width_visible / height_visible;
-				}
-				else
-				{
-					dar = (rotate == 90 || rotate == 270)
-						? 3.0 / 4.0
-						: 4.0 / 3.0;
-				}
-
-				width_visible = (int)Math.Round(height_visible * dar);
-
-				double aspect_visible = (double)width_visible / height_visible;
-
-				int width_snap = 0;
-				int height_snap = 0;
-				using (var image = Image.FromFile(pngFilename))
-				{
-					width_snap = image.Width;
-					height_snap = image.Height;
-
-					double aspect_snap = (double)width_snap / height_snap;
-
-					double aspect_diff = Math.Abs(aspect_snap - aspect_visible);
-
-					resultRow["width_snap"] = width_snap;
-					resultRow["height_snap"] = height_snap;
-					resultRow["aspect_snap"] = aspect_snap;
-
-					resultRow["width_visible"] = width_visible;
-					resultRow["height_visible"] = height_visible;
-					resultRow["aspect_visible"] = aspect_visible;
-
-					resultRow["aspect_diff"] = aspect_diff;
-
-					if (aspect_snap == aspect_visible)
-					{
-						resultRow["status"] = "ASPECT OK";
-						continue;
-					}
-
-					string targetDirectory = @"C:\tmp\test snap";
-
-					string testFilename1 = Path.Combine(targetDirectory, machine_name + "@1.jpg");
-					string testFilename2 = Path.Combine(targetDirectory, machine_name + "@2.jpg");
-
-					//File.Copy(jpgFilename, testFilename1);
-
-					using (Bitmap bitmap = new Bitmap(width_visible, height_visible, PixelFormat.Format24bppRgb))
-					{
-						bitmap.SetResolution(96, 96);
-						using (Graphics graphics = Graphics.FromImage(bitmap))
-						{
-							ConfigureGraphicsPixel(graphics);
-							graphics.DrawImage(image, new Rectangle(0, 0, width_visible, height_visible));
-						}
-
-						//Resize(bitmap, ThumbSize, testFilename2, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 96);
-
-						File.Delete(jpgFilename);
-						Resize(bitmap, ThumbSize, jpgFilename, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 96);
-					}
-				}
-			}
-
-			DataView view = new DataView(resultTable);
-			view.RowFilter = "[status] IS NULL";
-			view.Sort = "aspect_diff";
-
-			DataTable table = resultTable.Clone();
-			foreach (DataRowView rowView in view)
-				table.ImportRow(rowView.Row);
-
-			Tools.PopText(table);
+			return Database.ExecuteFill(connection, commandText);
 		}
 
+		public static Size FixedSize(string machine_name, DataTable displayTable)
+		{
+			DataRow[] rows = displayTable.Select($"[name] = '{machine_name}'");
+
+			if (rows.Length != 1)
+				return new Size();
+
+			DataRow row = rows[0];
+
+			string type = (string)row["type"];
+
+			if (type != "raster")
+				return new Size();
+
+			if (row.IsNull("pixclock") == true)
+				return new Size();
+
+			if (((string)row["tag"]).Contains("screen") == false)
+				return new Size();
+
+			int rotate = Int32.Parse((string)row["rotate"]);
+			int width = Int32.Parse((string)row["width"]);
+			int height = Int32.Parse((string)row["height"]);
+
+			int hbend = Int32.Parse((string)row["hbend"]);
+			int hbstart = Int32.Parse((string)row["hbstart"]);
+			int vbend = Int32.Parse((string)row["vbend"]);
+			int vbstart = Int32.Parse((string)row["vbstart"]);
+
+			int width_visible = hbstart - hbend;
+			int height_visible = vbstart - vbend;
+
+			// Probably a 4:3 CRT
+			if (height_visible >= 100 && height_visible <= 567)
+				height_visible = (int)Math.Round(width_visible / 4.0 * 3.0, 0);
+
+			bool isRotate = rotate == 90 || rotate == 270;
+
+			return new Size(isRotate ? height_visible : width_visible, isRotate ? width_visible : height_visible);
+		}
 
 	}
 }

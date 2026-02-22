@@ -8,6 +8,7 @@ using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using System.Drawing.Imaging;
+using System.Drawing;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -183,12 +184,12 @@ namespace Spludlow.MameAO
 			task.Start();
 		}
 
-		public static void ProcessPhoneHome(string directory, string connectionString)
+		public static void ProcessPhoneHome(string directory, string masterConnectionString, string serverConnectionString, string[] machineDatabaseNames)
 		{
 			string snapHomeDirectory = Path.Combine(directory, "snap-home");
 			string snapSubmitDirectory = Path.Combine(directory, "snap-submit");
 
-			SqlConnection connection = new SqlConnection(connectionString);
+			SqlConnection connection = new SqlConnection(masterConnectionString);
 
 			DataTable phoneHomesTable = new DataTable();
 			using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT * FROM [phone_home] WHERE ([process_time] IS NULL AND [token] IS NOT NULL) ORDER BY [phone_home_id]", connection))
@@ -196,6 +197,7 @@ namespace Spludlow.MameAO
 
 			DataTable targetTable = null;
 			Dictionary<string, DataTable> snapIndexTables = null;
+			Dictionary<string, DataTable> displayTables = null;
 
 			foreach (DataRow phoneHomeRow in phoneHomesTable.Rows)
 			{
@@ -219,6 +221,18 @@ namespace Spludlow.MameAO
 					targetTable = new DataTable("snap_submit");
 					using (SqlDataAdapter adapter = new SqlDataAdapter("SELECT TOP 0 * FROM [snap_submit]", connection))
 						adapter.Fill(targetTable);
+				}
+
+				if (displayTables == null)
+				{
+					displayTables = new Dictionary<string, DataTable>();
+					string[] coreNames = new string[] { "mame", "hbmame" };
+					for (int index = 0; index < 2; ++index)
+					{
+						string core = coreNames[index];
+						SqlConnection machineConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{machineDatabaseNames[index]}';");
+						displayTables.Add(core, Snap.GetDisplayTable(machineConnection));
+					}
 				}
 
 				long phone_home_id = (long)phoneHomeRow["phone_home_id"];
@@ -272,8 +286,10 @@ namespace Spludlow.MameAO
 					string thumbFilename = Path.Combine(snapSubmitDirectory, image_token + ".jpg");
 
 					File.Copy(snapFilename, targetFilename);
-					
-					Snap.Resize(targetFilename, Snap.ThumbSize, thumbFilename, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 72);
+
+					Size targetSize = Snap.FixedSize(machine, displayTables[core]);
+
+					Snap.CreateThumbnail(targetFilename, thumbFilename, targetSize);
 
 					status = 1;
 				}

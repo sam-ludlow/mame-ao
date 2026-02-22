@@ -36,8 +36,8 @@ namespace Spludlow.MameAO
 						break;
 
 					case "process_phone_home":
-						ValidateRequiredParameters(parameters, new string[] { "database" });
-						PhoneHome.ProcessPhoneHome(parameters["directory"], parameters["database"]);
+						ValidateRequiredParameters(parameters, new string[] { "database", "server", "names" });
+						PhoneHome.ProcessPhoneHome(parameters["directory"], parameters["database"], parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
 						break;
 
 					case "approve_phone_home":

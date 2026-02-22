@@ -7,10 +7,6 @@ namespace Spludlow.MameAO
 	{
 		static int Main(string[] args)
 		{
-			//Snap.UtilFixAspectThumbsMachine("Server='my-mssql-server';Database='ao-mame-machine';Integrated Security=True;TrustServerCertificate=True;", @"E:\ao-data\snap\mame");
-			//Snap.UtilFixAspectThumbsMachine("Server='my-mssql-server';Database='ao-hbmame-machine';Integrated Security=True;TrustServerCertificate=True;", @"\\splcal-app\e$\ao-data\snap\hbmame");
-			//return 0;
-
 			if (args.Length > 0 && args[0].Contains("=") == false)
 				args[0] = $"operation={args[0]}";
 
