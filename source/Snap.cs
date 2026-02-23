@@ -65,8 +65,6 @@ namespace Spludlow.MameAO
 
 		public static void ImportSnapMachine(string sourceDirectory, string targetDirectory)
 		{
-			Size size = new Size(128, 128);
-
 			string targetDirectoryPNG = Path.Combine(targetDirectory, "png");
 			Directory.CreateDirectory(targetDirectoryPNG);
 			string targetDirectoryJPG = Path.Combine(targetDirectory, "jpg");
@@ -84,7 +82,7 @@ namespace Spludlow.MameAO
 			string[] sourceFilenames = Directory.GetFiles(sourceDirectory, "*.png");
 			foreach (string sourceFilename in sourceFilenames)
 			{
-				if (ImportSnapFile(sourceFilename, targetDirectoryPNG, targetDirectoryJPG, size) == true)
+				if (ImportSnapFile(sourceFilename, targetDirectoryPNG, targetDirectoryJPG) == true)
 					++processCount;
 				else
 					++skipCount;
@@ -136,7 +134,7 @@ namespace Spludlow.MameAO
 
 				foreach (string sourceFilename in sourceFilenames)
 				{
-					if (ImportSnapFile(sourceFilename, targetDirectorySoftwarePNG, targetDirectorySoftwareJPG, ThumbSize) == true)
+					if (ImportSnapFile(sourceFilename, targetDirectorySoftwarePNG, targetDirectorySoftwareJPG) == true)
 						++processCount;
 					else
 						++skipCount;
@@ -150,29 +148,31 @@ namespace Spludlow.MameAO
 			Console.WriteLine($"Software process:{processCount}, skip: {skipCount}, took:{(DateTime.Now - startTime).TotalMinutes}");
 		}
 
-		public static bool ImportSnapFile(string sourceFilename, string targetDirectoryPNG, string targetDirectoryJPG, Size size)
+		public static bool ImportSnapFile(string sourceFilenamePNG, string targetDirectoryPNG, string targetDirectoryJPG)
 		{
-			FileInfo sourceInfo = new FileInfo(sourceFilename);
+			FileInfo sourceInfo = new FileInfo(sourceFilenamePNG);
 			FileInfo targetInfo = null;
 
-			string targetFilename = Path.Combine(targetDirectoryPNG, Path.GetFileName(sourceFilename));
+			string targetFilenamePNG = Path.Combine(targetDirectoryPNG, Path.GetFileName(sourceFilenamePNG));
 
-			if (File.Exists(targetFilename) == true)
-				targetInfo = new FileInfo(targetFilename);
+			if (File.Exists(targetFilenamePNG) == true)
+				targetInfo = new FileInfo(targetFilenamePNG);
 
 			if (targetInfo != null && targetInfo.LastWriteTime >= sourceInfo.LastWriteTime)
 				return false;
 
 			// PNG
-			File.Delete(targetFilename);
-			File.Copy(sourceFilename, targetFilename);
+			File.Delete(targetFilenamePNG);
+			File.Copy(sourceFilenamePNG, targetFilenamePNG);
+			Console.WriteLine($"{sourceFilenamePNG}\t=>\t{targetFilenamePNG}");
 
 			// JPG
-			targetFilename = Path.Combine(targetDirectoryJPG, Path.GetFileNameWithoutExtension(sourceFilename) + ".jpg");
+			string sourceFilenameJPG = sourceFilenamePNG.Substring(0, sourceFilenamePNG.Length - 4) + ".jpg";
+			string targetFilenameJPG = Path.Combine(targetDirectoryJPG, Path.GetFileName(sourceFilenameJPG));
 
-			File.Delete(targetFilename);
-			Resize(sourceFilename, size, targetFilename, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 72);
-			File.SetLastWriteTime(targetFilename, sourceInfo.LastWriteTime);
+			File.Delete(targetFilenameJPG);
+			File.Copy(sourceFilenameJPG, targetFilenameJPG);
+			Console.WriteLine($"{sourceFilenameJPG}\t=>\t{targetFilenameJPG}");
 
 			return true;
 		}

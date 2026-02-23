@@ -329,9 +329,7 @@ namespace Spludlow.MameAO
 				string software_name = row.IsNull("software_name") == false ? (string)row["software_name"] : null;
 				string image_token = (string)row["image_token"];
 
-				string sourceFilename = Path.Combine(snapSubmitDirectory, image_token + ".png");
-				if (File.Exists(sourceFilename) == false)
-					throw new ApplicationException($"sourceFilename not found: {sourceFilename}");
+				string sourceName = Path.Combine(snapSubmitDirectory, image_token);
 
 				switch (status)
 				{
@@ -339,12 +337,22 @@ namespace Spludlow.MameAO
 						break;
 
 					case 1:		// Aproved
-						string targetFilename = softwarelist_name == null ?
-							Path.Combine(snapTempDirectory, core_name, machine_name + ".png") : Path.Combine(snapTempDirectory, core_name, softwarelist_name, software_name + ".png");
+						string targetName = softwarelist_name == null ?
+							Path.Combine(snapTempDirectory, core_name, machine_name) : Path.Combine(snapTempDirectory, core_name, softwarelist_name, software_name);
 
-						Console.WriteLine($"{snap_submit_id}\t{sourceFilename}\t=>\t{targetFilename}");
-						Directory.CreateDirectory(Path.GetDirectoryName(targetFilename));
-						File.Copy(sourceFilename, targetFilename);
+						Directory.CreateDirectory(Path.GetDirectoryName(targetName));
+
+						foreach (string extention in new string[] { ".png", ".jpg" })
+						{
+							string sourceFilename = sourceName + extention;
+							if (File.Exists(sourceFilename) == false)
+								throw new ApplicationException($"Source filename not found: {sourceFilename}");
+
+							string targetFilename = targetName + extention;
+
+							Console.WriteLine($"{snap_submit_id}\t{sourceFilename}\t=>\t{targetFilename}");
+							File.Copy(sourceFilename, targetFilename);
+						}
 						break;
 
 					default:
