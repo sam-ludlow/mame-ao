@@ -106,6 +106,10 @@ namespace Spludlow.MameAO
 						columnDefs.Add($"[{column.ColumnName}] [int]");
 						break;
 
+					case TypeCode.Boolean:
+						columnDefs.Add($"[{column.ColumnName}] [bit]");
+						break;
+
 					default:
 						columnDefs.Add($"[{column.ColumnName}] nvarchar({(column.MaxLength == -1 ? "max" : column.MaxLength.ToString())})");
 						break;
@@ -190,10 +194,11 @@ namespace Spludlow.MameAO
 					machine.name,
 					machine.sourcefile,
 					machine.sampleof,
-					machine.isbios,
-					machine.isdevice,
-					machine.ismechanical,
-					machine.runnable,
+					CAST(CASE WHEN machine.isbios = 'yes' THEN 1 ELSE 0 END AS BIT) AS [isbios],
+					CAST(CASE WHEN machine.isdevice = 'yes' THEN 1 ELSE 0 END AS BIT) AS [isdevice],
+					CAST(CASE WHEN machine.ismechanical = 'yes' THEN 1 ELSE 0 END AS BIT) AS [ismechanical],
+					CAST(CASE WHEN machine.ismechanical = 'no' THEN 1 ELSE 0 END AS BIT) AS [iselectronic],
+					CAST(CASE WHEN machine.runnable = 'yes' THEN 1 ELSE 0 END AS BIT) AS [runnable],
 					machine.description,
 					machine.year,
 					machine.manufacturer,
@@ -227,6 +232,15 @@ namespace Spludlow.MameAO
 			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
 				adapter.Fill(searchTable);
 			searchTable.PrimaryKey = new DataColumn[] { searchTable.Columns["name"] };
+
+			foreach (DataRow row in searchTable.Rows)
+			{
+				if ((bool)row["isdevice"] == true)
+				{
+					row["ismechanical"] = false;
+					row["iselectronic"] = false;
+				}
+			}
 
 			//
 			// display
@@ -406,7 +420,7 @@ namespace Spludlow.MameAO
 				string machine_description = (string)row["description"];
 				string machine_year = row.IsNull("year") ? "" : (string)row["year"];
 				string machine_manufacturer = row.IsNull("manufacturer") ? "" : (string)row["manufacturer"];
-				string machine_isdevice = (string)row["isdevice"];
+				bool machine_isdevice = (bool)row["isdevice"];
 
 				DataRow snapRow = snapTable == null ? null : snapTable.Rows.Find(machine_name);
 
@@ -420,7 +434,7 @@ namespace Spludlow.MameAO
 				}
 				else
 				{
-					if (machine_isdevice == "yes")
+					if (machine_isdevice == true)
 						item.Append($"<p>DEVICE</p>");
 					else
 						item.Append($"<p>NO SNAP</p>");
@@ -485,7 +499,18 @@ namespace Spludlow.MameAO
 			");
 
 			Database.ExecuteNonQuery(connections[0], @"
-				CREATE INDEX [IX_machine_search_payload_description] ON [machine_search_payload] ([description]);
+				CREATE NONCLUSTERED INDEX [IX_machine_search_payload_filters_description]
+				ON [machine_search_payload]
+				(
+					[isdevice],
+					[ismechanical],
+					[iselectronic],
+					[description]
+				)
+				INCLUDE (
+					[html],
+					[html_card]
+				);
 			");
 		}
 
