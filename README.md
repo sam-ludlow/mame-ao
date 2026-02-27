@@ -367,6 +367,16 @@ For `get` operations if a new version if found the exit code will be set to 1.
 | tosec-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe tosec-mssql directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
 | tosec-mssql-payload | Create web payload tables. | `mame-ao.exe tosec-mssql-payload directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
 
+### Spludlow Data Web Operations
+|Operation|Description|Example|
+|:----|:----|:----|
+| snap_machine | Import machine snaps. | `mame-ao.exe snap_machine source="C:\ao-data\snap-temp\mame" target="C:\ao-data\snap\mame"` |
+| snap_software | Import software snaps. | `mame-ao.exe snap_software source="C:\ao-data\snap-temp\mame" target="C:\ao-data\snap\mame"` |
+| snap_index | Index the PNG files (`_index.txt`). | `mame-ao.exe snap_index directory="C:\ao-data\snap\mame\png"` |
+| process_phone_home | Process snap home uploads (Task Scheduler). | `mame-ao.exe process_phone_home directory=C:\ao-data database="Server='my-mssql-server';Database='ao-master';Integrated Security=True;TrustServerCertificate=True;" server="Server='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-hbmame-machine"` |
+| approve_phone_home | Process approved snaps export to temp directory ready to import.  | `mame-ao.exe yyy` |
+| update_pugsys_cheats | Process Pugsy's cheats | `mame-ao.exe update_pugsys_cheats directory="C:\ao-data\cheat\mame" server="Server='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
+
 ## Internal Workings
 
 ### Overall
