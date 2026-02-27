@@ -91,7 +91,11 @@ namespace Spludlow.MameAO
 				}
 				column.MaxLength = max;
 
-				columnDefs.Add($"[{column.ColumnName}] VARCHAR({column.MaxLength})");
+				string pkDataType = "VARCHAR";
+				if (table.TableName == "game_payload" && column.ColumnName == "game_name")
+					pkDataType = "NVARCHAR";
+
+				columnDefs.Add($"[{column.ColumnName}] {pkDataType}({column.MaxLength})");
 
 				pkNames.Add(column.ColumnName);
 			}
