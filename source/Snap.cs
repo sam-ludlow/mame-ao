@@ -329,19 +329,6 @@ namespace Spludlow.MameAO
 			graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
 		}
 
-		public static void UtilMakeThumbs()
-		{
-			string directory = @"";
-
-			foreach (string pngFilename in Directory.GetFiles(directory, "*.png"))
-			{
-				string jpgFilename = Path.Combine(Path.GetDirectoryName(pngFilename), Path.GetFileNameWithoutExtension(pngFilename) + ".jpg");
-
-				if (File.Exists(jpgFilename) == false)
-					Snap.Resize(pngFilename, Snap.ThumbSize, jpgFilename, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 72);
-			}
-		}
-
 		public static void UtilCopyDatabaseRows(string sourceConnectionString, string targetConnectionString, string sourceTableName, string targetTableName)
 		{
 			SqlConnection sourceConnection = new SqlConnection(sourceConnectionString);
@@ -412,7 +399,7 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static void UtilFixAspectThumbsMachine(string connectionString, string snapCoreDirectory)
+		public static void UtilMakeThumbsMachine(string connectionString, string snapCoreDirectory)
 		{
 			DataTable displayTable = GetDisplayTable(new SqlConnection(connectionString));
 
@@ -510,9 +497,6 @@ namespace Spludlow.MameAO
 			if (type != "raster")
 				return new Size();
 
-			if (row.IsNull("pixclock") == true)
-				return new Size();
-
 			if (((string)row["tag"]).Contains("screen") == false)
 				return new Size();
 
@@ -520,13 +504,19 @@ namespace Spludlow.MameAO
 			int width = Int32.Parse((string)row["width"]);
 			int height = Int32.Parse((string)row["height"]);
 
-			int hbend = Int32.Parse((string)row["hbend"]);
-			int hbstart = Int32.Parse((string)row["hbstart"]);
-			int vbend = Int32.Parse((string)row["vbend"]);
-			int vbstart = Int32.Parse((string)row["vbstart"]);
+			int width_visible = width;
+			int height_visible = height;
 
-			int width_visible = hbstart - hbend;
-			int height_visible = vbstart - vbend;
+			if (row.IsNull("pixclock") == false)
+			{
+				int hbend = Int32.Parse((string)row["hbend"]);
+				int hbstart = Int32.Parse((string)row["hbstart"]);
+				int vbend = Int32.Parse((string)row["vbend"]);
+				int vbstart = Int32.Parse((string)row["vbstart"]);
+
+				width_visible = hbstart - hbend;
+				height_visible = vbstart - vbend;
+			}
 
 			// Probably a 4:3 CRT
 			if (height_visible >= 100 && height_visible <= 567)
