@@ -939,6 +939,13 @@ namespace Spludlow.MameAO
 				background-color: #ffbf00;
 			}
 
+			.toolbar {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				padding: 4px;
+			}
+
 			hr {
 				color: #00ADEF;
 				background-color: #00ADEF;

@@ -365,9 +365,11 @@
 
 			const data = await fetchJson('/api/settings');
 
-			let html = '<hr />';
+			let html = '';
 
 			Object.keys(data.available_options).forEach((key) => {
+				if (html.length > 0)
+					html += '<hr />';
 				html += `<h2>${key}</h2><p>${data.option_descriptions[key]}</p>`
 				html += `<select id="settings_${key}" onchange="runCommand('.set ${key} ' + this.value)">`;
 
@@ -376,7 +378,7 @@
 				});
 
 				html += '</select>';
-				html += '<hr />';
+
 			});
 
 
@@ -1509,18 +1511,38 @@
 
 		}
 
+		const goLocationUrl = (offset) => `${_path}?offset=${offset}&search=${encodeURIComponent(_parameters.search)}`;
+
 		const navigateHtml = (data) => {
 
-			const limit = 100;
+			const limit = data.limit;
+			const offset = data.offset;
+			const total = data.total;
+			const count = data.count;
 
-			const totalPages = Math.ceil(data.total / data.limit);
-			const currentPage = (data.offset / data.limit) + 1;
+			let nav = '<div class="toolbar">';
 
-			return `<a href="${_path}?offset=${_parameters.offset - limit}&search=${encodeURIComponent(_parameters.search)}">PREV</a>` +
-				'&nbsp; - &nbsp;' +
-				`<a href="${_path}?offset=${_parameters.offset + limit}&search=${encodeURIComponent(_parameters.search)}">NEXT</a>` +
-				'&nbsp; - &nbsp;' +
-				`page: ${currentPage} / ${totalPages} - total: ${data.total} - viewing: ${data.count}`;
+			let prevOffset = offset - limit;
+			nav += prevOffset >= 0 ?
+				`<a href="${goLocationUrl(prevOffset)}"><img src="https://data.spludlow.co.uk/images/back.png" alt="Navigate back a page" /></a> &bull;` :
+				'<div><img src="https://data.spludlow.co.uk/images/back.png" alt="On first page" /></div> &bull;';
+
+			let nextOffset = offset + limit;
+			nav += nextOffset < total ?
+				`<a href="${goLocationUrl(nextOffset)}"><img src="https://data.spludlow.co.uk/images/next.png" alt="Navigate to next page" /></a> &bull;` :
+				'<div><img src="https://data.spludlow.co.uk/images/next.png" alt="On last page" /></div> &bull;';
+
+			let lastOffset = Math.floor(total / limit) * limit;
+			if (total > 0 && total % limit === 0)
+				lastOffset -= limit;
+
+			nav += `<div>page <a href="${goLocationUrl(0)}">${offset / limit + 1}</a> ` +
+				`of <a href="${goLocationUrl(lastOffset)}">${Math.ceil(total / limit)}</a></div> &bull;` +
+				`<div>view ${count} of ${total}</div>`;
+
+			nav += '</div>';
+
+			return nav;
 		}
 
 		//
@@ -1708,7 +1730,7 @@
 	<nav id="nav">
 	</nav>
 
-	<hr />
+	<br />
 
 	<div id="error"></div>
 
