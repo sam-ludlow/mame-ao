@@ -6,6 +6,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.IO;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace Spludlow.MameAO
@@ -182,8 +183,8 @@ namespace Spludlow.MameAO
 			string indexFilename = Path.Combine(directory, "_index.txt");
 
 			DataTable table = Tools.MakeDataTable("snap", 
-				"Key		Length	LastWriteTime	Width	Height	HorizontalResolution	VerticalResolution	PaletteLength	PixelFormat	PropertyItems",
-				"String*	Int64	DateTime		Int32	Int32	Single					Single				Int64			String		String"
+				"Key		Length	LastWriteTime	Width	Height	HorizontalResolution	VerticalResolution	PaletteLength	PixelFormat	PropertyItems	PixelSHA1",
+				"String*	Int64	DateTime		Int32	Int32	Single					Single				Int64			String		String			String"
 			);
 
 			DataTable existingTable = table.Clone();
@@ -213,9 +214,11 @@ namespace Spludlow.MameAO
 								.Select(item => item.Id + ":" + new string(item.Value.Select(b => (b >= 32 && b <= 126) ? (char)b : ' ').ToArray()).Trim())
 							);
 
+						string pixelHash = Tools.SHA1Hex(GetPixelData(image));
+
 						table.Rows.Add(name, info.Length, info.LastWriteTime,
 							image.Width, image.Height, image.HorizontalResolution, image.VerticalResolution,
-							image.Palette.Entries.LongLength, image.PixelFormat.ToString(), propertyItems);
+							image.Palette.Entries.LongLength, image.PixelFormat.ToString(), propertyItems, pixelHash);
 					}
 				}
 				else
@@ -229,8 +232,24 @@ namespace Spludlow.MameAO
 
 			File.Delete(indexFilename);
 			File.WriteAllText(indexFilename, Tools.TextTable(table), Encoding.UTF8);
+		}
 
-			//Tools.PopText(table);
+		public static byte[] GetPixelData(Image image)
+		{
+			Bitmap bitmap = (Bitmap)image;
+
+			Rectangle rectangle = new Rectangle(0, 0, bitmap.Width, bitmap.Height);
+			BitmapData bitmapData = bitmap.LockBits(rectangle, ImageLockMode.ReadOnly, bitmap.PixelFormat);
+
+			int length = Math.Abs(bitmapData.Stride) * bitmapData.Height;
+
+			byte[] data = new byte[length];
+
+			Marshal.Copy(bitmapData.Scan0, data, 0, data.Length);
+
+			bitmap.UnlockBits(bitmapData);
+
+			return data;
 		}
 
 		public static Size Resize(string sourceFilename, Size size, string targetFilename, ImageFormat imageFormat, PixelFormat pixelFormat, int dpi)

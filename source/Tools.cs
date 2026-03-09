@@ -349,6 +349,15 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static string SHA1Hex(byte[] data)
+		{
+			byte[] hash = _SHA1Managed.ComputeHash(data);
+			StringBuilder hex = new StringBuilder();
+			foreach (byte b in hash)
+				hex.Append(b.ToString("x2"));
+			return hex.ToString();
+		}
+
 		public static string SHA1Hex(Stream stream)
 		{
 			byte[] hash = _SHA1Managed.ComputeHash(stream);
