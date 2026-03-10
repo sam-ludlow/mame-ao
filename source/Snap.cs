@@ -417,6 +417,40 @@ namespace Spludlow.MameAO
 				}
 			}
 		}
+		public static void UtilDeleteBadSnaps(string snapDirectory, string coreName)
+		{
+			string pngDirectory = Path.Combine(Path.Combine(snapDirectory, coreName), "png");
+			string jpgDirectory = Path.Combine(Path.Combine(snapDirectory, coreName), "jpg");
+
+			DataTable table = LoadSnapIndex(snapDirectory, coreName);
+
+			foreach (DataRow row in table.Rows)
+			{
+				string sha1 = (string)row["PixelSHA1"];
+
+				if (sha1 == "6f5b7ca1ab2965228a7025292a1eb500eddcd2cb" || sha1 == "cca44353fde08d05f87a844a9072d9fbd6d24209")
+				{
+					string key = (string)row["key"];
+
+					string pngFilename = Path.Combine(pngDirectory, key + ".png");
+					string jpgFilename = Path.Combine(jpgDirectory, key + ".jpg");
+
+					if (File.Exists(pngFilename) == false)
+						throw new ApplicationException(pngFilename);
+
+					if (File.Exists(jpgFilename) == false)
+						throw new ApplicationException(jpgFilename);
+
+					Console.WriteLine(pngFilename);
+					Console.WriteLine(jpgFilename);
+
+					File.Delete(pngFilename);
+					File.Delete(jpgFilename);
+
+				}
+			}
+		}
+
 
 		public static void UtilMakeThumbsMachine(string connectionString, string snapCoreDirectory)
 		{
