@@ -32,6 +32,8 @@ namespace Spludlow.MameAO
 
 			string tableName = "_metadata";
 
+			Database.ExecuteNonQuery(connection, $"DROP TABLE IF EXISTS [{tableName}];");
+
 			string[] columnDefs = new string[] {
 				$"[{tableName}_id] BIGINT NOT NULL PRIMARY KEY",
 				"[dataset] NVARCHAR(1024) NOT NULL",
@@ -122,21 +124,14 @@ namespace Spludlow.MameAO
 
 			columnDefs.Add($"CONSTRAINT [PK_{table.TableName}] PRIMARY KEY NONCLUSTERED ([{String.Join("], [", pkNames)}])");
 
+			Database.ExecuteNonQuery(connection, $"DROP TABLE IF EXISTS [{table.TableName}];");
+
 			string commandText = $"CREATE TABLE [{table.TableName}] ({String.Join(", ", columnDefs)});";
 
 			Console.WriteLine(commandText);
 
 			Database.ExecuteNonQuery(connection, commandText);
 			Database.BulkInsert(connection, table);
-		}
-
-		public static void DeleteExistingPayloadTables(SqlConnection connection)
-		{
-			foreach (string tableName in Database.TableList(connection))
-			{
-				if (tableName == "_metadata" || tableName.EndsWith("_payload") == true)
-					Database.ExecuteNonQuery(connection, $"DROP TABLE [{tableName}]");
-			}
 		}
 
 		//
@@ -174,7 +169,7 @@ namespace Spludlow.MameAO
 
 			DataTable snapTable = Snap.LoadSnapIndex(Path.Combine(Path.GetDirectoryName(directory), "snap"), coreName);
 
-			MameishMSSQLMachinePayloads(directory, version, connections, coreName, versionDirectory, exeTime, snapTable);
+			MameishMSSQLMachinePayloads(version, connections, coreName, versionDirectory, exeTime, snapTable);
 			
 			MameishMSSQLMachinePayloadsSearch(connections, coreName, snapTable);
 
@@ -426,7 +421,7 @@ namespace Spludlow.MameAO
 				string machine_manufacturer = row.IsNull("manufacturer") ? "" : (string)row["manufacturer"];
 				bool machine_isdevice = (bool)row["isdevice"];
 
-				DataRow snapRow = snapTable == null ? null : snapTable.Rows.Find(machine_name);
+				DataRow snapRow = snapTable?.Rows.Find(machine_name);
 
 				item = new StringBuilder();
 				item.Append("<div class=\"card\">");
@@ -518,10 +513,8 @@ namespace Spludlow.MameAO
 			");
 		}
 
-		public static void MameishMSSQLMachinePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime, DataTable snapTable)
+		public static void MameishMSSQLMachinePayloads(string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime, DataTable snapTable)
 		{
-			DeleteExistingPayloadTables(connections[0]);
-
 			//
 			// Metadata
 			//
@@ -987,8 +980,6 @@ namespace Spludlow.MameAO
 
 		public static void MameishMSSQLSoftwarePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime)
 		{
-			DeleteExistingPayloadTables(connections[1]);
-
 			bool usingDisk = Database.TableExists(connections[1], "disk");
 
 			//
@@ -1529,8 +1520,6 @@ namespace Spludlow.MameAO
 			string info;
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
 			{
-				DeleteExistingPayloadTables(connection);
-
 				int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
 				int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
 				int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
@@ -1809,8 +1798,6 @@ namespace Spludlow.MameAO
 			string info;
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
 			{
-				DeleteExistingPayloadTables(connection);
-
 				int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
 				int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
 				int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");

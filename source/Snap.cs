@@ -15,7 +15,7 @@ namespace Spludlow.MameAO
     {
 		public static Size ThumbSize = new Size(128, 128);
 
-		private static ImageCodecInfo JpegCodecInfo = null;
+		private static readonly ImageCodecInfo JpegCodecInfo = null;
 
 		static Snap()
 		{
@@ -111,7 +111,7 @@ namespace Spludlow.MameAO
 
 			int processCount = 0;
 			int skipCount = 0;
-			int count = 0;
+			int count;
 			DateTime startTime = DateTime.Now;
 
 			foreach (string softwareDirectory in Directory.GetDirectories(sourceDirectory))
