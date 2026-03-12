@@ -591,6 +591,27 @@ namespace Spludlow.MameAO
 			}
 
 			//
+			// Get clones
+			//
+			Dictionary<string, List<string>> parentCloneDescriptionNames = new Dictionary<string, List<string>>();
+
+			foreach (DataRow machineRow in dataSet.Tables["machine"].Rows)
+			{
+				if (machineRow.IsNull("cloneof") == true)
+					continue;
+
+				string name = (string)machineRow["name"];
+				string description = (string)machineRow["description"];
+				string cloneof = (string)machineRow["cloneof"];
+
+				if (parentCloneDescriptionNames.ContainsKey(cloneof) == false)
+					parentCloneDescriptionNames.Add(cloneof, new List<string>());
+				parentCloneDescriptionNames[cloneof].Add($"{description.Replace("\t", " ")}\t{name}");
+			}
+			foreach (string key in parentCloneDescriptionNames.Keys)
+				parentCloneDescriptionNames[key].Sort();
+
+			//
 			// Payloads
 			//
 			DataTable machine_payload_table = MakePayloadDataTable("machine_payload", new string[] { "machine_name" });
@@ -964,6 +985,25 @@ namespace Spludlow.MameAO
 							html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["dipvalue"], dipvalueRows, null));
 						}
 					}
+				}
+
+				//
+				// clones
+				//
+				if (parentCloneDescriptionNames.ContainsKey(machine_name) == true)
+				{
+					html.AppendLine("<hr />");
+					html.AppendLine("<h2>clones</h2>");
+
+					html.AppendLine("<table>");
+					html.AppendLine("<tr><th>name</th><th>description</th></tr>");
+
+					foreach (string descriptionNameLine in parentCloneDescriptionNames[machine_name])
+					{
+						string[] descriptionName = descriptionNameLine.Split('\t');
+						html.AppendLine($"<tr><td><a href=\"/{coreName}/machine/{descriptionName[1]}\">{descriptionName[1]}</a></td><td>{descriptionName[0]}</td></tr>");
+					}
+					html.AppendLine("</table>");
 				}
 
 				string[] xmlJson = machine_XmlJsonPayloads[machine_name];
