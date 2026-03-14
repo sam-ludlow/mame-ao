@@ -195,7 +195,7 @@ namespace Spludlow.MameAO
 			//
 			_SoftwareListDescriptions = new Dictionary<string, string>();
 
-			foreach (DataRow row in Database.ExecuteFill(_ConnectionStringSoftware, "SELECT name, description FROM softwarelist").Rows)
+			foreach (DataRow row in Database.ExecuteFill(_ConnectionStringSoftware, "SELECT [name], [description] FROM [softwarelist] ORDER BY [description]").Rows)
 				_SoftwareListDescriptions.Add((string)row["name"], (string)row["description"]);
 
 		}
