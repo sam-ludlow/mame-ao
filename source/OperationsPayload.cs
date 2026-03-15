@@ -175,6 +175,8 @@ namespace Spludlow.MameAO
 
 			MameishMSSQLSoftwarePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
 
+			MameishMSSQLSoftwarePayloadsSearch(connections, coreName, snapTable);
+
 			return 0;
 		}
 
@@ -455,29 +457,7 @@ namespace Spludlow.MameAO
 			//
 			// Insert database table
 			//
-			foreach (DataColumn column in searchTable.Columns)
-			{
-				if (column.DataType != typeof(string))
-					continue;
-
-				int max = 1;
-				foreach (DataRow row in searchTable.Rows)
-				{
-					if (row.IsNull(column) == false)
-					{
-						int len = ((string)row[column]).Length;
-						if (len > max)
-							max = len;
-					}
-				}
-				column.MaxLength = max;
-			}
-
-			foreach (string tableName in Database.TableList(connections[0]))
-			{
-				if (tableName == searchTable.TableName)
-					Database.ExecuteNonQuery(connections[0], $"DROP TABLE [{tableName}]");
-			}
+			Tools.SetDataTableStringLengths(searchTable);
 
 			MakeMSSQLPayloadsInsert(connections[0], searchTable);
 
@@ -511,6 +491,151 @@ namespace Spludlow.MameAO
 					[html_card]
 				);
 			");
+		}
+
+		public static void MameishMSSQLSoftwarePayloadsSearch(SqlConnection[] connections, string coreName, DataTable snapTable)
+		{
+			string commandText;
+
+			//
+			// softwarelist, software	mame has:	cloneof, notes
+			//
+			commandText = @"
+				SELECT
+					CONCAT(softwarelist.name, '_', software.name) AS [key],
+					softwarelist.name AS softwarelist_name,
+					software.name AS software_name,
+					CAST(CASE WHEN software.supported = 'yes' THEN 1 ELSE 0 END AS BIT) AS [supported],
+					software.description,
+					software.year,
+					software.publisher
+				FROM
+					softwarelist
+					INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id
+				ORDER BY
+					softwarelist.name,
+					software.name;
+			";
+
+			DataTable searchTable = new DataTable("software_search_payload");
+			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[1]))
+				adapter.Fill(searchTable);
+			searchTable.PrimaryKey = new DataColumn[] { searchTable.Columns["key"] };
+
+			foreach (string name in new string[] { "xml", "json", "html", "html_card" })
+				searchTable.Columns.Add(name, typeof(string));
+
+			//
+			//	Build payloads
+			//
+
+			string[] columnNames = new string[] { "software_name", "description", "year", "publisher" };
+
+			foreach (DataRow row in searchTable.Rows)
+			{
+				StringBuilder item;
+
+				string softwarelist_name = (string)row["softwarelist_name"];
+				string software_name = (string)row["software_name"];
+				string software_description = (string)row["description"];
+				string software_year = (string)row["year"];
+				string software_publisher = (string)row["publisher"];
+
+				//
+				// Table row
+				//
+				item = new StringBuilder();
+				item.Append("<tr>");
+
+				foreach (string columnName in columnNames)
+				{
+					DataColumn column = searchTable.Columns[columnName];
+					item.Append("<td>");
+					if (row.IsNull(column) == false)
+					{
+						switch (columnName)
+						{
+							case "name":
+							case "cloneof":
+								item.Append($"<a href=\"/{coreName}/software/{softwarelist_name}/{row[column]}\">{row[column]}</a>");
+								break;
+							default:
+								item.Append(WebUtility.HtmlEncode(Convert.ToString(row[column])));
+								break;
+						}
+					}
+
+					item.Append("</td>");
+				}
+
+				item.Append("</tr>");
+				row["html"] = item.ToString();
+
+				//
+				// Div card
+				//
+				DataRow snapRow = snapTable?.Rows.Find($"{softwarelist_name}\\{software_name}");
+
+				item = new StringBuilder();
+				item.Append("<div class=\"card\">");
+
+				item.Append($"<div class=\"card-thumb\"><a href=\"/{coreName}/software/{softwarelist_name}/{software_name}\" class=\"card-link\">");
+				if (snapRow != null)
+					item.Append($"<img src=\"/{coreName}/software/{softwarelist_name}/{software_name}.jpg\" alt=\"{software_description}\" loading=\"lazy\" class=\"card-img\" />");
+				else
+					item.Append($"<p>NO SNAP</p>");
+
+				item.Append("</a></div>");
+
+				item.Append("<div class=\"card-body\">");
+				item.Append($"<div class=\"card-name\">{software_name}</div>");
+				item.Append($"<div class=\"card-description\">{software_description}</div>");
+				item.Append($"<div class=\"card-year\">{software_year}</div>");
+				item.Append($"<div class=\"card-manufacturer\">{software_publisher}</div>");
+				item.Append("</div>");
+
+				item.Append("</div>");
+				row["html_card"] = item.ToString();
+			}
+
+			//
+			// Insert table
+			//
+
+			Tools.SetDataTableStringLengths(searchTable);
+
+			MakeMSSQLPayloadsInsert(connections[1], searchTable);
+
+			//
+			// Create indexes
+			//
+			Database.ExecuteNonQuery(connections[1], @"
+				CREATE FULLTEXT INDEX ON [software_search_payload]
+				(
+					[software_name],
+					[description],
+					[year],
+					[publisher]
+				)
+				KEY INDEX [PK_software_search_payload]
+				ON [ao_catalog]
+				WITH CHANGE_TRACKING AUTO;
+			");
+
+			Database.ExecuteNonQuery(connections[1], @"
+				CREATE NONCLUSTERED INDEX [IX_software_search_payload_softwarelist_name_description]
+				ON [software_search_payload]
+				(
+					[softwarelist_name],
+					[description]
+				)
+				INCLUDE (
+					[html],
+					[html_card]
+				);
+			");
+
+
 		}
 
 		public static void MameishMSSQLMachinePayloads(string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime, DataTable snapTable)

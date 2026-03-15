@@ -62,6 +62,27 @@ namespace Spludlow.MameAO
 			return table;
 		}
 
+		public static void SetDataTableStringLengths(DataTable table)
+		{
+			foreach (DataColumn column in table.Columns)
+			{
+				if (column.DataType != typeof(string))
+					continue;
+
+				int max = 1;
+				foreach (DataRow row in table.Rows)
+				{
+					if (row.IsNull(column) == false)
+					{
+						int len = ((string)row[column]).Length;
+						if (len > max)
+							max = len;
+					}
+				}
+				column.MaxLength = max;
+			}
+		}
+
 		public static void ConsoleToFront()
 		{
 			if (Globals.AO.ConsoleHandle != IntPtr.Zero)
