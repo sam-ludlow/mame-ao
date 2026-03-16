@@ -173,9 +173,7 @@ namespace Spludlow.MameAO
 			
 			MameishMSSQLMachinePayloadsSearch(connections, coreName, snapTable);
 
-			MameishMSSQLSoftwarePayloads(directory, version, connections, coreName, versionDirectory, exeTime);
-
-			MameishMSSQLSoftwarePayloadsSearch(connections, coreName, snapTable);
+			MameishMSSQLSoftwarePayloads(directory, version, connections, coreName, versionDirectory, exeTime, snapTable);
 
 			return 0;
 		}
@@ -491,151 +489,6 @@ namespace Spludlow.MameAO
 					[html_card]
 				);
 			");
-		}
-
-		public static void MameishMSSQLSoftwarePayloadsSearch(SqlConnection[] connections, string coreName, DataTable snapTable)
-		{
-			string commandText;
-
-			//
-			// softwarelist, software	mame has:	cloneof, notes
-			//
-			commandText = @"
-				SELECT
-					CONCAT(softwarelist.name, '_', software.name) AS [key],
-					softwarelist.name AS softwarelist_name,
-					software.name AS software_name,
-					CAST(CASE WHEN software.supported = 'yes' THEN 1 ELSE 0 END AS BIT) AS [supported],
-					software.description,
-					software.year,
-					software.publisher
-				FROM
-					softwarelist
-					INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id
-				ORDER BY
-					softwarelist.name,
-					software.name;
-			";
-
-			DataTable searchTable = new DataTable("software_search_payload");
-			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[1]))
-				adapter.Fill(searchTable);
-			searchTable.PrimaryKey = new DataColumn[] { searchTable.Columns["key"] };
-
-			foreach (string name in new string[] { "xml", "json", "html", "html_card" })
-				searchTable.Columns.Add(name, typeof(string));
-
-			//
-			//	Build payloads
-			//
-
-			string[] columnNames = new string[] { "software_name", "description", "year", "publisher" };
-
-			foreach (DataRow row in searchTable.Rows)
-			{
-				StringBuilder item;
-
-				string softwarelist_name = (string)row["softwarelist_name"];
-				string software_name = (string)row["software_name"];
-				string software_description = (string)row["description"];
-				string software_year = (string)row["year"];
-				string software_publisher = (string)row["publisher"];
-
-				//
-				// Table row
-				//
-				item = new StringBuilder();
-				item.Append("<tr>");
-
-				foreach (string columnName in columnNames)
-				{
-					DataColumn column = searchTable.Columns[columnName];
-					item.Append("<td>");
-					if (row.IsNull(column) == false)
-					{
-						switch (columnName)
-						{
-							case "name":
-							case "cloneof":
-								item.Append($"<a href=\"/{coreName}/software/{softwarelist_name}/{row[column]}\">{row[column]}</a>");
-								break;
-							default:
-								item.Append(WebUtility.HtmlEncode(Convert.ToString(row[column])));
-								break;
-						}
-					}
-
-					item.Append("</td>");
-				}
-
-				item.Append("</tr>");
-				row["html"] = item.ToString();
-
-				//
-				// Div card
-				//
-				DataRow snapRow = snapTable?.Rows.Find($"{softwarelist_name}\\{software_name}");
-
-				item = new StringBuilder();
-				item.Append("<div class=\"card\">");
-
-				item.Append($"<div class=\"card-thumb\"><a href=\"/{coreName}/software/{softwarelist_name}/{software_name}\" class=\"card-link\">");
-				if (snapRow != null)
-					item.Append($"<img src=\"/{coreName}/software/{softwarelist_name}/{software_name}.jpg\" alt=\"{software_description}\" loading=\"lazy\" class=\"card-img\" />");
-				else
-					item.Append($"<p>NO SNAP</p>");
-
-				item.Append("</a></div>");
-
-				item.Append("<div class=\"card-body\">");
-				item.Append($"<div class=\"card-name\">{software_name}</div>");
-				item.Append($"<div class=\"card-description\">{software_description}</div>");
-				item.Append($"<div class=\"card-year\">{software_year}</div>");
-				item.Append($"<div class=\"card-manufacturer\">{software_publisher}</div>");
-				item.Append("</div>");
-
-				item.Append("</div>");
-				row["html_card"] = item.ToString();
-			}
-
-			//
-			// Insert table
-			//
-
-			Tools.SetDataTableStringLengths(searchTable);
-
-			MakeMSSQLPayloadsInsert(connections[1], searchTable);
-
-			//
-			// Create indexes
-			//
-			Database.ExecuteNonQuery(connections[1], @"
-				CREATE FULLTEXT INDEX ON [software_search_payload]
-				(
-					[software_name],
-					[description],
-					[year],
-					[publisher]
-				)
-				KEY INDEX [PK_software_search_payload]
-				ON [ao_catalog]
-				WITH CHANGE_TRACKING AUTO;
-			");
-
-			Database.ExecuteNonQuery(connections[1], @"
-				CREATE NONCLUSTERED INDEX [IX_software_search_payload_softwarelist_name_description]
-				ON [software_search_payload]
-				(
-					[softwarelist_name],
-					[description]
-				)
-				INCLUDE (
-					[html],
-					[html_card]
-				);
-			");
-
-
 		}
 
 		public static void MameishMSSQLMachinePayloads(string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime, DataTable snapTable)
@@ -1143,7 +996,7 @@ namespace Spludlow.MameAO
 			Tools.ConsolePrintMemory();
 		}
 
-		public static void MameishMSSQLSoftwarePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime)
+		public static void MameishMSSQLSoftwarePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime, DataTable snapTable)
 		{
 			bool usingDisk = Database.TableExists(connections[1], "disk");
 
@@ -1202,13 +1055,14 @@ namespace Spludlow.MameAO
 				{ "software",		"description" },
 			};
 			DataSet dataSet = new DataSet();
+			string commandText;
 
 			foreach (string tableName in Database.TableList(connections[1]))
 			{
 				if (tableName.EndsWith("_payload") == true || tableName == "sysdiagrams")
 					continue;
 
-				string commandText = $"SELECT * FROM [{tableName}]";
+				commandText = $"SELECT * FROM [{tableName}]";
 				if (tableOrderBys.ContainsKey(tableName) == true)
 					commandText += $" ORDER BY [{tableOrderBys[tableName]}]";
 
@@ -1229,11 +1083,6 @@ namespace Spludlow.MameAO
 
 			DataTable machineDetailTable = Database.ExecuteFill(connections[0], "SELECT machine.name, machine.description FROM machine");
 			machineDetailTable.PrimaryKey = new DataColumn[] { machineDetailTable.Columns["name"] };
-
-			//
-			//	Snaps
-			//
-			DataTable snapTable = Snap.LoadSnapIndex(Path.Combine(Path.GetDirectoryName(directory), "snap"), coreName);
 
 			//
 			// Payloads
@@ -1265,6 +1114,34 @@ namespace Spludlow.MameAO
 				"name	description	roms	disks	rom_size	rom_size_text	disk_size	disk_size_text",
 				"String	String		Int32	Int32	Int64		String			Int64		String"
 			);
+
+			//
+			//	Search Payloads - software
+			//
+			commandText = @"
+				SELECT
+					CONCAT(softwarelist.name, '_', software.name) AS [key],
+					softwarelist.name AS softwarelist_name,
+					software.name AS software_name,
+					CAST(CASE WHEN software.supported = 'yes' THEN 1 ELSE 0 END AS BIT) AS [supported],
+					software.description,
+					software.year,
+					software.publisher
+				FROM
+					softwarelist
+					INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id
+				ORDER BY
+					softwarelist.name,
+					software.name;
+			";
+
+			DataTable searchTable = new DataTable("software_search_payload");
+			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[1]))
+				adapter.Fill(searchTable);
+			searchTable.PrimaryKey = new DataColumn[] { searchTable.Columns["key"] };
+
+			foreach (string name in new string[] { "xml", "json", "html", "html_card" })
+				searchTable.Columns.Add(name, typeof(string));
 
 			foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Select(null, "description"))
 			{
@@ -1333,9 +1210,10 @@ namespace Spludlow.MameAO
 					html.AppendLine("<br />");
 					html.AppendLine(Reports.MakeHtmlTable(dataSet.Tables["software"], new[] { softwareRow }, null));
 
+					DataRow snapRow = null;
 					if (snapTable != null)
 					{
-						DataRow snapRow = snapTable.Rows.Find($"{softwarelist_name}\\{software_name}");
+						snapRow = snapTable.Rows.Find($"{softwarelist_name}\\{software_name}");
 						if (snapRow != null)
 						{
 							html.AppendLine("<hr />");
@@ -1570,6 +1448,79 @@ namespace Spludlow.MameAO
 					string[] software_xmlJson = software_XmlJsonPayloads[$"{softwarelist_name}\t{software_name}"];
 
 					software_payload_table.Rows.Add(softwarelist_name, software_name, software_title, software_xmlJson[0], software_xmlJson[1], html.ToString());
+
+					//
+					// Search
+					//
+					DataRow searchRow = searchTable.Rows.Find($"{softwarelist_name}_{software_name}") ?? throw new ApplicationException($"Did not find search row: {softwarelist_name}_{software_name}");
+
+					string software_description = (string)searchRow["description"];
+					string software_year = (string)searchRow["year"];
+					string software_publisher = (string)searchRow["publisher"];
+
+					StringBuilder item = new StringBuilder();
+					//
+					// Search - Table row
+					//
+					item.Append("<tr>");
+
+					foreach (string columnName in new string[] { "software_name", "description", "year", "publisher" })
+					{
+						DataColumn column = searchTable.Columns[columnName];
+						item.Append("<td>");
+						if (searchRow.IsNull(column) == false)
+						{
+							switch (columnName)
+							{
+								case "software_name":
+								case "cloneof":
+									item.Append($"<a href=\"/{coreName}/software/{softwarelist_name}/{searchRow[column]}\">{searchRow[column]}</a>");
+									break;
+								default:
+									item.Append(WebUtility.HtmlEncode(Convert.ToString(searchRow[column])));
+									break;
+							}
+						}
+
+						item.Append("</td>");
+					}
+
+					item.Append($"<td>{software_cloneof}</td>");
+
+					item.Append($"<td>{(software_rom_count > 0 ? software_rom_count.ToString() : "")}</td>");
+					item.Append($"<td>{(software_disk_count > 0 ? software_disk_count.ToString() : "")}</td>");
+
+					item.Append($"<td>{(software_rom_count > 0 ? software_rom_size.ToString() : "")}</td>");
+					item.Append($"<td>{(software_rom_count > 0 ? Tools.DataSize(software_rom_size) : "")}</td>");
+					item.Append($"<td>{(software_disk_count > 0 ? software_disk_size.ToString() : "")}</td>");
+					item.Append($"<td>{(software_disk_count > 0 ? Tools.DataSize(software_disk_size) : "")}</td>");
+
+					item.Append("</tr>");
+					searchRow["html"] = item.ToString();
+
+					//
+					// Search - Div card
+					//
+					item = new StringBuilder();
+					item.Append("<div class=\"card\">");
+
+					item.Append($"<div class=\"card-thumb\"><a href=\"/{coreName}/software/{softwarelist_name}/{software_name}\" class=\"card-link\">");
+					if (snapRow != null)
+						item.Append($"<img src=\"/{coreName}/software/{softwarelist_name}/{software_name}.jpg\" alt=\"{software_description}\" loading=\"lazy\" class=\"card-img\" />");
+					else
+						item.Append($"<p>NO SNAP</p>");
+
+					item.Append("</a></div>");
+
+					item.Append("<div class=\"card-body\">");
+					item.Append($"<div class=\"card-name\">{software_name}</div>");
+					item.Append($"<div class=\"card-description\">{software_description}</div>");
+					item.Append($"<div class=\"card-year\">{software_year}</div>");
+					item.Append($"<div class=\"card-manufacturer\">{software_publisher}</div>");
+					item.Append("</div>");
+
+					item.Append("</div>");
+					searchRow["html_card"] = item.ToString();
 				}
 
 				softwarelist_html.AppendLine(Reports.MakeHtmlTable(softwareTable, null));
@@ -1603,6 +1554,39 @@ namespace Spludlow.MameAO
 			MakeMSSQLPayloadsInsert(connections[1], softwarelists_payload_table);
 			MakeMSSQLPayloadsInsert(connections[1], softwarelist_payload_table);
 			MakeMSSQLPayloadsInsert(connections[1], software_payload_table);
+
+			//
+			// Search Payload
+			//
+
+			Tools.SetDataTableStringLengths(searchTable);
+			MakeMSSQLPayloadsInsert(connections[1], searchTable);
+
+			Database.ExecuteNonQuery(connections[1], @"
+				CREATE FULLTEXT INDEX ON [software_search_payload]
+				(
+					[software_name],
+					[description],
+					[year],
+					[publisher]
+				)
+				KEY INDEX [PK_software_search_payload]
+				ON [ao_catalog]
+				WITH CHANGE_TRACKING AUTO;
+			");
+
+			Database.ExecuteNonQuery(connections[1], @"
+				CREATE NONCLUSTERED INDEX [IX_software_search_payload_softwarelist_name_description]
+				ON [software_search_payload]
+				(
+					[softwarelist_name],
+					[description]
+				)
+				INCLUDE (
+					[html],
+					[html_card]
+				);
+			");
 
 			Tools.ConsolePrintMemory();
 		}
