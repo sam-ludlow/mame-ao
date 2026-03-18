@@ -222,7 +222,9 @@ namespace Spludlow.MameAO
 
 			DataTable softwareTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT software.software_id, software.softwarelist_id, software.name, software.description, software.cloneof FROM software ORDER BY software.name");
 			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT part.software_id, rom.name, rom.sha1 FROM (part INNER JOIN dataarea ON part.part_id = dataarea.part_id) INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id WHERE (rom.sha1 IS NOT NULL)");
-			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT part.software_id, disk.name, disk.sha1 FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.sha1 IS NOT NULL)");
+			DataTable diskTable = null;		
+			if (Globals.Core.Name == "mame")
+				Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT part.software_id, disk.name, disk.sha1 FROM (part INNER JOIN diskarea ON part.part_id = diskarea.part_id) INNER JOIN disk ON diskarea.diskarea_id = disk.diskarea_id WHERE (disk.sha1 IS NOT NULL)");
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
@@ -247,8 +249,11 @@ namespace Spludlow.MameAO
 			for (int index = 0; index < tables.Length; ++index)
 			{
 				DataTable table = tables[index];
-				table.TableName = names[index];
-				dataSet.Tables.Add(table);
+				if (table != null)
+				{
+					table.TableName = names[index];
+					dataSet.Tables.Add(table);
+				}
 			}
 
 			return dataSet;
