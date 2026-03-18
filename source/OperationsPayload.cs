@@ -1473,7 +1473,6 @@ namespace Spludlow.MameAO
 							switch (columnName)
 							{
 								case "software_name":
-								case "cloneof":
 									item.Append($"<a href=\"/{coreName}/software/{softwarelist_name}/{searchRow[column]}\">{searchRow[column]}</a>");
 									break;
 								default:
@@ -1485,7 +1484,7 @@ namespace Spludlow.MameAO
 						item.Append("</td>");
 					}
 
-					item.Append($"<td>{software_cloneof}</td>");
+					item.Append($"<td>{(software_cloneof != null ? $"<a href=\"/{coreName}/software/{softwarelist_name}/{software_cloneof}\">{software_cloneof}</a>" : "")}</td>");
 
 					item.Append($"<td>{(software_rom_count > 0 ? software_rom_count.ToString() : "")}</td>");
 					item.Append($"<td>{(software_disk_count > 0 ? software_disk_count.ToString() : "")}</td>");

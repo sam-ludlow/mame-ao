@@ -1746,10 +1746,10 @@ namespace Spludlow.MameAO
 
 		public void Report_SNAPCOV()
 		{
-			if (Globals.Config.ContainsKey("SnapServerPath") == false)
-				throw new ApplicationException("You must have SnapServerPath set in _config.txt");
+			if (Globals.Config.ContainsKey("ServerPath") == false)
+				throw new ApplicationException("You must have ServerPath set in _config.txt");
 
-			DataTable snapTable = Snap.LoadSnapIndex(Globals.Config["SnapServerPath"], Globals.Core.Name);
+			DataTable snapTable = Snap.LoadSnapIndex(Path.Combine(Globals.Config["ServerPath"], "snap"), Globals.Core.Name);
 
 			if (snapTable == null)
 				throw new ApplicationException("Snap index not available");
@@ -1768,7 +1768,7 @@ namespace Spludlow.MameAO
 					softwarelist.name,
 					softwarelist.description
 				ORDER BY
-					softwarelist.name;
+					softwarelist.description;
 			");
 
 			DataTable software_table = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"

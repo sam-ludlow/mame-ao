@@ -133,7 +133,7 @@ You can set advanced configuration options using the file `_config.txt`, each li
 | BitTorrentRestartMinutes | Minutes to wait until restarting DOME-BT if no asset data has downloaded | 5 | `BitTorrentRestartMinutes	2.5` |
 | BitTorrentUrl | Override default DOME-BT URL | http://localhost:12381 | `BitTorrentUrl	http://[::1]:12381` |
 | DisplayName | Public display name used to cedit snap home (max length 32) | Your time zone, e.g. `GMT Standard Time` | `DisplayName	Michael Knight` |
-| SnapServerPath | Snap Directory used for reporting |  | `SnapServerPath	C:\ao-data\snap` |
+| ServerPath | Server Directory used for reporting |  | `ServerPath	C:\ao-data` |
 
 MAME-AO must be restarted for changes to `_config.txt` to take affect.
 

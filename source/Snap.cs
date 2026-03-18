@@ -348,6 +348,101 @@ namespace Spludlow.MameAO
 			graphics.PixelOffsetMode = PixelOffsetMode.HighQuality;
 		}
 
+		public static void CreateThumbnail(string pngFilename, string jpgFilename, Size targetSize)
+		{
+			using (var image = Image.FromFile(pngFilename))
+			{
+				if (targetSize.IsEmpty == true)
+					targetSize = new Size(image.Width, image.Height);
+
+				using (Bitmap bitmap = new Bitmap(targetSize.Width, targetSize.Height, PixelFormat.Format24bppRgb))
+				{
+					bitmap.SetResolution(96, 96);
+					using (Graphics graphics = Graphics.FromImage(bitmap))
+					{
+						ConfigureGraphicsPixel(graphics);
+						graphics.DrawImage(image, new Rectangle(0, 0, targetSize.Width, targetSize.Height));
+					}
+
+					File.Delete(jpgFilename);
+					Resize(bitmap, ThumbSize, jpgFilename, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 96);
+				}
+			}
+		}
+
+		public static DataTable GetDisplayTable(SqlConnection connection)
+		{
+			string commandText = @"
+				SELECT
+					machine.name,
+					display.tag,
+					display.type,
+					display.rotate,
+					display.width,
+					display.height,
+					display.refresh,
+					display.pixclock,
+					display.htotal,
+					display.hbend,
+					display.hbstart,
+					display.vtotal,
+					display.vbend,
+					display.vbstart,
+					display.flipx
+				FROM
+					machine
+					INNER JOIN display ON machine.machine_id = display.machine_id
+				ORDER BY
+					machine.name;
+			";
+
+			return Database.ExecuteFill(connection, commandText);
+		}
+
+		public static Size FixedSize(string machine_name, DataTable displayTable)
+		{
+			DataRow[] rows = displayTable.Select($"[name] = '{machine_name}'");
+
+			if (rows.Length != 1)
+				return new Size();
+
+			DataRow row = rows[0];
+
+			string type = (string)row["type"];
+
+			if (type != "raster")
+				return new Size();
+
+			if (((string)row["tag"]).Contains("screen") == false)
+				return new Size();
+
+			int rotate = Int32.Parse((string)row["rotate"]);
+			int width = Int32.Parse((string)row["width"]);
+			int height = Int32.Parse((string)row["height"]);
+
+			int width_visible = width;
+			int height_visible = height;
+
+			if (row.IsNull("pixclock") == false)
+			{
+				int hbend = Int32.Parse((string)row["hbend"]);
+				int hbstart = Int32.Parse((string)row["hbstart"]);
+				int vbend = Int32.Parse((string)row["vbend"]);
+				int vbstart = Int32.Parse((string)row["vbstart"]);
+
+				width_visible = hbstart - hbend;
+				height_visible = vbstart - vbend;
+			}
+
+			// Probably a 4:3 CRT
+			if (height_visible >= 100 && height_visible <= 567)
+				height_visible = (int)Math.Round(width_visible / 4.0 * 3.0, 0);
+
+			bool isRotate = rotate == 90 || rotate == 270;
+
+			return new Size(isRotate ? height_visible : width_visible, isRotate ? width_visible : height_visible);
+		}
+
 		public static void UtilCopyDatabaseRows(string sourceConnectionString, string targetConnectionString, string sourceTableName, string targetTableName)
 		{
 			SqlConnection sourceConnection = new SqlConnection(sourceConnectionString);
@@ -450,8 +545,7 @@ namespace Spludlow.MameAO
 				}
 			}
 		}
-
-
+		
 		public static void UtilMakeThumbsMachine(string connectionString, string snapCoreDirectory)
 		{
 			DataTable displayTable = GetDisplayTable(new SqlConnection(connectionString));
@@ -476,109 +570,63 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static void CreateThumbnail(string pngFilename, string jpgFilename, Size targetSize)
+		public static void UtilMakeThumbsSoftware(string connectionStringMachine, string snapCoreDirectory)
 		{
-			using (var image = Image.FromFile(pngFilename))
+			DataTable softwareListMachineTable = Database.ExecuteFill(new SqlConnection(connectionStringMachine), @"
+				SELECT
+					softwarelist.name AS softwarelist_name,
+					driver.status,
+					driver.emulation,
+					machine.name AS machine_name
+				FROM
+					(
+						softwarelist
+						INNER JOIN machine ON softwarelist.machine_id = machine.machine_id
+					)
+					INNER JOIN driver ON machine.machine_id = driver.machine_id
+				WHERE
+					(machine.cloneof IS NULL)
+				ORDER BY
+					softwarelist.name,
+					driver.status,
+					driver.emulation,
+					machine.name;
+			");
+
+			DataTable displayTable = GetDisplayTable(new SqlConnection(connectionStringMachine));
+
+			string pngDirectory = Path.Combine(snapCoreDirectory, "png");
+			string jpgDirectory = Path.Combine(snapCoreDirectory, "jpg");
+
+			foreach (string softwareListDirectory in Directory.GetDirectories(pngDirectory))
 			{
-				if (targetSize.IsEmpty == true)
-					targetSize = new Size(image.Width, image.Height);
+				string softwarelistName = Path.GetFileName(softwareListDirectory);
 
-				//string targetDirectory = @"C:\tmp\test snap";
+				Size? size = null;
 
-				//string testFilename1 = Path.Combine(targetDirectory, machine_name + "@1.png");
-				//string testFilename2 = Path.Combine(targetDirectory, machine_name + "@2.jpg");
-
-				//File.Copy(pngFilename, testFilename1);
-
-				using (Bitmap bitmap = new Bitmap(targetSize.Width, targetSize.Height, PixelFormat.Format24bppRgb))
+				foreach (string pngFilename in Directory.GetFiles(softwareListDirectory, "*.png"))
 				{
-					bitmap.SetResolution(96, 96);
-					using (Graphics graphics = Graphics.FromImage(bitmap))
+					string softwareName = Path.GetFileNameWithoutExtension(pngFilename);
+
+					if (size == null)
 					{
-						ConfigureGraphicsPixel(graphics);
-						graphics.DrawImage(image, new Rectangle(0, 0, targetSize.Width, targetSize.Height));
+						size = new Size();
+
+						DataRow[] machineRows = softwareListMachineTable.Select($"softwarelist_name = '{softwarelistName}'");
+
+						if (machineRows.Length > 0)
+							size = FixedSize((string)machineRows[0]["machine_name"], displayTable);
 					}
 
-					//Resize(bitmap, ThumbSize, testFilename2, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 96);
+					string jpgFilename = Path.Combine(jpgDirectory, softwarelistName, softwareName + ".jpg");
 
-					File.Delete(jpgFilename);
-					Resize(bitmap, ThumbSize, jpgFilename, ImageFormat.Jpeg, PixelFormat.Format24bppRgb, 96);
+					Console.WriteLine($"{softwarelistName}\t{softwareName}\t{size.Value.Width}\t{size.Value.Height}");
+
+					CreateThumbnail(pngFilename, jpgFilename, size.Value);
 				}
 			}
 		}
 
-		public static DataTable GetDisplayTable(SqlConnection connection)
-		{
-			string commandText = @"
-				SELECT
-					machine.name,
-					display.tag,
-					display.type,
-					display.rotate,
-					display.width,
-					display.height,
-					display.refresh,
-					display.pixclock,
-					display.htotal,
-					display.hbend,
-					display.hbstart,
-					display.vtotal,
-					display.vbend,
-					display.vbstart,
-					display.flipx
-				FROM
-					machine
-					INNER JOIN display ON machine.machine_id = display.machine_id
-				ORDER BY
-					machine.name;
-			";
-
-			return Database.ExecuteFill(connection, commandText);
-		}
-
-		public static Size FixedSize(string machine_name, DataTable displayTable)
-		{
-			DataRow[] rows = displayTable.Select($"[name] = '{machine_name}'");
-
-			if (rows.Length != 1)
-				return new Size();
-
-			DataRow row = rows[0];
-
-			string type = (string)row["type"];
-
-			if (type != "raster")
-				return new Size();
-
-			if (((string)row["tag"]).Contains("screen") == false)
-				return new Size();
-
-			int rotate = Int32.Parse((string)row["rotate"]);
-			int width = Int32.Parse((string)row["width"]);
-			int height = Int32.Parse((string)row["height"]);
-
-			int width_visible = width;
-			int height_visible = height;
-
-			if (row.IsNull("pixclock") == false)
-			{
-				int hbend = Int32.Parse((string)row["hbend"]);
-				int hbstart = Int32.Parse((string)row["hbstart"]);
-				int vbend = Int32.Parse((string)row["vbend"]);
-				int vbstart = Int32.Parse((string)row["vbstart"]);
-
-				width_visible = hbstart - hbend;
-				height_visible = vbstart - vbend;
-			}
-
-			// Probably a 4:3 CRT
-			if (height_visible >= 100 && height_visible <= 567)
-				height_visible = (int)Math.Round(width_visible / 4.0 * 3.0, 0);
-
-			bool isRotate = rotate == 90 || rotate == 270;
-
-			return new Size(isRotate ? height_visible : width_visible, isRotate ? width_visible : height_visible);
-		}
 
 	}
 }
