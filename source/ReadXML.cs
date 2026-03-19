@@ -17,7 +17,7 @@ namespace Spludlow.MameAO
 			"device_ref",
 			"sample",
 			//"chip",
-			//"display",
+			"display",
 			//"sound",
 			"input",
 			//"control",

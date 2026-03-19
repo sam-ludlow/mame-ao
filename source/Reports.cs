@@ -185,6 +185,13 @@ namespace Spludlow.MameAO
 				Text = "Snap Coverage",
 				Decription = "What snaps are covered and required.",
 			},
+			new ReportType(){
+				Key = "machine-type",
+				Group = "interesting",
+				Code = "IMTYPE",
+				Text = "Machine Type",
+				Decription = "Determine a machines type.",
+			},
 
 		};
 
@@ -1816,6 +1823,145 @@ namespace Spludlow.MameAO
 			dataSet.Tables.Add(software_list_table);
 
 			SaveHtmlReport(dataSet, "Snap Coverage");
+		}
+
+		public void Report_IMTYPE()
+		{
+			var machineConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]);
+
+			DataTable machineTable = Database.ExecuteFill(machineConnection, @"
+				SELECT
+					machine.machine_id,
+					machine.name,
+					machine.description,
+					machine.cloneof,
+					machine.isdevice,
+					machine.sourcefile,
+					driver.status,
+					driver.emulation,
+					input.players,
+					input.coins
+				FROM machine
+					LEFT JOIN [input] ON machine.machine_id = [input].machine_id
+					LEFT JOIN [driver] ON machine.machine_id = [driver].machine_id
+				WHERE
+					(machine.cloneof IS NULL) AND (machine.isdevice = 'no')
+				ORDER BY
+					machine.description;
+			");
+			DataTable deviceTable = Database.ExecuteFill(machineConnection, @"
+				SELECT
+					device_ref.machine_id,
+					device_ref.name
+				FROM
+					device_ref
+				ORDER BY
+					device_ref.machine_id,
+					device_ref.name;
+			");
+			DataTable displayTable = Database.ExecuteFill(machineConnection, @"
+				SELECT
+					display.machine_id,
+					display.type
+				FROM
+					display
+				ORDER BY
+					display.machine_id,
+					display.type;
+			");
+			DataTable softwarelistTable = Database.ExecuteFill(machineConnection, @"
+				SELECT
+					softwarelist.machine_id,
+					softwarelist.name
+				FROM
+					softwarelist
+				ORDER BY
+					softwarelist.machine_id,
+					softwarelist.name;
+			");
+
+			machineTable.Columns.Add("type", typeof(string));
+			machineTable.Columns.Add("flags", typeof(string));
+
+			var interestingDevices = new HashSet<string>(new string[] {
+
+				"coin_hopper",			//	Coin Hopper
+				"wpc_lamp",				//	Williams Pinball Controller Lamp Control
+				"meters",				//	Electromechanical meters
+
+				"ace_sp_reelctrl",		//	ACE sp.ACE Reel Controller PCB
+				"ace_sp_reelctrl_pcp",
+				"em_reel",				//	Electromechanical Reel
+
+				"stepper",				//	Stepper Motor
+			});
+
+			foreach (DataRow machineRow in machineTable.Rows)
+			{
+				long machine_id = (long)machineRow["machine_id"];
+				string machine_name = (string)machineRow["name"];
+
+				machineRow["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/machine/{machine_name}\" target=\"_blank\" >{machine_name}</a>";
+
+				StringBuilder flags = new StringBuilder();
+
+				int coins = machineRow.IsNull("coins") == false ? Int32.Parse((string)machineRow["coins"]) : 0;
+				var softwareLists = softwarelistTable.Select($"machine_id = {machine_id}").Select(row => (string)row["name"]).ToArray();
+				var deviceNames = deviceTable.Select($"machine_id = {machine_id}").Select(row => (string)row["name"]).Distinct().OrderBy(name => name);
+				bool isdevice = (string)machineRow["isdevice"] == "yes";
+
+				if (Int32.Parse((string)machineRow["players"]) > 0)
+					flags.Append("players, ");
+
+				if (coins > 0)
+					flags.Append("coins, ");
+
+				if (displayTable.Select($"machine_id = {machine_id}").Length > 0)
+					flags.Append("display, ");
+
+				if (softwareLists.Length > 0)
+					flags.Append("software, ");
+
+
+				foreach (string deviceName in deviceNames)
+				{
+					if (interestingDevices.Contains(deviceName) == true)
+						flags.Append($"{deviceName}, ");
+				}
+
+				machineRow["flags"] = flags.ToString();
+
+
+				string type;
+
+				if (isdevice)
+				{
+					type = "device";
+				}
+				else
+				{
+					if (coins > 0)
+					{
+						if (deviceNames.Contains("coin_hopper") || deviceNames.Contains("meters") || deviceNames.Contains("stepper"))
+							type = "gamble";
+						else
+							type = "arcade";
+					}
+					else
+					{
+						if (softwareLists.Length > 0)
+							type = "software";
+						else
+							type = "other";
+					}
+				}
+
+				machineRow["type"] = type;
+
+			}
+
+			SaveHtmlReport(machineTable, "Machine Type");
+
 		}
 	}
 }

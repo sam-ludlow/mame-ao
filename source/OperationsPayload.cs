@@ -180,17 +180,16 @@ namespace Spludlow.MameAO
 
 		public static void MameishMSSQLMachinePayloadsSearch(SqlConnection[] connections, string coreName, DataTable snapTable)
 		{
-			//	TODO:	feature 0-5, chip
+			//	TODO ???	feature 0-5, chip
 
-			DataTable table;
-			string commandText;
 
 			//
 			// machine, driver, sound, input
 			//
-			commandText = @"
+			DataTable searchTable = Database.ExecuteFill(connections[0], @"
 				SELECT
 					machine.name,
+					machine.machine_id,
 					machine.sourcefile,
 					machine.sampleof,
 					CAST(CASE WHEN machine.isbios = 'yes' THEN 1 ELSE 0 END AS BIT) AS [isbios],
@@ -198,6 +197,7 @@ namespace Spludlow.MameAO
 					CAST(CASE WHEN machine.ismechanical = 'yes' THEN 1 ELSE 0 END AS BIT) AS [ismechanical],
 					CAST(CASE WHEN machine.ismechanical = 'no' THEN 1 ELSE 0 END AS BIT) AS [iselectronic],
 					CAST(CASE WHEN machine.runnable = 'yes' THEN 1 ELSE 0 END AS BIT) AS [runnable],
+					'' AS [type],
 					machine.description,
 					machine.year,
 					machine.manufacturer,
@@ -225,11 +225,9 @@ namespace Spludlow.MameAO
 						LEFT JOIN sound ON machine.machine_id = sound.machine_id
 					)
 					LEFT JOIN [input] ON machine.machine_id = input.machine_id;
-			";
+			");
 
-			DataTable searchTable = new DataTable("machine_search_payload");
-			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
-				adapter.Fill(searchTable);
+			searchTable.TableName = "machine_search_payload";
 			searchTable.PrimaryKey = new DataColumn[] { searchTable.Columns["name"] };
 
 			foreach (DataRow row in searchTable.Rows)
@@ -244,7 +242,7 @@ namespace Spludlow.MameAO
 			//
 			// display
 			//
-			commandText = @"
+			DataTable displayTable = Database.ExecuteFill(connections[0], @"
 				SELECT
 					machine.name,
 					display.tag,
@@ -268,20 +266,44 @@ namespace Spludlow.MameAO
 					machine.name,
 					display.type,
 					display.tag;
-			";
+			");
 
-			DataTable displayTable = new DataTable();
-			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
-				adapter.Fill(displayTable);
+			//
+			// device_ref
+			//
+			DataTable deviceRefTable = Database.ExecuteFill(connections[0], @"
+				SELECT
+					device_ref.machine_id,
+					device_ref.name
+				FROM
+					device_ref
+				ORDER BY
+					device_ref.machine_id,
+					device_ref.name;
+			");
 
-			commandText = "SELECT [type] FROM [display] GROUP BY [type] ORDER BY [type]";
-			table = new DataTable();
-			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
-				adapter.Fill(table);
-			List<string> displayTypes = table.Rows.Cast<DataRow>().Select(row => (string)row[0]).ToList();
+			//
+			// softwarelist
+			//
+			DataTable softwarelistTable = Database.ExecuteFill(connections[0], @"
+				SELECT
+					softwarelist.machine_id,
+					softwarelist.name
+				FROM
+					softwarelist
+				ORDER BY
+					softwarelist.machine_id,
+					softwarelist.name;
+			");
+
+			//
+			// display types
+			//
+			List<string> displayTypes = Database.ExecuteFill(connections[0],
+				"SELECT [type] FROM [display] GROUP BY [type] ORDER BY [type]").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToList();
 
 			foreach (string displayType in displayTypes)
-				searchTable.Columns.Add($"{displayType}", typeof(int));
+				searchTable.Columns.Add($"{ displayType}", typeof(int));
 
 			foreach (DataRow searchRow in searchTable.Rows)
 			{
@@ -312,7 +334,7 @@ namespace Spludlow.MameAO
 			//
 			//	control (input)
 			//
-			commandText = @"
+			DataTable inputControlTable = Database.ExecuteFill(connections[0], @"
 				SELECT
 					machine.name,
 					control.*
@@ -326,17 +348,14 @@ namespace Spludlow.MameAO
 					machine.name,
 					control.type,
 					control.player;
-			";
+			");
 
-			DataTable inputControlTable = new DataTable();
-			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
-				adapter.Fill(inputControlTable);
 
-			commandText = "SELECT [type] FROM [control] GROUP BY [type] ORDER BY [type]";
-			table = new DataTable();
-			using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[0]))
-				adapter.Fill(table);
-			List<string> controlTypes = table.Rows.Cast<DataRow>().Select(row => (string)row[0]).ToList();
+			//
+			// control types
+			//
+			List<string> controlTypes = Database.ExecuteFill(connections[0],
+				"SELECT [type] FROM [control] GROUP BY [type] ORDER BY [type]").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToList();
 
 			foreach (string controlType in controlTypes)
 				searchTable.Columns.Add($"{controlType}", typeof(int));
@@ -450,6 +469,41 @@ namespace Spludlow.MameAO
 
 				item.Append("</div>");
 				row["html_card"] = item.ToString();
+
+				//
+				// Machine Type
+				//
+				string type;
+
+				long machine_id = (long)row["machine_id"];
+
+				int coins = row.IsNull("coins") == false ? Int32.Parse((string)row["coins"]) : 0;
+				var deviceRefNames = deviceRefTable.Select($"machine_id = {machine_id}").Select(r => (string)r["name"]).Distinct().OrderBy(name => name);
+				var softwareLists = softwarelistTable.Select($"machine_id = {machine_id}").Select(r => (string)r["name"]).ToArray();
+
+				if (machine_isdevice)
+				{
+					type = "device";
+				}
+				else
+				{
+					if (coins > 0)
+					{
+						if (deviceRefNames.Contains("coin_hopper") || deviceRefNames.Contains("meters") || deviceRefNames.Contains("stepper"))
+							type = "gamble";
+						else
+							type = "arcade";
+					}
+					else
+					{
+						if (softwareLists.Length > 0)
+							type = "software";
+						else
+							type = "other";
+					}
+				}
+
+				row["type"] = type;
 			}
 
 			//
@@ -476,12 +530,10 @@ namespace Spludlow.MameAO
 			");
 
 			Database.ExecuteNonQuery(connections[0], @"
-				CREATE NONCLUSTERED INDEX [IX_machine_search_payload_filters_description]
+				CREATE NONCLUSTERED INDEX [IX_machine_search_payload_type_description]
 				ON [machine_search_payload]
 				(
-					[isdevice],
-					[ismechanical],
-					[iselectronic],
+					[type],
 					[description]
 				)
 				INCLUDE (
