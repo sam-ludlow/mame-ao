@@ -192,6 +192,13 @@ namespace Spludlow.MameAO
 				Text = "Machine Type",
 				Decription = "Determine a machines type.",
 			},
+			new ReportType(){
+				Key = "year-fix",
+				Group = "interesting",
+				Code = "IYEAR",
+				Text = "Year Fix",
+				Decription = "Guess years with question marks.",
+			},
 
 		};
 
@@ -1962,6 +1969,41 @@ namespace Spludlow.MameAO
 
 			SaveHtmlReport(machineTable, "Machine Type");
 
+		}
+
+		public void Report_IYEAR()
+		{
+			var machineConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]);
+			var softwareConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[1]);
+
+			DataTable machineTable = Database.ExecuteFill(machineConnection, "SELECT [year] FROM [machine] WHERE ([isdevice] = 'no') GROUP BY [year] ORDER BY [year]");
+			DataTable softwareTable = Database.ExecuteFill(softwareConnection, "SELECT [year] FROM [software] GROUP BY [year] ORDER BY [year]");
+
+			List<string> yearStrings = new List<string>();
+
+			foreach (var table in new DataTable[] { machineTable, softwareTable })
+			{
+				foreach (string year in table.Rows.Cast<DataRow>().Select(row => (string)row["year"]))
+					if (yearStrings.Contains(year) == false)
+						yearStrings.Add(year);
+
+			}
+
+			yearStrings.Sort();
+
+			DataTable resultTable = Tools.MakeDataTable(
+				"Year	FixedYear",
+				"String	Int32"
+			);
+
+			foreach (string yearString in yearStrings)
+			{
+				int year = OperationsPayload.ParseFixYear(yearString);
+
+				resultTable.Rows.Add(yearString, year);
+			}
+
+			SaveHtmlReport(resultTable, "Year Fix");
 		}
 	}
 }

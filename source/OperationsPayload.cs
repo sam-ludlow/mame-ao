@@ -178,6 +178,37 @@ namespace Spludlow.MameAO
 			return 0;
 		}
 
+		private readonly static HashSet<string> yearFixMatch = new HashSet<string>(new string[] {
+			"?", "??", "???", "0", "00", "000", "0000"
+		});
+		public static int ParseFixYear(string year)
+		{
+			string yearFix = year;
+
+			if (yearFix.Length > 4)
+				yearFix = yearFix.Substring(0, 4);
+
+			yearFix = yearFix.ToUpper().Replace("X", "?");
+
+			if (yearFixMatch.Contains(yearFix))
+				yearFix = "????";
+
+			if (yearFix == "20??")
+				yearFix = "2005";
+
+			if (yearFix[3] == '?')
+				yearFix = yearFix.Substring(0, 3) + "5";
+
+			if (yearFix.Contains("?") == true)
+				yearFix = "1985";
+
+			int year_fixed = 0;
+			if (Int32.TryParse(yearFix, out year_fixed) == false)
+				throw new ApplicationException($"Bad year:\t{year}\t{yearFix}");
+
+			return year_fixed;
+		}
+
 		public static void MameishMSSQLMachinePayloadsSearch(SqlConnection[] connections, string coreName, DataTable snapTable)
 		{
 			//	TODO ???	feature 0-5, chip
