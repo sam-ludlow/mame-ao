@@ -504,37 +504,7 @@ namespace Spludlow.MameAO
 				//
 				// Machine Type
 				//
-				string type;
-
-				long machine_id = (long)row["machine_id"];
-
-				int coins = row.IsNull("coins") == false ? Int32.Parse((string)row["coins"]) : 0;
-				var deviceRefNames = deviceRefTable.Select($"machine_id = {machine_id}").Select(r => (string)r["name"]).Distinct().OrderBy(name => name);
-				var softwareLists = softwarelistTable.Select($"machine_id = {machine_id}").Select(r => (string)r["name"]).ToArray();
-
-				if (machine_isdevice)
-				{
-					type = "device";
-				}
-				else
-				{
-					if (coins > 0)
-					{
-						if (deviceRefNames.Contains("coin_hopper") || deviceRefNames.Contains("meters") || deviceRefNames.Contains("stepper"))
-							type = "gamble";
-						else
-							type = "arcade";
-					}
-					else
-					{
-						if (softwareLists.Length > 0)
-							type = "software";
-						else
-							type = "other";
-					}
-				}
-
-				row["type"] = type;
+				row["type"] = MameishMachineType(row, machine_isdevice, deviceRefTable, softwarelistTable);
 			}
 
 			//
@@ -572,6 +542,37 @@ namespace Spludlow.MameAO
 					[html_card]
 				);
 			");
+		}
+
+		public static string MameishMachineType(DataRow row, bool isdevice, DataTable deviceRefTable, DataTable softwarelistTable)
+		{
+			long machine_id = (long)row["machine_id"];
+			string sourcefile = (string)row["sourcefile"];
+
+			int coins = row.IsNull("coins") == false ? Int32.Parse((string)row["coins"]) : 0;
+			var deviceRefNames = deviceRefTable.Select($"machine_id = {machine_id}").Select(r => (string)r["name"]).Distinct();
+			var softwareLists = softwarelistTable.Select($"machine_id = {machine_id}").Select(r => (string)r["name"]).ToArray();
+
+			if (isdevice)
+				return "device";
+
+			if (sourcefile.StartsWith("pinball/"))
+				return "pinball";
+
+			if (coins > 0)
+			{
+				if (deviceRefNames.Contains("coin_hopper") || deviceRefNames.Contains("meters") || deviceRefNames.Contains("stepper"))
+					return "gamble";
+				else
+					return "arcade";
+			}
+			else
+			{
+				if (softwareLists.Length > 0)
+					return "software";
+				else
+					return "other";
+			}
 		}
 
 		public static void MameishMSSQLMachinePayloads(string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime, DataTable snapTable)

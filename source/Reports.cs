@@ -1856,7 +1856,7 @@ namespace Spludlow.MameAO
 				ORDER BY
 					machine.description;
 			");
-			DataTable deviceTable = Database.ExecuteFill(machineConnection, @"
+			DataTable deviceRefTable = Database.ExecuteFill(machineConnection, @"
 				SELECT
 					device_ref.machine_id,
 					device_ref.name
@@ -1914,7 +1914,7 @@ namespace Spludlow.MameAO
 
 				int coins = machineRow.IsNull("coins") == false ? Int32.Parse((string)machineRow["coins"]) : 0;
 				var softwareLists = softwarelistTable.Select($"machine_id = {machine_id}").Select(row => (string)row["name"]).ToArray();
-				var deviceNames = deviceTable.Select($"machine_id = {machine_id}").Select(row => (string)row["name"]).Distinct().OrderBy(name => name);
+				var deviceNames = deviceRefTable.Select($"machine_id = {machine_id}").Select(row => (string)row["name"]).Distinct().OrderBy(name => name);
 				bool isdevice = (string)machineRow["isdevice"] == "yes";
 
 				if (Int32.Parse((string)machineRow["players"]) > 0)
@@ -1938,30 +1938,7 @@ namespace Spludlow.MameAO
 
 				machineRow["flags"] = flags.ToString();
 
-
-				string type;
-
-				if (isdevice)
-				{
-					type = "device";
-				}
-				else
-				{
-					if (coins > 0)
-					{
-						if (deviceNames.Contains("coin_hopper") || deviceNames.Contains("meters") || deviceNames.Contains("stepper"))
-							type = "gamble";
-						else
-							type = "arcade";
-					}
-					else
-					{
-						if (softwareLists.Length > 0)
-							type = "software";
-						else
-							type = "other";
-					}
-				}
+				string type = OperationsPayload.MameishMachineType(machineRow, isdevice, deviceRefTable, softwarelistTable);
 
 				machineRow["type"] = type;
 
