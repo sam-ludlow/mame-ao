@@ -1768,6 +1768,85 @@ namespace Spludlow.MameAO
 			if (snapTable == null)
 				throw new ApplicationException("Snap index not available");
 
+			//
+			// Machine
+			//
+			var machineConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]);
+
+			DataTable machineTable = Database.ExecuteFill(machineConnection, @"
+				SELECT
+					machine.machine_id,
+					machine.name,
+					machine.description,
+					machine.cloneof,
+					machine.isdevice,
+					machine.sourcefile,
+					driver.status,
+					driver.emulation,
+					input.players,
+					input.coins
+				FROM machine
+					LEFT JOIN [input] ON machine.machine_id = [input].machine_id
+					LEFT JOIN [driver] ON machine.machine_id = [driver].machine_id
+				WHERE
+					(machine.isdevice = 'no')
+				ORDER BY
+					machine.description;
+			");
+			DataTable deviceRefTable = Database.ExecuteFill(machineConnection, @"
+				SELECT
+					device_ref.machine_id,
+					device_ref.name
+				FROM
+					device_ref
+				ORDER BY
+					device_ref.machine_id,
+					device_ref.name;
+			");
+			DataTable softwarelistTable = Database.ExecuteFill(machineConnection, @"
+				SELECT
+					softwarelist.machine_id,
+					softwarelist.name
+				FROM
+					softwarelist
+				ORDER BY
+					softwarelist.machine_id,
+					softwarelist.name;
+			");
+
+			machineTable.Columns.Add("type", typeof(string));
+			machineTable.Columns.Add("snap", typeof(bool));
+
+			foreach (DataRow machineRow in machineTable.Rows)
+			{
+				long machine_id = (long)machineRow["machine_id"];
+				string machine_name = (string)machineRow["name"];
+				bool isdevice = (string)machineRow["isdevice"] == "yes";
+
+				machineRow["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/machine/{machine_name}\" target=\"_blank\" >{machine_name}</a>";
+
+				machineRow["type"] = OperationsPayload.MameishMachineType(machineRow, isdevice, deviceRefTable, softwarelistTable);
+
+				DataRow snapRow = snapTable.Rows.Find(machine_name);
+
+				machineRow["snap"] = snapRow != null;
+
+			}
+
+			foreach (string type in machineTable.Rows.Cast<DataRow>().Select(row => (string)row["type"]).Distinct().OrderBy(type => type))
+			{
+				DataView typeView = new DataView(machineTable);
+				typeView.RowFilter = $"[type] = '{type}' AND [snap] = 0";
+
+				string reportName = $"{type} Snap Coverage";
+
+				SaveHtmlReport(Tools.DataTableFromView(typeView, reportName), reportName);
+			}
+
+			//
+			// Software
+			//
+
 			DataTable software_list_table = Database.ExecuteFill(Globals.Core.ConnectionStrings[1], @"
 				SELECT
 					softwarelist.softwarelist_id,
@@ -1824,12 +1903,12 @@ namespace Spludlow.MameAO
 				software_list_row["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/software/{softwarelist_name}\" target=\"_blank\" >{softwarelist_name}</a>";
 			}
 
-			DataSet dataSet = new DataSet();
-
 			software_list_table.TableName = "Software List Coverage";
-			dataSet.Tables.Add(software_list_table);
 
-			SaveHtmlReport(dataSet, "Snap Coverage");
+			DataView view = new DataView(software_list_table);
+			view.Sort = "[software_coverage] DESC, description";
+
+			SaveHtmlReport(Tools.DataTableFromView(view, software_list_table.TableName), software_list_table.TableName);
 		}
 
 		public void Report_IMTYPE()
