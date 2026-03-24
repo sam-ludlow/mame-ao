@@ -471,10 +471,12 @@ namespace Spludlow.MameAO
 				string machine_manufacturer = row.IsNull("manufacturer") ? "" : (string)row["manufacturer"];
 				bool machine_isdevice = (bool)row["isdevice"];
 
+				string cardClass = machine_isdevice == true ? "card" : $"card-{((string)row["status"])[0]}{((string)row["emulation"])[0]}";
+
 				DataRow snapRow = snapTable?.Rows.Find(machine_name);
 
 				item = new StringBuilder();
-				item.Append("<div class=\"card\">");
+				item.Append($"<div class=\"{cardClass}\">");
 
 				item.Append($"<div class=\"card-thumb\"><a href=\"/{coreName}/machine/{machine_name}\" class=\"card-link\">");
 				if (snapRow != null)
@@ -558,6 +560,9 @@ namespace Spludlow.MameAO
 
 			if (sourcefile.StartsWith("pinball/"))
 				return "pinball";
+
+			if (sourcefile.StartsWith("barcrest/") || sourcefile.StartsWith("bfm/") || sourcefile.StartsWith("maygay/"))
+				return "gamble";
 
 			if (coins > 0)
 			{
