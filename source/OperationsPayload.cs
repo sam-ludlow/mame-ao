@@ -561,7 +561,9 @@ namespace Spludlow.MameAO
 			if (sourcefile.StartsWith("pinball/"))
 				return "pinball";
 
-			if (sourcefile.StartsWith("barcrest/") || sourcefile.StartsWith("bfm/") || sourcefile.StartsWith("maygay/"))
+			if (sourcefile.StartsWith("barcrest/") || sourcefile.StartsWith("bfm/") || sourcefile.StartsWith("maygay/") || sourcefile.StartsWith("jpm/")
+				 || sourcefile.StartsWith("misc/ecoin") || sourcefile.StartsWith("misc/proconn") || sourcefile.StartsWith("misc/acesp")
+				 || sourcefile.StartsWith("misc/globalfr") || sourcefile.StartsWith("misc/astrafr"))
 				return "gamble";
 
 			if (coins > 0)
