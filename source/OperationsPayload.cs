@@ -227,8 +227,9 @@ namespace Spludlow.MameAO
 					CAST(CASE WHEN machine.isdevice = 'yes' THEN 1 ELSE 0 END AS BIT) AS [isdevice],
 					CAST(CASE WHEN machine.ismechanical = 'yes' THEN 1 ELSE 0 END AS BIT) AS [ismechanical],
 					CAST(CASE WHEN machine.ismechanical = 'no' THEN 1 ELSE 0 END AS BIT) AS [iselectronic],
-					CAST(CASE WHEN machine.runnable = 'yes' THEN 1 ELSE 0 END AS BIT) AS [runnable],
+					CAST(CASE WHEN machine.cloneof IS NULL THEN 0 ELSE 1 END AS BIT) AS [isclone],
 					'' AS [type],
+					'' AS [ao_status],
 					machine.description,
 					machine.year,
 					machine.manufacturer,
@@ -507,6 +508,13 @@ namespace Spludlow.MameAO
 				// Machine Type
 				//
 				row["type"] = MameishMachineType(row, machine_isdevice, deviceRefTable, softwarelistTable);
+
+				//
+				// Status
+				//
+				if (machine_isdevice == false)
+					row["ao_status"] = machineAoStatusLookup[$"{(string)row["status"]}-{(string)row["emulation"]}"];
+
 			}
 
 			//
@@ -540,11 +548,41 @@ namespace Spludlow.MameAO
 					[description]
 				)
 				INCLUDE (
+					[ao_status],	
+					[ismechanical],
+					[isclone],
+
 					[html],
 					[html_card]
 				);
 			");
+
+			Database.ExecuteNonQuery(connections[0], @"
+				CREATE NONCLUSTERED INDEX [IX_machine_search_payload_type_status_description]
+				ON [machine_search_payload]
+				(
+					[type],
+					[ao_status],
+					[description]
+				)
+				INCLUDE (
+					[ismechanical],
+					[isclone],
+
+					[html],
+					[html_card]
+				);
+			");
+
+			//	TODO: Indexes for sorting by year..... maybe more index combinations?
 		}
+
+		private static readonly Dictionary<string, string> machineAoStatusLookup = new Dictionary<string, string> {
+			{ "good-good",					"good" },
+			{ "imperfect-good",				"imperfect" },
+			{ "preliminary-good",			"preliminary" },
+			{ "preliminary-preliminary",	"bad" },
+		};
 
 		public static string MameishMachineType(DataRow row, bool isdevice, DataTable deviceRefTable, DataTable softwarelistTable)
 		{
