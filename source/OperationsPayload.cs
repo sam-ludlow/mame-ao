@@ -507,7 +507,7 @@ namespace Spludlow.MameAO
 				//
 				// Machine Type
 				//
-				row["type"] = MameishMachineType(row, machine_isdevice, deviceRefTable, softwarelistTable);
+				row["type"] = MameishMachineType(row, machine_isdevice, deviceRefTable, softwarelistTable, inputControlTable);
 
 				//
 				// Status
@@ -584,20 +584,25 @@ namespace Spludlow.MameAO
 			{ "preliminary-preliminary",	"bad" },
 		};
 
-		public static string MameishMachineType(DataRow row, bool isdevice, DataTable deviceRefTable, DataTable softwarelistTable)
+		public static string MameishMachineType(DataRow row, bool isdevice, DataTable deviceRefTable, DataTable softwarelistTable, DataTable inputControlTable)
 		{
 			long machine_id = (long)row["machine_id"];
+			string name = (string)row["name"];
 			string sourcefile = (string)row["sourcefile"];
 
 			int coins = row.IsNull("coins") == false ? Int32.Parse((string)row["coins"]) : 0;
 			var deviceRefNames = deviceRefTable.Select($"machine_id = {machine_id}").Select(r => (string)r["name"]).Distinct();
 			var softwareLists = softwarelistTable.Select($"machine_id = {machine_id}").Select(r => (string)r["name"]).ToArray();
+			var controlTypes = inputControlTable.Select($"[name] = '{name}'").Select(r => (string)r["type"]).Distinct();
 
 			if (isdevice)
 				return "device";
 
 			if (sourcefile.StartsWith("pinball/"))
 				return "pinball";
+
+			if (controlTypes.Contains("gambling"))
+				return "gamble";
 
 			if (sourcefile.StartsWith("barcrest/") || sourcefile.StartsWith("bfm/") || sourcefile.StartsWith("maygay/") || sourcefile.StartsWith("jpm/")
 				 || sourcefile.StartsWith("misc/ecoin") || sourcefile.StartsWith("misc/proconn") || sourcefile.StartsWith("misc/acesp")

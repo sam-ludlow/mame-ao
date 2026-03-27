@@ -1780,6 +1780,7 @@ namespace Spludlow.MameAO
 					machine.description,
 					machine.cloneof,
 					machine.isdevice,
+					machine.ismechanical,
 					machine.sourcefile,
 					driver.status,
 					driver.emulation,
@@ -1791,6 +1792,7 @@ namespace Spludlow.MameAO
 				WHERE
 					(machine.isdevice = 'no')
 				ORDER BY
+					machine.ismechanical,
 					machine.description;
 			");
 			DataTable deviceRefTable = Database.ExecuteFill(machineConnection, @"
@@ -1813,6 +1815,21 @@ namespace Spludlow.MameAO
 					softwarelist.machine_id,
 					softwarelist.name;
 			");
+			DataTable inputControlTable = Database.ExecuteFill(machineConnection, @"
+				SELECT
+					machine.name,
+					control.*
+				FROM
+					(
+						machine
+						INNER JOIN [input] ON machine.machine_id = input.machine_id
+					)
+					INNER JOIN control ON input.input_id = control.input_id
+				ORDER BY
+					machine.name,
+					control.type,
+					control.player;
+			");
 
 			machineTable.Columns.Add("type", typeof(string));
 			machineTable.Columns.Add("snap", typeof(bool));
@@ -1823,14 +1840,13 @@ namespace Spludlow.MameAO
 				string machine_name = (string)machineRow["name"];
 				bool isdevice = (string)machineRow["isdevice"] == "yes";
 
-				machineRow["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/machine/{machine_name}\" target=\"_blank\" >{machine_name}</a>";
-
-				machineRow["type"] = OperationsPayload.MameishMachineType(machineRow, isdevice, deviceRefTable, softwarelistTable);
+				machineRow["type"] = OperationsPayload.MameishMachineType(machineRow, isdevice, deviceRefTable, softwarelistTable, inputControlTable);
 
 				DataRow snapRow = snapTable.Rows.Find(machine_name);
 
 				machineRow["snap"] = snapRow != null;
 
+				machineRow["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/machine/{machine_name}\" target=\"_blank\" >{machine_name}</a>";
 			}
 
 			foreach (string type in machineTable.Rows.Cast<DataRow>().Select(row => (string)row["type"]).Distinct().OrderBy(type => type))
@@ -1965,6 +1981,21 @@ namespace Spludlow.MameAO
 					softwarelist.machine_id,
 					softwarelist.name;
 			");
+			DataTable inputControlTable = Database.ExecuteFill(machineConnection, @"
+				SELECT
+					machine.name,
+					control.*
+				FROM
+					(
+						machine
+						INNER JOIN [input] ON machine.machine_id = input.machine_id
+					)
+					INNER JOIN control ON input.input_id = control.input_id
+				ORDER BY
+					machine.name,
+					control.type,
+					control.player;
+			");
 
 			machineTable.Columns.Add("type", typeof(string));
 			machineTable.Columns.Add("flags", typeof(string));
@@ -1987,8 +2018,6 @@ namespace Spludlow.MameAO
 				long machine_id = (long)machineRow["machine_id"];
 				string machine_name = (string)machineRow["name"];
 
-				machineRow["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/machine/{machine_name}\" target=\"_blank\" >{machine_name}</a>";
-
 				StringBuilder flags = new StringBuilder();
 
 				int coins = machineRow.IsNull("coins") == false ? Int32.Parse((string)machineRow["coins"]) : 0;
@@ -2008,7 +2037,6 @@ namespace Spludlow.MameAO
 				if (softwareLists.Length > 0)
 					flags.Append("software, ");
 
-
 				foreach (string deviceName in deviceNames)
 				{
 					if (interestingDevices.Contains(deviceName) == true)
@@ -2017,10 +2045,9 @@ namespace Spludlow.MameAO
 
 				machineRow["flags"] = flags.ToString();
 
-				string type = OperationsPayload.MameishMachineType(machineRow, isdevice, deviceRefTable, softwarelistTable);
+				machineRow["type"] = OperationsPayload.MameishMachineType(machineRow, isdevice, deviceRefTable, softwarelistTable, inputControlTable);
 
-				machineRow["type"] = type;
-
+				machineRow["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/machine/{machine_name}\" target=\"_blank\" >{machine_name}</a>";
 			}
 
 			SaveHtmlReport(machineTable, "Machine Type");
