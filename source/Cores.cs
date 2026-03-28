@@ -242,6 +242,7 @@ namespace Spludlow.MameAO
 				machineTable.Columns.Add("ao_softwarelist_count", typeof(int));
 				machineTable.Columns.Add("ao_driver_status", typeof(string));
 				machineTable.Columns.Add("ao_input_coins", typeof(int));
+				machineTable.Columns.Add("ao_type", typeof(string));
 
 				foreach (DataRow machineRow in machineTable.Rows)
 				{
@@ -260,9 +261,22 @@ namespace Spludlow.MameAO
 					if (driverRows.Length == 1)
 						machineRow["ao_driver_status"] = (string)driverRows[0]["status"];
 
-					machineRow["ao_input_coins"] = 0;
+					int coins = 0;
 					if (inputRows.Length == 1 && inputRows[0].IsNull("coins") == false)
-						machineRow["ao_input_coins"] = Int32.Parse((string)inputRows[0]["coins"]);
+						coins = Int32.Parse((string)inputRows[0]["coins"]);
+					machineRow["ao_input_coins"] = coins;
+
+					DataTable inputControlTable = Tools.MakeDataTable(
+						"name	type",
+						"String	String");
+					if (inputRows.Length == 1)
+					{
+						long input_id = (long)inputRows[0]["input_id"];
+						foreach (string type in dataSet.Tables["control"].Select($"[input_id] = {input_id}").Select(r => (string)r["type"]))
+							inputControlTable.Rows.Add((string)machineRow["name"], type);
+					}
+
+					machineRow["ao_type"] = OperationsPayload.MameishMachineType(machineRow, (string)machineRow["isdevice"] == "yes", coins, dataSet.Tables["device_ref"], softwarelistTable, inputControlTable);
 				}
 			}
 

@@ -1840,7 +1840,8 @@ namespace Spludlow.MameAO
 				string machine_name = (string)machineRow["name"];
 				bool isdevice = (string)machineRow["isdevice"] == "yes";
 
-				machineRow["type"] = OperationsPayload.MameishMachineType(machineRow, isdevice, deviceRefTable, softwarelistTable, inputControlTable);
+				int coins = machineRow.IsNull("coins") == false ? Int32.Parse((string)machineRow["coins"]) : 0;
+				machineRow["type"] = OperationsPayload.MameishMachineType(machineRow, isdevice, coins, deviceRefTable, softwarelistTable, inputControlTable);
 
 				DataRow snapRow = snapTable.Rows.Find(machine_name);
 
@@ -2045,7 +2046,7 @@ namespace Spludlow.MameAO
 
 				machineRow["flags"] = flags.ToString();
 
-				machineRow["type"] = OperationsPayload.MameishMachineType(machineRow, isdevice, deviceRefTable, softwarelistTable, inputControlTable);
+				machineRow["type"] = OperationsPayload.MameishMachineType(machineRow, isdevice, coins, deviceRefTable, softwarelistTable, inputControlTable);
 
 				machineRow["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/machine/{machine_name}\" target=\"_blank\" >{machine_name}</a>";
 			}

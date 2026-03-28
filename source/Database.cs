@@ -11,96 +11,135 @@ namespace Spludlow.MameAO
 {
 	public class Database
 	{
-		public static DataQueryProfile[] DataQueryProfiles = new DataQueryProfile[] {
-			new DataQueryProfile(){
-				Key = "arcade-good",
-				Text = "Arcade Good",
-				Decription = "Arcade Machines - Status Good - Parents only",
-				CommandText =
-					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
-					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins > 0) @SEARCH) " +
-					"ORDER BY machine.description COLLATE NOCASE ASC " +
-					"LIMIT @LIMIT OFFSET @OFFSET",
-			},
-			new DataQueryProfile(){
-				Key = "arcade-imperfect",
-				Text = "Arcade Imperfect",
-				Decription = "Arcade Machines - Status Imperfect - Parents only",
-				CommandText =
-					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
-					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins > 0) @SEARCH) " +
-					"ORDER BY machine.description COLLATE NOCASE ASC " +
-					"LIMIT @LIMIT OFFSET @OFFSET",
-			},
-			new DataQueryProfile(){
-				Key = "computer-console-good",
-				Text = "Computers & Consoles Good",
-				Decription = "Computers & Consoles with software - status good - Parents only",
-				CommandText =
-					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
-					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
-					"ORDER BY machine.description COLLATE NOCASE ASC " +
-					"LIMIT @LIMIT OFFSET @OFFSET",
-			},
-			new DataQueryProfile(){
-				Key = "computer-console-imperfect",
-				Text = "Computers & Consoles Imperfect",
-				Decription = "Computers & Consoles with software - status imperfect - Parents only",
-				CommandText =
-					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
-					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
-					"ORDER BY machine.description COLLATE NOCASE ASC " +
-					"LIMIT @LIMIT OFFSET @OFFSET",
-			},
-			new DataQueryProfile(){
-				Key = "other-good",
-				Text = "Other Good",
-				Decription = "Other Systems without software - status good - Parents only",
-				CommandText =
-					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
-					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
-					"ORDER BY machine.description COLLATE NOCASE ASC " +
-					"LIMIT @LIMIT OFFSET @OFFSET",
-			},
-			new DataQueryProfile(){
-				Key = "other-imperfect",
-				Text = "Other Imperfect",
-				Decription = "Other Systems without software - status imperfect - Parents only",
-				CommandText =
-					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
-					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
-					"ORDER BY machine.description COLLATE NOCASE ASC " +
-					"LIMIT @LIMIT OFFSET @OFFSET",
-			},
-			new DataQueryProfile(){
+		public static List<DataQueryProfile> DataQueryProfiles = new List<DataQueryProfile>();
+
+		static Database()
+		{
+			string commandText = @"
+				SELECT machine.*, driver.*, COUNT() OVER() AS ao_total
+				FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id
+				WHERE (@WHERE @SEARCH)
+				ORDER BY machine.description COLLATE NOCASE ASC
+				LIMIT @LIMIT OFFSET @OFFSET;
+			";
+
+			foreach (string type in new string[] { "arcade", "software", "pinball", "gamble", "other" })
+			{
+				DataQueryProfiles.Add(new DataQueryProfile() {
+					Key = type,
+					Text = $"{type} TEXT",
+					Decription = $"{type} DESCRIPTION",
+					CommandText = commandText.Replace("@WHERE", $"([ao_type] = '{type}')"),
+				});
+			}
+
+			DataQueryProfiles.Add(new DataQueryProfile()
+			{
 				Key = "everything",
-				Text = "Everything",
-				Decription = "Absolutely Everything",
-				CommandText =
-					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
-					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') @SEARCH) " +
-					"ORDER BY machine.description COLLATE NOCASE ASC " +
-					"LIMIT @LIMIT OFFSET @OFFSET",
-			},
-			new DataQueryProfile(){
+				Text = "everything TEXT",
+				Decription = "everything DESCRIPTION",
+				CommandText = commandText.Replace("@WHERE", "([ao_type] <> 'device')"),
+			});
+
+			DataQueryProfiles.Add(new DataQueryProfile()
+			{
 				Key = "favorites",
-				Text = "Favorites",
-				Decription = "Favorites",
-				CommandText =
-					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
-					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') @FAVORITES @SEARCH) " +
-					"ORDER BY machine.description COLLATE NOCASE ASC " +
-					"LIMIT @LIMIT OFFSET @OFFSET",
-			},
-		};
+				Text = "favorites TEXT",
+				Decription = "favorites DESCRIPTION",
+				CommandText = commandText.Replace("@WHERE", "([ao_type] <> 'device') @FAVORITES"),
+			});
+		}
+
+		//public static DataQueryProfile[] DataQueryProfilesOLD = new DataQueryProfile[] {
+		//	new DataQueryProfile(){
+		//		Key = "arcade-good",
+		//		Text = "Arcade Good",
+		//		Decription = "Arcade Machines - Status Good - Parents only",
+		//		CommandText =
+		//			"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
+		//			"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+		//			"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins > 0) @SEARCH) " +
+		//			"ORDER BY machine.description COLLATE NOCASE ASC " +
+		//			"LIMIT @LIMIT OFFSET @OFFSET",
+		//	},
+		//	new DataQueryProfile(){
+		//		Key = "arcade-imperfect",
+		//		Text = "Arcade Imperfect",
+		//		Decription = "Arcade Machines - Status Imperfect - Parents only",
+		//		CommandText =
+		//			"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
+		//			"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+		//			"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins > 0) @SEARCH) " +
+		//			"ORDER BY machine.description COLLATE NOCASE ASC " +
+		//			"LIMIT @LIMIT OFFSET @OFFSET",
+		//	},
+		//	new DataQueryProfile(){
+		//		Key = "computer-console-good",
+		//		Text = "Computers & Consoles Good",
+		//		Decription = "Computers & Consoles with software - status good - Parents only",
+		//		CommandText =
+		//			"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
+		//			"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+		//			"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
+		//			"ORDER BY machine.description COLLATE NOCASE ASC " +
+		//			"LIMIT @LIMIT OFFSET @OFFSET",
+		//	},
+		//	new DataQueryProfile(){
+		//		Key = "computer-console-imperfect",
+		//		Text = "Computers & Consoles Imperfect",
+		//		Decription = "Computers & Consoles with software - status imperfect - Parents only",
+		//		CommandText =
+		//			"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
+		//			"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+		//			"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count > 0) @SEARCH) " +
+		//			"ORDER BY machine.description COLLATE NOCASE ASC " +
+		//			"LIMIT @LIMIT OFFSET @OFFSET",
+		//	},
+		//	new DataQueryProfile(){
+		//		Key = "other-good",
+		//		Text = "Other Good",
+		//		Decription = "Other Systems without software - status good - Parents only",
+		//		CommandText =
+		//			"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
+		//			"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+		//			"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'good') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
+		//			"ORDER BY machine.description COLLATE NOCASE ASC " +
+		//			"LIMIT @LIMIT OFFSET @OFFSET",
+		//	},
+		//	new DataQueryProfile(){
+		//		Key = "other-imperfect",
+		//		Text = "Other Imperfect",
+		//		Decription = "Other Systems without software - status imperfect - Parents only",
+		//		CommandText =
+		//			"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
+		//			"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+		//			"WHERE ((machine.cloneof IS NULL) AND (driver.status = 'imperfect') AND (machine.runnable = 'yes') AND (machine.isdevice = 'no') AND (ao_input_coins = 0) AND (ao_softwarelist_count = 0) @SEARCH) " +
+		//			"ORDER BY machine.description COLLATE NOCASE ASC " +
+		//			"LIMIT @LIMIT OFFSET @OFFSET",
+		//	},
+		//	new DataQueryProfile(){
+		//		Key = "everything",
+		//		Text = "Everything",
+		//		Decription = "Absolutely Everything",
+		//		CommandText =
+		//			"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
+		//			"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+		//			"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') @SEARCH) " +
+		//			"ORDER BY machine.description COLLATE NOCASE ASC " +
+		//			"LIMIT @LIMIT OFFSET @OFFSET",
+		//	},
+		//	new DataQueryProfile(){
+		//		Key = "favorites",
+		//		Text = "Favorites",
+		//		Decription = "Favorites",
+		//		CommandText =
+		//			"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
+		//			"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
+		//			"WHERE ((machine.runnable = 'yes') AND (machine.isdevice = 'no') @FAVORITES @SEARCH) " +
+		//			"ORDER BY machine.description COLLATE NOCASE ASC " +
+		//			"LIMIT @LIMIT OFFSET @OFFSET",
+		//	},
+		//};
 
 		public static DataQueryProfile GetDataQueryProfile(string key)
 		{

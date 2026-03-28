@@ -507,7 +507,8 @@ namespace Spludlow.MameAO
 				//
 				// Machine Type
 				//
-				row["type"] = MameishMachineType(row, machine_isdevice, deviceRefTable, softwarelistTable, inputControlTable);
+				int coins = row.IsNull("coins") == false ? Int32.Parse((string)row["coins"]) : 0;
+				row["type"] = MameishMachineType(row, machine_isdevice, coins, deviceRefTable, softwarelistTable, inputControlTable);
 
 				//
 				// Status
@@ -584,13 +585,12 @@ namespace Spludlow.MameAO
 			{ "preliminary-preliminary",	"bad" },
 		};
 
-		public static string MameishMachineType(DataRow row, bool isdevice, DataTable deviceRefTable, DataTable softwarelistTable, DataTable inputControlTable)
+		public static string MameishMachineType(DataRow row, bool isdevice, int coins, DataTable deviceRefTable, DataTable softwarelistTable, DataTable inputControlTable)
 		{
 			long machine_id = (long)row["machine_id"];
 			string name = (string)row["name"];
 			string sourcefile = (string)row["sourcefile"];
 
-			int coins = row.IsNull("coins") == false ? Int32.Parse((string)row["coins"]) : 0;
 			var deviceRefNames = deviceRefTable.Select($"machine_id = {machine_id}").Select(r => (string)r["name"]).Distinct();
 			var softwareLists = softwarelistTable.Select($"machine_id = {machine_id}").Select(r => (string)r["name"]).ToArray();
 			var controlTypes = inputControlTable.Select($"[name] = '{name}'").Select(r => (string)r["type"]).Distinct();
