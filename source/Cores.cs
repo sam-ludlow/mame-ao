@@ -51,7 +51,7 @@ namespace Spludlow.MameAO
 
 		string GetRequiredMedia(string machine_name, string softwarelist_name, string software_name);
 
-		DataTable QueryMachines(DataQueryProfile profile, int offset, int limit, string search);
+		DataTable QueryMachines(DataQueryProfile profile, int offset, int limit, string search, string[] status, bool? mechanical, bool? clone);
 		DataTable QuerySoftware(string softwarelist_name, int offset, int limit, string search, string favorites_machine);
 	}
 	public class Cores
@@ -243,6 +243,7 @@ namespace Spludlow.MameAO
 				machineTable.Columns.Add("ao_driver_status", typeof(string));
 				machineTable.Columns.Add("ao_input_coins", typeof(int));
 				machineTable.Columns.Add("ao_type", typeof(string));
+				machineTable.Columns.Add("ao_status", typeof(string));
 
 				foreach (DataRow machineRow in machineTable.Rows)
 				{
@@ -277,6 +278,9 @@ namespace Spludlow.MameAO
 					}
 
 					machineRow["ao_type"] = OperationsPayload.MameishMachineType(machineRow, (string)machineRow["isdevice"] == "yes", coins, dataSet.Tables["device_ref"], softwarelistTable, inputControlTable);
+
+					if (driverRows.Length == 1)
+						machineRow["ao_status"] = OperationsPayload.MachineAoStatusLookup[$"{(string)driverRows[0]["status"]}-{(string)driverRows[0]["emulation"]}"];
 				}
 			}
 
@@ -603,20 +607,28 @@ namespace Spludlow.MameAO
 			return String.Join(" ", results);
 		}
 
-		public static DataTable QueryMachines(string connectionString, DataQueryProfile profile, int offset, int limit, string search)
+		public static DataTable QueryMachines(string connectionString, DataQueryProfile profile, int offset, int limit, string search, string[] statuses, bool? mechanical, bool? clone)
 		{
+			List<string> wheres = new List<string>();
+
+			if (search != null)
+				wheres.Add("machine.name LIKE @name OR machine.description LIKE @description");
+
+			if (statuses.Length > 0)
+				wheres.Add($"({String.Join(") OR (", statuses.Select(s => $"ao_status='{s}'"))})");
+
+			if (mechanical != null)
+				wheres.Add(mechanical.Value ? "ismechanical = 'yes'" : "ismechanical = 'no'");
+
+			if (clone != null)
+				wheres.Add(clone.Value ? "cloneof IS NOT NULL" : "cloneof IS NULL");
+
 			string commandText = profile.CommandText;
 
-			if (search == null)
-			{
+			if (wheres.Count == 0)
 				commandText = commandText.Replace("@SEARCH", "");
-			}
 			else
-			{
-				search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
-				commandText = commandText.Replace("@SEARCH",
-					" AND (machine.name LIKE @name OR machine.description LIKE @description)");
-			}
+				commandText = commandText.Replace("@SEARCH", $" AND ({String.Join(") AND (", wheres)})");
 
 			if (profile.Key == "favorites")
 			{
@@ -632,7 +644,7 @@ namespace Spludlow.MameAO
 					}
 					favorites = text.ToString();
 				}
-				commandText = commandText.Replace("@FAVORITES", $" AND ({favorites})");
+				commandText = commandText.Replace("@FAVORITES", $"({favorites})");
 			}
 
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
@@ -646,10 +658,10 @@ namespace Spludlow.MameAO
 				{
 					if (search != null)
 					{
+						search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
 						command.Parameters.AddWithValue("@name", search);
 						command.Parameters.AddWithValue("@description", search);
 					}
-
 					table = Database.ExecuteFill(command);
 				}
 			}

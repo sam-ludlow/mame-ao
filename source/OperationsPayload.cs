@@ -514,7 +514,7 @@ namespace Spludlow.MameAO
 				// Status
 				//
 				if (machine_isdevice == false)
-					row["ao_status"] = machineAoStatusLookup[$"{(string)row["status"]}-{(string)row["emulation"]}"];
+					row["ao_status"] = MachineAoStatusLookup[$"{(string)row["status"]}-{(string)row["emulation"]}"];
 
 			}
 
@@ -578,7 +578,7 @@ namespace Spludlow.MameAO
 			//	TODO: Indexes for sorting by year..... maybe more index combinations?
 		}
 
-		private static readonly Dictionary<string, string> machineAoStatusLookup = new Dictionary<string, string> {
+		public static readonly Dictionary<string, string> MachineAoStatusLookup = new Dictionary<string, string> {
 			{ "good-good",					"good" },
 			{ "imperfect-good",				"imperfect" },
 			{ "preliminary-good",			"preliminary" },

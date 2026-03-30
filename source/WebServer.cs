@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
+using System.Linq;
 using System.Net;
 using System.Reflection;
 using System.Text;
@@ -10,7 +11,7 @@ using System.Net.Sockets;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-using System.Linq;
+
 
 namespace Spludlow.MameAO
 {
@@ -279,6 +280,9 @@ namespace Spludlow.MameAO
 		{
 			string qs;
 
+			string profile = context.Request.QueryString["profile"] ?? throw new ApplicationException("profile not passed");
+			DataQueryProfile dataQueryProfile = Database.GetDataQueryProfile(profile);
+
 			int offset = 0;
 			qs = context.Request.QueryString["offset"];
 			if (qs != null)
@@ -296,11 +300,22 @@ namespace Spludlow.MameAO
 			if (search.Length == 0)
 				search = null;
 
-			string profile = context.Request.QueryString["profile"] ?? throw new ApplicationException("profile not passed");
+			string[] status = new string[0];
+			qs = context.Request.QueryString["status"];
+			if (qs != null && qs != "")
+				status = qs.Split(',');
 
-			DataQueryProfile dataQueryProfile = Database.GetDataQueryProfile(profile);
+			bool? mechanical = null;
+			qs = context.Request.QueryString["mechanical"];
+			if (qs != null && qs != "null")
+				mechanical = Boolean.Parse(qs);
 
-			DataTable table = Globals.Core.QueryMachines(dataQueryProfile, offset, limit, search);
+			bool? clone = null;
+			qs = context.Request.QueryString["clone"];
+			if (qs != null && qs != "null")
+				clone = Boolean.Parse(qs);
+
+			DataTable table = Globals.Core.QueryMachines(dataQueryProfile, offset, limit, search, status, mechanical, clone);
 
 			JArray results = new JArray();
 
@@ -1035,6 +1050,29 @@ namespace Spludlow.MameAO
 			}
 			tr.clone-odd {
 				background-color: #77ccf6;
+			}
+
+			.toolbar {
+				display: flex;
+				flex-wrap: wrap;
+				gap: 8px;
+			}
+			.checkbox-group {
+				border: 1px solid #00adef;
+				padding: 8px;
+				display: flex;
+				flex-wrap: nowrap;
+				gap: 8px;
+			}
+			.toolbar-input {
+				display: flex;
+				gap: 8px;
+				padding: 8px;
+			}
+			.toolbar-input input {
+				flex: 1;
+				padding: 4px;
+				box-sizing: border-box;
 			}
 		";
 

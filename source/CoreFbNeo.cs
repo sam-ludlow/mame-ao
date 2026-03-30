@@ -410,7 +410,7 @@ namespace Spludlow.MameAO
 			throw new NotImplementedException();
 		}
 
-		DataTable ICore.QueryMachines(DataQueryProfile profile, int offset, int limit, string search)
+		DataTable ICore.QueryMachines(DataQueryProfile profile, int offset, int limit, string search, string[] status, bool? mechanical, bool? clone)
 		{
 			throw new NotImplementedException();
 		}

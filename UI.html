@@ -1274,28 +1274,25 @@
 			const genres = await fetchJson(`/api/genres?genre_name=${encodeURIComponent(genre_name)}`);
 			const genre_id = genres.results[0].genre_id;
 
-			let profileKey = `genre-${genre_id}`;
+			let profile = `genre-${genre_id}`;
 
-			const machinesData = await (await fetch(`${_baseUrl}/api/machines?profile=${profileKey}&offset=${_parameters.offset}&search=${_parameters.search}`)).json();
+			const machinesData = await fetchJson(makeParameters('/api/machines', { ..._parameters, profile }));
 
-			profileKey = 'everything';
-
-			showMachines(canvas, machinesData, profileKey);
+			showMachines(canvas, machinesData, 'everything');
 		}
 
 		//
 		// Machines in Data Profile
 		//
 		const machines = async () => {
-
 			const canvas = getCanvas();
 
 			let parts = _pathParts[2].split('/');
-			const profileKey = parts[parts.length - 1];
+			const profile = parts[parts.length - 1];
 
-			const machinesData = await fetchJson(`/api/machines?profile=${profileKey}&offset=${_parameters.offset}&search=${_parameters.search}`);
+			const machinesData = await fetchJson(makeParameters('/api/machines', { ..._parameters, profile }));
 
-			showMachines(canvas, machinesData, profileKey);
+			showMachines(canvas, machinesData, profile);
 		}
 
 		//
@@ -1370,18 +1367,58 @@
 
 			const navHtml = navigateHtml(machinesData);
 
-			let html = '';
-
-			html += `<input id="inputText" type="text" value="${_parameters.search}" style="width:480px;" />`;
-			html += '<button type="submit" onclick="searchButton(); return false;">Search</button>';
-			html += '<hr />';
-			html += `<nav>${navHtml}</nav>`;
-			html += '<div id="results"></div>';
-			html += `<nav>${navHtml}</nav>`;
+			let html = `
+				<div class="toolbar-input">
+					<input id="inputText" type="text" placeholder="Machine name & description" />
+					<button type="submit" onclick="searchMachine(); return false;">Search</button>
+				</div>
+				<div class="toolbar">
+					<div class="checkbox-group">
+						<label><input type="checkbox" name="status" value="good" onchange="changeStatus(this);">good</label>
+						<label><input type="checkbox" name="status" value="imperfect" onchange="changeStatus(this);">imperfect</label>
+						<label><input type="checkbox" name="status" value="preliminary" onchange="changeStatus(this);">preliminary</label>
+						<label><input type="checkbox" name="status" value="bad" onchange="changeStatus(this);">bad</label>
+					</div>
+					<div class="checkbox-group">
+						<label><input id="clone-parent" type="radio" name="clone" value="parent" onchange="changeClone(this);">parent</label>
+						<label><input id="clone-clone" type="radio" name="clone" value="clone" onchange="changeClone(this);">clone</label>
+						<label><input id="clone-all" type="radio" name="clone" value="all" onchange="changeClone(this);">all</label>
+					</div>
+					<div class="checkbox-group">
+						<label><input id="mechanical-electronic" type="radio" name="mechanical" value="electronic" onchange="changeMechanical(this);">electronic</label>
+						<label><input id="mechanical-mechanical" type="radio" name="mechanical" value="mechanical" onchange="changeMechanical(this);">mechanical</label>
+						<label><input id="mechanical-all" type="radio" name="mechanical" value="all" onchange="changeMechanical(this);">all</label>
+					</div>
+				</div>
+				<hr />
+				<nav>${navHtml}</nav>
+				<div id="results"></div>
+				<nav>${navHtml}</nav>
+			`;
 
 			const div = document.createElement('div');
 			div.innerHTML = html;
 			canvas.appendChild(div);
+
+			document.getElementById("inputText").value = _parameters.search;
+
+			document.querySelectorAll('input[name="status"]').forEach(cb => cb.checked = _parameters.status.includes(cb.value));
+
+			if (_parameters.mechanical === null)
+				document.getElementById("mechanical-all").checked = true;
+			else
+				if (_parameters.mechanical === true)
+					document.getElementById("mechanical-mechanical").checked = true;
+				else
+					document.getElementById("mechanical-electronic").checked = true;
+
+			if (_parameters.clone === null)
+				document.getElementById("clone-all").checked = true;
+			else
+				if (_parameters.clone === true)
+					document.getElementById("clone-clone").checked = true;
+				else
+					document.getElementById("clone-parent").checked = true;
 
 			const results = document.getElementById('results');
 
@@ -1409,6 +1446,31 @@
 				cell.className = '';
 			else
 				cell.className = (resultIndex % 2) ? 'fav-odd' : 'fav-even';
+		}
+		const searchMachine = () => {
+			_parameters['search'] = document.getElementById('inputText').value;
+			_parameters['offset'] = 0;
+			document.location = makeParameters(_path, _parameters);
+		}
+
+		const changeStatus = () => {
+			_parameters.status = Array.from(document.querySelectorAll('input[name="status"]:checked')).map(item => item.value);
+			_parameters['offset'] = 0;
+			document.location = makeParameters(_path, _parameters);
+		}
+		const changeClone = (input) => {
+			_parameters.clone = null;
+			if (input.value !== 'all')
+				_parameters.clone = input.value === 'clone';
+			_parameters['offset'] = 0;
+			document.location = makeParameters(_path, _parameters);
+		}
+		const changeMechanical = (input) => {
+			_parameters.mechanical = null;
+			if (input.value !== 'all')
+				_parameters.mechanical = input.value === 'mechanical';
+			_parameters['offset'] = 0;
+			document.location = makeParameters(_path, _parameters);
 		}
 
 		//
@@ -1508,10 +1570,9 @@
 			const inputText = document.getElementById('inputText');
 
 			document.location = `${_path}?search=${encodeURIComponent(inputText.value)}`;
-
 		}
 
-		const goLocationUrl = (offset) => `${_path}?offset=${offset}&search=${encodeURIComponent(_parameters.search)}`;
+		const goLocationUrl = (offset) => makeParameters(_path, { ..._parameters, offset });
 
 		const navigateHtml = (data) => {
 
@@ -1597,28 +1658,84 @@
 			});
 		}
 
+		const _defaultParamters = {
+			offset: 0,
+			search: '',
+			status: [],
+			mechanical: null,
+			clone: null,
+		};
+		const _machine_statuses = [
+			'good',
+			'imperfect',
+			'preliminary',
+			'bad',
+		];
+
+		const makeParameters = (url, parameters) => {
+			const partKeys = Object.keys(parameters).filter((key) => {
+				if (Array.isArray(parameters[key]))
+					return parameters[key].length > 0;
+				else
+					return parameters[key] !== _defaultParamters[key];
+			});
+
+			const parts = [];
+
+			partKeys.forEach(key => {
+				const value = parameters[key];
+				if (Array.isArray(value))
+					value.forEach(itemValue => parts.push(`${key}=${encodeURIComponent(itemValue)}`));
+				else
+					parts.push(`${key}=${encodeURIComponent(value)}`);
+			});
+
+			if (parts.length === 0)
+				return url;
+			else
+				return url + '?' + parts.join('&');
+		}
+
 		const getRequestInfo = () => {
 
-			_baseUrl = window.location.origin;
-
-			_parameters = {};
+			_parameters = JSON.parse(JSON.stringify(_defaultParamters));
 
 			if (window.location.href.includes('?')) {
-
 				const parts = window.location.href.split('?')[1].split('&');
 				parts.forEach((part) => {
 					const pair = part.split('=');
-					_parameters[pair[0]] = decodeURIComponent(pair[1]);
+					const key = pair[0];
+					const value = decodeURIComponent(pair[1]);
+
+					switch (key) {
+						case 'offset':
+							_parameters[key] = parseInt(value, 10);
+							break;
+
+						case 'search':
+						case 'view':
+							_parameters[key] = value;
+							break;
+
+						case 'status':
+							if (_machine_statuses.includes(value) && !_parameters.status.includes(value))
+								_parameters.status.push(value);
+							break;
+
+						case 'mechanical':
+							if (['true', 'false'].includes(value))
+								_parameters.mechanical = value === 'true';
+							break;
+
+						case 'clone':
+							if (['true', 'false'].includes(value))
+								_parameters.clone = value === 'true';
+							break;
+					}
 				});
 			}
 
-			if (_parameters['offset'] === undefined)
-				_parameters['offset'] = 0;
-			else
-				_parameters['offset'] = parseInt(_parameters['offset'], 10);
-
-			if (_parameters['search'] === undefined)
-				_parameters['search'] = '';
+			_baseUrl = window.location.origin;
 
 			_path = document.location.pathname;
 

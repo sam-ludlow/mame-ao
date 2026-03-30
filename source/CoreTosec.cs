@@ -396,7 +396,7 @@ namespace Spludlow.MameAO
 			OperationsPayload.TosecMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
-		DataTable ICore.QueryMachines(DataQueryProfile profile, int offset, int limit, string search)
+		DataTable ICore.QueryMachines(DataQueryProfile profile, int offset, int limit, string search, string[] status, bool? mechanical, bool? clone)
 		{
 			throw new NotImplementedException();
 		}
