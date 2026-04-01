@@ -37,7 +37,7 @@ namespace Spludlow.MameAO
 
 		public static string MakeSQLiteConnectionString(string filename)
 		{
-			return $"Data Source={filename};Mode=ReadWrite;Cache=Shared;Pooling=True;Max Pool Size=8;Journal Mode=WAL;Synchronous=Normal";
+			return $"Data Source={filename};";	// Mode=ReadWrite;Cache=Shared;Pooling=True;Max Pool Size=8;Journal Mode=WAL;Synchronous=Normal;";
 		}
 
 		public static void DataSet2SQLite(string name, string connectionString, DataSet dataSet)
