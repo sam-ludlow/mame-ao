@@ -261,7 +261,6 @@ namespace Spludlow.MameAO
 				result.key = profile.Key;
 				result.text = profile.Text;
 				result.description = profile.Decription;
-				result.command = profile.CommandText;
 
 				results.Add(result);
 			}
@@ -281,7 +280,6 @@ namespace Spludlow.MameAO
 			string qs;
 
 			string profile = context.Request.QueryString["profile"] ?? throw new ApplicationException("profile not passed");
-			DataQueryProfile dataQueryProfile = Database.GetDataQueryProfile(profile);
 
 			int offset = 0;
 			qs = context.Request.QueryString["offset"];
@@ -315,7 +313,7 @@ namespace Spludlow.MameAO
 			if (qs != null && qs != "null")
 				clone = Boolean.Parse(qs);
 
-			DataTable table = Globals.Core.QueryMachines(dataQueryProfile, offset, limit, search, status, mechanical, clone);
+			DataTable table = Globals.Core.QueryMachines(profile, offset, limit, search, status, mechanical, clone);
 
 			JArray results = new JArray();
 
@@ -331,7 +329,7 @@ namespace Spludlow.MameAO
 			}
 
 			dynamic json = new JObject();
-			json.profile = dataQueryProfile.Key;
+			json.profile = profile;
 			json.offset = offset;
 			json.limit = limit;
 			json.total = table.Rows.Count == 0 ? 0 : (long)table.Rows[0]["ao_total"];

@@ -2,10 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Text;
+using System.Linq;
 
 using System.Data.SqlClient;
 using System.Data.SQLite;
-using System.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -15,20 +15,14 @@ namespace Spludlow.MameAO
 
 		static Database()
 		{
-			string commandText = @"
-				SELECT machine.*, COUNT() OVER() AS ao_total
-				FROM machine
-				WHERE (@WHERE @SEARCH)
-				ORDER BY machine.description COLLATE NOCASE ASC
-				LIMIT @LIMIT OFFSET @OFFSET;
-			";
-
 			string[][] types = new string[][] {
-				new string[] { "arcade",	"Arcade",   "Arcade Machines" },
-				new string[] { "software",	"Software", "Computers & Consoles with Software" },
-				new string[] { "pinball",	"Pinball",  "Pinball Machines" },
-				new string[] { "gamble",	"Gamble",   "Gamble Machines" },
-				new string[] { "other",		"Other",    "Other Machines" },
+				new string[] { "arcade",		"Arcade",		"Arcade Machines" },
+				new string[] { "software",		"Software",		"Computers & Consoles with Software" },
+				new string[] { "pinball",		"Pinball",		"Pinball Machines" },
+				new string[] { "gamble",		"Gamble",		"Gamble Machines" },
+				new string[] { "other",			"Other",		"Other Machines" },
+				new string[] { "everything",	"Everything",	"Every Machine" },
+				new string[] { "favorites",		"Favorites",	"Favorite Machines" },
 			};
 
 			foreach (string[] type in types)
@@ -37,66 +31,13 @@ namespace Spludlow.MameAO
 					Key = type[0],
 					Text = type[1],
 					Decription = type[2],
-					CommandText = commandText.Replace("@WHERE", $"([ao_type] = '{type[0]}')"),
 				});
 			}
-
-			DataQueryProfiles.Add(new DataQueryProfile()
-			{
-				Key = "everything",
-				Text = "Everything",
-				Decription = "Every Machine",
-				CommandText = commandText.Replace("@WHERE", "([ao_type] <> 'device')"),
-			});
-
-			DataQueryProfiles.Add(new DataQueryProfile()
-			{
-				Key = "favorites",
-				Text = "Favorites",
-				Decription = "Favorite Machines",
-				CommandText = commandText.Replace("@WHERE", "@FAVORITES"),
-			});
 		}
 
-		public static DataQueryProfile GetDataQueryProfile(string key)
+		public static string MakeSQLiteConnectionString(string filename)
 		{
-			DataQueryProfile found = null;
-
-			if (key.StartsWith("genre") == true)
-			{
-				long genre_id = Int64.Parse(key.Split(new char[] { '-' })[1]);
-
-				found = new DataQueryProfile()
-				{
-					Key = key,
-					Text = "genre",
-					Decription = "genre",
-					CommandText =
-					"SELECT machine.*, driver.*, COUNT() OVER() AS ao_total " +
-					"FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id " +
-					"WHERE ((genre_id = @genre_id) @SEARCH) " +
-					"ORDER BY machine.description COLLATE NOCASE ASC " +
-					"LIMIT @LIMIT OFFSET @OFFSET",
-				};
-
-				found.CommandText = found.CommandText.Replace("@genre_id", genre_id.ToString());
-			}
-			else
-			{
-				foreach (DataQueryProfile profile in Database.DataQueryProfiles)
-				{
-					if (profile.Key == key)
-					{
-						found = profile;
-						break;
-					}
-				}
-			}
-
-			if (found == null)
-				throw new ApplicationException($"Data Profile not found {key}");
-
-			return found;
+			return $"Data Source={filename};Mode=ReadWrite;Cache=Shared;Pooling=True;Max Pool Size=8;Journal Mode=WAL;Synchronous=Normal";
 		}
 
 		public static void DataSet2SQLite(string name, string connectionString, DataSet dataSet)
@@ -123,10 +64,6 @@ namespace Spludlow.MameAO
 								if (column.DataType == typeof(int) || column.DataType == typeof(long))
 									dataType = "INTEGER";
 							}
-
-							if (table.TableName == "machine" && column.ColumnName == "description")
-								dataType += " COLLATE NOCASE";
-
 							columnDefinitions.Add($"\"{column.ColumnName}\" {dataType}");
 						}
 
@@ -179,7 +116,7 @@ namespace Spludlow.MameAO
 					{
 						foreach (string commandText in new string[] {
 							"CREATE INDEX idx_machine_name ON machine(name);",
-							"CREATE INDEX idx_machine_description ON machine(description COLLATE NOCASE);",
+							"CREATE INDEX idx_machine_description ON machine([description] COLLATE NOCASE);",
 						})
 							using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 								command.ExecuteNonQuery();
@@ -187,7 +124,12 @@ namespace Spludlow.MameAO
 
 					if (name == "softwarelists")
 					{
-
+						foreach (string commandText in new string[] {
+							"CREATE INDEX idx_software_name ON software(name);",
+							"CREATE INDEX idx_software_description ON software([description] COLLATE NOCASE);",
+						})
+							using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+								command.ExecuteNonQuery();
 					}
 				}
 				finally

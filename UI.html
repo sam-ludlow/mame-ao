@@ -1266,8 +1266,6 @@
 		//
 		const genreMachines = async () => {
 
-			const canvas = getCanvas();
-
 			let parts = _pathParts[3].split('/');
 			const genre_name = decodeURIComponent(parts[parts.length - 1]);
 
@@ -1278,27 +1276,28 @@
 
 			const machinesData = await fetchJson(makeParameters('/api/machines', { ..._parameters, profile }));
 
-			showMachines(canvas, machinesData, 'everything');
+			showMachines(machinesData, 'everything');
 		}
 
 		//
 		// Machines in Data Profile
 		//
 		const machines = async () => {
-			const canvas = getCanvas();
 
 			let parts = _pathParts[2].split('/');
 			const profile = parts[parts.length - 1];
 
 			const machinesData = await fetchJson(makeParameters('/api/machines', { ..._parameters, profile }));
 
-			showMachines(canvas, machinesData, profile);
+			showMachines(machinesData, profile);
 		}
 
 		//
 		// Show Machines
 		//
-		const showMachines = (canvas, machinesData, profileKey) => {
+		const showMachines = (machinesData, profileKey) => {
+
+			const canvas = getCanvas();
 
 			const columnDefs = [
 				{ heading: '', columnName: 'ao_image' },

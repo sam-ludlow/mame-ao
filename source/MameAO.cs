@@ -26,7 +26,6 @@ namespace Spludlow.MameAO
 		public string Key;
 		public string Text;
 		public string Decription;
-		public string CommandText;
 	}
 
 	public static class Globals

@@ -48,10 +48,10 @@ namespace Spludlow.MameAO
 		DataRow[] GetSoftwareRoms(DataRow software);
 		DataRow[] GetSoftwareDisks(DataRow software);
 		DataRow[] GetMachineFeatures(DataRow machine);
-
+		
 		string GetRequiredMedia(string machine_name, string softwarelist_name, string software_name);
 
-		DataTable QueryMachines(DataQueryProfile profile, int offset, int limit, string search, string[] status, bool? mechanical, bool? clone);
+		DataTable QueryMachines(string profile, int offset, int limit, string search, string[] status, bool? mechanical, bool? clone);
 		DataTable QuerySoftware(string softwarelist_name, int offset, int limit, string search, string favorites_machine);
 	}
 	public class Cores
@@ -161,7 +161,7 @@ namespace Spludlow.MameAO
 
 			File.WriteAllBytes(sqliteFilename, new byte[0]);
 
-			string connectionString = $"Data Source='{sqliteFilename}';datetimeformat=CurrentCulture;";
+			string connectionString = Database.MakeSQLiteConnectionString(sqliteFilename);
 
 			Database.DataSet2SQLite(document.Name.LocalName, connectionString, dataSet);
 		}
@@ -607,53 +607,83 @@ namespace Spludlow.MameAO
 			return String.Join(" ", results);
 		}
 
-		public static DataTable QueryMachines(string connectionString, DataQueryProfile profile, int offset, int limit, string search, string[] statuses, bool? mechanical, bool? clone)
+		public static DataTable QueryMachines(string connectionString, string profile, int offset, int limit, string search, string[] statuses, bool? mechanical, bool? clone)
 		{
+			string commandTextCount = "SELECT COUNT(*) FROM [machine] WHERE (@WHERE)";
+			string commandText = "SELECT [machine].*, @ao_total AS [ao_total] FROM [machine] WHERE (@WHERE) ORDER BY [description] COLLATE NOCASE LIMIT @LIMIT OFFSET @OFFSET";
+
 			List<string> wheres = new List<string>();
 
+			string[] likeColumnNames = new string[0];
 			if (search != null)
-				wheres.Add("machine.name LIKE @name OR machine.description LIKE @description");
+			{
+				likeColumnNames = new string[] { "name", "description" };
+				wheres.Add("(" + String.Join(" OR ", likeColumnNames.Select(c => $"[{c}] LIKE @{c}")) + ")");
+			}
 
 			if (statuses.Length > 0)
-				wheres.Add($"({String.Join(") OR (", statuses.Select(s => $"ao_status='{s}'"))})");
+				wheres.Add($"{String.Join(" OR ", statuses.Select(s => $"[ao_status] = '{s}'"))}");
 
 			if (mechanical != null)
-				wheres.Add(mechanical.Value ? "ismechanical = 'yes'" : "ismechanical = 'no'");
+				wheres.Add(mechanical.Value ? "[ismechanical] = 'yes'" : "[ismechanical] = 'no'");
 
 			if (clone != null)
-				wheres.Add(clone.Value ? "cloneof IS NOT NULL" : "cloneof IS NULL");
+				wheres.Add(clone.Value ? "[cloneof] IS NOT NULL" : "[cloneof] IS NULL");
 
-			string commandText = profile.CommandText;
-
-			if (wheres.Count == 0)
-				commandText = commandText.Replace("@SEARCH", "");
-			else
-				commandText = commandText.Replace("@SEARCH", $" AND ({String.Join(") AND (", wheres)})");
-
-			if (profile.Key == "favorites")
+			switch (profile)
 			{
-				string favorites = Globals.Favorites._Machines.Count == 0 ? "machine.machine_id = -1" : $"[name] IN('{String.Join("','", Globals.Favorites._Machines.Keys)}')";
-				commandText = commandText.Replace("@FAVORITES", $"({favorites})");
+				case "favorites":
+					wheres.Add(Globals.Favorites._Machines.Count == 0 ? "[machine_id] = -1" : $"[name] IN('{String.Join("','", Globals.Favorites._Machines.Keys)}')");
+					break;
+
+				case "everything":
+					wheres.Add("[ao_type] <> 'device'");
+					break;
+
+				default:
+					if (profile.StartsWith("genre-"))
+						wheres.Add($"[genre_id] = {profile.Substring(6)}");
+					else
+						wheres.Add($"[ao_type] = '{profile}'");
+					break;
 			}
+
+			string where = $"({String.Join(") AND (", wheres)})";
+
+			commandTextCount = commandTextCount.Replace("@WHERE", where);
+
+			commandText = commandText.Replace("@WHERE", where);
 
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
-			DataTable table;
+			if (search != null)
+				search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
+
+			DataTable table = new DataTable();
 
 			using (var connection = new SQLiteConnection(connectionString))
 			{
+				connection.Open();
+
+				long total;
+				using (SQLiteCommand command = new SQLiteCommand(commandTextCount, connection))
+				{
+					foreach (var columnName in likeColumnNames)
+						command.Parameters.AddWithValue($"@{columnName}", search);
+
+					total = (long)command.ExecuteScalar();
+				}
+
+				commandText = commandText.Replace("@ao_total", total.ToString());
+
 				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 				{
-					if (search != null)
-					{
-						search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
-						command.Parameters.AddWithValue("@name", search);
-						command.Parameters.AddWithValue("@description", search);
-					}
-					//DateTime start = DateTime.Now;
-					table = Database.ExecuteFill(command);
-					//Console.WriteLine($"{(DateTime.Now - start).TotalMilliseconds}\t{commandText}");
+					foreach (var columnName in likeColumnNames)
+						command.Parameters.AddWithValue($"@{columnName}", search);
+
+					using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+						adapter.Fill(table);
 				}
 			}
 
@@ -665,13 +695,13 @@ namespace Spludlow.MameAO
 		public static DataTable QuerySoftware(string connectionString, string softwarelist_name, int offset, int limit, string search, string favorites_machine)
 		{
 			string commandText = "SELECT software.*, softwarelist.name AS softwarelist_name, COUNT() OVER() AS ao_total FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id " +
-				$"WHERE (softwarelist.name = '{softwarelist_name}' @SEARCH) ORDER BY software.description COLLATE NOCASE ASC " +
+				$"WHERE (softwarelist.name = '{softwarelist_name}' @SEARCH) ORDER BY software.description COLLATE NOCASE " +
 				"LIMIT @LIMIT OFFSET @OFFSET";
 
 			if (softwarelist_name == "@fav")
 			{
 				commandText = "SELECT software.*, softwarelist.name AS softwarelist_name, COUNT() OVER() AS ao_total FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id " +
-					"WHERE ((@FAVORITES) @SEARCH) ORDER BY software.description COLLATE NOCASE ASC " +
+					"WHERE ((@FAVORITES) @SEARCH) ORDER BY software.description COLLATE NOCASE " +
 					"LIMIT @LIMIT OFFSET @OFFSET";
 
 				string[][] listSoftwareNames = Globals.Favorites.ListSoftwareUsedByMachine(favorites_machine);

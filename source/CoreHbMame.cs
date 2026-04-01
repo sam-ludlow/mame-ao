@@ -277,8 +277,8 @@ namespace Spludlow.MameAO
 
 		private void InitializeConnections()
 		{
-			_ConnectionStringMachine = $"Data Source='{Path.Combine(_CoreDirectory, "_machine.sqlite")}';datetimeformat=CurrentCulture;";
-			_ConnectionStringSoftware = $"Data Source='{Path.Combine(_CoreDirectory, "_software.sqlite")}';datetimeformat=CurrentCulture;";
+			_ConnectionStringMachine = Database.MakeSQLiteConnectionString(Path.Combine(_CoreDirectory, "_machine.sqlite"));
+			_ConnectionStringSoftware = Database.MakeSQLiteConnectionString(Path.Combine(_CoreDirectory, "_software.sqlite"));
 		}
 
 
@@ -365,7 +365,7 @@ namespace Spludlow.MameAO
 		string ICore.GetRequiredMedia(string machine_name, string softwarelist_name, string software_name) =>
 			Cores.GetRequiredMedia(_ConnectionStringMachine, _ConnectionStringSoftware, _SoftwareListDescriptions, machine_name, softwarelist_name, software_name);
 
-		DataTable ICore.QueryMachines(DataQueryProfile profile, int offset, int limit, string search, string[] status, bool? mechanical, bool? clone) =>
+		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string[] status, bool? mechanical, bool? clone) =>
 			Cores.QueryMachines(_ConnectionStringMachine, profile, offset, limit, search, status, mechanical, clone);
 
 		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string favorites_machine) =>

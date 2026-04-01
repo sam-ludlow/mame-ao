@@ -231,7 +231,7 @@ namespace Spludlow.MameAO
 
 			DataSet dataSet = FBNeoDataSet(_CoreDirectory);
 
-			string connectionString = $"Data Source='{sqlLiteFilename}';datetimeformat=CurrentCulture;";
+			string connectionString = Database.MakeSQLiteConnectionString(sqlLiteFilename);
 
 			Console.Write($"Creating SQLite database {sqlLiteFilename} ...");
 			Database.DataSet2SQLite("fbneo", connectionString, dataSet);
@@ -410,7 +410,7 @@ namespace Spludlow.MameAO
 			throw new NotImplementedException();
 		}
 
-		DataTable ICore.QueryMachines(DataQueryProfile profile, int offset, int limit, string search, string[] status, bool? mechanical, bool? clone)
+		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string[] status, bool? mechanical, bool? clone)
 		{
 			throw new NotImplementedException();
 		}
