@@ -632,18 +632,7 @@ namespace Spludlow.MameAO
 
 			if (profile.Key == "favorites")
 			{
-				string favorites = "machine.machine_id = -1";
-				if (Globals.Favorites._Machines.Count > 0)
-				{
-					StringBuilder text = new StringBuilder();
-					foreach (string name in Globals.Favorites._Machines.Keys)
-					{
-						if (text.Length > 0)
-							text.Append(" OR ");
-						text.Append($"(name = '{name}')");
-					}
-					favorites = text.ToString();
-				}
+				string favorites = Globals.Favorites._Machines.Count == 0 ? "machine.machine_id = -1" : $"[name] IN('{String.Join("','", Globals.Favorites._Machines.Keys)}')";
 				commandText = commandText.Replace("@FAVORITES", $"({favorites})");
 			}
 
@@ -662,7 +651,9 @@ namespace Spludlow.MameAO
 						command.Parameters.AddWithValue("@name", search);
 						command.Parameters.AddWithValue("@description", search);
 					}
+					//DateTime start = DateTime.Now;
 					table = Database.ExecuteFill(command);
+					//Console.WriteLine($"{(DateTime.Now - start).TotalMilliseconds}\t{commandText}");
 				}
 			}
 

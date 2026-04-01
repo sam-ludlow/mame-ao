@@ -1312,8 +1312,7 @@
 				{ heading: 'lists', columnName: 'ao_softwarelist_count' },
 				{ heading: 'cloneof', columnName: 'cloneof' },
 				{ heading: 'romof', columnName: 'romof' },
-				{ heading: 'status', columnName: 'status' },
-				{ heading: 'emulation', columnName: 'emulation' },
+				{ heading: 'status', columnName: 'ao_status' },
 			];
 
 			const table = document.createElement('table');
@@ -1355,8 +1354,8 @@
 							cell.className = (resultIndex % 2) ? 'fav-odd' : 'fav-even';
 						break;
 
-					case 'status':
-						cell.className = result.status + (resultIndex % 2 ? '-odd' : '-even');
+					case 'ao_status':
+						cell.className = result.ao_status;
 						break;
 
 				}

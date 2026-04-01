@@ -1024,25 +1024,17 @@ namespace Spludlow.MameAO
 				background-color: #ffdf00;
 			}
 
-			td.good-even {
-				background-color: #90ee90;
+			td.good {
+				background-color: #ccffcc;
 			}
-			td.good-odd {
-				background-color: #98fb98;
+			td.imperfect {
+				background-color: #ffffcc;
 			}
-
-			td.imperfect-even {
-				background-color: #fff000;
+			td.preliminary {
+				background-color: #ffd9b3;
 			}
-			td.imperfect-odd {
-				background-color: #ffef00;
-			}
-
-			td.preliminary-even {
-				background-color: #fa8072;
-			}
-			td.preliminary-odd {
-				background-color: #f08080;
+			td.bad {
+				background-color: #ffcccc;
 			}
 
 			tr.clone-even {

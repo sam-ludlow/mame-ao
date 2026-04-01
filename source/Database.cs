@@ -16,8 +16,8 @@ namespace Spludlow.MameAO
 		static Database()
 		{
 			string commandText = @"
-				SELECT machine.*, driver.*, COUNT() OVER() AS ao_total
-				FROM machine INNER JOIN driver ON machine.machine_id = driver.machine_id
+				SELECT machine.*, COUNT() OVER() AS ao_total
+				FROM machine
 				WHERE (@WHERE @SEARCH)
 				ORDER BY machine.description COLLATE NOCASE ASC
 				LIMIT @LIMIT OFFSET @OFFSET;
@@ -178,10 +178,8 @@ namespace Spludlow.MameAO
 					if (name == "mame")
 					{
 						foreach (string commandText in new string[] {
-							"CREATE INDEX idx_driver_machine_id ON driver(machine_id);",
 							"CREATE INDEX idx_machine_name ON machine(name);",
-							"CREATE INDEX idx_machine_description ON machine(description);",
-							"CREATE INDEX idx_machine_filter_order ON machine(ao_type, ismechanical, cloneof, ao_status, description COLLATE NOCASE);",
+							"CREATE INDEX idx_machine_description ON machine(description COLLATE NOCASE);",
 						})
 							using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 								command.ExecuteNonQuery();
