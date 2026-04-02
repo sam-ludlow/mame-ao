@@ -51,7 +51,7 @@ namespace Spludlow.MameAO
 		
 		string GetRequiredMedia(string machine_name, string softwarelist_name, string software_name);
 
-		DataTable QueryMachines(string profile, int offset, int limit, string search, string[] status, bool? mechanical, bool? clone);
+		DataTable QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, bool? mechanical, bool? clone, string order, string sort);
 		DataTable QuerySoftware(string softwarelist_name, int offset, int limit, string search, string favorites_machine);
 	}
 	public class Cores
@@ -137,6 +137,20 @@ namespace Spludlow.MameAO
 				XML2SQLite(machineXmlFilename, machineSqlLiteFilename, requiredMachineTables, assemblyVersion, aoExtra);
 				GC.Collect();
 				Console.WriteLine("...done");
+
+				if (aoExtra != null)
+				{
+					using (SQLiteConnection connection = new SQLiteConnection(Database.MakeSQLiteConnectionString(machineSqlLiteFilename)))
+					{
+						connection.Open();
+
+						foreach (string commandText in new string[] {
+							"CREATE INDEX idx_machine_year_description ON machine([ao_year], [description] COLLATE NOCASE);",
+						})
+							using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+								command.ExecuteNonQuery();
+					}
+				}
 			}
 
 			if (File.Exists(softwareSqlLiteFilename) == false)
@@ -244,6 +258,7 @@ namespace Spludlow.MameAO
 				machineTable.Columns.Add("ao_input_coins", typeof(int));
 				machineTable.Columns.Add("ao_type", typeof(string));
 				machineTable.Columns.Add("ao_status", typeof(string));
+				machineTable.Columns.Add("ao_year", typeof(int));
 
 				foreach (DataRow machineRow in machineTable.Rows)
 				{
@@ -281,6 +296,9 @@ namespace Spludlow.MameAO
 
 					if (driverRows.Length == 1)
 						machineRow["ao_status"] = OperationsPayload.MachineAoStatusLookup[$"{(string)driverRows[0]["status"]}-{(string)driverRows[0]["emulation"]}"];
+
+					if (machineRow.IsNull("year") == false)
+						machineRow["ao_year"] = OperationsPayload.ParseFixYear((string)machineRow["year"]);
 				}
 			}
 
@@ -607,10 +625,25 @@ namespace Spludlow.MameAO
 			return String.Join(" ", results);
 		}
 
-		public static DataTable QueryMachines(string connectionString, string profile, int offset, int limit, string search, string[] statuses, bool? mechanical, bool? clone)
+		public static DataTable QueryMachines(string connectionString, string profile, int offset, int limit, string search, string manufacturer, string[] statuses, bool? mechanical, bool? clone, string order, string sort)
 		{
+			string orderBy = "[description] COLLATE NOCASE @SORT";
+			switch (order)
+			{
+				case "year":
+					orderBy = "[ao_year] @SORT, [description] COLLATE NOCASE @SORT";
+					break;
+			}
+
+			sort = sort.ToUpper();
+
 			string commandTextCount = "SELECT COUNT(*) FROM [machine] WHERE (@WHERE)";
-			string commandText = "SELECT [machine].*, @ao_total AS [ao_total] FROM [machine] WHERE (@WHERE) ORDER BY [description] COLLATE NOCASE LIMIT @LIMIT OFFSET @OFFSET";
+			string commandText = "SELECT [machine].*, @ao_total AS [ao_total] FROM [machine] WHERE (@WHERE) ORDER BY @ORDER LIMIT @LIMIT OFFSET @OFFSET";
+
+			commandText = commandText.Replace("@ORDER", orderBy);
+			commandText = commandText.Replace("@SORT", sort);
+			commandText = commandText.Replace("@LIMIT", limit.ToString());
+			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
 			List<string> wheres = new List<string>();
 
@@ -619,6 +652,13 @@ namespace Spludlow.MameAO
 			{
 				likeColumnNames = new string[] { "name", "description" };
 				wheres.Add("(" + String.Join(" OR ", likeColumnNames.Select(c => $"[{c}] LIKE @{c}")) + ")");
+				search = $"%{String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))}%";
+			}
+
+			if (manufacturer != null)
+			{
+				wheres.Add($"[manufacturer] LIKE @manufacturer");
+				manufacturer = $"%{String.Join("%", manufacturer.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))}%";
 			}
 
 			if (statuses.Length > 0)
@@ -651,14 +691,7 @@ namespace Spludlow.MameAO
 			string where = $"({String.Join(") AND (", wheres)})";
 
 			commandTextCount = commandTextCount.Replace("@WHERE", where);
-
 			commandText = commandText.Replace("@WHERE", where);
-
-			commandText = commandText.Replace("@LIMIT", limit.ToString());
-			commandText = commandText.Replace("@OFFSET", offset.ToString());
-
-			if (search != null)
-				search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
 
 			DataTable table = new DataTable();
 
@@ -672,6 +705,9 @@ namespace Spludlow.MameAO
 					foreach (var columnName in likeColumnNames)
 						command.Parameters.AddWithValue($"@{columnName}", search);
 
+					if (manufacturer != null)
+						command.Parameters.AddWithValue("@manufacturer", manufacturer);
+
 					total = (long)command.ExecuteScalar();
 				}
 
@@ -681,6 +717,9 @@ namespace Spludlow.MameAO
 				{
 					foreach (var columnName in likeColumnNames)
 						command.Parameters.AddWithValue($"@{columnName}", search);
+
+					if (manufacturer != null)
+						command.Parameters.AddWithValue("@manufacturer", manufacturer);
 
 					using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
 						adapter.Fill(table);

@@ -298,6 +298,13 @@ namespace Spludlow.MameAO
 			if (search.Length == 0)
 				search = null;
 
+			string manufacturer = "";
+			qs = context.Request.QueryString["manufacturer"];
+			if (qs != null)
+				manufacturer = qs.Trim();
+			if (manufacturer.Length == 0)
+				manufacturer = null;
+
 			string[] status = new string[0];
 			qs = context.Request.QueryString["status"];
 			if (qs != null && qs != "")
@@ -305,15 +312,25 @@ namespace Spludlow.MameAO
 
 			bool? mechanical = null;
 			qs = context.Request.QueryString["mechanical"];
-			if (qs != null && qs != "null")
+			if (qs != null)
 				mechanical = Boolean.Parse(qs);
 
 			bool? clone = null;
 			qs = context.Request.QueryString["clone"];
-			if (qs != null && qs != "null")
+			if (qs != null)
 				clone = Boolean.Parse(qs);
 
-			DataTable table = Globals.Core.QueryMachines(profile, offset, limit, search, status, mechanical, clone);
+			string order = "description";
+			qs = context.Request.QueryString["order"];
+			if (qs != null)
+				order = qs;
+
+			string sort = "asc";
+			qs = context.Request.QueryString["sort"];
+			if (qs != null)
+				sort = qs;
+
+			DataTable table = Globals.Core.QueryMachines(profile, offset, limit, search, manufacturer, status, mechanical, clone, order, sort);
 
 			JArray results = new JArray();
 

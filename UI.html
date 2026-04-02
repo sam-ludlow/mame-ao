@@ -1357,6 +1357,11 @@
 						cell.className = result.ao_status;
 						break;
 
+					case 'description':
+					case 'manufacturer':
+						cell.innerHTML = htmlEncode(value);
+						break;
+
 				}
 
 				if (cell.innerHTML === '0')
@@ -1368,6 +1373,7 @@
 			let html = `
 				<div class="toolbar-input">
 					<input id="inputText" type="text" placeholder="Machine name & description" />
+					<input id="manufacturerText" type="text" placeholder="Manufacturer" />
 					<button type="submit" onclick="searchMachine(); return false;">Search</button>
 				</div>
 				<div class="toolbar">
@@ -1387,6 +1393,12 @@
 						<label><input id="mechanical-mechanical" type="radio" name="mechanical" value="mechanical" onchange="changeMechanical(this);">mechanical</label>
 						<label><input id="mechanical-all" type="radio" name="mechanical" value="all" onchange="changeMechanical(this);">all</label>
 					</div>
+					<div class="checkbox-group">
+						<label><input id="order-description" type="radio" name="order" value="description" onchange="changeOrder(this);">description</label>
+						<label><input id="order-year" type="radio" name="order" value="year" onchange="changeOrder(this);">year</label>
+						<label><input id="sort-asc" type="radio" name="sort" value="asc" onchange="changeSort(this);">asc</label>
+						<label><input id="sort-desc" type="radio" name="sort" value="desc" onchange="changeSort(this);">desc</label>
+					</div>
 				</div>
 				<hr />
 				<nav>${navHtml}</nav>
@@ -1399,6 +1411,7 @@
 			canvas.appendChild(div);
 
 			document.getElementById("inputText").value = _parameters.search;
+			document.getElementById("manufacturerText").value = _parameters.manufacturer;
 
 			document.querySelectorAll('input[name="status"]').forEach(cb => cb.checked = _parameters.status.includes(cb.value));
 
@@ -1418,6 +1431,9 @@
 				else
 					document.getElementById("clone-parent").checked = true;
 
+			document.getElementById(`order-${_parameters.order}`).checked = true;
+			document.getElementById(`sort-${_parameters.sort}`).checked = true;
+
 			const results = document.getElementById('results');
 
 			results.appendChild(table);
@@ -1425,8 +1441,7 @@
 			if (machinesData.results.length === 0)
 				results.insertAdjacentHTML('beforeend', `<p><b>No results - try looking in <a href="/machines/everything?search=${_parameters.search}">Everything</a></b></p>`);
 
-			const inputText = document.getElementById('inputText');
-			inputText.focus();
+			document.getElementById('inputText').focus();
 		}
 		const changeFavoriteMachine = async (checkBoxId, resultIndex) => {
 			const checkBox = document.getElementById(checkBoxId);
@@ -1447,6 +1462,7 @@
 		}
 		const searchMachine = () => {
 			_parameters['search'] = document.getElementById('inputText').value;
+			_parameters['manufacturer'] = document.getElementById('manufacturerText').value;
 			_parameters['offset'] = 0;
 			document.location = makeParameters(_path, _parameters);
 		}
@@ -1467,6 +1483,16 @@
 			_parameters.mechanical = null;
 			if (input.value !== 'all')
 				_parameters.mechanical = input.value === 'mechanical';
+			_parameters['offset'] = 0;
+			document.location = makeParameters(_path, _parameters);
+		}
+		const changeOrder = (input) => {
+			_parameters.order = input.value;
+			_parameters['offset'] = 0;
+			document.location = makeParameters(_path, _parameters);
+		}
+		const changeSort = (input) => {
+			_parameters.sort = input.value;
 			_parameters['offset'] = 0;
 			document.location = makeParameters(_path, _parameters);
 		}
@@ -1517,8 +1543,13 @@
 							cell.className = (resultIndex % 2) ? 'fav-odd' : 'fav-even';
 						break;
 
+					case 'description':
+					case 'publisher':
+						cell.innerHTML = htmlEncode(result[columnDef.columnName]);
+						break;
+
 					default:
-						cell.innerHTML = result[columnDef.columnName] ?? '';
+						cell.innerHTML = result[columnDef.columnName];
 						break;
 				}
 			});
@@ -1659,9 +1690,12 @@
 		const _defaultParamters = {
 			offset: 0,
 			search: '',
+			manufacturer: '',
 			status: [],
 			mechanical: null,
 			clone: null,
+			order: 'description',
+			sort: 'asc',
 		};
 		const _machine_statuses = [
 			'good',
@@ -1711,7 +1745,10 @@
 							break;
 
 						case 'search':
+						case 'manufacturer':
 						case 'view':
+						case 'order':
+						case 'sort':
 							_parameters[key] = value;
 							break;
 
@@ -1754,7 +1791,7 @@
 			}
 		}
 
-		const htmlEncode = (html) => html.replace(/[&<>'"]/g,
+		const htmlEncode = (html = '') => html.replace(/[&<>'"]/g,
 			tag => ({
 				'&': '&amp;',
 				'<': '&lt;',
