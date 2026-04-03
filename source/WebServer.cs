@@ -958,22 +958,45 @@ namespace Spludlow.MameAO
 		}
 
 		private readonly string _DefaultStyleSheet = @"
-
 			body {
 				font-family: sans-serif;
 				font-size: small;
 				background-color: #c6eafb;
 			}
-
 			body.busy {
-				background-color: #ffbf00;
+				background-color: #e6d4dc;
 			}
 
-			.toolbar {
+			.header {
+				background: #00adef;
+				padding: 4px;
+				box-sizing: border-box;
 				display: flex;
 				align-items: center;
-				gap: 12px;
-				padding: 4px;
+				gap: 4px;
+				border-radius: 24px 14px 0 0;
+			}
+			.logo {
+				height: 96px;
+			}
+			.header h1 {
+				margin: 0;
+			}
+
+			td.good {
+				background-color: #ccffcc;
+			}
+			td.imperfect {
+				background-color: #ffffcc;
+			}
+			td.preliminary {
+				background-color: #ffd9b3;
+			}
+			td.bad {
+				background-color: #ffcccc;
+			}
+			td.fav {
+				background-color: #ffd700;
 			}
 
 			hr {
@@ -983,10 +1006,44 @@ namespace Spludlow.MameAO
 				border: none;
 				padding-left: 0px;
 			}
+			hr.px2 {
+				color: #00ADEF;
+				background-color: #00ADEF;
+				height: 2px;
+				border: none;
+				padding-left: 0px;
+			}
 
 			table {
 				border-collapse: collapse;
-				font-size: small;
+			}
+
+			table.nav {
+				width: 100%;
+				border-collapse: separate;
+				border-spacing: 2px;
+				background: transparent;
+				border: none;
+			}
+			td.nav-off {
+				text-decoration: none;
+				background-color: #1a75bc;
+				text-align: center;
+				border: none;
+			}
+			td.nav-on {
+				text-decoration: none;
+				background-color: #00ADEF;
+				text-align: center;
+				border: none;
+			}
+			a.nav-off {
+				text-decoration: none;
+				color: #FFFFFF;
+			}
+			a.nav-on {
+				text-decoration: none;
+				color: #FFFF00;
 			}
 
 			th, td {
@@ -999,15 +1056,18 @@ namespace Spludlow.MameAO
 			}
 
 			th {
-				background-color: #00ADEF;
-				color: white;
+				background-color: #555;
+				color: #fff;
 			}
 
-			tr:nth-child(odd) {
-				background-color: #c6eafb;
+			tr {
+				color: #000;
+				background-color: #ddd;
 			}
+
 			tr:nth-child(even) {
-				background-color: #b1e2fa;
+				color: #000;
+				background-color: #eee;
 			}
 
 			a.nav-off {
@@ -1032,31 +1092,76 @@ namespace Spludlow.MameAO
 				text-align: center;
 			}
 
-			td.fav-even {
-				background-color: #ffd700;
-			}
-			td.fav-odd {
-				background-color: #ffdf00;
-			}
-
-			td.good {
-				background-color: #ccffcc;
-			}
-			td.imperfect {
-				background-color: #ffffcc;
-			}
-			td.preliminary {
-				background-color: #ffd9b3;
-			}
-			td.bad {
-				background-color: #ffcccc;
+			.card-grid {
+				display: grid;
+				grid-template-columns: repeat(auto-fit, minmax(192px, 1fr));
+				gap: 8px;
 			}
 
-			tr.clone-even {
-				background-color: #65c6f5;
+			.card {
+				width: 100%;
+				background-color: #f2f2f2;
 			}
-			tr.clone-odd {
-				background-color: #77ccf6;
+			.card-gg {
+				width: 100%;
+				background-color: #e6ffe6;
+			}
+			.card-ig {
+				width: 100%;
+				background-color: #ffffe6;
+			}
+			.card-pg {
+				width: 100%;
+				background-color: #fff0e6;
+			}
+			.card-pp {
+				width: 100%;
+				background-color: #ffe6e6;
+			}
+
+			.card-thumb {
+				width: 128px;
+				height: 128px;
+				margin: 0 auto;
+				color: #fff;
+				background-color: #262626;
+				display: grid;
+				place-items: center;
+				text-align: center;
+			}
+			.card-link {
+				text-decoration: none;
+				color: inherit;
+				display: block;
+			}
+
+			.card-img {
+				max-width: 100%;
+				max-height: 100%;
+				object-fit: contain;
+			}
+			.card-body {
+				display: flex;
+				flex-direction: column;
+				gap: 4px;
+				align-items: center;
+				text-align: center;
+			}
+			.card-name {
+				font-weight: 600;
+				font-size: 1.0rem;
+			}
+			.card-description {
+				font-weight: 400;
+				font-size: 0.8rem;
+			}
+				.card-year {
+				font-weight: 600;
+				font-size: 0.8rem;
+			}
+			.card-manufacturer {
+				font-weight: 400;
+				font-size: 0.8rem;
 			}
 
 			.toolbar {

@@ -1340,7 +1340,6 @@
 
 					case 'cloneof':
 						cell.innerHTML = `<a href="/machines/everything?search=${value}">${value}</a>`;
-						row.className = (resultIndex % 2) ? 'clone-odd' : 'clone-even';
 						break;
 
 					case 'romof':
@@ -1350,7 +1349,7 @@
 					case 'favorite':
 						cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteMachine(this.id, ${resultIndex})" ${result.favorite ? 'checked' : ''}>`;
 						if (result.favorite === true)
-							cell.className = (resultIndex % 2) ? 'fav-odd' : 'fav-even';
+							cell.className = 'fav';
 						break;
 
 					case 'ao_status':
@@ -1454,11 +1453,7 @@
 
 			const row = checkBox.parentElement.parentElement;
 
-			const cell = row.cells[1];
-			if (checkBox.checked === false)
-				cell.className = '';
-			else
-				cell.className = (resultIndex % 2) ? 'fav-odd' : 'fav-even';
+			row.cells[1].className = checkBox.checked ? 'fav' : '';
 		}
 		const searchMachine = () => {
 			_parameters['search'] = document.getElementById('inputText').value;
@@ -1539,8 +1534,7 @@
 
 					case 'favorite':
 						cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteSoftware(this.id, '${machineData.name}', '${result.softwarelist_name}', ${resultIndex})" ${result.favorite ? 'checked' : ''}>`;
-						if (result.favorite === true)
-							cell.className = (resultIndex % 2) ? 'fav-odd' : 'fav-even';
+						cell.className = result.favorite ? 'fav' : '';
 						break;
 
 					case 'description':
@@ -1587,11 +1581,7 @@
 
 			const row = checkBox.parentElement.parentElement;
 
-			const cell = row.cells[1];
-			if (checkBox.checked === false)
-				cell.className = '';
-			else
-				cell.className = (resultIndex % 2) ? 'fav-odd' : 'fav-even';
+			row.cells[1].className = checkBox.checked ? 'fav' : '';
 		}
 
 		const searchButton = async () => {
@@ -1824,9 +1814,10 @@
 			const heading = document.getElementById('heading');
 
 			const table = document.createElement('table');
-			table.style = "width: 100%;";
+			table.className = 'nav';
 
 			const row = document.createElement('tr');
+			row.className = 'nav';
 
 			let found;
 
@@ -1873,9 +1864,8 @@
 
 </head>
 <body>
-
-	<div>
-		<a style="float:left;" href="/"><img src="https://mame.spludlow.co.uk/snap/mame-ao-logo.png" /></a>
+	<div class="header">
+		<a href="/" class="logo"><img src="https://data.spludlow.co.uk/mame-ao.svg" alt="mame-ao logo"></a>
 		<h1 id="heading"></h1>
 	</div>
 
