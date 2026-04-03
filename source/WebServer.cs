@@ -959,12 +959,11 @@ namespace Spludlow.MameAO
 
 		private readonly string _DefaultStyleSheet = @"
 			body {
-				font-family: sans-serif;
-				font-size: small;
-				background-color: #c6eafb;
+				font: small sans-serif;
+				background: #c6eafb;
 			}
 			body.busy {
-				background-color: #e6d4dc;
+				background: #e6d4dc;
 			}
 
 			.header {
@@ -976,121 +975,54 @@ namespace Spludlow.MameAO
 				gap: 4px;
 				border-radius: 24px 14px 0 0;
 			}
-			.logo {
-				height: 96px;
-			}
-			.header h1 {
-				margin: 0;
-			}
+			.logo { height: 96px; }
+			.header h1 { margin: 0; }
 
-			td.good {
-				background-color: #ccffcc;
-			}
-			td.imperfect {
-				background-color: #ffffcc;
-			}
-			td.preliminary {
-				background-color: #ffd9b3;
-			}
-			td.bad {
-				background-color: #ffcccc;
-			}
-			td.fav {
-				background-color: #ffd700;
-			}
+			td.good        { background: #cfc; }
+			td.imperfect   { background: #ffc; }
+			td.preliminary { background: #ffd9b3; }
+			td.bad         { background: #fcc; }
+			td.fav         { background: #ffd700; }
 
 			hr {
-				color: #00ADEF;
-				background-color: #00ADEF;
+				background: #00adef;
 				height: 6px;
-				border: none;
-				padding-left: 0px;
+				border: 0;
 			}
-			hr.px2 {
-				color: #00ADEF;
-				background-color: #00ADEF;
-				height: 2px;
-				border: none;
-				padding-left: 0px;
-			}
+			hr.px2 { height: 2px; }
 
-			table {
-				border-collapse: collapse;
+			table { border-collapse: collapse; }
+			th, td {
+				padding: 2px;
+				text-align: left;
+				border: 1px solid #000;
 			}
+			th {
+				background: #555;
+				color: #fff;
+			}
+			tr { background: #ddd; }
+			tr:nth-child(even) { background: #eee; }
 
 			table.nav {
 				width: 100%;
 				border-collapse: separate;
 				border-spacing: 2px;
 				background: transparent;
-				border: none;
+				border: 0;
 			}
-			td.nav-off {
-				text-decoration: none;
-				background-color: #1a75bc;
+			td.nav-off, td.nav-on {
 				text-align: center;
-				border: none;
+				border: 0;
 			}
-			td.nav-on {
+			td.nav-off { background: #1a75bc; }
+			td.nav-on  { background: #00adef; }
+
+			a.nav-off, a.nav-on {
 				text-decoration: none;
-				background-color: #00ADEF;
-				text-align: center;
-				border: none;
 			}
-			a.nav-off {
-				text-decoration: none;
-				color: #FFFFFF;
-			}
-			a.nav-on {
-				text-decoration: none;
-				color: #FFFF00;
-			}
-
-			th, td {
-				padding: 2px;
-				text-align: left;
-			}
-
-			table, th, td {
-				border: 1px solid black;
-			}
-
-			th {
-				background-color: #555;
-				color: #fff;
-			}
-
-			tr {
-				color: #000;
-				background-color: #ddd;
-			}
-
-			tr:nth-child(even) {
-				color: #000;
-				background-color: #eee;
-			}
-
-			a.nav-off {
-				text-decoration: none;
-				color: #FFFFFF;
-			}
-
-			a.nav-on {
-				text-decoration: none;
-				color: #FFFF00;
-			}
-
-			td.nav-off {
-				text-decoration: none;
-				background-color: #1a75bc;
-				text-align: center;
-			}
-
-			td.nav-on {
-				text-decoration: none;
-				background-color: #00ADEF;
-				text-align: center;
-			}
+			a.nav-off { color: #fff; }
+			a.nav-on  { color: #ff0; }
 
 			.card-grid {
 				display: grid;
@@ -1098,41 +1030,35 @@ namespace Spludlow.MameAO
 				gap: 8px;
 			}
 
-			.card {
-				width: 100%;
-				background-color: #f2f2f2;
-			}
-			.card-gg {
-				width: 100%;
-				background-color: #e6ffe6;
-			}
-			.card-ig {
-				width: 100%;
-				background-color: #ffffe6;
-			}
-			.card-pg {
-				width: 100%;
-				background-color: #fff0e6;
-			}
+			.card,
+			.card-gg,
+			.card-ig,
+			.card-pg,
 			.card-pp {
 				width: 100%;
-				background-color: #ffe6e6;
 			}
+
+			.card       { background: #f2f2f2; }
+			.card-gg    { background: #e6ffe6; }
+			.card-ig    { background: #ffffe6; }
+			.card-pg    { background: #fff0e6; }
+			.card-pp    { background: #ffe6e6; }
 
 			.card-thumb {
 				width: 128px;
 				height: 128px;
 				margin: 0 auto;
-				color: #fff;
-				background-color: #262626;
 				display: grid;
 				place-items: center;
 				text-align: center;
+				color: #fff;
+				background: #262626;
 			}
+
 			.card-link {
+				display: block;
 				text-decoration: none;
 				color: inherit;
-				display: block;
 			}
 
 			.card-img {
@@ -1140,6 +1066,7 @@ namespace Spludlow.MameAO
 				max-height: 100%;
 				object-fit: contain;
 			}
+
 			.card-body {
 				display: flex;
 				flex-direction: column;
@@ -1147,22 +1074,11 @@ namespace Spludlow.MameAO
 				align-items: center;
 				text-align: center;
 			}
-			.card-name {
-				font-weight: 600;
-				font-size: 1.0rem;
-			}
-			.card-description {
-				font-weight: 400;
-				font-size: 0.8rem;
-			}
-				.card-year {
-				font-weight: 600;
-				font-size: 0.8rem;
-			}
-			.card-manufacturer {
-				font-weight: 400;
-				font-size: 0.8rem;
-			}
+
+			.card-name { font: 600 1rem sans-serif; }
+			.card-description,
+			.card-manufacturer { font-size: 0.8rem; }
+			.card-year { font: 600 0.8rem sans-serif; }
 
 			.toolbar {
 				display: flex;
@@ -1173,7 +1089,6 @@ namespace Spludlow.MameAO
 				border: 1px solid #00adef;
 				padding: 8px;
 				display: flex;
-				flex-wrap: nowrap;
 				gap: 8px;
 			}
 			.toolbar-input {

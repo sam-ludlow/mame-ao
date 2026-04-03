@@ -1543,7 +1543,7 @@
 						break;
 
 					default:
-						cell.innerHTML = result[columnDef.columnName];
+						cell.innerHTML = result[columnDef.columnName] || '';
 						break;
 				}
 			});
