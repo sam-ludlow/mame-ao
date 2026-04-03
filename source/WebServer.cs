@@ -320,15 +320,8 @@ namespace Spludlow.MameAO
 			if (qs != null)
 				clone = Boolean.Parse(qs);
 
-			string order = "description";
-			qs = context.Request.QueryString["order"];
-			if (qs != null)
-				order = qs;
-
-			string sort = "asc";
-			qs = context.Request.QueryString["sort"];
-			if (qs != null)
-				sort = qs;
+			string order = context.Request.QueryString["order"] ?? "description";
+			string sort = context.Request.QueryString["sort"] ?? "asc";
 
 			DataTable table = Globals.Core.QueryMachines(profile, offset, limit, search, manufacturer, status, mechanical, clone, order, sort);
 
@@ -1031,40 +1024,42 @@ namespace Spludlow.MameAO
 			}
 
 			.card,
-			.card-gg,
-			.card-ig,
-			.card-pg,
-			.card-pp {
+			.card-good,
+			.card-imperfect,
+			.card-preliminary,
+			.card-bad {
 				width: 100%;
 			}
 
-			.card       { background: #f2f2f2; }
-			.card-gg    { background: #e6ffe6; }
-			.card-ig    { background: #ffffe6; }
-			.card-pg    { background: #fff0e6; }
-			.card-pp    { background: #ffe6e6; }
+			.card				{ background: #f2f2f2; }
+			.card-good			{ background: #e6ffe6; }
+			.card-imperfect		{ background: #ffffe6; }
+			.card-preliminary	{ background: #fff0e6; }
+			.card-bad			{ background: #ffe6e6; }
 
 			.card-thumb {
 				width: 128px;
 				height: 128px;
 				margin: 0 auto;
-				display: grid;
-				place-items: center;
-				text-align: center;
-				color: #fff;
+				display: flex;
+				align-items: center;
+				justify-content: center;
 				background: #262626;
+				color: #fff;
+				overflow: hidden;
+			}
+			.card-thumb img {
+				width: auto;
+				height: auto;
+				max-width: 128px;
+				max-height: 128px;
+				display: block;
 			}
 
 			.card-link {
 				display: block;
 				text-decoration: none;
 				color: inherit;
-			}
-
-			.card-img {
-				max-width: 100%;
-				max-height: 100%;
-				object-fit: contain;
 			}
 
 			.card-body {

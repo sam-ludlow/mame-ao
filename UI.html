@@ -1314,58 +1314,109 @@
 				{ heading: 'status', columnName: 'ao_status' },
 			];
 
-			const table = document.createElement('table');
-			table.style = 'width:100%;';
+			let body;
 
-			buildTable(columnDefs, machinesData.results, table, (columnDef, result, resultIndex, row, cell) => {
+			if (_parameters.view === 'grid') {
 
-				const value = result[columnDef.columnName];
+				body = document.createElement('div');
+				body.className = 'card-grid';
 
-				if (value === undefined)
-					return;
+				machinesData.results.forEach((result) => {
 
-				cell.innerHTML = value;
+					const item = document.createElement('div');
+					item.className = `card-${result.ao_status}`;
 
-				switch (columnDef.columnName) {
-					case 'ao_image':
-						if (result.ao_softwarelist_count > 0)
-							cell.innerHTML = `<a id="${result.name}" href="${_baseUrl}/machines/${profileKey}/${result.name}"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
-						else
-							cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${result.name}@${_info.core_name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
-						break;
+					const target = result.ao_softwarelist_count > 0 ?
+						`href="${_baseUrl}/machines/${profileKey}/${result.name}"` : `href="#" onclick="runCommand('${result.name}@${_info.core_name}'); return false;"`;
 
-					case 'name':
-						cell.innerHTML = `<a href="https://data.spludlow.co.uk/${_info.core_name}/machine/${result.name}" target="_blank">${result.name}</a>`;
-						break;
+					const card = `
+						<div class="card-thumb">
+							<a ${target} class="card-link">
+								<img src="https://data.spludlow.co.uk/${_info.core_name}/machine/${result.name}.png" alt="${result.description}" loading="lazy" />
+							</a>
+						</div>
+						<div class="card-body">
+							<div class="card-name">${result.name}</div>
+							<div class="card-description">${htmlEncode(result.description)}</div>
+							<div class="card-year">${result.year}</div>
+							<div class="card-manufacturer">${htmlEncode(result.manufacturer)}</div>
+						</div>
+					`;
 
-					case 'cloneof':
-						cell.innerHTML = `<a href="/machines/everything?search=${value}">${value}</a>`;
-						break;
+					item.innerHTML = card;
 
-					case 'romof':
-						cell.innerHTML = `<a href="/machines/everything?search=${value}">${value}</a>`;
-						break;
+					const img = item.querySelector('.card-thumb img');
+					img.addEventListener('error', () => {
+						img.src = 'data:image/svg+xml;base64,' + btoa(`
+							<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">
+								<rect width="128" height="128" fill="#262626"/>
+								<text x="50%" y="50%" font-size="18" fill="#fff" text-anchor="middle" alignment-baseline="central">
+									no image
+								</text>
+							</svg>
+						`);
+						img.alt = 'Image not available';
+					});
 
-					case 'favorite':
-						cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteMachine(this.id, ${resultIndex})" ${result.favorite ? 'checked' : ''}>`;
-						if (result.favorite === true)
-							cell.className = 'fav';
-						break;
+					body.appendChild(item);
+				});
 
-					case 'ao_status':
-						cell.className = result.ao_status;
-						break;
+			} else {
 
-					case 'description':
-					case 'manufacturer':
-						cell.innerHTML = htmlEncode(value);
-						break;
+				body = document.createElement('table');
+				body.style = 'width:100%;';
 
-				}
+				buildTable(columnDefs, machinesData.results, body, (columnDef, result, resultIndex, row, cell) => {
 
-				if (cell.innerHTML === '0')
-					cell.innerHTML = '';
-			});
+					const value = result[columnDef.columnName];
+
+					if (value === undefined)
+						return;
+
+					cell.innerHTML = value;
+
+					switch (columnDef.columnName) {
+						case 'ao_image':
+							if (result.ao_softwarelist_count > 0)
+								cell.innerHTML = `<a id="${result.name}" href="${_baseUrl}/machines/${profileKey}/${result.name}"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
+							else
+								cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${result.name}@${_info.core_name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
+							break;
+
+						case 'name':
+							cell.innerHTML = `<a href="https://data.spludlow.co.uk/${_info.core_name}/machine/${result.name}" target="_blank">${result.name}</a>`;
+							break;
+
+						case 'cloneof':
+							cell.innerHTML = `<a href="/machines/everything?search=${value}">${value}</a>`;
+							break;
+
+						case 'romof':
+							cell.innerHTML = `<a href="/machines/everything?search=${value}">${value}</a>`;
+							break;
+
+						case 'favorite':
+							cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteMachine(this.id, ${resultIndex})" ${result.favorite ? 'checked' : ''}>`;
+							if (result.favorite === true)
+								cell.className = 'fav';
+							break;
+
+						case 'ao_status':
+							cell.className = result.ao_status;
+							break;
+
+						case 'description':
+						case 'manufacturer':
+							cell.innerHTML = htmlEncode(value);
+							break;
+
+					}
+
+					if (cell.innerHTML === '0')
+						cell.innerHTML = '';
+				});
+
+			}
 
 			const navHtml = navigateHtml(machinesData);
 
@@ -1397,6 +1448,10 @@
 						<label><input id="order-year" type="radio" name="order" value="year" onchange="changeOrder(this);">year</label>
 						<label><input id="sort-asc" type="radio" name="sort" value="asc" onchange="changeSort(this);">asc</label>
 						<label><input id="sort-desc" type="radio" name="sort" value="desc" onchange="changeSort(this);">desc</label>
+					</div>
+					<div class="checkbox-group">
+						<label><input id="view-grid" type="radio" name="view" value="grid" onchange="changeView(this);">grid</label>
+						<label><input id="view-list" type="radio" name="view" value="list" onchange="changeView(this);">list</label>
 					</div>
 				</div>
 				<hr />
@@ -1433,9 +1488,11 @@
 			document.getElementById(`order-${_parameters.order}`).checked = true;
 			document.getElementById(`sort-${_parameters.sort}`).checked = true;
 
+			document.getElementById(`view-${_parameters.view}`).checked = true;
+
 			const results = document.getElementById('results');
 
-			results.appendChild(table);
+			results.appendChild(body);
 
 			if (machinesData.results.length === 0)
 				results.insertAdjacentHTML('beforeend', `<p><b>No results - try looking in <a href="/machines/everything?search=${_parameters.search}">Everything</a></b></p>`);
@@ -1489,6 +1546,10 @@
 		const changeSort = (input) => {
 			_parameters.sort = input.value;
 			_parameters['offset'] = 0;
+			document.location = makeParameters(_path, _parameters);
+		}
+		const changeView = (input) => {
+			_parameters.view = input.value;
 			document.location = makeParameters(_path, _parameters);
 		}
 
@@ -1686,6 +1747,7 @@
 			clone: null,
 			order: 'description',
 			sort: 'asc',
+			view: 'grid',
 		};
 		const _machine_statuses = [
 			'good',
@@ -1736,9 +1798,9 @@
 
 						case 'search':
 						case 'manufacturer':
-						case 'view':
 						case 'order':
 						case 'sort':
+						case 'view':
 							_parameters[key] = value;
 							break;
 
