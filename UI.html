@@ -1299,22 +1299,10 @@
 
 			const canvas = getCanvas();
 
-			const columnDefs = [
-				{ heading: '', columnName: 'ao_image' },
-				{ heading: 'fav', columnName: 'favorite' },
-				{ heading: 'name', columnName: 'name' },
-				{ heading: 'description', columnName: 'description' },
-				{ heading: 'year', columnName: 'year' },
-				{ heading: 'manufacturer', columnName: 'manufacturer' },
-				{ heading: 'roms', columnName: 'ao_rom_count' },
-				{ heading: 'disks', columnName: 'ao_disk_count' },
-				{ heading: 'lists', columnName: 'ao_softwarelist_count' },
-				{ heading: 'cloneof', columnName: 'cloneof' },
-				{ heading: 'romof', columnName: 'romof' },
-				{ heading: 'status', columnName: 'ao_status' },
-			];
-
 			let body;
+
+			const target = (result) => result.ao_softwarelist_count > 0 ?
+				`href="${_baseUrl}/machines/${profileKey}/${result.name}"` : `href="#" onclick="runCommand('${result.name}@${_info.core_name}'); return false;"`;
 
 			if (_parameters.view === 'grid') {
 
@@ -1326,20 +1314,23 @@
 					const item = document.createElement('div');
 					item.className = `card-${result.ao_status}`;
 
-					const target = result.ao_softwarelist_count > 0 ?
-						`href="${_baseUrl}/machines/${profileKey}/${result.name}"` : `href="#" onclick="runCommand('${result.name}@${_info.core_name}'); return false;"`;
-
 					const card = `
-						<div class="card-thumb">
-							<a ${target} class="card-link">
-								<img src="https://data.spludlow.co.uk/${_info.core_name}/machine/${result.name}.png" alt="${result.description}" loading="lazy" />
-							</a>
-						</div>
 						<div class="card-body">
-							<div class="card-name">${result.name}</div>
-							<div class="card-description">${htmlEncode(result.description)}</div>
+							<div class="card-name">
+								<a class="card-link" href="https://data.spludlow.co.uk/${_info.core_name}/machine/${result.name}" target="_blank">${result.name}</a>
+								<div>
+									<input type="checkbox" class="fav-checkbox" id="fav_${result.name}" onclick="changeFavoriteMachine(this.id)" ${result.favorite ? 'checked' : ''} />
+									<label for="fav_${result.name}" class="star"></label>
+								</div>
+							</div>
+							<div class="card-thumb">
+								<a ${target(result)} class="card-link">
+									<img src="https://data.spludlow.co.uk/${_info.core_name}/machine/${result.name}.png" alt="${result.description}" loading="lazy" />
+								</a>
+							</div>
+							<div>${htmlEncode(result.description)}</div>
 							<div class="card-year">${result.year}</div>
-							<div class="card-manufacturer">${htmlEncode(result.manufacturer)}</div>
+							<div>${htmlEncode(result.manufacturer)}</div>
 						</div>
 					`;
 
@@ -1366,6 +1357,20 @@
 				body = document.createElement('table');
 				body.style = 'width:100%;';
 
+				const columnDefs = [
+					{ heading: 'name', columnName: 'name' },
+					{ heading: '', columnName: 'favorite' },
+					{ heading: 'description', columnName: 'description' },
+					{ heading: 'status', columnName: 'ao_status' },
+					{ heading: 'year', columnName: 'year' },
+					{ heading: 'manufacturer', columnName: 'manufacturer' },
+					{ heading: 'roms', columnName: 'ao_rom_count' },
+					{ heading: 'disks', columnName: 'ao_disk_count' },
+					{ heading: 'lists', columnName: 'ao_softwarelist_count' },
+					{ heading: 'cloneof', columnName: 'cloneof' },
+					{ heading: 'romof', columnName: 'romof' },
+				];
+
 				buildTable(columnDefs, machinesData.results, body, (columnDef, result, resultIndex, row, cell) => {
 
 					const value = result[columnDef.columnName];
@@ -1376,15 +1381,24 @@
 					cell.innerHTML = value;
 
 					switch (columnDef.columnName) {
-						case 'ao_image':
-							if (result.ao_softwarelist_count > 0)
-								cell.innerHTML = `<a id="${result.name}" href="${_baseUrl}/machines/${profileKey}/${result.name}"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
-							else
-								cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${result.name}@${_info.core_name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
+						case 'name':
+							cell.innerHTML = `<a ${target(result)} target="_blank">${result.name}</a>`;
 							break;
 
-						case 'name':
-							cell.innerHTML = `<a href="https://data.spludlow.co.uk/${_info.core_name}/machine/${result.name}" target="_blank">${result.name}</a>`;
+						case 'favorite':
+							cell.innerHTML = `
+								<div>
+									<input type="checkbox" class="fav-checkbox" id="fav_${result.name}" onclick="changeFavoriteMachine(this.id)" ${result.favorite ? 'checked' : ''} />
+									<label for="fav_${result.name}" class="star"></label>
+								</div>`;
+							break;
+
+						case 'description':
+							cell.innerHTML = `<a href="https://data.spludlow.co.uk/${_info.core_name}/machine/${result.name}" target="_blank">${htmlEncode(result.description) }</a>`;
+							break;
+
+						case 'ao_status':
+							cell.className = result.ao_status;
 							break;
 
 						case 'cloneof':
@@ -1395,17 +1409,6 @@
 							cell.innerHTML = `<a href="/machines/everything?search=${value}">${value}</a>`;
 							break;
 
-						case 'favorite':
-							cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteMachine(this.id, ${resultIndex})" ${result.favorite ? 'checked' : ''}>`;
-							if (result.favorite === true)
-								cell.className = 'fav';
-							break;
-
-						case 'ao_status':
-							cell.className = result.ao_status;
-							break;
-
-						case 'description':
 						case 'manufacturer':
 							cell.innerHTML = htmlEncode(value);
 							break;
@@ -1456,7 +1459,9 @@
 				</div>
 				<hr />
 				<nav>${navHtml}</nav>
+				<hr />
 				<div id="results"></div>
+				<hr />
 				<nav>${navHtml}</nav>
 			`;
 
@@ -1499,18 +1504,11 @@
 
 			document.getElementById('inputText').focus();
 		}
-		const changeFavoriteMachine = async (checkBoxId, resultIndex) => {
+		const changeFavoriteMachine = async (checkBoxId) => {
 			const checkBox = document.getElementById(checkBoxId);
-
 			const name = checkBoxId.substring(4);
-
 			const command = checkBox.checked ? ".favm" : ".favmx";
-
 			await runCommand(`${command} ${name}`);
-
-			const row = checkBox.parentElement.parentElement;
-
-			row.cells[1].className = checkBox.checked ? 'fav' : '';
 		}
 		const searchMachine = () => {
 			_parameters['search'] = document.getElementById('inputText').value;
@@ -1567,7 +1565,7 @@
 
 			const columnDefs = [
 				{ heading: '', columnName: 'ao_image' },
-				{ heading: 'fav', columnName: 'favorite' },
+				{ heading: '', columnName: 'favorite' },
 				{ heading: 'name', columnName: 'name' },
 				{ heading: 'description', columnName: 'description' },
 				{ heading: 'year', columnName: 'year' },
@@ -1594,8 +1592,11 @@
 						break;
 
 					case 'favorite':
-						cell.innerHTML = `<input type="checkbox" id="fav_${result.name}" onclick="changeFavoriteSoftware(this.id, '${machineData.name}', '${result.softwarelist_name}', ${resultIndex})" ${result.favorite ? 'checked' : ''}>`;
-						cell.className = result.favorite ? 'fav' : '';
+						cell.innerHTML = `
+								<div>
+									<input type="checkbox" class="fav-checkbox" id="fav_${result.name}" onclick="changeFavoriteSoftware(this.id, '${machineData.name}', '${result.softwarelist_name}')" ${result.favorite ? 'checked' : ''} />
+									<label for="fav_${result.name}" class="star"></label>
+								</div>`;
 						break;
 
 					case 'description':
@@ -1631,18 +1632,11 @@
 			const inputText = document.getElementById('inputText');
 			inputText.focus();
 		}
-		const changeFavoriteSoftware = async (checkBoxId, machineName, listName, resultIndex) => {
+		const changeFavoriteSoftware = async (checkBoxId, machineName, listName) => {
 			const checkBox = document.getElementById(checkBoxId);
-
 			const softwareName = checkBoxId.substring(4);
-
 			const command = checkBox.checked ? ".favs" : ".favsx";
-
 			await runCommand(`${command} ${machineName} ${listName} ${softwareName}`);
-
-			const row = checkBox.parentElement.parentElement;
-
-			row.cells[1].className = checkBox.checked ? 'fav' : '';
 		}
 
 		const searchButton = async () => {

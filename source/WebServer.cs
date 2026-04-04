@@ -110,6 +110,18 @@ namespace Spludlow.MameAO
 											context.Response.Headers["Cache-Control"] = "max-age=60";
 											break;
 
+										case "/fav-off.png":
+											context.Response.Headers["Content-Type"] = "image/png";
+											context.Response.OutputStream.Write(_FavOff, 0, _FavOff.Length);
+											context.Response.Headers["Cache-Control"] = "max-age=60";
+											break;
+
+										case "/fav-on.png":
+											context.Response.Headers["Content-Type"] = "image/png";
+											context.Response.OutputStream.Write(_FavOn, 0, _FavOn.Length);
+											context.Response.Headers["Cache-Control"] = "max-age=60";
+											break;
+
 										case "/styles.css":
 											context.Response.Headers["Content-Type"] = "text/css";
 											context.Response.Headers["Cache-Control"] = "max-age=60";
@@ -286,7 +298,7 @@ namespace Spludlow.MameAO
 			if (qs != null)
 				offset = Int32.Parse(qs);
 
-			int limit = 100;
+			int limit = 250;
 			qs = context.Request.QueryString["limit"];
 			if (qs != null)
 				limit = Int32.Parse(qs);
@@ -406,7 +418,7 @@ namespace Spludlow.MameAO
 			if (qs != null)
 				offset = Int32.Parse(qs);
 
-			int limit = 100;
+			int limit = 250;
 			qs = context.Request.QueryString["limit"];
 			if (qs != null)
 				limit = Int32.Parse(qs);
@@ -966,7 +978,7 @@ namespace Spludlow.MameAO
 				display: flex;
 				align-items: center;
 				gap: 4px;
-				border-radius: 24px 14px 0 0;
+				border-radius: 24px 24px 0 0;
 			}
 			.logo { height: 96px; }
 			.header h1 { margin: 0; }
@@ -975,7 +987,6 @@ namespace Spludlow.MameAO
 			td.imperfect   { background: #ffc; }
 			td.preliminary { background: #ffd9b3; }
 			td.bad         { background: #fcc; }
-			td.fav         { background: #ffd700; }
 
 			hr {
 				background: #00adef;
@@ -1032,10 +1043,10 @@ namespace Spludlow.MameAO
 			}
 
 			.card				{ background: #f2f2f2; }
-			.card-good			{ background: #e6ffe6; }
-			.card-imperfect		{ background: #ffffe6; }
-			.card-preliminary	{ background: #fff0e6; }
-			.card-bad			{ background: #ffe6e6; }
+			.card-good			{ background: #cfc; }
+			.card-imperfect		{ background: #ffc; }
+			.card-preliminary	{ background: #ffd9b3; }
+			.card-bad			{ background: #fcc; }
 
 			.card-thumb {
 				width: 128px;
@@ -1070,10 +1081,16 @@ namespace Spludlow.MameAO
 				text-align: center;
 			}
 
-			.card-name { font: 600 1rem sans-serif; }
-			.card-description,
-			.card-manufacturer { font-size: 0.8rem; }
-			.card-year { font: 600 0.8rem sans-serif; }
+			.card-name {
+				font-weight: 600;
+				font-size: 1.2em;
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+			.card-year {
+				font-weight: 600;
+			}
 
 			.toolbar {
 				display: flex;
@@ -1096,6 +1113,23 @@ namespace Spludlow.MameAO
 				padding: 4px;
 				box-sizing: border-box;
 			}
+
+			.fav-checkbox {
+				position: absolute;
+				opacity: 0;
+				width: 0;
+				height: 0;
+			}
+			.star {
+				display: inline-block;
+				width: 18px;
+				height: 18px;
+				background: url('/fav-off.png') no-repeat center/contain;
+				cursor: pointer;
+			}
+			.fav-checkbox:checked + .star {
+				background: url('/fav-on.png') no-repeat center/contain;
+			}
 		";
 
 		private readonly byte[] _FavIcon = Convert.FromBase64String(@"
@@ -1115,6 +1149,25 @@ namespace Spludlow.MameAO
 			sgD//fn98sz0vwDyrgDxqwDxqgDxqwDyrwD1xQD9+OL+/PXysgD1rADyrwDyrwDxrQDztQD889D/
 			/fn989P75pT53mj76J399dv//fn87rjzswDyrADxrAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
+		");
+
+		private readonly byte[] _FavOff = Convert.FromBase64String(@"
+			iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJ
+			bWFnZVJlYWR5ccllPAAAAPtJREFUeNqsVMsRgjAQBfXiSUqQCtAOUoIlSAVKBWgFlCAlUEKuntAK
+			sITYgW9nng4TAomjO/Nm2ezbD7uEKPLIieLjxZ4ka6iW5hb2Y4w78xQqgYYoJzti1b3Dt+J5SrsD
+			auDp4NbSkQEOQGY5JSBHISOQZ0eSjLHmPYsj0EVfisRIrH3YDg6nk0jx1jXsQgYKZxKQJOHwi0Ei
+			ODWU9m2nt03NmKD1B0u/IwUlOAfECUcxZtBRJQSu2jcjw2SVawM/rT/mBjoO+m5xb/A3DNpBbRwf
+			pLxe+rcr4rv9F8vOx7iLgO18fiNTxPmUU2ttlFJLPF7fsxqTlwADAMtvaRbmu0F+AAAAAElFTkSu
+			QmCC
+		");
+
+		private readonly byte[] _FavOn = Convert.FromBase64String(@"
+			iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJ
+			bWFnZVJlYWR5ccllPAAAAMpJREFUeNpiYCAMGqCYIqAAxO+hWIESg+YnJDD8B2EQG59CRqhNCVjk
+			+AUEGAru34dwFBUZGD58YJgAZH7EonYByCABIL4fEMAgYGCAKquvz8AAFAeDDRsYGC5eRJW/cAEs
+			/gFkD0ysQEGB4f///6RhkB6QXnTnne/vJ94QkFqQHmzh5QAMk//v3xM2BKQGpBakB1fgry8oIGwQ
+			SA1ILbJGJgYaAKp5jSqBTXH0Uy1BUi2LUC3TUq0YYSZgEMj/nEB8EhRM+BQCBBgAjOwnS3jMtcAA
+			AAAASUVORK5CYII=
 		");
 
 	}
