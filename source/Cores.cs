@@ -127,7 +127,7 @@ namespace Spludlow.MameAO
 			if (overwrite == true)
 			{
 				File.Delete(machineSqlLiteFilename);
-				File.Delete(machineSqlLiteFilename);
+				File.Delete(softwareSqlLiteFilename);
 			}
 
 			if (File.Exists(machineSqlLiteFilename) == false)
