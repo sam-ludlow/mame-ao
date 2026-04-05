@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Data;
 using System.IO;
 using System.Linq;
-using System.Text;
 using System.Xml.Linq;
 
 using System.Data.SQLite;
@@ -52,7 +51,7 @@ namespace Spludlow.MameAO
 		string GetRequiredMedia(string machine_name, string softwarelist_name, string software_name);
 
 		DataTable QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, bool? mechanical, bool? clone, string order, string sort);
-		DataTable QuerySoftware(string softwarelist_name, int offset, int limit, string search, string favorites_machine);
+		DataTable QuerySoftware(string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine);
 	}
 	public class Cores
 	{
@@ -159,6 +158,21 @@ namespace Spludlow.MameAO
 				XML2SQLite(softwareXmlFilename, softwareSqlLiteFilename, requiredSoftwareTables, assemblyVersion, aoExtra);
 				GC.Collect();
 				Console.WriteLine("...done");
+
+				if (aoExtra != null)
+				{
+					using (SQLiteConnection connection = new SQLiteConnection(Database.MakeSQLiteConnectionString(softwareSqlLiteFilename)))
+					{
+						connection.Open();
+
+						foreach (string commandText in new string[] {
+							"CREATE INDEX idx_software_softwarelist_name_description ON [software] ([softwarelist_name], [description] COLLATE NOCASE);",
+							"CREATE INDEX idx_software_softwarelist_name_year_description ON [software] ([softwarelist_name], [ao_year], [description] COLLATE NOCASE);",
+						})
+							using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
+								command.ExecuteNonQuery();
+					}
+				}
 			}
 		}
 
@@ -305,8 +319,26 @@ namespace Spludlow.MameAO
 			if (dataSet.Tables.Contains("software") == true)
 			{
 				DataTable softwareTable = dataSet.Tables["software"];
+				DataTable softwareListTable = dataSet.Tables["softwarelist"];
+
+				// HBMAME dont have
 				if (softwareTable.Columns.Contains("cloneof") == false)
 					softwareTable.Columns.Add("cloneof", typeof(string));
+
+				softwareTable.Columns.Add("softwarelist_name", typeof(string));
+				softwareTable.Columns.Add("ao_year", typeof(int));
+
+				Dictionary<long, string> listNames = new Dictionary<long, string>();
+				foreach (DataRow softwareListRow in softwareListTable.Rows)
+					listNames.Add((long)softwareListRow["softwarelist_id"], (string)softwareListRow["name"]);
+
+				foreach (DataRow softwareRow in softwareTable.Rows)
+				{
+					softwareRow["softwarelist_name"] = listNames[(long)softwareRow["softwarelist_id"]];
+
+					if (softwareRow.IsNull("year") == false)
+						softwareRow["ao_year"] = OperationsPayload.ParseFixYear((string)softwareRow["year"]);
+				}
 			}
 		}
 
@@ -731,65 +763,94 @@ namespace Spludlow.MameAO
 			return table;
 		}
 
-		public static DataTable QuerySoftware(string connectionString, string softwarelist_name, int offset, int limit, string search, string favorites_machine)
+		public static DataTable QuerySoftware(string connectionString, string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine)
 		{
-			string commandText = "SELECT software.*, softwarelist.name AS softwarelist_name, COUNT() OVER() AS ao_total FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id " +
-				$"WHERE (softwarelist.name = '{softwarelist_name}' @SEARCH) ORDER BY software.description COLLATE NOCASE " +
-				"LIMIT @LIMIT OFFSET @OFFSET";
-
-			if (softwarelist_name == "@fav")
+			string orderBy = "[description] COLLATE NOCASE @SORT";
+			switch (order)
 			{
-				commandText = "SELECT software.*, softwarelist.name AS softwarelist_name, COUNT() OVER() AS ao_total FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_Id = software.softwarelist_Id " +
-					"WHERE ((@FAVORITES) @SEARCH) ORDER BY software.description COLLATE NOCASE " +
-					"LIMIT @LIMIT OFFSET @OFFSET";
-
-				string[][] listSoftwareNames = Globals.Favorites.ListSoftwareUsedByMachine(favorites_machine);
-
-				if (listSoftwareNames.Length == 0)
-				{
-					commandText = commandText.Replace("@FAVORITES", "software_id = -1");
-				}
-				else
-				{
-					StringBuilder text = new StringBuilder();
-					foreach (string[] listSoftwareName in listSoftwareNames)
-					{
-						if (text.Length > 0)
-							text.Append(" OR ");
-
-						text.Append($"(softwarelist.name = '{listSoftwareName[0]}' AND software.name = '{listSoftwareName[1]}')");
-					}
-					commandText = commandText.Replace("@FAVORITES", text.ToString());
-				}
+				case "year":
+					orderBy = "[ao_year] @SORT, [description] COLLATE NOCASE @SORT";
+					break;
 			}
 
-			if (search == null)
-			{
-				commandText = commandText.Replace("@SEARCH", "");
-			}
-			else
-			{
-				search = "%" + String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries)) + "%";
-				commandText = commandText.Replace("@SEARCH",
-					" AND (software.name LIKE @name OR software.description LIKE @description)");
-			}
+			sort = sort.ToUpper();
 
+			string commandTextCount = "SELECT COUNT(*) FROM [software] WHERE (@WHERE)";
+			string commandText = "SELECT [software].*, @ao_total AS [ao_total] FROM [software] WHERE (@WHERE) ORDER BY @ORDER LIMIT @LIMIT OFFSET @OFFSET";
+
+			commandText = commandText.Replace("@ORDER", orderBy);
+			commandText = commandText.Replace("@SORT", sort);
 			commandText = commandText.Replace("@LIMIT", limit.ToString());
 			commandText = commandText.Replace("@OFFSET", offset.ToString());
 
-			DataTable table;
+			List<string> wheres = new List<string>();
 
-			using (SQLiteConnection connection = new SQLiteConnection(connectionString))
+			if (softwarelist_name == "@fav")
 			{
+				if (Globals.Favorites._Software.Count == 0)
+				{
+					wheres.Add("[software_id] = -1");
+				}
+				else
+				{
+					var favWheres = Globals.Favorites.ListSoftwareUsedByMachine(favorites_machine).Select(listName => $"([softwarelist_name] = '{listName[0]}' AND [name] = '{listName[1]}')");
+					wheres.Add(String.Join(" OR ", favWheres));
+				}
+			}
+			else
+			{
+				wheres.Add($"[softwarelist_name] = '{softwarelist_name}'");
+			}
+
+			string[] likeColumnNames = new string[0];
+			if (search != null)
+			{
+				likeColumnNames = new string[] { "name", "description" };
+				wheres.Add("(" + String.Join(" OR ", likeColumnNames.Select(c => $"[{c}] LIKE @{c}")) + ")");
+				search = $"%{String.Join("%", search.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))}%";
+			}
+
+			if (publisher != null)
+			{
+				wheres.Add($"[publisher] LIKE @publisher");
+				publisher = $"%{String.Join("%", publisher.Split(new char[] { ' ' }, StringSplitOptions.RemoveEmptyEntries))}%";
+			}
+
+			string where = $"({String.Join(") AND (", wheres)})";
+
+			commandTextCount = commandTextCount.Replace("@WHERE", where);
+			commandText = commandText.Replace("@WHERE", where);
+
+			DataTable table = new DataTable();
+
+			using (var connection = new SQLiteConnection(connectionString))
+			{
+				connection.Open();
+
+				long total;
+				using (SQLiteCommand command = new SQLiteCommand(commandTextCount, connection))
+				{
+					foreach (var columnName in likeColumnNames)
+						command.Parameters.AddWithValue($"@{columnName}", search);
+
+					if (publisher != null)
+						command.Parameters.AddWithValue("@publisher", publisher);
+
+					total = (long)command.ExecuteScalar();
+				}
+
+				commandText = commandText.Replace("@ao_total", total.ToString());
+
 				using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 				{
-					if (search != null)
-					{
-						command.Parameters.AddWithValue("@name", search);
-						command.Parameters.AddWithValue("@description", search);
-					}
+					foreach (var columnName in likeColumnNames)
+						command.Parameters.AddWithValue($"@{columnName}", search);
 
-					table = Database.ExecuteFill(command);
+					if (publisher != null)
+						command.Parameters.AddWithValue("@publisher", publisher);
+
+					using (SQLiteDataAdapter adapter = new SQLiteDataAdapter(command))
+						adapter.Fill(table);
 				}
 			}
 

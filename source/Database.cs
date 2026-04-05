@@ -125,8 +125,10 @@ namespace Spludlow.MameAO
 					if (name == "softwarelists")
 					{
 						foreach (string commandText in new string[] {
-							"CREATE INDEX idx_software_name ON software(name);",
+							"CREATE INDEX idx_software_name ON software([name]);",
 							"CREATE INDEX idx_software_description ON software([description] COLLATE NOCASE);",
+							"CREATE INDEX idx_softwarelist_name ON softwarelist([name]);",
+							"CREATE INDEX idx_softwarelist_description ON softwarelist([description] COLLATE NOCASE);",
 						})
 							using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 								command.ExecuteNonQuery();

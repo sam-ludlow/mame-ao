@@ -368,8 +368,8 @@ namespace Spludlow.MameAO
 		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, bool? mechanical, bool? clone, string order, string sort) =>
 			Cores.QueryMachines(_ConnectionStringMachine, profile, offset, limit, search, manufacturer, status, mechanical, clone, order, sort);
 
-		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string favorites_machine) =>
-			Cores.QuerySoftware(_ConnectionStringSoftware, softwarelist_name, offset, limit, search, favorites_machine);
+		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine) =>
+			Cores.QuerySoftware(_ConnectionStringSoftware, softwarelist_name, offset, limit, search, publisher, order, sort, favorites_machine);
 
 	}
 }

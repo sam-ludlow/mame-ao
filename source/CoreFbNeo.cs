@@ -415,7 +415,7 @@ namespace Spludlow.MameAO
 			throw new NotImplementedException();
 		}
 
-		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string favorites_machine)
+		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine)
 		{
 			throw new NotImplementedException();
 		}

@@ -465,11 +465,21 @@ namespace Spludlow.MameAO
 			if (search.Length == 0)
 				search = null;
 
+			string publisher = "";
+			qs = context.Request.QueryString["publisher"];
+			if (qs != null)
+				publisher = qs.Trim();
+			if (publisher.Length == 0)
+				publisher = null;
+
+			string order = context.Request.QueryString["order"] ?? "description";
+			string sort = context.Request.QueryString["sort"] ?? "asc";
+
 			string favorites_machine = context.Request.QueryString["favorites_machine"];
 			if (favorites_machine != null)
 				favorites_machine = favorites_machine.Trim();
 
-			DataTable table = Globals.Core.QuerySoftware(softwarelist, offset, limit, search, favorites_machine);
+			DataTable table = Globals.Core.QuerySoftware(softwarelist, offset, limit, search, publisher, order, sort, favorites_machine);
 
 			JArray results = new JArray();
 
@@ -1018,10 +1028,14 @@ namespace Spludlow.MameAO
 			.logo { height: 96px; }
 			.header h1 { margin: 0; }
 
-			td.good        { background: #cfc; }
-			td.imperfect   { background: #ffc; }
-			td.preliminary { background: #ffd9b3; }
-			td.bad         { background: #fcc; }
+			td.good			{ background: #cfc; }
+			td.imperfect	{ background: #ffc; }
+			td.preliminary	{ background: #ffd9b3; }
+			td.bad			{ background: #fcc; }
+
+			td.yes			{ background: #cfc; }
+			td.partial		{ background: #ffc; }
+			td.no			{ background: #ffd9b3; }
 
 			hr {
 				background: #00adef;
@@ -1082,6 +1096,10 @@ namespace Spludlow.MameAO
 			.card-imperfect		{ background: #ffc; }
 			.card-preliminary	{ background: #ffd9b3; }
 			.card-bad			{ background: #fcc; }
+
+			.card-yes			{ background: #cfc; }
+			.card-partial		{ background: #ffc; }
+			.card-no			{ background: #ffd9b3; }
 
 			.card-thumb {
 				width: 128px;

@@ -1425,8 +1425,8 @@
 
 			let html = `
 				<div class="toolbar-input">
-					<input id="inputText" type="text" placeholder="Machine name & description" />
-					<input id="manufacturerText" type="text" placeholder="Manufacturer" />
+					<input id="inputText" type="text" placeholder="machine name & description" />
+					<input id="manufacturerText" type="text" placeholder="manufacturer" />
 					<button type="submit" onclick="searchMachine(); return false;">Search</button>
 				</div>
 				<div class="toolbar">
@@ -1556,78 +1556,158 @@
 		//
 		const machine = async (machineData) => {
 
-			const canvas = getCanvas();
-
 			let parts = _pathParts[4].split('/');
 			const softwarelist = parts[parts.length - 1];
 
-			const softwareData = await fetchJson(`/api/software?softwarelist=${softwarelist}&offset=${_parameters.offset}&search=${_parameters.search}&favorites_machine=${machineData.name}`);
+			const softwareData = await fetchJson(makeParameters('/api/software', { ..._parameters, softwarelist, favorites_machine: machineData.name }));
 
-			const columnDefs = [
-				{ heading: '', columnName: 'ao_image' },
-				{ heading: '', columnName: 'favorite' },
-				{ heading: 'name', columnName: 'name' },
-				{ heading: 'description', columnName: 'description' },
-				{ heading: 'year', columnName: 'year' },
-				{ heading: 'publisher', columnName: 'publisher' },
-				{ heading: 'cloneof', columnName: 'cloneof' },
-				{ heading: 'supported', columnName: 'supported' },
-			];
+			const canvas = getCanvas();
 
-			if (_path.endsWith('/@fav') === true)
-				columnDefs.push({ heading: 'software list', columnName: 'softwarelist_name' });
+			let body;
 
-			const table = document.createElement('table');
-			table.style = 'width:100%;';
+			if (_parameters.view === 'grid') {
 
-			buildTable(columnDefs, softwareData.results, table, (columnDef, result, resultIndex, row, cell) => {
+				body = document.createElement('div');
+				body.className = 'card-grid';
 
-				switch (columnDef.columnName) {
-					case 'ao_image':
-						cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${machineData.name}@${_info.core_name} ${result.name}@${result.softwarelist_name}')" href="javascript:void(0);"><div style="width:128px;height:128px;"><img src="${result.ao_image}" loading="lazy" /></div></a>`;
-						break;
+				softwareData.results.forEach((result) => {
 
-					case 'name':
-						cell.innerHTML = `<a href="https://data.spludlow.co.uk/${_info.core_name}/software/${result.softwarelist_name}/${result.name}" target="_blank">${result.name}</a>`;
-						break;
+					const item = document.createElement('div');
+					item.className = `card-${result.supported}`;
 
-					case 'favorite':
-						cell.innerHTML = `
+					const card = `
+						<div class="card-body">
+							<div class="card-name">
+								<a class="card-link" href="https://data.spludlow.co.uk/${_info.core_name}/software/${result.softwarelist_name}/${result.name}" target="_blank">${result.name}</a>
+								<div>
+									<input type="checkbox" class="fav-checkbox" id="fav_${result.name}" onclick="changeFavoriteSoftware(this.id, '${machineData.name}', '${result.softwarelist_name}')" ${result.favorite ? 'checked' : ''} />
+									<label for="fav_${result.name}" class="star"></label>
+								</div>
+							</div>
+							<div class="card-thumb">
+								<a href="#" onclick="runCommand('${machineData.name}@${_info.core_name} ${result.name}@${result.softwarelist_name}')" class="card-link">
+									<img src="https://data.spludlow.co.uk/${_info.core_name}/software/${result.softwarelist_name}/${result.name}.png" alt="${result.description}" loading="lazy" />
+								</a>
+							</div>
+							<div>${htmlEncode(result.description)}</div>
+							<div class="card-year">${result.year}</div>
+							<div>${htmlEncode(result.publisher)}</div>
+						</div>
+					`;
+
+					item.innerHTML = card;
+
+					const img = item.querySelector('.card-thumb img');
+					img.addEventListener('error', () => {
+						img.src = 'data:image/svg+xml;base64,' + btoa(`
+							<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128">
+								<rect width="128" height="128" fill="#262626"/>
+								<text x="50%" y="50%" font-size="18" fill="#fff" text-anchor="middle" alignment-baseline="central">
+									no image
+								</text>
+							</svg>
+						`);
+						img.alt = 'Image not available';
+					});
+
+					body.appendChild(item);
+				});
+
+
+			} else {
+
+				const columnDefs = [
+					{ heading: 'name', columnName: 'name' },
+					{ heading: '', columnName: 'favorite' },
+					{ heading: 'description', columnName: 'description' },
+					{ heading: 'supported', columnName: 'supported' },
+					{ heading: 'year', columnName: 'year' },
+					{ heading: 'publisher', columnName: 'publisher' },
+					{ heading: 'cloneof', columnName: 'cloneof' },
+				];
+
+				if (_path.endsWith('/@fav') === true)
+					columnDefs.push({ heading: 'software list', columnName: 'softwarelist_name' });
+
+				body = document.createElement('table');
+				body.style = 'width:100%;';
+
+				buildTable(columnDefs, softwareData.results, body, (columnDef, result, resultIndex, row, cell) => {
+
+					switch (columnDef.columnName) {
+						case 'name':
+							cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${machineData.name}@${_info.core_name} ${result.name}@${result.softwarelist_name}')" href="#">${result.name}</a>`;
+							break;
+
+						case 'favorite':
+							cell.innerHTML = `
 								<div>
 									<input type="checkbox" class="fav-checkbox" id="fav_${result.name}" onclick="changeFavoriteSoftware(this.id, '${machineData.name}', '${result.softwarelist_name}')" ${result.favorite ? 'checked' : ''} />
 									<label for="fav_${result.name}" class="star"></label>
 								</div>`;
-						break;
+							break;
 
-					case 'description':
-					case 'publisher':
-						cell.innerHTML = htmlEncode(result[columnDef.columnName]);
-						break;
+						case 'description':
+							cell.innerHTML = `<a href="https://data.spludlow.co.uk/${_info.core_name}/software/${result.softwarelist_name}/${result.name}" target="_blank">${result.name}</a>`;
+							break;
 
-					default:
-						cell.innerHTML = result[columnDef.columnName] || '';
-						break;
-				}
-			});
+						case 'publisher':
+							cell.innerHTML = htmlEncode(result[columnDef.columnName]);
+							break;
+
+						case 'supported':
+							cell.className = result.supported;
+							cell.innerHTML = result.supported;
+							break;
+
+						default:
+							cell.innerHTML = result[columnDef.columnName] || '';
+							break;
+					}
+				});
+			}
 
 			const navHtml = navigateHtml(softwareData);
 
-			let html = '';
-
-			html += `<input id="inputText" type="text" value="${_parameters.search}" style="width:480px;" />`;
-			html += '<button type="submit" onclick="searchButton(); return false;">Search</button>';
-			html += '<hr />';
-			html += `<nav>${navHtml}</nav>`;
-			html += '<div id="results"></div>';
-			html += `<nav>${navHtml}</nav>`;
+			let html = `
+				<div class="toolbar-input">
+					<input id="inputText" type="text" placeholder="software name & description" />
+					<input id="publisherText" type="text" placeholder="publisher" />
+					<button type="submit" onclick="searchSoftware(); return false;">Search</button>
+				</div>
+				<div class="toolbar">
+					<div class="checkbox-group">
+						<label><input id="order-description" type="radio" name="order" value="description" onchange="changeOrder(this);">description</label>
+						<label><input id="order-year" type="radio" name="order" value="year" onchange="changeOrder(this);">year</label>
+						<label><input id="sort-asc" type="radio" name="sort" value="asc" onchange="changeSort(this);">asc</label>
+						<label><input id="sort-desc" type="radio" name="sort" value="desc" onchange="changeSort(this);">desc</label>
+					</div>
+					<div class="checkbox-group">
+						<label><input id="view-grid" type="radio" name="view" value="grid" onchange="changeView(this);">grid</label>
+						<label><input id="view-list" type="radio" name="view" value="list" onchange="changeView(this);">list</label>
+					</div>
+				</div>
+				<hr />
+				<nav>${navHtml}</nav>
+				<hr />
+				<div id="results"></div>
+				<hr />
+				<nav>${navHtml}</nav>
+			`;
 
 			const div = document.createElement('div');
 			div.innerHTML = html;
 			canvas.appendChild(div);
 
+			document.getElementById("inputText").value = _parameters.search;
+			document.getElementById("publisherText").value = _parameters.publisher;
+			document.getElementById(`order-${_parameters.order}`).checked = true;
+			document.getElementById(`sort-${_parameters.sort}`).checked = true;
+			document.getElementById(`view-${_parameters.view}`).checked = true;
+
 			const results = document.getElementById('results');
 
-			results.appendChild(table);
+			results.appendChild(body);
 
 			const inputText = document.getElementById('inputText');
 			inputText.focus();
@@ -1639,11 +1719,11 @@
 			await runCommand(`${command} ${machineName} ${listName} ${softwareName}`);
 		}
 
-		const searchButton = async () => {
-
-			const inputText = document.getElementById('inputText');
-
-			document.location = `${_path}?search=${encodeURIComponent(inputText.value)}`;
+		const searchSoftware = async () => {
+			_parameters['search'] = document.getElementById('inputText').value;
+			_parameters['publisher'] = document.getElementById('publisherText').value;
+			_parameters['offset'] = 0;
+			document.location = makeParameters(_path, _parameters);
 		}
 
 		const goLocationUrl = (offset) => makeParameters(_path, { ..._parameters, offset });
@@ -1736,6 +1816,7 @@
 			offset: 0,
 			search: '',
 			manufacturer: '',
+			publisher: '',
 			status: [],
 			mechanical: null,
 			clone: null,
@@ -1792,6 +1873,7 @@
 
 						case 'search':
 						case 'manufacturer':
+						case 'publisher':
 						case 'order':
 						case 'sort':
 						case 'view':
