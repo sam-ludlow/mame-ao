@@ -25,9 +25,47 @@ namespace Spludlow.MameAO
 		private readonly string MACHINE_IMAGE_URL = "https://data.spludlow.co.uk/@core/machine/@machine.jpg";
 		private readonly string SOFTWARE_IMAGE_URL = "https://data.spludlow.co.uk/@core/software/@softwarelist/@software.jpg";
 
+		private Dictionary<string, string> _Images = new Dictionary<string, string>();
+
 		public WebServer()
 		{
 			RefreshAssets();
+
+			_Images.Add("/images/fav-off.svg", @"<?xml version=""1.0"" encoding=""UTF-8""?>
+				<svg id=""Layer_1"" xmlns=""http://www.w3.org/2000/svg"" version=""1.1"" viewBox=""0 0 18 18"">
+				  <defs>
+					<style>
+					  .st0 {
+						fill: gray;
+					  }
+					</style>
+				  </defs>
+				  <path class=""st0"" d=""M9,1.5l1.51,2.61.22.38h5.21l-2.39,4.14-.22.38.22.38,2.39,4.14h-5.21l-.22.38-1.51,2.61-1.51-2.61-.22-.38H2.07l2.39-4.14.22-.38-.22-.38-2.39-4.14h5.21l.22-.38,1.51-2.61M9,0l-2.16,3.74H.77l3.04,5.26L.77,14.26h6.07l2.16,3.74,2.16-3.74h6.07l-3.04-5.26,3.04-5.26h-6.07l-2.16-3.74h0Z""/>
+				</svg>
+			");
+			_Images.Add("/images/fav-on.svg", @"<?xml version=""1.0"" encoding=""UTF-8""?>
+				<svg id=""Layer_1"" xmlns=""http://www.w3.org/2000/svg"" version=""1.1"" viewBox=""0 0 18 18"">
+				  <defs>
+					<style>
+					  .st0 {
+						fill: #ff0;
+					  }
+					</style>
+				  </defs>
+				  <polygon class=""st0"" points=""7.06 13.89 1.42 13.89 4.24 9 1.42 4.11 7.06 4.11 9 .75 10.94 4.11 16.58 4.11 13.76 9 16.58 13.89 10.94 13.89 9 17.25 7.06 13.89""/>
+				  <path d=""M9,1.5l1.51,2.61.22.38h5.21l-2.39,4.14-.22.38.22.38,2.39,4.14h-5.21l-.22.38-1.51,2.61-1.51-2.61-.22-.38H2.07l2.39-4.14.22-.38-.22-.38-2.39-4.14h5.21l.22-.38,1.51-2.61M9,0l-2.16,3.74H.77l3.04,5.26L.77,14.26h6.07l2.16,3.74,2.16-3.74h6.07l-3.04-5.26,3.04-5.26h-6.07l-2.16-3.74h0Z""/>
+				</svg>
+			");
+			_Images.Add("/images/back.svg", @"<?xml version=""1.0"" encoding=""UTF-8""?>
+				<svg id=""Layer_1"" xmlns=""http://www.w3.org/2000/svg"" version=""1.1"" viewBox=""0 0 48 24"">
+				  <polygon points=""24 24 0 12 24 0 24 6 48 6 48 18 24 18 24 24""/>
+				</svg>
+			");
+			_Images.Add("/images/next.svg", @"<?xml version=""1.0"" encoding=""UTF-8""?>
+				<svg id=""Layer_1"" xmlns=""http://www.w3.org/2000/svg"" version=""1.1"" viewBox=""0 0 48 24"">
+				  <polygon points=""24 24 48 12 24 0 24 6 0 6 0 18 24 18 24 24""/>
+				</svg>
+			");
 		}
 
 		public void RefreshAssets()
@@ -110,16 +148,13 @@ namespace Spludlow.MameAO
 											context.Response.Headers["Cache-Control"] = "max-age=60";
 											break;
 
-										case "/fav-off.png":
-											context.Response.Headers["Content-Type"] = "image/png";
-											context.Response.OutputStream.Write(_FavOff, 0, _FavOff.Length);
+										case "/images/fav-off.svg":
+										case "/images/fav-on.svg":
+										case "/images/next.svg":
+										case "/images/back.svg":
+											context.Response.Headers["Content-Type"] = "image/svg+xml";
 											context.Response.Headers["Cache-Control"] = "max-age=60";
-											break;
-
-										case "/fav-on.png":
-											context.Response.Headers["Content-Type"] = "image/png";
-											context.Response.OutputStream.Write(_FavOn, 0, _FavOn.Length);
-											context.Response.Headers["Cache-Control"] = "max-age=60";
+											writer.Write(_Images[path]);
 											break;
 
 										case "/styles.css":
@@ -1124,11 +1159,16 @@ namespace Spludlow.MameAO
 				display: inline-block;
 				width: 18px;
 				height: 18px;
-				background: url('/fav-off.png') no-repeat center/contain;
+				background: url('/images/fav-off.svg') no-repeat center/contain;
 				cursor: pointer;
 			}
 			.fav-checkbox:checked + .star {
-				background: url('/fav-on.png') no-repeat center/contain;
+				background: url('/images/fav-on.svg') no-repeat center/contain;
+			}
+
+			.arrow {
+				width: 48px;
+				height: 24px;
 			}
 		";
 
@@ -1149,25 +1189,6 @@ namespace Spludlow.MameAO
 			sgD//fn98sz0vwDyrgDxqwDxqgDxqwDyrwD1xQD9+OL+/PXysgD1rADyrwDyrwDxrQDztQD889D/
 			/fn989P75pT53mj76J399dv//fn87rjzswDyrADxrAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
 			AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA
-		");
-
-		private readonly byte[] _FavOff = Convert.FromBase64String(@"
-			iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJ
-			bWFnZVJlYWR5ccllPAAAAPtJREFUeNqsVMsRgjAQBfXiSUqQCtAOUoIlSAVKBWgFlCAlUEKuntAK
-			sITYgW9nng4TAomjO/Nm2ezbD7uEKPLIieLjxZ4ka6iW5hb2Y4w78xQqgYYoJzti1b3Dt+J5SrsD
-			auDp4NbSkQEOQGY5JSBHISOQZ0eSjLHmPYsj0EVfisRIrH3YDg6nk0jx1jXsQgYKZxKQJOHwi0Ei
-			ODWU9m2nt03NmKD1B0u/IwUlOAfECUcxZtBRJQSu2jcjw2SVawM/rT/mBjoO+m5xb/A3DNpBbRwf
-			pLxe+rcr4rv9F8vOx7iLgO18fiNTxPmUU2ttlFJLPF7fsxqTlwADAMtvaRbmu0F+AAAAAElFTkSu
-			QmCC
-		");
-
-		private readonly byte[] _FavOn = Convert.FromBase64String(@"
-			iVBORw0KGgoAAAANSUhEUgAAABIAAAASCAYAAABWzo5XAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJ
-			bWFnZVJlYWR5ccllPAAAAMpJREFUeNpiYCAMGqCYIqAAxO+hWIESg+YnJDD8B2EQG59CRqhNCVjk
-			+AUEGAru34dwFBUZGD58YJgAZH7EonYByCABIL4fEMAgYGCAKquvz8AAFAeDDRsYGC5eRJW/cAEs
-			/gFkD0ysQEGB4f///6RhkB6QXnTnne/vJ94QkFqQHmzh5QAMk//v3xM2BKQGpBakB1fgry8oIGwQ
-			SA1ILbJGJgYaAKp5jSqBTXH0Uy1BUi2LUC3TUq0YYSZgEMj/nEB8EhRM+BQCBBgAjOwnS3jMtcAA
-			AAAASUVORK5CYII=
 		");
 
 	}

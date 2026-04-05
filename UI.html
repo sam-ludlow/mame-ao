@@ -1659,13 +1659,13 @@
 
 			let prevOffset = offset - limit;
 			nav += prevOffset >= 0 ?
-				`<a href="${goLocationUrl(prevOffset)}"><img src="https://data.spludlow.co.uk/images/back.png" alt="Navigate back a page" /></a> &bull;` :
-				'<div><img src="https://data.spludlow.co.uk/images/back.png" alt="On first page" /></div> &bull;';
+				`<a href="${goLocationUrl(prevOffset)}"><img class="arrow" src="/images/back.svg" alt="Navigate back a page" /></a> &bull;` :
+				'<div><img class="arrow" src="/images/back.svg" alt="On first page" /></div> &bull;';
 
 			let nextOffset = offset + limit;
 			nav += nextOffset < total ?
-				`<a href="${goLocationUrl(nextOffset)}"><img src="https://data.spludlow.co.uk/images/next.png" alt="Navigate to next page" /></a> &bull;` :
-				'<div><img src="https://data.spludlow.co.uk/images/next.png" alt="On last page" /></div> &bull;';
+				`<a href="${goLocationUrl(nextOffset)}"><img class="arrow" src="/images/next.svg" alt="Navigate to next page" /></a> &bull;` :
+				'<div><img class="arrow" src="/images/next.svg" alt="On last page" /></div> &bull;';
 
 			let lastOffset = Math.floor(total / limit) * limit;
 			if (total > 0 && total % limit === 0)
