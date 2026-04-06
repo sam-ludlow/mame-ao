@@ -787,15 +787,11 @@ namespace Spludlow.MameAO
 
 			if (softwarelist_name == "@fav")
 			{
-				if (Globals.Favorites._Software.Count == 0)
-				{
+				var favSoftware = Globals.Favorites.ListSoftwareUsedByMachine(favorites_machine);
+				if (favSoftware.Length == 0)
 					wheres.Add("[software_id] = -1");
-				}
 				else
-				{
-					var favWheres = Globals.Favorites.ListSoftwareUsedByMachine(favorites_machine).Select(listName => $"([softwarelist_name] = '{listName[0]}' AND [name] = '{listName[1]}')");
-					wheres.Add(String.Join(" OR ", favWheres));
-				}
+					wheres.Add(String.Join(" OR ", favSoftware.Select(listName => $"([softwarelist_name] = '{listName[0]}' AND [name] = '{listName[1]}')")));
 			}
 			else
 			{
