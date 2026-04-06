@@ -13,7 +13,8 @@ namespace Spludlow.MameAO
 {
     public class Snap
     {
-		public static Size ThumbSize = new Size(128, 128);
+		public static readonly Size ThumbSize = new Size(128, 128);
+		public static readonly int JpegQuality = 60;
 
 		private static readonly ImageCodecInfo JpegCodecInfo = null;
 
@@ -265,7 +266,7 @@ namespace Spludlow.MameAO
 			using (var bitmap = Resize(image, size, pixelFormat, dpi))
 			{
 				if (imageFormat == ImageFormat.Jpeg)
-					QualitySaveJpeg(bitmap, filename, 100);
+					QualitySaveJpeg(bitmap, filename, JpegQuality);
 				else
 					bitmap.Save(filename, imageFormat);
 
@@ -275,7 +276,7 @@ namespace Spludlow.MameAO
 
 		public static void QualitySaveJpeg(Bitmap bitmap, string filename, int qualityPercent)
 		{
-			if (JpegCodecInfo != null)
+			if (JpegCodecInfo != null && qualityPercent > 0)
 			{
 				EncoderParameters encoderParameters = new EncoderParameters(1);
 				encoderParameters.Param[0] = new EncoderParameter(System.Drawing.Imaging.Encoder.Quality, qualityPercent);
@@ -283,7 +284,7 @@ namespace Spludlow.MameAO
 			}
 			else
 			{
-				bitmap.Save(filename, ImageFormat.Jpeg);
+				bitmap.Save(filename, ImageFormat.Jpeg);	//	Tested exactly same size as 90%
 			}
 		}
 
@@ -553,6 +554,7 @@ namespace Spludlow.MameAO
 			string pngDirectory = Path.Combine(snapCoreDirectory, "png");
 			string jpgDirectory = Path.Combine(snapCoreDirectory, "jpg");
 
+			long total = 0;
 			int count = 0;
 			string[] pngFilenames = Directory.GetFiles(pngDirectory, "*.png");
 			foreach (string pngFilename in pngFilenames)
@@ -567,7 +569,11 @@ namespace Spludlow.MameAO
 				Size targetSize = FixedSize(machine_name, displayTable);
 
 				CreateThumbnail(pngFilename, jpgFilename, targetSize);
+
+				total += (new FileInfo(jpgFilename)).Length;
 			}
+
+			Console.WriteLine($"{total}\t{Tools.DataSize(total)}");
 		}
 
 		public static void UtilMakeThumbsSoftware(string connectionStringMachine, string snapCoreDirectory)
@@ -604,8 +610,13 @@ namespace Spludlow.MameAO
 
 				Size? size = null;
 
-				foreach (string pngFilename in Directory.GetFiles(softwareListDirectory, "*.png"))
+				int count = 0;
+				string[] pngFilenames = Directory.GetFiles(softwareListDirectory, "*.png");
+				foreach (string pngFilename in pngFilenames)
 				{
+					if ((count++ % 1024) == 0)
+						Console.WriteLine($"{softwarelistName}\t{count}/{pngFilenames.Length}");
+
 					string softwareName = Path.GetFileNameWithoutExtension(pngFilename);
 
 					if (size == null)
@@ -614,13 +625,14 @@ namespace Spludlow.MameAO
 
 						DataRow[] machineRows = softwareListMachineTable.Select($"softwarelist_name = '{softwarelistName}'");
 
+						//	TODO: (c64 cart) some systems are mutilscreen so get 0, but others are ok.
 						if (machineRows.Length > 0)
 							size = FixedSize((string)machineRows[0]["machine_name"], displayTable);
 					}
 
 					string jpgFilename = Path.Combine(jpgDirectory, softwarelistName, softwareName + ".jpg");
 
-					Console.WriteLine($"{softwarelistName}\t{softwareName}\t{size.Value.Width}\t{size.Value.Height}");
+					//Console.WriteLine($"{softwarelistName}\t{softwareName}\t{size.Value.Width}\t{size.Value.Height}");
 
 					CreateThumbnail(pngFilename, jpgFilename, size.Value);
 				}
