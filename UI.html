@@ -985,12 +985,12 @@
 				switch (columnDef.columnName) {
 
 					case 'version':
-						cell.innerHTML = `<a onclick="runCommand('.${result.version}')" href="javascript:void(0);">${result.version}</a>`;
+						cell.innerHTML = `<a href="#" onclick="runCommand('.${result.version}'); return false;">${result.version}</a>`;
 						break;
 
 					case 'sta_machine':
 						if (result.sta_machine !== undefined)
-							cell.innerHTML = `<a onclick="runCommand('.${result.version} ${result.sta_machine}')" href="javascript:void(0);">${result.sta_machine}</a>`;
+							cell.innerHTML = `<a href="#" onclick="runCommand('.${result.version} ${result.sta_machine}'); return false;">${result.sta_machine}</a>`;
 						break;
 
 					default:
@@ -1030,7 +1030,7 @@
 
 				report_types.results.filter(report_type => report_type.group === report_group.key).forEach(report_type => {
 
-					html += `<tr><td>${report_type.key}</td><td><a href="javascript:void(0);" onclick="runCommand('.report ${report_type.code}')" >${report_type.code}</a></td><td>${report_type.text}</td><td>${report_type.description}</td></tr>`;
+					html += `<tr><td>${report_type.key}</td><td><a href="#" onclick="runCommand('.report ${report_type.code}'); return false;" >${report_type.code}</a></td><td>${report_type.text}</td><td>${report_type.description}</td></tr>`;
 				});
 
 				html += '</table>';
@@ -1585,7 +1585,7 @@
 								</div>
 							</div>
 							<div class="card-thumb">
-								<a href="#" onclick="runCommand('${machineData.name}@${_info.core_name} ${result.name}@${result.softwarelist_name}')" class="card-link">
+								<a href="#" onclick="runCommand('${machineData.name}@${_info.core_name} ${result.name}@${result.softwarelist_name}'); return false;" class="card-link">
 									<img src="https://data.spludlow.co.uk/${_info.core_name}/software/${result.softwarelist_name}/${result.name}.jpg" alt="${result.description}" loading="lazy" />
 								</a>
 							</div>
@@ -1636,7 +1636,7 @@
 
 					switch (columnDef.columnName) {
 						case 'name':
-							cell.innerHTML = `<a id="${result.name}" onclick="runCommand('${machineData.name}@${_info.core_name} ${result.name}@${result.softwarelist_name}')" href="#">${result.name}</a>`;
+							cell.innerHTML = `<a id="${result.name}" href="#" onclick="runCommand('${machineData.name}@${_info.core_name} ${result.name}@${result.softwarelist_name}'); return false;">${result.name}</a>`;
 							break;
 
 						case 'favorite':
