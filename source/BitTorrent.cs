@@ -91,7 +91,7 @@ namespace Spludlow.MameAO
 
 		public static void Initialize()
 		{
-			Tools.ConsoleHeading(2, "DOME-BT (Pleasuredome Bit Torrents)");
+			Tools.ConsoleHeading(2, "DOME-BT Bit Torrents");
 
 			GitHubRepo repo = Globals.GitHubRepos["dome-bt"];
 
