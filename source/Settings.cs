@@ -16,6 +16,7 @@ namespace Spludlow.MameAO
 			{ "PlaceReport", new List<string>(new string[] { "No", "Yes" }) },
 			{ "PhoneHome", new List<string>(new string[] { "Yes", "YesVerbose", "No" }) },
 			{ "SnapHome", new List<string>(new string[] { "No", "Yes" }) },
+			{ "SnapNative", new List<string>(new string[] { "Yes", "No" }) },
 		};
 
 		public Dictionary<string, string> OptionDescriptions = new Dictionary<string, string>() {
@@ -24,6 +25,7 @@ namespace Spludlow.MameAO
 			{ "PlaceReport", "Report on placing files (rom, disk, samples, artwork)." },
 			{ "PhoneHome", "Help the project by submitting usage data. Switch to \"No\" if you do not want. To see exaclty what's being sent switch to \"YesVerbose\". See the <a href=\"https://github.com/sam-ludlow/mame-ao#phone-home\" target=\"_blank\">README</a>." },
 			{ "SnapHome", "Submit F12 snaps to the mother ship. PhoneHome must be enabled. See the <a href=\"https://github.com/sam-ludlow/mame-ao#snap-home\" target=\"_blank\">README</a>." },
+			{ "SnapNative", "F12 snaps will not have overlays. You normally want this \"Yes\", but sometimes set to \"No\" for example multi-screen machines." },
 		};
 
 		public Dictionary<string, string> Options = new Dictionary<string, string>();

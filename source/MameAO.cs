@@ -852,6 +852,9 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			if (Globals.Settings.Options["Cheats"] == "Yes")
 				arguments += " -cheat";
 
+			if (Globals.Settings.Options["SnapNative"] == "Yes")
+				arguments += " -snapview native";
+
 			if (Globals.Settings.Options["SnapHome"] == "Yes")
 				Snap.CollectSnaps(machine);
 
