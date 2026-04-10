@@ -9,7 +9,7 @@ namespace Spludlow.MameAO
 	{
 		public static void Run(string profile, int count)
 		{
-			DataTable table = Globals.Core.QueryMachines(profile, 0, 0xfff, null, null, new string[0], null, null, "description", "asc");
+			DataTable table = Globals.Core.QueryMachines(profile, 0, 0xfff, null, null, new string[0], new string[0], new string[0], null, null, "description", "asc");
 
 			if (count == 0 || count > table.Rows.Count)
 				count = table.Rows.Count;

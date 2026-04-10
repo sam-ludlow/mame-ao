@@ -17,6 +17,7 @@ namespace Spludlow.MameAO
 		string[] ICore.ConnectionStrings { get => new string[] { _ConnectionString }; }
 
 		Dictionary<string, string> ICore.SoftwareListDescriptions { get => null; }
+		Dictionary<string, string[]> ICore.Filters { get => throw new NotImplementedException(); }
 
 		private string _RootDirectory = null;
 		private string _CoreDirectory = null;
@@ -396,7 +397,7 @@ namespace Spludlow.MameAO
 			OperationsPayload.TosecMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
-		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string manufacturer,string[] status, bool? mechanical, bool? clone, string order, string sort)
+		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] control, bool? mechanical, bool? clone, string order, string sort)
 		{
 			throw new NotImplementedException();
 		}

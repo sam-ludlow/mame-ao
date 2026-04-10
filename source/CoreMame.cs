@@ -16,6 +16,7 @@ namespace Spludlow.MameAO
 		string[] ICore.ConnectionStrings { get => new string[] { _ConnectionStringMachine, _ConnectionStringSoftware }; }
 
 		Dictionary<string, string> ICore.SoftwareListDescriptions { get => _SoftwareListDescriptions; }
+		Dictionary<string, string[]> ICore.Filters { get => _Filters; }
 
 		private string _RootDirectory = null;
 		private string _CoreDirectory = null;
@@ -27,6 +28,7 @@ namespace Spludlow.MameAO
 
 		private Dictionary<string, DataRow[]> _MachineDevicesRefs = null;
 		private Dictionary<string, string> _SoftwareListDescriptions = null;
+		private Dictionary<string, string[]> _Filters = null;
 
 		void ICore.Initialize(string directory, string version)
 		{
@@ -198,6 +200,7 @@ namespace Spludlow.MameAO
 			foreach (DataRow row in Database.ExecuteFill(_ConnectionStringSoftware, "SELECT [name], [description] FROM [softwarelist] ORDER BY [description]").Rows)
 				_SoftwareListDescriptions.Add((string)row["name"], (string)row["description"]);
 
+			_Filters = Cores.GetFilters(_ConnectionStringMachine);
 		}
 
 		private void InitializeConnections()
@@ -291,8 +294,8 @@ namespace Spludlow.MameAO
 		string ICore.GetRequiredMedia(string machine_name, string softwarelist_name, string software_name) =>
 			Cores.GetRequiredMedia(_ConnectionStringMachine, _ConnectionStringSoftware, _SoftwareListDescriptions, machine_name, softwarelist_name, software_name);
 
-		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string manufacturer,string[] status, bool? mechanical, bool? clone, string order, string sort) =>
-			Cores.QueryMachines(_ConnectionStringMachine, profile, offset, limit, search, manufacturer, status, mechanical, clone, order, sort);
+		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] control, bool? mechanical, bool? clone, string order, string sort) =>
+			Cores.QueryMachines(_ConnectionStringMachine, profile, offset, limit, search, manufacturer, status, display, control, mechanical, clone, order, sort);
 
 		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine) =>
 			Cores.QuerySoftware(_ConnectionStringSoftware, softwarelist_name, offset, limit, search, publisher, order, sort, favorites_machine);

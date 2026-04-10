@@ -1272,11 +1272,7 @@
 			const genres = await fetchJson(`/api/genres?genre_name=${encodeURIComponent(genre_name)}`);
 			const genre_id = genres.results[0].genre_id;
 
-			let profile = `genre-${genre_id}`;
-
-			const machinesData = await fetchJson(makeParameters('/api/machines', { ..._parameters, profile }));
-
-			showMachines(machinesData, 'everything');
+			await showMachines(`genre-${genre_id}`);
 		}
 
 		//
@@ -1287,22 +1283,28 @@
 			let parts = _pathParts[2].split('/');
 			const profile = parts[parts.length - 1];
 
-			const machinesData = await fetchJson(makeParameters('/api/machines', { ..._parameters, profile }));
-
-			showMachines(machinesData, profile);
+			await showMachines(profile);
 		}
 
 		//
 		// Show Machines
 		//
-		const showMachines = (machinesData, profileKey) => {
+		const showMachines = async (profile) => {
+
+			const [machinesData, filtersData] = await Promise.all([
+				fetchJson(makeParameters('/api/machines', { ..._parameters, profile })),
+				fetchJson('/api/filters')
+			]);
+
+			if (profile.startsWith('genre'))
+				profile = 'everything';
 
 			const canvas = getCanvas();
 
 			let body;
 
 			const target = (result) => result.ao_softwarelist_count > 0 ?
-				`href="${_baseUrl}/machines/${profileKey}/${result.name}"` : `href="#" onclick="runCommand('${result.name}@${_info.core_name}'); return false;"`;
+				`href="${_baseUrl}/machines/${profile}/${result.name}"` : `href="#" onclick="runCommand('${result.name}@${_info.core_name}'); return false;"`;
 
 			if (_parameters.view === 'grid') {
 
@@ -1423,39 +1425,14 @@
 
 			const navHtml = navigateHtml(machinesData);
 
-			let html = `
+			let div = document.createElement('div');
+			div.innerHTML = `
 				<div class="toolbar-input">
 					<input id="inputText" type="text" placeholder="machine name & description" />
 					<input id="manufacturerText" type="text" placeholder="manufacturer" />
 					<button type="submit" onclick="searchMachine(); return false;">Search</button>
 				</div>
-				<div class="toolbar">
-					<div class="checkbox-group">
-						<label><input type="checkbox" name="status" value="good" onchange="changeStatus(this);">good</label>
-						<label><input type="checkbox" name="status" value="imperfect" onchange="changeStatus(this);">imperfect</label>
-						<label><input type="checkbox" name="status" value="preliminary" onchange="changeStatus(this);">preliminary</label>
-						<label><input type="checkbox" name="status" value="bad" onchange="changeStatus(this);">bad</label>
-					</div>
-					<div class="checkbox-group">
-						<label><input id="clone-parent" type="radio" name="clone" value="parent" onchange="changeClone(this);">parent</label>
-						<label><input id="clone-clone" type="radio" name="clone" value="clone" onchange="changeClone(this);">clone</label>
-						<label><input id="clone-all" type="radio" name="clone" value="all" onchange="changeClone(this);">all</label>
-					</div>
-					<div class="checkbox-group">
-						<label><input id="mechanical-electronic" type="radio" name="mechanical" value="electronic" onchange="changeMechanical(this);">electronic</label>
-						<label><input id="mechanical-mechanical" type="radio" name="mechanical" value="mechanical" onchange="changeMechanical(this);">mechanical</label>
-						<label><input id="mechanical-all" type="radio" name="mechanical" value="all" onchange="changeMechanical(this);">all</label>
-					</div>
-					<div class="checkbox-group">
-						<label><input id="order-description" type="radio" name="order" value="description" onchange="changeOrder(this);">description</label>
-						<label><input id="order-year" type="radio" name="order" value="year" onchange="changeOrder(this);">year</label>
-						<label><input id="sort-asc" type="radio" name="sort" value="asc" onchange="changeSort(this);">asc</label>
-						<label><input id="sort-desc" type="radio" name="sort" value="desc" onchange="changeSort(this);">desc</label>
-					</div>
-					<div class="checkbox-group">
-						<label><input id="view-grid" type="radio" name="view" value="grid" onchange="changeView(this);">grid</label>
-						<label><input id="view-list" type="radio" name="view" value="list" onchange="changeView(this);">list</label>
-					</div>
+				<div class="toolbar" id="filters">
 				</div>
 				<hr />
 				<nav>${navHtml}</nav>
@@ -1464,15 +1441,42 @@
 				<hr />
 				<nav>${navHtml}</nav>
 			`;
-
-			const div = document.createElement('div');
-			div.innerHTML = html;
 			canvas.appendChild(div);
+
+			const filtersDiv = document.getElementById("filters");
+
+			Object.keys(filtersData.machine).forEach((name) => {
+				const filterDiv = document.createElement('div');
+				filterDiv.className = 'checkbox-group';
+				filterDiv.innerHTML = `${filtersData.machine[name].values.map(value =>
+					`<label><input id="${name}-${value}" type="${filtersData.machine[name].type}" name="${name}" value="${value}" onchange="changeFilter('${name}', this);">${value}</label>`
+				).join('')}`;
+
+				filtersDiv.appendChild(filterDiv);
+			});
+
+			div = document.createElement('div');
+			div.className = 'checkbox-group';
+			div.innerHTML = `
+					<label><input id="order-description" type="radio" name="order" value="description" onchange="changeOrder(this);">description</label>
+					<label><input id="order-year" type="radio" name="order" value="year" onchange="changeOrder(this);">year</label>
+					<label><input id="sort-asc" type="radio" name="sort" value="asc" onchange="changeSort(this);">asc</label>
+					<label><input id="sort-desc" type="radio" name="sort" value="desc" onchange="changeSort(this);">desc</label>`;
+			filtersDiv.appendChild(div);
+
+			div = document.createElement('div');
+			div.className = 'checkbox-group';
+			div.innerHTML = `
+						<label><input id="view-grid" type="radio" name="view" value="grid" onchange="changeView(this);">grid</label>
+						<label><input id="view-list" type="radio" name="view" value="list" onchange="changeView(this);">list</label>`;
+			filtersDiv.appendChild(div);
 
 			document.getElementById("inputText").value = _parameters.search;
 			document.getElementById("manufacturerText").value = _parameters.manufacturer;
 
 			document.querySelectorAll('input[name="status"]').forEach(cb => cb.checked = _parameters.status.includes(cb.value));
+			document.querySelectorAll('input[name="display"]').forEach(cb => cb.checked = _parameters.display.includes(cb.value));
+			document.querySelectorAll('input[name="control"]').forEach(cb => cb.checked = _parameters.control.includes(cb.value));
 
 			if (_parameters.mechanical === null)
 				document.getElementById("mechanical-all").checked = true;
@@ -1492,7 +1496,6 @@
 
 			document.getElementById(`order-${_parameters.order}`).checked = true;
 			document.getElementById(`sort-${_parameters.sort}`).checked = true;
-
 			document.getElementById(`view-${_parameters.view}`).checked = true;
 
 			const results = document.getElementById('results');
@@ -1504,6 +1507,7 @@
 
 			document.getElementById('inputText').focus();
 		}
+
 		const changeFavoriteMachine = async (checkBoxId) => {
 			const checkBox = document.getElementById(checkBoxId);
 			const name = checkBoxId.substring(4);
@@ -1517,25 +1521,23 @@
 			document.location = makeParameters(_path, _parameters);
 		}
 
-		const changeStatus = () => {
-			_parameters.status = Array.from(document.querySelectorAll('input[name="status"]:checked')).map(item => item.value);
+		const changeFilter = (name, input) => {
+			switch (name) {
+				case 'status':
+				case 'display':
+				case 'control':
+					_parameters[name] = Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(item => item.value);
+					break;
+
+				case 'clone':
+				case 'mechanical':
+					_parameters[name] = input.value === 'all' ? null : input.value === name;
+					break;
+			}
 			_parameters['offset'] = 0;
 			document.location = makeParameters(_path, _parameters);
 		}
-		const changeClone = (input) => {
-			_parameters.clone = null;
-			if (input.value !== 'all')
-				_parameters.clone = input.value === 'clone';
-			_parameters['offset'] = 0;
-			document.location = makeParameters(_path, _parameters);
-		}
-		const changeMechanical = (input) => {
-			_parameters.mechanical = null;
-			if (input.value !== 'all')
-				_parameters.mechanical = input.value === 'mechanical';
-			_parameters['offset'] = 0;
-			document.location = makeParameters(_path, _parameters);
-		}
+
 		const changeOrder = (input) => {
 			_parameters.order = input.value;
 			_parameters['offset'] = 0;
@@ -1818,6 +1820,8 @@
 			manufacturer: '',
 			publisher: '',
 			status: [],
+			display: [],
+			control: [],
 			mechanical: null,
 			clone: null,
 			order: 'description',
@@ -1885,14 +1889,16 @@
 								_parameters.status.push(value);
 							break;
 
-						case 'mechanical':
-							if (['true', 'false'].includes(value))
-								_parameters.mechanical = value === 'true';
+						case 'display':
+						case 'control':
+							if (!_parameters[key].includes(value))
+								_parameters[key].push(value);
 							break;
 
+						case 'mechanical':
 						case 'clone':
 							if (['true', 'false'].includes(value))
-								_parameters.clone = value === 'true';
+								_parameters[key] = value === 'true';
 							break;
 					}
 				});

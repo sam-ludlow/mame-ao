@@ -4,14 +4,13 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Net.Sockets;
 using System.Reflection;
 using System.Text;
 using System.Threading.Tasks;
-using System.Net.Sockets;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
-
 
 namespace Spludlow.MameAO
 {
@@ -386,6 +385,16 @@ namespace Spludlow.MameAO
 			if (qs != null && qs != "")
 				status = qs.Split(',');
 
+			string[] display = new string[0];
+			qs = context.Request.QueryString["display"];
+			if (qs != null && qs != "")
+				display = qs.Split(',');
+
+			string[] control = new string[0];
+			qs = context.Request.QueryString["control"];
+			if (qs != null && qs != "")
+				control = qs.Split(',');
+
 			bool? mechanical = null;
 			qs = context.Request.QueryString["mechanical"];
 			if (qs != null)
@@ -399,7 +408,7 @@ namespace Spludlow.MameAO
 			string order = context.Request.QueryString["order"] ?? "description";
 			string sort = context.Request.QueryString["sort"] ?? "asc";
 
-			DataTable table = Globals.Core.QueryMachines(profile, offset, limit, search, manufacturer, status, mechanical, clone, order, sort);
+			DataTable table = Globals.Core.QueryMachines(profile, offset, limit, search, manufacturer, status, display, control, mechanical, clone, order, sort);
 
 			JArray results = new JArray();
 
@@ -945,6 +954,33 @@ namespace Spludlow.MameAO
 			json.available_options = available_options;
 			json.option_descriptions = option_descriptions;
 			json.options = options;
+
+			writer.WriteLine(json.ToString(Formatting.Indented));
+		}
+
+		public void _api_filters(HttpListenerContext context, StreamWriter writer)
+		{
+			dynamic json = new JObject();
+			json.machine = new JObject();
+
+			foreach (string key in Globals.Core.Filters.Keys)
+			{
+				json.machine[key] = new JObject();
+				switch (key)
+				{
+					case "display":
+					case "status":
+					case "control":
+						json.machine[key].type = "checkbox";
+						break;
+
+					default:
+						json.machine[key].type = "radio";
+						break;
+				}
+
+				json.machine[key].values = new JArray(Globals.Core.Filters[key]);
+			}
 
 			writer.WriteLine(json.ToString(Formatting.Indented));
 		}
