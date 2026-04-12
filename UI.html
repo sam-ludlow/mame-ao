@@ -1477,6 +1477,7 @@
 			document.querySelectorAll('input[name="status"]').forEach(cb => cb.checked = _parameters.status.includes(cb.value));
 			document.querySelectorAll('input[name="display"]').forEach(cb => cb.checked = _parameters.display.includes(cb.value));
 			document.querySelectorAll('input[name="control"]').forEach(cb => cb.checked = _parameters.control.includes(cb.value));
+			document.querySelectorAll('input[name="players"]').forEach(cb => cb.checked = _parameters.players.includes(cb.value));
 
 			if (_parameters.mechanical === null)
 				document.getElementById("mechanical-all").checked = true;
@@ -1526,6 +1527,7 @@
 				case 'status':
 				case 'display':
 				case 'control':
+				case 'players':
 					_parameters[name] = Array.from(document.querySelectorAll(`input[name="${name}"]:checked`)).map(item => item.value);
 					break;
 
@@ -1822,6 +1824,7 @@
 			status: [],
 			display: [],
 			control: [],
+			players: [],
 			mechanical: null,
 			clone: null,
 			order: 'description',
@@ -1891,6 +1894,7 @@
 
 						case 'display':
 						case 'control':
+						case 'players':
 							if (!_parameters[key].includes(value))
 								_parameters[key].push(value);
 							break;

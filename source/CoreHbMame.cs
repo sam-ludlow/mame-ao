@@ -366,8 +366,8 @@ namespace Spludlow.MameAO
 		string ICore.GetRequiredMedia(string machine_name, string softwarelist_name, string software_name) =>
 			Cores.GetRequiredMedia(_ConnectionStringMachine, _ConnectionStringSoftware, _SoftwareListDescriptions, machine_name, softwarelist_name, software_name);
 
-		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] control, bool? mechanical, bool? clone, string order, string sort) =>
-			Cores.QueryMachines(_ConnectionStringMachine, profile, offset, limit, search, manufacturer, status, display, control, mechanical, clone, order, sort);
+		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] players,string[] control, bool? mechanical, bool? clone, string order, string sort) =>
+			Cores.QueryMachines(_ConnectionStringMachine, profile, offset, limit, search, manufacturer, status, display, players, control, mechanical, clone, order, sort);
 
 		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine) =>
 			Cores.QuerySoftware(_ConnectionStringSoftware, softwarelist_name, offset, limit, search, publisher, order, sort, favorites_machine);

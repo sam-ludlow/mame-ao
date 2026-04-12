@@ -50,7 +50,7 @@ namespace Spludlow.MameAO
 		
 		string GetRequiredMedia(string machine_name, string softwarelist_name, string software_name);
 
-		DataTable QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] input, bool? mechanical, bool? clone, string order, string sort);
+		DataTable QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] players, string[] control, bool? mechanical, bool? clone, string order, string sort);
 		DataTable QuerySoftware(string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine);
 	}
 	public class Cores
@@ -274,6 +274,7 @@ namespace Spludlow.MameAO
 				machineTable.Columns.Add("ao_type", typeof(string));
 				machineTable.Columns.Add("ao_status", typeof(string));
 				machineTable.Columns.Add("ao_year", typeof(int));
+				machineTable.Columns.Add("ao_players", typeof(int));
 
 				List<string> controlTypes = new List<string>(dataSet.Tables["control"].Rows.Cast<DataRow>().Select(row => (string)row["type"]).Distinct().OrderBy(x => x));
 				foreach (string controlType in controlTypes)
@@ -305,6 +306,9 @@ namespace Spludlow.MameAO
 					if (inputRows.Length == 1 && inputRows[0].IsNull("coins") == false)
 						coins = Int32.Parse((string)inputRows[0]["coins"]);
 					machineRow["ao_input_coins"] = coins;
+
+					if (inputRows.Length == 1 && inputRows[0].IsNull("players") == false)
+						machineRow["ao_players"] = Int32.Parse((string)inputRows[0]["players"]);
 
 					foreach (string controlType in controlTypes)
 						machineRow[controlType] = false;
@@ -679,7 +683,7 @@ namespace Spludlow.MameAO
 			return String.Join(" ", results);
 		}
 
-		public static DataTable QueryMachines(string connectionString, string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] control, bool? mechanical, bool? clone, string order, string sort)
+		public static DataTable QueryMachines(string connectionString, string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] players, string[] control, bool? mechanical, bool? clone, string order, string sort)
 		{
 			string orderBy = "[description] COLLATE NOCASE @SORT";
 			switch (order)
@@ -717,6 +721,9 @@ namespace Spludlow.MameAO
 
 			if (status.Length > 0)
 				wheres.Add($"{String.Join(" OR ", status.Select(s => $"[ao_status] = '{s}'"))}");
+
+			if (players.Length > 0)
+				wheres.Add($"{String.Join(" OR ", players.Select(p => $"[ao_players] = {p}"))}");
 
 			if (control.Length > 0)
 				wheres.Add($"{String.Join(" AND ", control.Select(type => $"[{type}] = 1"))}");
@@ -801,9 +808,10 @@ namespace Spludlow.MameAO
 
 			using (SQLiteConnection connection = new SQLiteConnection(connectionStringMachine))
 			{
+				result.Add("players",
+					Database.ExecuteFill(connection, "SELECT DISTINCT [players] FROM [input] ORDER BY [players]").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray());
 				result.Add("display",
 					Database.ExecuteFill(connection, "SELECT DISTINCT [type] FROM [display] ORDER BY [type]").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray());
-
 				result.Add("control",
 					Database.ExecuteFill(connection, "SELECT DISTINCT [type] FROM [control] ORDER BY [type]").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray());
 			}

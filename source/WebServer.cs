@@ -390,6 +390,11 @@ namespace Spludlow.MameAO
 			if (qs != null && qs != "")
 				display = qs.Split(',');
 
+			string[] players = new string[0];
+			qs = context.Request.QueryString["players"];
+			if (qs != null && qs != "")
+				players = qs.Split(',');
+
 			string[] control = new string[0];
 			qs = context.Request.QueryString["control"];
 			if (qs != null && qs != "")
@@ -408,7 +413,7 @@ namespace Spludlow.MameAO
 			string order = context.Request.QueryString["order"] ?? "description";
 			string sort = context.Request.QueryString["sort"] ?? "asc";
 
-			DataTable table = Globals.Core.QueryMachines(profile, offset, limit, search, manufacturer, status, display, control, mechanical, clone, order, sort);
+			DataTable table = Globals.Core.QueryMachines(profile, offset, limit, search, manufacturer, status, display, players, control, mechanical, clone, order, sort);
 
 			JArray results = new JArray();
 
@@ -971,6 +976,7 @@ namespace Spludlow.MameAO
 					case "display":
 					case "status":
 					case "control":
+					case "players":
 						json.machine[key].type = "checkbox";
 						break;
 
