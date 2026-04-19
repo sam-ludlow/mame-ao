@@ -452,6 +452,24 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static bool IndexExists(SqlConnection connection, string tableName, string indexName)
+		{
+			using (SqlCommand command = new SqlCommand(@"
+				SELECT 1
+				FROM sys.indexes
+				WHERE name = @INDEX_NAME
+				AND object_id = OBJECT_ID(@TABLE_NAME)
+				", connection))
+			{
+				command.Parameters.AddWithValue("@INDEX_NAME", indexName);
+				command.Parameters.AddWithValue("@TABLE_NAME", tableName);
+
+				object obj = ExecuteScalar(command);
+
+				return !(obj == null || obj is DBNull);
+			}
+		}
+
 		public static void ConsoleQuery(ICore core, string database, string commandText)
 		{
 			using (SQLiteConnection connection = new SQLiteConnection(database == "m" ? core.ConnectionStrings[0] : core.ConnectionStrings[1]))

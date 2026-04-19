@@ -1090,7 +1090,7 @@ namespace Spludlow.MameAO
 			}
 
 			.header {
-				background: #333;
+				background: #444;
 				color: #fff;
 				padding: 8px;
 				box-sizing: border-box;

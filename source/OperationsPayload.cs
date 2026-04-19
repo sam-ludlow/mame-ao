@@ -575,7 +575,58 @@ namespace Spludlow.MameAO
 				);
 			");
 
-			//	TODO: Indexes for sorting by year..... maybe more index combinations?
+			//	TODO: Indexes for sorting by year and others .......
+
+
+
+			//
+			//	Indexes for hash search - Not on payload tables create once
+			//
+
+			if (Database.IndexExists(connections[0], "rom", "IX_rom_sha1_machine") == false)
+			{
+				//	machine rom.sha1
+				Database.ExecuteNonQuery(connections[0], @"
+					CREATE NONCLUSTERED INDEX IX_rom_sha1_machine
+					ON [rom] (sha1, machine_id)
+					INCLUDE (name);
+				");
+				//	machine disk.sha1
+				if (Database.TableExists(connections[0], "disk") == true)
+					Database.ExecuteNonQuery(connections[0], @"
+						CREATE NONCLUSTERED INDEX IX_disk_sha1_machine
+						ON disk (sha1, machine_id)
+						INCLUDE (name);
+					");
+
+				// software rom.sha1
+				Database.ExecuteNonQuery(connections[1], @"
+					CREATE NONCLUSTERED INDEX IX_rom_sha1
+					ON rom (sha1)
+					INCLUDE (dataarea_id, name);
+
+					CREATE NONCLUSTERED INDEX IX_dataarea_part_id ON [dataarea] (part_id);
+					CREATE NONCLUSTERED INDEX IX_rom_dataarea_id ON [rom] (dataarea_id);
+
+					CREATE NONCLUSTERED INDEX IX_part_software_id ON part (software_id);
+					CREATE NONCLUSTERED INDEX IX_software_softwarelist_id ON software (softwarelist_id);
+				");
+				// software disk.sha1
+				if (Database.TableExists(connections[1], "disk") == true)
+					Database.ExecuteNonQuery(connections[1], @"
+						CREATE NONCLUSTERED INDEX IX_disk_sha1
+						ON [disk] (sha1)
+						INCLUDE (diskarea_id, name);
+
+						CREATE NONCLUSTERED INDEX IX_diskarea_part_id ON [diskarea] (part_id);
+						CREATE NONCLUSTERED INDEX IX_disk_diskarea_id ON [disk] (diskarea_id);
+					");
+
+
+
+				//Database.ExecuteNonQuery(connections[0], @"
+				//");
+			}
 		}
 
 		public static readonly Dictionary<string, string> MachineAoStatusLookup = new Dictionary<string, string> {
