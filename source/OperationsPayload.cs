@@ -580,52 +580,61 @@ namespace Spludlow.MameAO
 
 
 			//
-			//	Indexes for hash search - Not on payload tables create once
+			//	hash & name search
 			//
-
-			if (Database.IndexExists(connections[0], "rom", "IX_rom_sha1_machine") == false)
+			if (Database.IndexExists(connections[0], "rom", "IX_rom_name") == false)
 			{
-				//	machine rom.sha1
 				Database.ExecuteNonQuery(connections[0], @"
-					CREATE NONCLUSTERED INDEX IX_rom_sha1_machine
+					CREATE NONCLUSTERED INDEX IX_rom_name
+					ON [rom] (name, machine_id)
+					INCLUDE (size, sha1, crc);
+
+					CREATE NONCLUSTERED INDEX IX_rom_sha1
 					ON [rom] (sha1, machine_id)
-					INCLUDE (name);
+					INCLUDE (name, size, crc);
+
+					CREATE NONCLUSTERED INDEX IX_rom_crc
+					ON [rom] (crc, machine_id)
+					INCLUDE (name, size, sha1);
 				");
-				//	machine disk.sha1
+
 				if (Database.TableExists(connections[0], "disk") == true)
 					Database.ExecuteNonQuery(connections[0], @"
-						CREATE NONCLUSTERED INDEX IX_disk_sha1_machine
-						ON disk (sha1, machine_id)
+						CREATE NONCLUSTERED INDEX IX_disk_name
+						ON [disk] (name, machine_id)
+						INCLUDE (sha1);
+
+						CREATE NONCLUSTERED INDEX IX_disk_sha1
+						ON [disk] (sha1, machine_id)
 						INCLUDE (name);
 					");
-
-				// software rom.sha1
+			}
+			if (Database.IndexExists(connections[1], "rom", "IX_rom_name") == false)
+			{
 				Database.ExecuteNonQuery(connections[1], @"
+					CREATE NONCLUSTERED INDEX IX_rom_name
+					ON [rom] (name, dataarea_id)
+					INCLUDE (size, sha1, crc);
+
 					CREATE NONCLUSTERED INDEX IX_rom_sha1
-					ON rom (sha1)
-					INCLUDE (dataarea_id, name);
+					ON [rom] (sha1, dataarea_id)
+					INCLUDE (name, size, crc);
 
-					CREATE NONCLUSTERED INDEX IX_dataarea_part_id ON [dataarea] (part_id);
-					CREATE NONCLUSTERED INDEX IX_rom_dataarea_id ON [rom] (dataarea_id);
-
-					CREATE NONCLUSTERED INDEX IX_part_software_id ON part (software_id);
-					CREATE NONCLUSTERED INDEX IX_software_softwarelist_id ON software (softwarelist_id);
+					CREATE NONCLUSTERED INDEX IX_rom_crc
+					ON [rom] (crc, dataarea_id)
+					INCLUDE (name, size, sha1);
 				");
-				// software disk.sha1
+
 				if (Database.TableExists(connections[1], "disk") == true)
 					Database.ExecuteNonQuery(connections[1], @"
 						CREATE NONCLUSTERED INDEX IX_disk_sha1
-						ON [disk] (sha1)
-						INCLUDE (diskarea_id, name);
+						ON [disk] (sha1, diskarea_id)
+						INCLUDE (name);
 
-						CREATE NONCLUSTERED INDEX IX_diskarea_part_id ON [diskarea] (part_id);
-						CREATE NONCLUSTERED INDEX IX_disk_diskarea_id ON [disk] (diskarea_id);
+						CREATE NONCLUSTERED INDEX IX_disk_name
+						ON [disk] (name, diskarea_id)
+						INCLUDE (sha1);
 					");
-
-
-
-				//Database.ExecuteNonQuery(connections[0], @"
-				//");
 			}
 		}
 
@@ -2050,6 +2059,22 @@ namespace Spludlow.MameAO
 				MakeMSSQLPayloadsInsert(connection, datafile_payload_table);
 				MakeMSSQLPayloadsInsert(connection, game_payload_table);
 
+				//
+				//	hash & name search
+				//
+				if (Database.IndexExists(connection, "rom", "IX_rom_name") == false)
+				{
+					Database.ExecuteNonQuery(connection, @"
+						CREATE NONCLUSTERED INDEX IX_rom_name
+						ON [rom] (name, game_id)
+						INCLUDE (size, crc);
+
+						CREATE NONCLUSTERED INDEX IX_rom_crc
+						ON [rom] (crc, game_id)
+						INCLUDE (name, size);
+					");
+				}
+
 				Tools.ConsolePrintMemory();
 			}
 
@@ -2353,6 +2378,26 @@ namespace Spludlow.MameAO
 				MakeMSSQLPayloadsInsert(connection, category_payload_table);
 				MakeMSSQLPayloadsInsert(connection, datafile_payload_table);
 				MakeMSSQLPayloadsInsert(connection, game_payload_table);
+
+				//
+				//	hash & name search
+				//
+				if (Database.IndexExists(connection, "rom", "IX_rom_name") == false)
+				{
+					Database.ExecuteNonQuery(connection, @"
+						CREATE NONCLUSTERED INDEX IX_rom_name
+						ON [rom] (name, game_id)
+						INCLUDE (size, sha1, crc);
+
+						CREATE NONCLUSTERED INDEX IX_rom_sha1
+						ON [rom] (sha1, game_id)
+						INCLUDE (name, size, crc);
+
+						CREATE NONCLUSTERED INDEX IX_rom_crc
+						ON [rom] (crc, game_id)
+						INCLUDE (name, size, sha1);
+					");
+				}
 
 				Tools.ConsolePrintMemory();
 			}
