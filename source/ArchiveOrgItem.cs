@@ -6,9 +6,9 @@ using System.Net;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
-using System.Web;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -88,58 +88,51 @@ namespace Spludlow.MameAO
 
 		private static string GetAuthCookie(string username, string password)
 		{
-			string url = "https://archive.org/account/login";
+			string url = "https://archive.org/services/account/login/";
+			string token;
 
-			var payloadValues = new Dictionary<string, string>()
-				{
-					{ "login", "true" },
-					{ "username", username },
-					{ "password", password },
-					{ "remember", "true" },
-					{ "referer", url },
-					{ "submit-to-login", "Log in" },
-				};
-
-			var payload = new StringBuilder();
-			foreach (string key in payloadValues.Keys)
+			using (Task<HttpResponseMessage> responseMessageTask = HttpClient.GetAsync(url))
 			{
-				if (payload.Length > 0)
-					payload.Append("&");
+				responseMessageTask.Wait();
 
-				payload.Append($"{key}={HttpUtility.UrlEncode(payloadValues[key])}");
+				HttpResponseMessage responseMessage = responseMessageTask.Result;
+				responseMessage.EnsureSuccessStatusCode();
+
+				Task<string> bodyTask = responseMessage.Content.ReadAsStringAsync();
+				bodyTask.Wait();
+
+				dynamic body = JsonConvert.DeserializeObject<dynamic>(bodyTask.Result);
+
+				if ((bool)body.success != true)
+					throw new ApplicationException("Archive.org auth get token not success.");
+
+				token = (string)body.value.token;
 			}
 
-			using (Task<HttpResponseMessage> requestTask = HttpClient.GetAsync(url))
-			{
-				requestTask.Wait();
-				requestTask.Result.EnsureSuccessStatusCode();
-			}
+			dynamic payload = new JObject();
+
+			payload.username = username;
+			payload.password = password;
+			payload.remember = "true";
+			payload.t = token;
 
 			using (var requestMessage = new HttpRequestMessage(HttpMethod.Post, url))
 			{
-				requestMessage.Content = new StringContent(payload.ToString(), Encoding.UTF8, "application/x-www-form-urlencoded");
-				
+				requestMessage.Content = new StringContent(payload.ToString(), Encoding.UTF8, "application/json");
+
 				using (Task<HttpResponseMessage> requestTask = HttpClient.SendAsync(requestMessage))
 				{
 					requestTask.Wait();
 					HttpResponseMessage responseMessage = requestTask.Result;
 
-					responseMessage.EnsureSuccessStatusCode();
+					if (responseMessage.StatusCode != HttpStatusCode.OK)
+						throw new HttpRequestException("Dummy 401");
 				}
 			}
 
-			bool ok = false;
 			List<string> cookies = new List<string>();
 			foreach (Cookie cookie in CookieContainer.GetCookies(new Uri(url)))
-			{
 				cookies.Add($"{cookie.Name}={cookie.Value}");
-
-				if (cookie.Name == "logged-in-user")
-					ok = true;
-			}
-
-			if (ok == false)
-				throw new HttpRequestException("Dummy 401");
 
 			return String.Join("; ", cookies.ToArray());
 		}
