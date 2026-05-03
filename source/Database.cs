@@ -470,6 +470,29 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static bool FullTextColumnExists(SqlConnection connection, string tableName, string columnName)
+		{
+			using (SqlCommand command = new SqlCommand(@"
+				SELECT 1
+				FROM sys.fulltext_index_columns
+				INNER JOIN sys.objects 
+					ON sys.fulltext_index_columns.object_id = sys.objects.object_id
+				INNER JOIN sys.columns 
+					ON sys.fulltext_index_columns.object_id = sys.columns.object_id 
+					AND sys.fulltext_index_columns.column_id = sys.columns.column_id
+				WHERE sys.objects.object_id = OBJECT_ID(@TABLE_NAME)
+					AND sys.columns.name = @COLUMN_NAME
+				", connection))
+			{
+				command.Parameters.AddWithValue("@TABLE_NAME", tableName);
+				command.Parameters.AddWithValue("@COLUMN_NAME", columnName);
+
+				object obj = ExecuteScalar(command);
+
+				return !(obj == null || obj is DBNull);
+			}
+		}
+
 		public static void ConsoleQuery(ICore core, string database, string commandText)
 		{
 			using (SQLiteConnection connection = new SQLiteConnection(database == "m" ? core.ConnectionStrings[0] : core.ConnectionStrings[1]))

@@ -2059,17 +2059,6 @@ namespace Spludlow.MameAO
 				MakeMSSQLPayloadsInsert(connection, datafile_payload_table);
 				MakeMSSQLPayloadsInsert(connection, game_payload_table);
 
-				Database.ExecuteNonQuery(connection, @"
-					CREATE FULLTEXT INDEX ON [game]
-					(
-						[name],
-						[description]
-					)
-					KEY INDEX [PK_game]
-					ON [ao_catalog]
-					WITH CHANGE_TRACKING AUTO;
-				");
-
 				//
 				//	hash & name search
 				//
@@ -2085,6 +2074,18 @@ namespace Spludlow.MameAO
 						INCLUDE (name, size);
 					");
 				}
+
+				if (Database.FullTextColumnExists(connection, "game", "name") == false)
+					Database.ExecuteNonQuery(connection, @"
+					CREATE FULLTEXT INDEX ON [game]
+					(
+						[name],
+						[description]
+					)
+					KEY INDEX [PK_game]
+					ON [ao_catalog]
+					WITH CHANGE_TRACKING AUTO;
+				");
 
 				Tools.ConsolePrintMemory();
 			}
@@ -2390,17 +2391,6 @@ namespace Spludlow.MameAO
 				MakeMSSQLPayloadsInsert(connection, datafile_payload_table);
 				MakeMSSQLPayloadsInsert(connection, game_payload_table);
 
-				Database.ExecuteNonQuery(connection, @"
-					CREATE FULLTEXT INDEX ON [game]
-					(
-						[name],
-						[description]
-					)
-					KEY INDEX [PK_game]
-					ON [ao_catalog]
-					WITH CHANGE_TRACKING AUTO;
-				");
-
 				//
 				//	hash & name search
 				//
@@ -2420,6 +2410,18 @@ namespace Spludlow.MameAO
 						INCLUDE (name, size, sha1);
 					");
 				}
+
+				if (Database.FullTextColumnExists(connection, "game", "name") == false)
+					Database.ExecuteNonQuery(connection, @"
+						CREATE FULLTEXT INDEX ON [game]
+						(
+							[name],
+							[description]
+						)
+						KEY INDEX [PK_game]
+						ON [ao_catalog]
+						WITH CHANGE_TRACKING AUTO;
+					");
 
 				Tools.ConsolePrintMemory();
 			}
