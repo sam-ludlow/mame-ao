@@ -467,6 +467,10 @@
 
 			columnDefs = [
 				{ heading: 'Name', columnName: 'name' },
+				{ heading: 'Core', columnName: 'core' },
+				{ heading: 'Type', columnName: 'type' },
+				{ heading: 'Version', columnName: 'version' },
+				{ heading: 'Hash / Magnet Link', columnName: 'hash' },
 				{ heading: 'State', columnName: 'state' },
 				{ heading: 'File Count', columnName: 'file_count' },
 				{ heading: 'Open Connections', columnName: 'open_connections' },
@@ -488,6 +492,10 @@
 					return;
 
 				switch (columnDef.columnName) {
+
+					case 'hash':
+						cell.innerHTML = `<a href="${result.magnet}" target="_blank">${value}</a>`;
+						break;
 
 					case 'state':
 						cell.innerHTML = `<a href="${_info.bit_torrent_url}/api/files?hash=${result.hash}&priority=Highest" target="_blank">${value}</a>`;
@@ -570,40 +578,6 @@
 				cell.innerHTML = value;
 			});
 
-			canvas.appendChild(table);
-
-			// Magnet Links
-
-			div = document.createElement('div');
-			div.innerHTML = '<hr /><h2>Magnet Links</h2>';
-			canvas.appendChild(div);
-
-			columnDefs = [
-				{ heading: 'Asset Type', columnName: 'type' },
-				{ heading: 'Name / Link', columnName: 'name' },
-				{ heading: 'Version', columnName: 'version' },
-				{ heading: 'Available', columnName: 'torrent_available' },
-			];
-
-			table = document.createElement('table');
-
-			buildTable(columnDefs, btInfo.magnets, table, (columnDef, result, resultIndex, row, cell) => {
-
-				const value = result[columnDef.columnName];
-
-				if (value === undefined)
-					return;
-
-				switch (columnDef.columnName) {
-
-					case 'name':
-						cell.innerHTML = `<a href="${result.magnet_link}" target="_blank">${value}</a>`;
-						break;
-					default:
-						cell.innerHTML = value;
-						break;
-				}
-			});
 			canvas.appendChild(table);
 
 			// Restart & Stop

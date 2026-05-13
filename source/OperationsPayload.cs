@@ -1208,8 +1208,8 @@ namespace Spludlow.MameAO
 				BitTorrent.Initialize();
 				BitTorrent.WaitReady();
 
-				var torrentHashes = BitTorrent.TorrentHashes();
-				string torrentHash = torrentHashes["SoftwareDisk"];
+				var torrentHashes = BitTorrent.TorrentHashes(coreName);
+				string torrentHash = torrentHashes[ItemType.SoftwareDisk];
 
 				JArray torrentFiles = BitTorrent.Files(torrentHash);
 

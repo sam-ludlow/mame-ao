@@ -207,9 +207,7 @@ namespace Spludlow.MameAO
 
 			while (true)
 			{
-				info = DomeInfo();
-				if (info == null)
-					throw new ApplicationException("Lost connection to DOME-BT");
+				info = DomeInfo() ?? throw new ApplicationException("Lost connection to DOME-BT");
 
 				if (info.ready_minutes != null)
 					break;
@@ -304,18 +302,29 @@ namespace Spludlow.MameAO
 			Restart();
 		}
 
-		public static Dictionary<string, string> TorrentHashes()
+		public static readonly Dictionary<string, ItemType> ShortNameItemTypeLookup = new Dictionary<string, ItemType>()
 		{
-			Dictionary<string, string> result = new Dictionary<string, string>();
+			{ "mr", ItemType.MachineRom },
+			{ "md", ItemType.MachineDisk },
+			{ "sr", ItemType.SoftwareRom },
+			{ "sd", ItemType.SoftwareDisk },
+		};
+
+		public static Dictionary<ItemType, string> TorrentHashes(string coreName)
+		{
+			Dictionary<ItemType, string> result = new Dictionary<ItemType, string>();
 
 			dynamic info = JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/info"));
 
-			foreach (dynamic mangent in info.magnets)
+			foreach (dynamic torrent in info.torrents)
 			{
-				//ItemType type = (ItemType) Enum.Parse(typeof(ItemType), (string)mangent.type);
-				result.Add((string)mangent.type, (string)mangent.hash);
-			}
+				if (coreName != (string)torrent.core)
+					continue;
 
+				ItemType type = ShortNameItemTypeLookup[(string)torrent.type];
+				result.Add(type, (string)torrent.hash);
+			}
+			
 			return result;
 		}
 

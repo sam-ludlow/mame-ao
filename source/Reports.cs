@@ -521,9 +521,9 @@ namespace Spludlow.MameAO
 				"String	String	Int32		Int64	String");
 			dataSet.Tables.Add(totalsTable);
 
-			var torrentHashes = BitTorrent.TorrentHashes();
+			var torrentHashes = BitTorrent.TorrentHashes(Globals.Core.Name);
 
-			foreach (string type in torrentHashes.Keys)
+			foreach (ItemType type in torrentHashes.Keys)
 			{
 				string hash = torrentHashes[type];
 
@@ -541,8 +541,8 @@ namespace Spludlow.MameAO
 
 				switch (type)
 				{
-					case "SoftwareRom":
-					case "SoftwareDisk":
+					case ItemType.SoftwareRom:
+					case ItemType.SoftwareDisk:
 
 						SortedDictionary<string, long[]> lists = new SortedDictionary<string, long[]>();
 
