@@ -1,10 +1,13 @@
-﻿using Newtonsoft.Json;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SQLite;
 using System.IO;
+using System.Linq;
 using System.Xml.Linq;
+
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -42,23 +45,28 @@ namespace Spludlow.MameAO
 
 		int ICore.Get()
 		{
-			string mameLatestJson = Tools.FetchTextCached("https://api.github.com/repos/mamedev/mame/releases/latest") ?? throw new ApplicationException("Unanle to get core lastest");
+			string url = _Version == null ?
+				"https://api.github.com/repos/mamedev/mame/releases/latest" :
+				$"https://api.github.com/repos/mamedev/mame/releases/tags/mame{_Version}";
 
-			mameLatestJson = Tools.PrettyJSON(mameLatestJson);
-
-			dynamic mameLatest = JsonConvert.DeserializeObject<dynamic>(mameLatestJson);
+			dynamic mameRelease = JsonConvert.DeserializeObject<dynamic>(Tools.FetchTextCached(url) ?? throw new ApplicationException("Unanle to get github release"));
 
 			if (_Version == null)
-				_Version = ((string)mameLatest.tag_name).Substring(4);
+				_Version = ((string)mameRelease.tag_name).Substring(4);
 
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 			Directory.CreateDirectory(_CoreDirectory);
 
 			if (File.Exists(Path.Combine(_CoreDirectory, "mame.exe")) == true)
 				return 0;
-			
-			string binariesUrl = "https://github.com/mamedev/mame/releases/download/mame@VERSION@/mame@VERSION@b_x64.exe";
-			binariesUrl = binariesUrl.Replace("@VERSION@", _Version);
+
+			var releaseAssets = ((JArray)mameRelease.assets)
+				.Where(token => ((string)token["name"]).EndsWith("b_x64.exe") || ((string)token["name"]).EndsWith("b_64bit.exe")).ToArray();
+
+			if (releaseAssets.Length != 1)
+				throw new ApplicationException($"Did not find single asset in release: {releaseAssets.Length} {url}");
+
+			string binariesUrl = (string)releaseAssets[0]["browser_download_url"];
 
 			string binariesFilename = Path.Combine(_CoreDirectory, Path.GetFileName(binariesUrl));
 
