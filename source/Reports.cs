@@ -199,6 +199,13 @@ namespace Spludlow.MameAO
 				Text = "Year Fix",
 				Decription = "Guess years with question marks.",
 			},
+			new ReportType(){
+				Key = "software-group",
+				Group = "interesting",
+				Code = "SG",
+				Text = "Software Groups",
+				Decription = "Show Software Machine Relationships.",
+			},
 
 		};
 
@@ -388,7 +395,7 @@ namespace Spludlow.MameAO
 					{
 						string value = Convert.ToString(row[column]);
 
-						if (value.StartsWith("<a href=") == true)
+						if (value.StartsWith("<a href=") == true || value.StartsWith("<table") == true)
 							html.Append(value);
 						else
 							html.Append(WebUtility.HtmlEncode(value));
@@ -2089,5 +2096,165 @@ namespace Spludlow.MameAO
 
 			SaveHtmlReport(resultTable, "Year Fix");
 		}
+
+		public class SoftwareGroup
+		{
+			public int id;
+			public HashSet<string> machine_names = new HashSet<string>();
+			public HashSet<string> softwarelist_names = new HashSet<string>();
+
+		}
+
+		public void Report_SG()
+		{
+			var machineConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]);
+			var softwareConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[1]);
+
+			DataTable machineSoftwareListTable = Database.ExecuteFill(machineConnection, @"
+				SELECT
+					machine.name AS machine_name,
+					machine.cloneof,
+					softwarelist.name AS softwarelist_name,
+					softwarelist.tag,
+					softwarelist.status,
+					softwarelist.filter
+				FROM
+					machine
+					INNER JOIN softwarelist ON machine.machine_id = softwarelist.machine_id
+				WHERE
+					softwarelist.status = 'original' -- AND machine.cloneof IS NULL
+				ORDER BY
+					machine.name,
+					softwarelist.name;
+			");
+			machineSoftwareListTable.TableName = "Machine SoftwareList";
+
+			Dictionary<string, string> machineDescriptions = new Dictionary<string, string>();
+			foreach (DataRow row in Database.ExecuteFill(machineConnection, @"SELECT name, description FROM machine").Rows)
+				machineDescriptions.Add((string)row[0], (string)row[1]);
+
+			DataTable softwareSoftwareListTable = Database.ExecuteFill(softwareConnection, @"
+				SELECT
+					softwarelist.name,
+					softwarelist.description,
+					COUNT(DISTINCT rom.rom_id) AS rom_count,
+					COUNT(DISTINCT disk.disk_id) AS disk_count
+
+				FROM softwarelist
+				LEFT JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id
+				LEFT JOIN part ON software.software_id = part.software_id
+				LEFT JOIN dataarea ON part.part_id = dataarea.part_id
+				LEFT JOIN rom ON dataarea.dataarea_id = rom.dataarea_id
+					AND rom.sha1 IS NOT NULL
+				LEFT JOIN diskarea ON part.part_id = diskarea.part_id
+				LEFT JOIN disk ON diskarea.diskarea_id = disk.diskarea_id
+					AND disk.sha1 IS NOT NULL
+
+				GROUP BY
+					softwarelist.name
+				ORDER BY
+					softwarelist.name;
+			");
+			softwareSoftwareListTable.TableName = "Software SoftwareList";
+			softwareSoftwareListTable.PrimaryKey = new DataColumn[] { softwareSoftwareListTable.Columns["name"] };
+
+			Dictionary<string, HashSet<string>> machineSoftwareListLookup = new Dictionary<string, HashSet<string>>();
+			Dictionary<string, HashSet<string>> softwareListMachineLookup = new Dictionary<string, HashSet<string>>();
+
+			foreach (DataRow row in machineSoftwareListTable.Rows)
+			{
+				string machine_name = (string)row["machine_name"];
+				string softwarelist_name = (string)row["softwarelist_name"];
+
+				if (machineSoftwareListLookup.ContainsKey(machine_name) == false)
+					machineSoftwareListLookup.Add(machine_name, new HashSet<string>());
+				machineSoftwareListLookup[machine_name].Add(softwarelist_name);
+
+				if (softwareListMachineLookup.ContainsKey(softwarelist_name) == false)
+					softwareListMachineLookup.Add(softwarelist_name, new HashSet<string>());
+				softwareListMachineLookup[softwarelist_name].Add(machine_name);
+			}
+
+			List<SoftwareGroup> softwareGroups = new List<SoftwareGroup>();
+
+			foreach (string softwarelist_name in softwareListMachineLookup.Keys)
+			{
+				foreach (string machine_name in softwareListMachineLookup[softwarelist_name])
+				{
+					var matchingGroups = softwareGroups.Where(g => g.machine_names.Contains(machine_name) || g.softwarelist_names.Contains(softwarelist_name)).ToList();
+					SoftwareGroup group;
+
+					if (matchingGroups.Count == 0)
+					{
+						group = new SoftwareGroup
+						{
+							id = softwareGroups.Count + 1
+						};
+						softwareGroups.Add(group);
+					}
+					else
+					{
+						group = matchingGroups.First();
+
+						foreach (var other in matchingGroups.Skip(1).ToList())
+						{
+							group.machine_names.UnionWith(other.machine_names);
+							group.softwarelist_names.UnionWith(other.softwarelist_names);
+
+							softwareGroups.Remove(other);
+						}
+					}
+					group.machine_names.Add(machine_name);
+					group.softwarelist_names.Add(softwarelist_name);
+				}
+			}
+
+			DataTable table = Tools.MakeDataTable("Software Group",
+				"id		SoftwareLists	Machines",
+				"Int32	String			String"
+			);
+
+			foreach (SoftwareGroup softwareGroup in softwareGroups)
+			{
+				StringBuilder html = new StringBuilder();
+
+				html.Length = 0;
+				html.AppendLine("<table><tr><th>software</th><th>description</th><th>rom</th><th>disk</th></tr>");
+				foreach (var softwarelist_name in softwareGroup.softwarelist_names)
+				{
+					DataRow row = softwareSoftwareListTable.Rows.Find(softwarelist_name);
+					string softwarelist_description = row != null ? (string)row["description"] : "NOT FOUND";
+					long rom_count = row != null ? (long)row["rom_count"] : 0;
+					long disk_count = row != null ? (long)row["disk_count"] : 0;
+					html.AppendLine($"<tr><td>{softwarelist_name}</td><td>{softwarelist_description}</td><td>{(rom_count > 0 ? rom_count.ToString() : "")}</td><td>{(disk_count > 0 ? disk_count.ToString() : "")}</td></tr>");
+				}
+				html.AppendLine("</table>");
+				string softwareHtml = html.ToString();
+
+				html.Length = 0;
+				html.AppendLine("<table><tr><th>machine</th><th>description</th></tr>");
+				foreach (var machine_name in softwareGroup.machine_names)
+				{
+					string machine_description = machineDescriptions[machine_name];
+					html.AppendLine($"<tr><td>{machine_name}</td><td>{machine_description}</td></tr>");
+
+				}
+				html.AppendLine("</table>");
+				string machineHtml = html.ToString();
+
+				table.Rows.Add(softwareGroup.id, softwareHtml, machineHtml);
+			}
+
+			//	TODO: softwarelists without machines, missing software lists from machine
+
+			DataSet dataSet = new DataSet();
+			dataSet.Tables.Add(table);
+			//dataSet.Tables.Add(machineSoftwareListTable);
+			//dataSet.Tables.Add(softwareSoftwareListTable);
+
+			SaveHtmlReport(dataSet, "Software Group");
+
+		}
 	}
+
 }
