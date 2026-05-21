@@ -224,6 +224,27 @@ namespace Spludlow.MameAO
 			Cores.Zips(_CoreDirectory);
 		}
 
+		void ICore.MSSql(string serverConnectionString, string[] databaseNames)
+		{
+			if (_Version == null)
+				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			DataSet dataSet = CoreTosec.TosecDataSet(_CoreDirectory);
+
+			Database.DataSet2MSSQL(dataSet, serverConnectionString, databaseNames[0]);
+
+			Database.MakeForeignKeys(serverConnectionString, databaseNames[0]);
+		}
+
+		void ICore.MSSqlPayload(string serverConnectionString, string[] databaseNames)
+		{
+			if (_Version == null)
+				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
+
+			OperationsPayload.TosecMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+		}
+
 		public static DataSet TosecDataSet(string directory)
 		{
 			DataSet dataSet = new DataSet();
@@ -374,27 +395,6 @@ namespace Spludlow.MameAO
 		DataRow[] ICore.GetSoftwareSharedFeats(DataRow software)
 		{
 			throw new NotImplementedException();
-		}
-
-		void ICore.MSSql(string serverConnectionString, string[] databaseNames)
-		{
-			if (_Version == null)
-				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
-			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
-
-			DataSet dataSet = CoreTosec.TosecDataSet(_CoreDirectory);
-
-			Database.DataSet2MSSQL(dataSet, serverConnectionString, databaseNames[0]);
-
-			Database.MakeForeignKeys(serverConnectionString, databaseNames[0]);
-		}
-
-		void ICore.MSSqlPayload(string serverConnectionString, string[] databaseNames)
-		{
-			if (_Version == null)
-				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
-
-			OperationsPayload.TosecMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
 		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] players, string[] control, bool? mechanical, bool? clone, string order, string sort)

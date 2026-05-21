@@ -16,7 +16,7 @@ namespace Spludlow.MameAO
 
 			string operation = parameters["operation"];
 
-			int index = operation.IndexOf("-");
+			int index = operation.LastIndexOf("-");
 			if (index == -1)
 			{
 				switch (operation)
@@ -76,6 +76,10 @@ namespace Spludlow.MameAO
 
 					case "tosec":
 						core = new CoreTosec();
+						break;
+
+					case "no-intro":
+						core = new CoreNoIntro();
 						break;
 
 					default:
