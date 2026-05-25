@@ -120,6 +120,7 @@ namespace Spludlow.MameAO
 						break;
 
 					case "mssql-payload":
+					case "mssqlpayload":
 						ValidateRequiredParameters(parameters, new string[] { "server", "names" });
 						core.MSSqlPayload(parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
 						break;

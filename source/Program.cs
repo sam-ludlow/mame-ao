@@ -10,6 +10,8 @@ namespace Spludlow.MameAO
 			//args = new string[] { "no-intro-get", @"directory=C:\ao-data\no-intro" };
 			//args = new string[] { "no-intro-xml", @"directory=C:\ao-data\no-intro" };
 			//args = new string[] { "no-intro-mssql", @"directory=C:\ao-data\no-intro", "server=Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;", "names=ao-no-intro" };
+			//args = new string[] { "no-intro-mssqlpayload", @"directory=C:\ao-data\no-intro", "server=Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;", "names=ao-no-intro" };
+
 			if (args.Length > 0 && args[0].Contains("=") == false)
 				args[0] = $"operation={args[0]}";
 

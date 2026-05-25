@@ -2155,6 +2155,32 @@ namespace Spludlow.MameAO
 		}
 
 		//
+		// No-Intro
+		//
+		public static int NoIntroMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName)
+		{
+			directory = Path.Combine(directory, version);
+
+			//
+			// Metadata
+			//
+			string info;
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
+			{
+				int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
+				int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
+				int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
+
+				info = $"No-Intro: {version} - Datafiles: {datafileCount} - Games: {gameCount} - rom: {softRomCount}";
+
+				CreateMetaDataTable(connection, "no-intro", version, info);
+			}
+
+
+
+			return 0;
+		}
+		//
 		// TOSEC
 		//
 

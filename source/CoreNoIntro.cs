@@ -182,34 +182,29 @@ namespace Spludlow.MameAO
 
 				XElement document = XElement.Load(filename);
 
-				document.Descendants("game_id").Select(e => e.Name = "game_code");
+				foreach (var element in document.Descendants("game_id"))
+					element.Name = "game_code";
 
 				foreach (var element in document.Descendants("id"))
 					element.Name = "datafile_identity";
 
-
 				foreach (var game in document.Descendants("game"))
 				{
-					var idAttr = game.Attribute("id");
-
-					if (idAttr != null)
+					var attribute = game.Attribute("id");
+					if (attribute != null)
 					{
-						game.SetAttributeValue("game_identity", idAttr.Value);
-						idAttr.Remove();
+						game.SetAttributeValue("game_identity", attribute.Value);
+						attribute.Remove();
 					}
 				}
-				
+
 				foreach (var category in document.Descendants("category"))
-				{
 					category.SetAttributeValue("name", category.Value);
-				}
+
 				foreach (var element in document.Descendants("game_code"))
-				{
 					element.SetAttributeValue("name", element.Value);
-				}
 
 				document.Descendants("clrmamepro").Remove();
-
 
 				DataSet fileDataSet = new DataSet();
 				ReadXML.ImportXMLWork(document, fileDataSet, null, null);
@@ -223,7 +218,28 @@ namespace Spludlow.MameAO
 				Tools.DataFileMergeDataSet(fileDataSet, dataSet);
 			}
 
+			dataSet.Tables["datafile"].Columns.Remove("xsi");
+			dataSet.Tables["datafile"].Columns.Remove("schemaLocation");
+			dataSet.Tables["datafile"].Columns.Remove("homepage");
+			dataSet.Tables["datafile"].Columns.Remove("url");
+
+			foreach (DataRow row in dataSet.Tables["datafile"].Rows)
+			{
+				string subset = row.IsNull("subset") == false ? (string)row["subset"] : "no-intro";
+				row["subset"] = subset.ToLower().Replace(' ', '-');
+			}
+
+			dataSet.Tables["datafile"].AcceptChanges();
+
 			return dataSet;
+		}
+
+		void ICore.MSSqlPayload(string serverConnectionString, string[] databaseNames)
+		{
+			if (_Version == null)
+				_Version = LatestDownloadedVersion();
+
+			OperationsPayload.NoIntroMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
 
@@ -325,11 +341,6 @@ namespace Spludlow.MameAO
 		}
 
 
-
-		void ICore.MSSqlPayload(string serverConnectionString, string[] databaseNames)
-		{
-			throw new NotImplementedException();
-		}
 
 		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] players, string[] control, bool? mechanical, bool? clone, string order, string sort)
 		{
