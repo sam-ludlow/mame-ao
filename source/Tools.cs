@@ -444,7 +444,7 @@ namespace Spludlow.MameAO
 
 		public static string FetchTextCached(string url)
 		{
-			string filename = Path.Combine(Globals.CacheDirectory, Tools.ValidFileName(url.Substring(8)));
+			string filename = Path.Combine(Globals.CacheDirectory, Tools.ValidFileName(url.Substring(8)));	//	TODO http?
 		
 			string result = null;
 

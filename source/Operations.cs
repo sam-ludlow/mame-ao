@@ -78,6 +78,10 @@ namespace Spludlow.MameAO
 						core = new CoreTosec();
 						break;
 
+					case "redump":
+						core = new CoreRedump();
+						break;
+
 					case "no-intro":
 						core = new CoreNoIntro();
 						break;

@@ -83,6 +83,7 @@
     <Compile Include="source\CoreHbMame.cs" />
     <Compile Include="source\CoreMame.cs" />
     <Compile Include="source\CoreNoIntro.cs" />
+    <Compile Include="source\CoreRedump.cs" />
     <Compile Include="source\Cores.cs" />
     <Compile Include="source\CoreTosec.cs" />
     <Compile Include="source\Database.cs" />
