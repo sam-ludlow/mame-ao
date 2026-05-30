@@ -2176,6 +2176,112 @@ namespace Spludlow.MameAO
 				CreateMetaDataTable(connection, "no-intro", version, info);
 			}
 
+			//
+			// Source Data
+			//
+			var dataSet = new DataSet();
+			string[] subSetNames;
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
+			{
+				foreach (string tableName in Database.TableList(connection))
+				{
+					var table = Database.ExecuteFill(connection, $"SELECT * FROM [{tableName}];");		//	ORDER BY
+					table.TableName = tableName;
+					dataSet.Tables.Add(table);
+				}
+				subSetNames = Database.ExecuteFill(connection, "SELECT DISTINCT [subset] FROM [datafile] ORDER BY [subset];").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray();
+			}
+
+			//
+			// Payloads
+			//
+			DataTable subset_payload_table = MakePayloadDataTable("subset_payload", new string[] { "subset" });
+			DataTable datafile_payload_table = MakePayloadDataTable("datafile_payload", new string[] { "subset", "datafile_name" });
+			DataTable game_payload_table = MakePayloadDataTable("game_payload", new string[] { "subset", "datafile_name", "game_name" });
+
+			foreach (string subset in subSetNames)
+			{
+				StringBuilder subset_html = new StringBuilder();
+				string subset_title = $"{subset.ToUpper()} ({version})";
+				subset_html.AppendLine($"<h2>{subset}</h2>");
+				subset_html.AppendLine("<table>");
+				subset_html.AppendLine("<tr><th>Name</th><th>Version</th></tr>");
+
+				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Select($"[subset] = '{subset}'"))
+				{
+					long datafile_id = (long)datafileRow["datafile_id"];
+					string datafile_name = (string)datafileRow["name"];
+					string datafile_version = (string)datafileRow["version"];
+					string datafile_name_enc = Uri.EscapeDataString(datafile_name);
+
+					foreach (DataRow gameRow in dataSet.Tables["game"].Select($"[datafile_id] = {datafile_id}"))
+					{
+						long game_id = (long)gameRow["game_id"];
+						string game_name = (string)gameRow["name"];
+						string game_name_enc = Uri.EscapeDataString(game_name);
+
+						foreach (DataRow romRow in dataSet.Tables["rom"].Select($"[game_id] = {game_id}"))
+						{
+							string rom_name = (string)romRow["name"];
+							string rom_extention = Path.GetExtension(rom_name).ToLower();
+							string rom_size = romRow.Field<string>("size") ?? "";
+							//string crc = rom_size == 0 ? "" : (string)romRow["crc"];
+							//string md5 = rom_size == 0 ? "" : (string)romRow["md5"];
+							//string sha1 = rom_size == 0 ? "" : (string)romRow["sha1"];
+
+						}
+					}
+
+					subset_html.AppendLine($"<tr><td>{datafile_name}</td><td>{datafile_version}</td></tr>");
+				}
+
+				subset_html.AppendLine("</table>");
+				subset_payload_table.Rows.Add(subset, subset_title, "", "", subset_html.ToString());
+			}
+
+			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
+			{
+				MakeMSSQLPayloadsInsert(connection, subset_payload_table);
+				MakeMSSQLPayloadsInsert(connection, datafile_payload_table);
+				MakeMSSQLPayloadsInsert(connection, game_payload_table);
+
+				//
+				//	hash & name search
+				//
+				if (Database.IndexExists(connection, "rom", "IX_rom_name") == false)
+				{
+					Database.ExecuteNonQuery(connection, @"
+						CREATE NONCLUSTERED INDEX IX_rom_name
+						ON [rom] (name, game_id)
+						INCLUDE (size, sha1, crc);
+
+						CREATE NONCLUSTERED INDEX IX_rom_sha1
+						ON [rom] (sha1, game_id)
+						INCLUDE (name, size, crc);
+
+						CREATE NONCLUSTERED INDEX IX_rom_crc
+						ON [rom] (crc, game_id)
+						INCLUDE (name, size, sha1);
+					");
+				}
+
+				if (Database.FullTextColumnExists(connection, "game", "name") == false)
+					Database.ExecuteNonQuery(connection, @"
+						CREATE FULLTEXT INDEX ON [game]
+						(
+							[name],
+							[description]
+						)
+						KEY INDEX [PK_game]
+						ON [ao_catalog]
+						WITH CHANGE_TRACKING AUTO;
+					");
+
+				Tools.ConsolePrintMemory();
+			}
+
+
+
 
 
 			return 0;
