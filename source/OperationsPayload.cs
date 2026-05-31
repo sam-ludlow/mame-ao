@@ -2212,25 +2212,79 @@ namespace Spludlow.MameAO
 					string datafile_version = (string)datafileRow["version"];
 					string datafile_name_enc = Uri.EscapeDataString(datafile_name);
 
+					StringBuilder datafile_html = new StringBuilder();
+					string datafile_title = $"{datafile_name} ({datafile_version})";
+					datafile_html.AppendLine("<br />");
+					datafile_html.AppendLine($"<div><h2 style=\"display:inline;\">datafile</h2> &bull; <a href=\"{datafile_name_enc}.xml\">XML</a> &bull; <a href=\"{datafile_name_enc}.json\">JSON</a></div>");
+					datafile_html.AppendLine("<br />");
+					datafile_html.AppendLine(Reports.MakeHtmlTable(datafileRow.Table, new[] { datafileRow }, null));
+					datafile_html.AppendLine("<hr />");
+					datafile_html.AppendLine($"<h2>game</h2>");
+					datafile_html.AppendLine("<table>");
+					datafile_html.AppendLine("<tr><th>Name</th><th>Rom Count</th><th>Rom Size</th><th>Rom Bytes</th></tr>");
+
 					foreach (DataRow gameRow in dataSet.Tables["game"].Select($"[datafile_id] = {datafile_id}"))
 					{
 						long game_id = (long)gameRow["game_id"];
 						string game_name = (string)gameRow["name"];
 						string game_name_enc = Uri.EscapeDataString(game_name);
 
+						StringBuilder game_html = new StringBuilder();
+						string game_title = $"{datafile_name} - {game_name} ({datafile_version})";
+						game_html.AppendLine("<br />");
+						game_html.AppendLine($"<div><h2 style=\"display:inline;\">game</h2> &bull; <a href=\"{game_name_enc}.xml\">XML</a> &bull; <a href=\"{game_name_enc}.json\">JSON</a></div>");
+						game_html.AppendLine("<br />");
+						game_html.AppendLine(Reports.MakeHtmlTable(gameRow.Table, new[] { gameRow }, null));
+						game_html.AppendLine("<hr />");
+						game_html.AppendLine($"<h2>rom</h2>");
+						game_html.AppendLine("<table>");
+						game_html.AppendLine("<tr><th>Name</th><th>Size</th><th>Size Bytes</th><th>CRC32</th><th>MD5</th><th>SHA1</th></tr>");
+
 						foreach (DataRow romRow in dataSet.Tables["rom"].Select($"[game_id] = {game_id}"))
 						{
 							string rom_name = (string)romRow["name"];
 							string rom_extention = Path.GetExtension(rom_name).ToLower();
-							string rom_size = romRow.Field<string>("size") ?? "";
-							//string crc = rom_size == 0 ? "" : (string)romRow["crc"];
-							//string md5 = rom_size == 0 ? "" : (string)romRow["md5"];
-							//string sha1 = rom_size == 0 ? "" : (string)romRow["sha1"];
+							string rom_size = romRow.Field<string>("size") ?? "0";
+							string crc = romRow.Field<string>("crc");
+							string md5 = romRow.Field<string>("md5");
+							string sha1 = romRow.Field<string>("sha1");
 
+							game_html.AppendLine($"<tr><td>{rom_name}</td><td>{Tools.DataSize(0)}</td><td>{0}</td><td>{crc}</td><td>{md5}</td><td>{sha1}</td></tr>");
 						}
+
+						game_html.AppendLine("</table>");
+
+						//string gamePayloadKey = $"{datafile_name}\t{game_name}";
+						//string[] gamePayload;
+						//if (gamePayloads.ContainsKey(gamePayloadKey) == true)
+						//{
+						//	gamePayload = gamePayloads[gamePayloadKey];
+						//}
+						//else
+						//{
+						//	gamePayload = new string[] { "", "" };
+						//	Console.WriteLine($"!!! Did not find game payload:{gamePayloadKey}");
+						//}
+						game_payload_table.Rows.Add(subset, datafile_name, game_name, game_title, "", "", game_html.ToString());
+
+						datafile_html.AppendLine($"<tr><td><a href=\"{datafile_name_enc}/{game_name_enc}\">{game_name}</a></td><td>{0}</td><td>{Tools.DataSize(0)}</td><td>{0}</td></tr>");
 					}
 
-					subset_html.AppendLine($"<tr><td>{datafile_name}</td><td>{datafile_version}</td></tr>");
+					datafile_html.AppendLine("</table>");
+
+					//string[] datafilePayload;
+					//if (datafilePayloads.ContainsKey(datafile_name) == true)
+					//{
+					//	datafilePayload = datafilePayloads[datafile_name];
+					//}
+					//else
+					//{
+					//	datafilePayload = new string[] { "", "" };
+					//	Console.WriteLine($"!!! Did not find datafile payload:{datafile_name}");
+					//}
+					datafile_payload_table.Rows.Add(subset, datafile_name, datafile_title, "", "", datafile_html.ToString());
+
+					subset_html.AppendLine($"<tr><td><a href=\"{subset}/{datafile_name_enc}\">{datafile_name}</a></td><td>{datafile_version}</td></tr>");
 				}
 
 				subset_html.AppendLine("</table>");
@@ -2343,25 +2397,87 @@ namespace Spludlow.MameAO
 					string datafile_version = (string)datafileRow["version"];
 					string datafile_name_enc = Uri.EscapeDataString(datafile_name);
 
+					StringBuilder datafile_html = new StringBuilder();
+					string datafile_title = $"{datafile_name} ({datafile_version})";
+					datafile_html.AppendLine("<br />");
+					datafile_html.AppendLine($"<div><h2 style=\"display:inline;\">datafile</h2> &bull; <a href=\"{datafile_name_enc}.xml\">XML</a> &bull; <a href=\"{datafile_name_enc}.json\">JSON</a></div>");
+					datafile_html.AppendLine("<br />");
+					datafile_html.AppendLine(Reports.MakeHtmlTable(datafileRow.Table, new[] { datafileRow }, null));
+					datafile_html.AppendLine("<hr />");
+					datafile_html.AppendLine($"<h2>game</h2>");
+					datafile_html.AppendLine("<table>");
+					datafile_html.AppendLine("<tr><th>Name</th><th>Rom Count</th><th>Rom Size</th><th>Rom Bytes</th></tr>");
+
 					foreach (DataRow gameRow in dataSet.Tables["game"].Select($"[datafile_id] = {datafile_id}"))
 					{
 						long game_id = (long)gameRow["game_id"];
 						string game_name = (string)gameRow["name"];
+						string game_identity = (string)gameRow["game_identity"];
 						string game_name_enc = Uri.EscapeDataString(game_name);
+
+						StringBuilder game_html = new StringBuilder();
+						string game_title = $"{datafile_name} - {game_name} ({datafile_version})";
+						game_html.AppendLine("<br />");
+						game_html.AppendLine($"<div><h2 style=\"display:inline;\">game</h2> &bull; <a href=\"{game_name_enc}.xml\">XML</a> &bull; <a href=\"{game_name_enc}.json\">JSON</a></div>");
+						game_html.AppendLine("<br />");
+						game_html.AppendLine(Reports.MakeHtmlTable(gameRow.Table, new[] { gameRow }, null));
+						game_html.AppendLine("<hr />");
+						game_html.AppendLine($"<h2>rom</h2>");
+						game_html.AppendLine("<table>");
+						game_html.AppendLine("<tr><th>Name</th><th>Size</th><th>Size Bytes</th><th>CRC32</th><th>MD5</th><th>SHA1</th></tr>");
 
 						foreach (DataRow romRow in dataSet.Tables["rom"].Select($"[game_id] = {game_id}"))
 						{
 							string rom_name = (string)romRow["name"];
 							string rom_extention = Path.GetExtension(rom_name).ToLower();
-							string rom_size = romRow.Field<string>("size") ?? "";
-							//string crc = rom_size == 0 ? "" : (string)romRow["crc"];
-							//string md5 = rom_size == 0 ? "" : (string)romRow["md5"];
-							//string sha1 = rom_size == 0 ? "" : (string)romRow["sha1"];
+							string rom_size = romRow.Field<string>("size") ?? "0";
+							string crc = romRow.Field<string>("crc");
+							string md5 = romRow.Field<string>("md5");
+							string sha1 = romRow.Field<string>("sha1");
 
+							game_html.AppendLine($"<tr><td>{rom_name}</td><td>{Tools.DataSize(0)}</td><td>{0}</td><td>{crc}</td><td>{md5}</td><td>{sha1}</td></tr>");
 						}
+
+						game_html.AppendLine("</table>");
+
+						//string gamePayloadKey = $"{datafile_name}\t{game_name}";
+						//string[] gamePayload;
+						//if (gamePayloads.ContainsKey(gamePayloadKey) == true)
+						//{
+						//	gamePayload = gamePayloads[gamePayloadKey];
+						//}
+						//else
+						//{
+						//	gamePayload = new string[] { "", "" };
+						//	Console.WriteLine($"!!! Did not find game payload:{gamePayloadKey}");
+						//}
+
+						//
+						// TODO: Datafix duplicates better
+						//
+						if (game_payload_table.Rows.Find(new object[] { subset, datafile_name, game_name }) != null)
+							Console.WriteLine($"!!! Duplicate game name {subset}\t{datafile_name}\t{game_name}");
+						else
+							game_payload_table.Rows.Add(subset, datafile_name, game_name, game_title, "", "", game_html.ToString());
+
+						datafile_html.AppendLine($"<tr><td><a href=\"{datafile_name_enc}/{game_name_enc}\">{game_name}</a></td><td>{0}</td><td>{Tools.DataSize(0)}</td><td>{0}</td></tr>");
 					}
 
-					subset_html.AppendLine($"<tr><td>{datafile_name}</td><td>{datafile_version}</td></tr>");
+					datafile_html.AppendLine("</table>");
+
+					//string[] datafilePayload;
+					//if (datafilePayloads.ContainsKey(datafile_name) == true)
+					//{
+					//	datafilePayload = datafilePayloads[datafile_name];
+					//}
+					//else
+					//{
+					//	datafilePayload = new string[] { "", "" };
+					//	Console.WriteLine($"!!! Did not find datafile payload:{datafile_name}");
+					//}
+					datafile_payload_table.Rows.Add(subset, datafile_name, datafile_title, "", "", datafile_html.ToString());
+
+					subset_html.AppendLine($"<tr><td><a href=\"{subset}/{datafile_name_enc}\">{datafile_name}</a></td><td>{datafile_version}</td></tr>");
 				}
 
 				subset_html.AppendLine("</table>");
