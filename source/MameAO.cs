@@ -829,6 +829,9 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			if (Globals.Settings.Options["SnapNative"] == "Yes")
 				arguments += " -snapview native";
 
+			if (Globals.Settings.Options["Window"] == "Yes")
+				arguments += " -window";
+
 			if (Globals.Settings.Options["SnapHome"] == "Yes")
 				Snap.CollectSnaps(machine);
 

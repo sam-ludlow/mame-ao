@@ -16,36 +16,36 @@ namespace Spludlow.MameAO
 
 			string operation = parameters["operation"];
 
-			int index = operation.LastIndexOf("-");
+			int index = operation.IndexOf("_");
 			if (index == -1)
 			{
 				switch (operation)
 				{
-					case "snap_machine":
+					case "snap-machine":
 						ValidateRequiredParameters(parameters, new string[] { "source", "target" });
 						Snap.ImportSnapMachine(parameters["source"], parameters["target"]);
 						break;
 
-					case "snap_software":
+					case "snap-software":
 						ValidateRequiredParameters(parameters, new string[] { "source", "target" });
 						Snap.ImportSnapSoftware(parameters["source"], parameters["target"]);
 						break;
 
-					case "snap_index":
+					case "snap-index":
 						Snap.IndexSnapDirectory(Path.Combine(parameters["directory"]));
 						break;
 
-					case "process_phone_home":
+					case "process-phone-home":
 						ValidateRequiredParameters(parameters, new string[] { "database", "server", "names" });
 						PhoneHome.ProcessPhoneHome(parameters["directory"], parameters["database"], parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
 						break;
 
-					case "approve_phone_home":
+					case "approve-phone-home":
 						ValidateRequiredParameters(parameters, new string[] { "database" });
 						PhoneHome.ApprovePhoneHome(parameters["directory"], parameters["database"]);
 						break;
 
-					case "update_pugsys_cheats":
+					case "update-pugsys-cheats":
 						ValidateRequiredParameters(parameters, new string[] { "server", "names" });
 						exitCode = Cheats.UpdateFromPugsy(parameters["directory"], parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
 						break;
@@ -124,7 +124,6 @@ namespace Spludlow.MameAO
 						break;
 
 					case "mssql-payload":
-					case "mssqlpayload":
 						ValidateRequiredParameters(parameters, new string[] { "server", "names" });
 						core.MSSqlPayload(parameters["server"], parameters["names"].Split(',').Select(name => name.Trim()).ToArray());
 						break;
