@@ -2157,6 +2157,47 @@ namespace Spludlow.MameAO
 		//
 		// Redump
 		//
+
+		public static Dictionary<string, string[]>[] RedumpDatafileGameXmlJsonPayloads(string directory)
+		{
+			Dictionary<string, string[]> datafilePayloads = new Dictionary<string, string[]>();
+			Dictionary<string, string[]> gamePayloads = new Dictionary<string, string[]>();
+
+			foreach (string filename in Directory.GetFiles(directory, "*.xml"))
+			{
+				using (XmlReader reader = XmlReader.Create(filename, _XmlReaderSettings))
+				{
+					while (reader.Read())
+					{
+						while (reader.NodeType == XmlNodeType.Element && reader.Name == "datafile")
+						{
+							if (XElement.ReadFrom(reader) is XElement datafileElement)
+							{
+								string datafile_name = datafileElement.Element("header").Element("name").Value;
+
+								string xml = datafileElement.ToString();
+								string json = Tools.XML2JSON(datafileElement);
+
+								datafilePayloads.Add(datafile_name, new string[] { xml, json });
+								foreach (XElement element in datafileElement.Elements("game"))
+								{
+									string game_name = element.Attribute("name").Value;
+
+									xml = element.ToString();
+									json = Tools.XML2JSON(element);
+
+									gamePayloads.Add($"{datafile_name}\t{game_name}", new string[] { xml, json });
+								}
+							}
+						}
+					}
+				}
+			}
+
+			return new Dictionary<string, string[]>[] { datafilePayloads, gamePayloads };
+		}
+
+
 		public static int RedumpMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName)
 		{
 			directory = Path.Combine(directory, version);
@@ -2196,6 +2237,10 @@ namespace Spludlow.MameAO
 			DataTable subset_payload_table = MakePayloadDataTable("subset_payload", new string[] { "subset" });
 			DataTable datafile_payload_table = MakePayloadDataTable("datafile_payload", new string[] { "subset", "datafile_name" });
 			DataTable game_payload_table = MakePayloadDataTable("game_payload", new string[] { "subset", "datafile_name", "game_name" });
+
+			var xmlJsonPayloads = RedumpDatafileGameXmlJsonPayloads(directory);
+			var datafilePayloads = xmlJsonPayloads[0];
+			var gamePayloads = xmlJsonPayloads[1];
 
 			foreach (string subset in new string[] { "redump" })
 			{
@@ -2254,35 +2299,24 @@ namespace Spludlow.MameAO
 
 						game_html.AppendLine("</table>");
 
-						//string gamePayloadKey = $"{datafile_name}\t{game_name}";
-						//string[] gamePayload;
-						//if (gamePayloads.ContainsKey(gamePayloadKey) == true)
-						//{
-						//	gamePayload = gamePayloads[gamePayloadKey];
-						//}
-						//else
-						//{
-						//	gamePayload = new string[] { "", "" };
-						//	Console.WriteLine($"!!! Did not find game payload:{gamePayloadKey}");
-						//}
-						game_payload_table.Rows.Add(subset, datafile_name, game_name, game_title, "", "", game_html.ToString());
+						string gamePayloadKey = $"{datafile_name}\t{game_name}";
+						if (gamePayloads.ContainsKey(gamePayloadKey) == false)
+							throw new ApplicationException($"Did not find game payload {gamePayloadKey}");
+						var gamePayload = gamePayloads[gamePayloadKey];
+
+						game_payload_table.Rows.Add(subset, datafile_name, game_name, game_title, gamePayload[0], gamePayload[1], game_html.ToString());
 
 						datafile_html.AppendLine($"<tr><td><a href=\"{datafile_name_enc}/{game_name_enc}\">{game_name}</a></td><td>{0}</td><td>{Tools.DataSize(0)}</td><td>{0}</td></tr>");
 					}
 
 					datafile_html.AppendLine("</table>");
 
-					//string[] datafilePayload;
-					//if (datafilePayloads.ContainsKey(datafile_name) == true)
-					//{
-					//	datafilePayload = datafilePayloads[datafile_name];
-					//}
-					//else
-					//{
-					//	datafilePayload = new string[] { "", "" };
-					//	Console.WriteLine($"!!! Did not find datafile payload:{datafile_name}");
-					//}
-					datafile_payload_table.Rows.Add(subset, datafile_name, datafile_title, "", "", datafile_html.ToString());
+
+					if (datafilePayloads.ContainsKey(datafile_name) == false)
+						throw new ApplicationException($"Did not find datafile payload {datafile_name}");
+					var datafilePayload = datafilePayloads[datafile_name];
+
+					datafile_payload_table.Rows.Add(subset, datafile_name, datafile_title, datafilePayload[0], datafilePayload[1], datafile_html.ToString());
 
 					subset_html.AppendLine($"<tr><td><a href=\"{subset}/{datafile_name_enc}\">{datafile_name}</a></td><td>{datafile_version}</td></tr>");
 				}
@@ -2340,6 +2374,45 @@ namespace Spludlow.MameAO
 		//
 		// No-Intro
 		//
+		public static Dictionary<string, string[]>[] NoIntroDatafileGameXmlJsonPayloads(string filename)
+		{
+			Dictionary<string, string[]> datafilePayloads = new Dictionary<string, string[]>();
+			Dictionary<string, string[]> gamePayloads = new Dictionary<string, string[]>();
+
+			using (XmlReader reader = XmlReader.Create(filename, _XmlReaderSettings))
+			{
+				while (reader.Read())
+				{
+					while (reader.NodeType == XmlNodeType.Element && reader.Name == "datafile")
+					{
+						if (XElement.ReadFrom(reader) is XElement datafileElement)
+						{
+							string datafile_name = datafileElement.Element("header").Element("name").Value;
+
+							string xml = datafileElement.ToString();
+							string json = Tools.XML2JSON(datafileElement);
+
+							datafilePayloads.Add(datafile_name, new string[] { xml, json });
+							foreach (XElement element in datafileElement.Elements("game"))
+							{
+								string game_name = element.Attribute("name").Value;
+
+								xml = element.ToString();
+								json = Tools.XML2JSON(element);
+
+								string key = $"{datafile_name}\t{game_name}";
+								if (gamePayloads.ContainsKey(key) == false)
+									gamePayloads.Add(key, new string[] { xml, json });
+								else
+									Console.WriteLine($"TODO fix dup issue: {key}");
+							}
+						}
+					}
+				}
+			}
+
+			return new Dictionary<string, string[]>[] { datafilePayloads, gamePayloads };
+		}
 		public static int NoIntroMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName)
 		{
 			directory = Path.Combine(directory, version);
@@ -2384,6 +2457,10 @@ namespace Spludlow.MameAO
 
 			foreach (string subset in subSetNames)
 			{
+				var xmlJsonPayloads = NoIntroDatafileGameXmlJsonPayloads(Path.Combine(directory, $"{subset}.xml"));
+				var datafilePayloads = xmlJsonPayloads[0];
+				var gamePayloads = xmlJsonPayloads[1];
+
 				StringBuilder subset_html = new StringBuilder();
 				string subset_title = $"{subset.ToUpper()} ({version})";
 				subset_html.AppendLine($"<h2>{subset}</h2>");
@@ -2440,17 +2517,10 @@ namespace Spludlow.MameAO
 
 						game_html.AppendLine("</table>");
 
-						//string gamePayloadKey = $"{datafile_name}\t{game_name}";
-						//string[] gamePayload;
-						//if (gamePayloads.ContainsKey(gamePayloadKey) == true)
-						//{
-						//	gamePayload = gamePayloads[gamePayloadKey];
-						//}
-						//else
-						//{
-						//	gamePayload = new string[] { "", "" };
-						//	Console.WriteLine($"!!! Did not find game payload:{gamePayloadKey}");
-						//}
+						string gamePayloadKey = $"{datafile_name}\t{game_name}";
+						if (gamePayloads.ContainsKey(gamePayloadKey) == false)
+							throw new ApplicationException($"Game payload not found: {gamePayloadKey}");
+						var gamePayload = gamePayloads[gamePayloadKey];
 
 						//
 						// TODO: Datafix duplicates better
@@ -2458,24 +2528,18 @@ namespace Spludlow.MameAO
 						if (game_payload_table.Rows.Find(new object[] { subset, datafile_name, game_name }) != null)
 							Console.WriteLine($"!!! Duplicate game name {subset}\t{datafile_name}\t{game_name}");
 						else
-							game_payload_table.Rows.Add(subset, datafile_name, game_name, game_title, "", "", game_html.ToString());
+							game_payload_table.Rows.Add(subset, datafile_name, game_name, game_title, gamePayload[0], gamePayload[1], game_html.ToString());
 
 						datafile_html.AppendLine($"<tr><td><a href=\"{datafile_name_enc}/{game_name_enc}\">{game_name}</a></td><td>{0}</td><td>{Tools.DataSize(0)}</td><td>{0}</td></tr>");
 					}
 
 					datafile_html.AppendLine("</table>");
 
-					//string[] datafilePayload;
-					//if (datafilePayloads.ContainsKey(datafile_name) == true)
-					//{
-					//	datafilePayload = datafilePayloads[datafile_name];
-					//}
-					//else
-					//{
-					//	datafilePayload = new string[] { "", "" };
-					//	Console.WriteLine($"!!! Did not find datafile payload:{datafile_name}");
-					//}
-					datafile_payload_table.Rows.Add(subset, datafile_name, datafile_title, "", "", datafile_html.ToString());
+					if (datafilePayloads.ContainsKey(datafile_name) == false)
+						throw new ApplicationException($"Datafile payload not found: {datafile_name}");
+					var datafilePayload = datafilePayloads[datafile_name];
+
+					datafile_payload_table.Rows.Add(subset, datafile_name, datafile_title, datafilePayload[0], datafilePayload[1], datafile_html.ToString());
 
 					subset_html.AppendLine($"<tr><td><a href=\"{subset}/{datafile_name_enc}\">{datafile_name}</a></td><td>{datafile_version}</td></tr>");
 				}

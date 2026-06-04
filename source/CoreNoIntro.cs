@@ -142,7 +142,7 @@ namespace Spludlow.MameAO
 			{
 				XmlDocument doc = subsetDocuments[subset];
 
-				string targetFilename = Path.Combine(_CoreDirectory, subset.ToLower() + ".xml");
+				string targetFilename = Path.Combine(_CoreDirectory, subset.ToLower().Replace(' ', '-') + ".xml");
 
 				XmlWriterSettings settings = new XmlWriterSettings
 				{
