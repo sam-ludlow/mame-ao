@@ -2223,9 +2223,9 @@ namespace Spludlow.MameAO
 			var dataSet = new DataSet();
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
 			{
-				foreach (string tableName in Database.TableList(connection))
+				foreach (string tableName in new string[] { "datafile", "game", "rom" })
 				{
-					var table = Database.ExecuteFill(connection, $"SELECT * FROM [{tableName}];");      //	ORDER BY
+					var table = Database.ExecuteFill(connection, $"SELECT * FROM [{tableName}] ORDER BY [name];");
 					table.TableName = tableName;
 					dataSet.Tables.Add(table);
 				}
@@ -2439,12 +2439,13 @@ namespace Spludlow.MameAO
 			string[] subSetNames;
 			using (SqlConnection connection = new SqlConnection(serverConnectionString + $"Database='{databaseName}';"))
 			{
-				foreach (string tableName in Database.TableList(connection))
+				foreach (string tableName in new string[] { "datafile", "game", "rom" })
 				{
-					var table = Database.ExecuteFill(connection, $"SELECT * FROM [{tableName}];");		//	ORDER BY
+					var table = Database.ExecuteFill(connection, $"SELECT * FROM [{tableName}] ORDER BY [name];");
 					table.TableName = tableName;
 					dataSet.Tables.Add(table);
 				}
+
 				subSetNames = Database.ExecuteFill(connection, "SELECT DISTINCT [subset] FROM [datafile] ORDER BY [subset];").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray();
 			}
 

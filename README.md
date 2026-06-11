@@ -322,60 +322,76 @@ For `get` operations if a new version if found the exit code will be set to 1.
 ### MAME
 |Operation|Description|Example|
 |:----|:----|:----|
-| mame-get | Download and extract MAME binaries. | `mame-ao.exe mame-get directory="C:\ao-data\mame"` |
-| mame-xml | Extract XML from MAME. | `mame-ao.exe mame-xml directory="C:\ao-data\mame"` |
-| mame-json | Convert XML to JSON. | `mame-ao.exe mame-json directory="C:\ao-data\mame"` |
-| mame-sqlite | Convert XML to SQLite. | `mame-ao.exe mame-sqlite directory="C:\ao-data\mame"` |
-| mame-msaccess | Convert XML to MS Access. | `mame-ao.exe mame-msaccess directory="C:\ao-data\mame"` |
-| mame-zips | Compress things. | `mame-ao.exe mame-zips directory="C:\ao-data\mame"` |
-| mame-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe mame-mssql directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
-| mame-mssql-payload | Create web payload tables. | `mame-ao.exe mame-mssql-payload directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
+| mame_get | Get MAME | `mame-ao.exe mame_get directory="C:\ao-data\mame"` |
+| mame_xml | Extract XML | `mame-ao.exe mame_xml directory="C:\ao-data\mame"` |
+| mame_json | JSON | `mame-ao.exe mame_json directory="C:\ao-data\mame"` |
+| mame_sqlite | SQLite | `mame-ao.exe mame_sqlite directory="C:\ao-data\mame"` |
+| mame_msaccess | MS Access | `mame-ao.exe mame_msaccess directory="C:\ao-data\mame"` |
+| mame_zips | ZIPs | `mame-ao.exe mame_zips directory="C:\ao-data\mame"` |
+| mame_mssql | MS SQL | `mame-ao.exe mame_mssql directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
+| mame_mssql-payload | Web payloads | `mame-ao.exe mame_mssql-payload directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
 
 ### HBMAME
 |Operation|Description|Example|
 |:----|:----|:----|
-| hbmame-get | Download and extract HBMAME binaries. | `mame-ao.exe hbmame-get directory="C:\ao-data\hbmame"` |
-| hbmame-xml | Extract XML from HBMAME. | `mame-ao.exe hbmame-xml directory="C:\ao-data\hbmame"` |
-| hbmame-json | Convert XML to JSON. | `mame-ao.exe hbmame-json directory="C:\ao-data\hbmame"` |
-| hbmame-sqlite | Convert XML to SQLite. | `mame-ao.exe hbmame-sqlite directory="C:\ao-data\hbmame"` |
-| hbmame-msaccess | Convert XML to MS Access. | `mame-ao.exe hbmame-msaccess directory="C:\ao-data\mame"` |
-| hbmame-zips | Compress things. | `mame-ao.exe hbmame-zips directory="C:\ao-data\mame"` |
-| hbmame-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe hbmame-mssql directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
-| hbmame-mssql-payload | Create web payload tables. | `mame-ao.exe hbmame-mssql-payload directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
+| hbmame_get | Get HBMAME | `mame-ao.exe hbmame_get directory="C:\ao-data\hbmame"` |
+| hbmame_xml | Extract XML | `mame-ao.exe hbmame_xml directory="C:\ao-data\hbmame"` |
+| hbmame_json | JSON | `mame-ao.exe hbmame_json directory="C:\ao-data\hbmame"` |
+| hbmame_sqlite | SQLite | `mame-ao.exe hbmame_sqlite directory="C:\ao-data\hbmame"` |
+| hbmame_msaccess | MS Access | `mame-ao.exe hbmame_msaccess directory="C:\ao-data\mame"` |
+| hbmame_zips | ZIPs | `mame-ao.exe hbmame_zips directory="C:\ao-data\mame"` |
+| hbmame_mssql | MS SQL | `mame-ao.exe hbmame_mssql directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
+| hbmame_mssql-payload | Web payloads | `mame-ao.exe hbmame_mssql-payload directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
 
 ### FBNeo
 |Operation|Description|Example|
 |:----|:----|:----|
-| fbneo-get | Download and extract FBNeo binaries. | `mame-ao.exe fbneo-get directory="C:\ao-data\fbneo"` |
-| fbneo-xml | Extract XML from FBNeo. | `mame-ao.exe fbneo-xml directory="C:\ao-data\fbneo"` |
-| fbneo-json | Convert XML to JSON. | `mame-ao.exe fbneo-json directory="C:\ao-data\fbneo"` |
-| fbneo-sqlite | Convert XML to SQLite. | `mame-ao.exe fbneo-sqlite directory="C:\ao-data\fbneo"` |
-| fbneo-msaccess | Convert XML to MS Access. | `mame-ao.exe fbneo-msaccess directory="C:\ao-data\mame"` |
-| fbneo-zips | Compress things. | `mame-ao.exe fbneo-zips directory="C:\ao-data\mame"` |
-| fbneo-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe fbneo-mssql directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
-| fbneo-mssql-payload | Create web payload tables. | `mame-ao.exe fbneo-mssql-payload directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
+| fbneo_get | Get FBNeo | `mame-ao.exe fbneo_get directory="C:\ao-data\fbneo"` |
+| fbneo_xml | Extract XML | `mame-ao.exe fbneo_xml directory="C:\ao-data\fbneo"` |
+| fbneo_json | JSON | `mame-ao.exe fbneo_json directory="C:\ao-data\fbneo"` |
+| fbneo_sqlite | SQLite | `mame-ao.exe fbneo_sqlite directory="C:\ao-data\fbneo"` |
+| fbneo_msaccess | MS Access | `mame-ao.exe fbneo_msaccess directory="C:\ao-data\mame"` |
+| fbneo_zips | ZIPs | `mame-ao.exe fbneo_zips directory="C:\ao-data\mame"` |
+| fbneo_mssql | MS SQL | `mame-ao.exe fbneo_mssql directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
+| fbneo_mssql-payload | Web payloads | `mame-ao.exe fbneo_mssql-payload directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
 
 ### TOSEC
 |Operation|Description|Example|
 |:----|:----|:----|
-| tosec-get | Download TOSEC and extract XML. | `mame-ao.exe tosec-get directory="C:\ao-data\tosec"` |
-| tosec-xml | Extract XML from FBNeo. | `mame-ao.exe tosec-xml directory="C:\ao-data\tosec"` |
-| tosec-json | Convert XML to JSON. | `mame-ao.exe tosec-json directory="C:\ao-data\tosec"` |
-| tosec-sqlite | Convert XML to SQLite. | `mame-ao.exe tosec-sqlite directory="C:\ao-data\tosec"` |
-| tosec-msaccess | Convert XML to MS Access. | `mame-ao.exe tosec-msaccess directory="C:\ao-data\mame"` |
-| tosec-zips | Compress things. | `mame-ao.exe tosec-zips directory="C:\ao-data\mame"` |
-| tosec-mssql | Convert XML to Microsoft SQL. | `mame-ao.exe tosec-mssql directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
-| tosec-mssql-payload | Create web payload tables. | `mame-ao.exe tosec-mssql-payload directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
+| tosec_get | Get TOSEC | `mame-ao.exe tosec_get directory="C:\ao-data\tosec"` |
+| tosec_xml | Extract XML | `mame-ao.exe tosec_xml directory="C:\ao-data\tosec"` |
+| tosec_json | JSON | `mame-ao.exe tosec_json directory="C:\ao-data\tosec"` |
+| tosec_sqlite | SQLite | `mame-ao.exe tosec_sqlite directory="C:\ao-data\tosec"` |
+| tosec_msaccess | MS Access | `mame-ao.exe tosec_msaccess directory="C:\ao-data\mame"` |
+| tosec_zips | ZIPs | `mame-ao.exe tosec_zips directory="C:\ao-data\mame"` |
+| tosec_mssql | MS SQL | `mame-ao.exe tosec_mssql directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
+| tosec_mssql-payload | Web payloads | `mame-ao.exe tosec_mssql-payload directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
+
+### Redump
+|Operation|Description|Example|
+|:----|:----|:----|
+| redump_get | Get Redump | `.\mame-ao.exe redump_get directory="C:\ao-data\redump"` |
+| redump_xml | Extract XML | `.\mame-ao.exe redump_xml directory="C:\ao-data\redump"` |
+| redump_mssql | MS SQL | `.\mame-ao.exe redump_mssql directory="C:\ao-data\redump" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-redump"` |
+| redump_mssql-payload | Web payloads | `.\mame-ao.exe redump_mssql-payload directory="C:\ao-data\redump" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-redump"` |
+
+### No-Intro
+|Operation|Description|Example|
+|:----|:----|:----|
+| no-intro_get | Get No-Intro | `.\mame-ao.exe no-intro_get directory="C:\ao-data\no-intro"` |
+| no-intro_xml | Extract XML | `.\mame-ao.exe no-intro_xml directory="C:\ao-data\no-intro"` |
+| no-intro_mssql | MS SQL | `.\mame-ao.exe no-intro_mssql directory="C:\ao-data\no-intro" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-no-intro"` |
+| no-intro_mssql-payload | Web payloads | `.\mame-ao.exe no-intro_mssql-payload directory="C:\ao-data\no-intro" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-no-intro"` |
 
 ### Spludlow Data Web Operations
 |Operation|Description|Example|
 |:----|:----|:----|
-| snap_machine | Import machine snaps. | `mame-ao.exe snap_machine source="C:\ao-data\snap-temp\mame" target="C:\ao-data\snap\mame"` |
-| snap_software | Import software snaps. | `mame-ao.exe snap_software source="C:\ao-data\snap-temp\mame" target="C:\ao-data\snap\mame"` |
-| snap_index | Index the PNG files (`_index.txt`). | `mame-ao.exe snap_index directory="C:\ao-data\snap\mame\png"` |
-| process_phone_home | Process snap home uploads (Task Scheduler). | `mame-ao.exe process_phone_home directory=C:\ao-data database="Server='my-mssql-server';Database='ao-master';Integrated Security=True;TrustServerCertificate=True;" server="Server='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-hbmame-machine"` |
-| approve_phone_home | Process approved snaps export to temp directory ready to import.  | `mame-ao.exe approve_phone_home directory="C:\ao-data" database="Server='my-mssql-server';Database='ao-master';Integrated Security=True;TrustServerCertificate=True;"` |
-| update_pugsys_cheats | Process Pugsy's cheats | `mame-ao.exe update_pugsys_cheats directory="C:\ao-data\cheat\mame" server="Server='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
+| snap-machine | Import machine snaps | `.\mame-ao.exe snap-machine source="C:\ao-data\snap-temp\mame" target="C:\ao-data\snap\mame"` |
+| snap-software | Import software snaps | `.\mame-ao.exe snap-software source="C:\ao-data\snap-temp\mame" target="C:\ao-data\snap\mame"` |
+| snap-index | Index the PNG files (`_index.txt`) | `.\mame-ao.exe snap-index directory="C:\ao-data\snap\mame\png"` |
+| process-phone-home | Process snap home uploads (Task Scheduler) | `.\mame-ao.exe process-phone-home directory=C:\ao-data database="Server='my-mssql-server';Database='ao-master';Integrated Security=True;TrustServerCertificate=True;" server="Server='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-hbmame-machine"` |
+| approve-phone-home | Process approved snaps export to temp directory ready to import | `.\mame-ao.exe approve-phone-home directory="C:\ao-data" database="Server='my-mssql-server';Database='ao-master';Integrated Security=True;TrustServerCertificate=True;"` |
+| update-pugsys-cheats | Process Pugsy's cheats | `.\mame-ao.exe update-pugsys-cheats directory="C:\ao-data\cheat\mame" server="Server='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
 
 ## Internal Workings
 

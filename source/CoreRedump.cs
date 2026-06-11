@@ -54,7 +54,7 @@ namespace Spludlow.MameAO
 
 		int ICore.Get()
 		{
-			string url = "http://redump.org/downloads/";
+			string url = "http://redump.org/downloads/";	//	Can take a while/fail client timeout?
 			string html;
 
 			try

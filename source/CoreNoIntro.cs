@@ -52,6 +52,7 @@ namespace Spludlow.MameAO
 
 		int ICore.Get()
 		{
+			//	https://datomatic.no-intro.org/index.php?page=download&s=64&op=daily
 			string importDirectory = @"C:\tmp\No-Intro";
 
 			string[] filenames = Directory.GetFiles(importDirectory, "*.zip");
