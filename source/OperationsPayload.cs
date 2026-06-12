@@ -2248,7 +2248,7 @@ namespace Spludlow.MameAO
 				string subset_title = $"{subset.ToUpper()} ({version})";
 				subset_html.AppendLine($"<h2>{subset}</h2>");
 				subset_html.AppendLine("<table>");
-				subset_html.AppendLine("<tr><th>Name</th><th>Version</th></tr>");
+				subset_html.AppendLine("<tr><th>Name</th><th>Version</th><th>Game Count</th><th>Rom Count</th><th>Rom Size</th><th>Rom Bytes</th></tr>");
 
 				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Rows)
 				{
@@ -2256,6 +2256,10 @@ namespace Spludlow.MameAO
 					string datafile_name = (string)datafileRow["name"];
 					string datafile_version = (string)datafileRow["version"];
 					string datafile_name_enc = Uri.EscapeDataString(datafile_name);
+
+					long datafile_game_count = 0;
+					long datafile_rom_count = 0;
+					long datafile_rom_size = 0;
 
 					StringBuilder datafile_html = new StringBuilder();
 					string datafile_title = $"{datafile_name} ({datafile_version})";
@@ -2274,6 +2278,9 @@ namespace Spludlow.MameAO
 						string game_name = (string)gameRow["name"];
 						string game_name_enc = Uri.EscapeDataString(game_name);
 
+						long game_rom_count = 0;
+						long game_rom_size = 0;
+
 						StringBuilder game_html = new StringBuilder();
 						string game_title = $"{datafile_name} - {game_name} ({datafile_version})";
 						game_html.AppendLine("<br />");
@@ -2289,12 +2296,15 @@ namespace Spludlow.MameAO
 						{
 							string rom_name = (string)romRow["name"];
 							string rom_extention = Path.GetExtension(rom_name).ToLower();
-							string rom_size = romRow.Field<string>("size") ?? "0";
+							long rom_size = Int64.Parse(romRow.Field<string>("size") ?? "0");
 							string crc = romRow.Field<string>("crc");
 							string md5 = romRow.Field<string>("md5");
 							string sha1 = romRow.Field<string>("sha1");
 
-							game_html.AppendLine($"<tr><td>{rom_name}</td><td>{Tools.DataSize(0)}</td><td>{0}</td><td>{crc}</td><td>{md5}</td><td>{sha1}</td></tr>");
+							++game_rom_count;
+							game_rom_size += rom_size;
+
+							game_html.AppendLine($"<tr><td>{rom_name}</td><td>{Tools.DataSize(rom_size)}</td><td>{rom_size}</td><td>{crc}</td><td>{md5}</td><td>{sha1}</td></tr>");
 						}
 
 						game_html.AppendLine("</table>");
@@ -2304,9 +2314,13 @@ namespace Spludlow.MameAO
 							throw new ApplicationException($"Did not find game payload {gamePayloadKey}");
 						var gamePayload = gamePayloads[gamePayloadKey];
 
+						++datafile_game_count;
+						datafile_rom_count += game_rom_count;
+						datafile_rom_size += game_rom_size;
+
 						game_payload_table.Rows.Add(subset, datafile_name, game_name, game_title, gamePayload[0], gamePayload[1], game_html.ToString());
 
-						datafile_html.AppendLine($"<tr><td><a href=\"{datafile_name_enc}/{game_name_enc}\">{game_name}</a></td><td>{0}</td><td>{Tools.DataSize(0)}</td><td>{0}</td></tr>");
+						datafile_html.AppendLine($"<tr><td><a href=\"{datafile_name_enc}/{game_name_enc}\">{game_name}</a></td><td>{game_rom_count}</td><td>{Tools.DataSize(game_rom_size)}</td><td>{game_rom_size}</td></tr>");
 					}
 
 					datafile_html.AppendLine("</table>");
@@ -2318,7 +2332,7 @@ namespace Spludlow.MameAO
 
 					datafile_payload_table.Rows.Add(subset, datafile_name, datafile_title, datafilePayload[0], datafilePayload[1], datafile_html.ToString());
 
-					subset_html.AppendLine($"<tr><td><a href=\"{subset}/{datafile_name_enc}\">{datafile_name}</a></td><td>{datafile_version}</td></tr>");
+					subset_html.AppendLine($"<tr><td><a href=\"{subset}/{datafile_name_enc}\">{datafile_name}</a></td><td>{datafile_version}</td><td>{datafile_game_count}</td><td>{datafile_rom_count}</td><td>{Tools.DataSize(datafile_rom_size)}</td><td>{datafile_rom_size}</td></tr>");
 				}
 
 				subset_html.AppendLine("</table>");
@@ -2466,7 +2480,7 @@ namespace Spludlow.MameAO
 				string subset_title = $"{subset.ToUpper()} ({version})";
 				subset_html.AppendLine($"<h2>{subset}</h2>");
 				subset_html.AppendLine("<table>");
-				subset_html.AppendLine("<tr><th>Name</th><th>Version</th></tr>");
+				subset_html.AppendLine("<tr><th>Name</th><th>Version</th><th>Games</th><th>Roms</th><th>Size</th><th>Bytes</th></tr>");
 
 				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Select($"[subset] = '{subset}'"))
 				{
@@ -2474,6 +2488,10 @@ namespace Spludlow.MameAO
 					string datafile_name = (string)datafileRow["name"];
 					string datafile_version = (string)datafileRow["version"];
 					string datafile_name_enc = Uri.EscapeDataString(datafile_name);
+
+					long datafile_game_count = 0;
+					long datafile_rom_count = 0;
+					long datafile_rom_size = 0;
 
 					StringBuilder datafile_html = new StringBuilder();
 					string datafile_title = $"{datafile_name} ({datafile_version})";
@@ -2493,6 +2511,11 @@ namespace Spludlow.MameAO
 						string game_identity = (string)gameRow["game_identity"];
 						string game_name_enc = Uri.EscapeDataString(game_name);
 
+						long game_rom_count = 0;
+						long game_rom_size = 0;
+
+						++datafile_game_count;
+
 						StringBuilder game_html = new StringBuilder();
 						string game_title = $"{datafile_name} - {game_name} ({datafile_version})";
 						game_html.AppendLine("<br />");
@@ -2508,15 +2531,24 @@ namespace Spludlow.MameAO
 						{
 							string rom_name = (string)romRow["name"];
 							string rom_extention = Path.GetExtension(rom_name).ToLower();
-							string rom_size = romRow.Field<string>("size") ?? "0";
+							string size = (romRow.Field<string>("size") ?? "0").Trim();
+							if (size.Length == 0)
+								size = "0";
+							long rom_size = Int64.Parse(size);
 							string crc = romRow.Field<string>("crc");
 							string md5 = romRow.Field<string>("md5");
 							string sha1 = romRow.Field<string>("sha1");
 
-							game_html.AppendLine($"<tr><td>{rom_name}</td><td>{Tools.DataSize(0)}</td><td>{0}</td><td>{crc}</td><td>{md5}</td><td>{sha1}</td></tr>");
+							++game_rom_count;
+							game_rom_size += rom_size;
+
+							game_html.AppendLine($"<tr><td>{rom_name}</td><td>{Tools.DataSize(rom_size)}</td><td>{rom_size}</td><td>{crc}</td><td>{md5}</td><td>{sha1}</td></tr>");
 						}
 
 						game_html.AppendLine("</table>");
+
+						datafile_rom_count += game_rom_count;
+						datafile_rom_size += game_rom_size;
 
 						string gamePayloadKey = $"{datafile_name}\t{game_name}";
 						if (gamePayloads.ContainsKey(gamePayloadKey) == false)
@@ -2531,7 +2563,7 @@ namespace Spludlow.MameAO
 						else
 							game_payload_table.Rows.Add(subset, datafile_name, game_name, game_title, gamePayload[0], gamePayload[1], game_html.ToString());
 
-						datafile_html.AppendLine($"<tr><td><a href=\"{datafile_name_enc}/{game_name_enc}\">{game_name}</a></td><td>{0}</td><td>{Tools.DataSize(0)}</td><td>{0}</td></tr>");
+						datafile_html.AppendLine($"<tr><td><a href=\"{datafile_name_enc}/{game_name_enc}\">{game_name}</a></td><td>{game_rom_count}</td><td>{Tools.DataSize(game_rom_size)}</td><td>{game_rom_size}</td></tr>");
 					}
 
 					datafile_html.AppendLine("</table>");
@@ -2542,7 +2574,7 @@ namespace Spludlow.MameAO
 
 					datafile_payload_table.Rows.Add(subset, datafile_name, datafile_title, datafilePayload[0], datafilePayload[1], datafile_html.ToString());
 
-					subset_html.AppendLine($"<tr><td><a href=\"{subset}/{datafile_name_enc}\">{datafile_name}</a></td><td>{datafile_version}</td></tr>");
+					subset_html.AppendLine($"<tr><td><a href=\"{subset}/{datafile_name_enc}\">{datafile_name}</a></td><td>{datafile_version}</td><td>{datafile_game_count}</td><td>{datafile_rom_count}</td><td>{Tools.DataSize(datafile_rom_size)}</td><td>{datafile_rom_size}</td></tr>");
 				}
 
 				subset_html.AppendLine("</table>");
