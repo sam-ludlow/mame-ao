@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.Drawing;
@@ -37,11 +38,32 @@ namespace Spludlow.MameAO
 				var sourceSnapFilenames = new DirectoryInfo(snapDirectory).GetFiles("*.png").OrderByDescending(fileInfo => fileInfo.LastWriteTime).Select(fileInfo => fileInfo.FullName).ToArray();
 				if (sourceSnapFilenames.Length > 0)
 				{
+					// If multiple pixel-size files use the largest ones
+					int keepIndex = 0;
+
+					Dictionary<string, long> filenamePixels = new Dictionary<string, long>();
+					foreach (string filename in sourceSnapFilenames)
+						using (Image image = Image.FromFile(filename))
+							filenamePixels.Add(filename, image.Width * image.Height);
+					long[] sizes = filenamePixels.Values.Distinct().OrderByDescending(x => x).ToArray();
+
+					if (sizes.Length > 1)
+					{
+						for (int index = 0; index < sourceSnapFilenames.Length; ++index)
+						{
+							if (filenamePixels[sourceSnapFilenames[index]] == sizes[0])
+							{
+								keepIndex = index;
+								break;
+							}
+						}
+					}
+
 					string snapTargetDirectory = Path.Combine(Globals.SnapDirectory, Globals.Core.Name, machine_name);
 					Directory.CreateDirectory(snapTargetDirectory);
 
 					string[] snapFilenames = Mame.CollectSnaps(sourceSnapFilenames, snapTargetDirectory, machine_name, Globals.Core.Version, null);
-					snapFilename = snapFilenames[0];
+					snapFilename = snapFilenames[keepIndex];
 				}
 			}
 
