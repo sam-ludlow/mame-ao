@@ -68,6 +68,12 @@ namespace Spludlow.MameAO
 				}
 			}
 
+			// HBMAME software list output is not XML
+			var info = new FileInfo(tempFilename);
+			if (info.Length < 48)
+				File.WriteAllText(tempFilename, @"<?xml version=""1.0""?>
+													<softwarelists></softwarelists>");
+
 			File.Move(tempFilename, outputFilename);
 		}
 		public static void RunMame(string binFilename, string arguments)
