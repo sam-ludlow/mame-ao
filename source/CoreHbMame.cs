@@ -162,31 +162,38 @@ namespace Spludlow.MameAO
 
 		public static string LatestLocalVersion(string directory)
 		{
-			SortedDictionary<int, string> versions = new SortedDictionary<int, string>();
-			string version;
+			List<int[]> versions = new List<int[]>();
 
 			foreach (string versionDirectory in Directory.GetDirectories(directory))
 			{
-				version = Path.GetFileName(versionDirectory);
+				string name = Path.GetFileName(versionDirectory);
 
-				if (version.StartsWith("0.") == false)
+				if (name.StartsWith("0.") == false)
 					continue;
 
 				if (File.Exists(Path.Combine(versionDirectory, "hbmame.exe")) == false)
 					continue;
 
-				string[] parts = version.Split('.');
+				string[] parts = name.Split('.');
 
 				if (parts.Length != 3)
 					continue;
 
-				versions.Add(Int32.Parse(parts[2]), version);
+				versions.Add(new int[] { Int32.Parse(parts[0]), Int32.Parse(parts[1]), Int32.Parse(parts[2]) });
 			}
 
 			if (versions.Count == 0)
 				throw new ApplicationException($"HBMAME version not found in '{directory}'.");
 
-			version = versions[versions.Keys.Last()];
+			versions = versions
+				.OrderByDescending(v => v[0])
+				.ThenByDescending(v => v[1])
+				.ThenByDescending(v => v[2])
+				.ToList();
+
+			string version = String.Join(".", versions[0]);
+
+			Console.WriteLine($"LatestLocalVersion\t{directory}\t{version}");
 
 			return version;
 		}
