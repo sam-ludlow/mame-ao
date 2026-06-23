@@ -1192,7 +1192,7 @@ namespace Spludlow.MameAO
 
 		public static void MameishMSSQLSoftwarePayloads(string directory, string version, SqlConnection[] connections, string coreName, string versionDirectory, string exeTime, DataTable snapTable)
 		{
-			bool usingDisk = Database.TableExists(connections[1], "disk");
+			bool usingDisk = Database.TableExists(connections[1], "disk") && coreName != "hbmame";
 
 			//
 			//	CHD Sizes
@@ -1205,18 +1205,24 @@ namespace Spludlow.MameAO
 				Globals.BitTorrentDirectory = Path.Combine(Globals.RootDirectory, "_BT");
 				Directory.CreateDirectory(Globals.BitTorrentDirectory);
 
-				BitTorrent.Initialize();
-				BitTorrent.WaitReady();
+				try
+				{
+					BitTorrent.EnableCore(coreName);
+					BitTorrent.Initialize();
+					BitTorrent.WaitReady();
 
-				var torrentHashes = BitTorrent.TorrentHashes(coreName);
-				string torrentHash = torrentHashes[ItemType.SoftwareDisk];
+					var torrentHashes = BitTorrent.TorrentHashes(coreName);
+					string torrentHash = torrentHashes[ItemType.SoftwareDisk];
 
-				JArray torrentFiles = BitTorrent.Files(torrentHash);
+					JArray torrentFiles = BitTorrent.Files(torrentHash);
 
-				foreach (dynamic torrentFile in torrentFiles)
-					torrentDiskSizes.Add((string)torrentFile.path, (long)torrentFile.length);
-
-				BitTorrent.Stop();
+					foreach (dynamic torrentFile in torrentFiles)
+						torrentDiskSizes.Add((string)torrentFile.path, (long)torrentFile.length);
+				}
+				finally
+				{
+					BitTorrent.Stop();
+				}
 			}
 
 			//
@@ -1506,7 +1512,7 @@ namespace Spludlow.MameAO
 									software_rom_size += rom_size;
 
 									DataRow row = table.Rows.Add(part_name, part_interface,
-										(string)dataareaRow["name"], (string)dataareaRow["size"], (string)dataareaRow["databits"], (string)dataareaRow["endian"]);
+										(string)dataareaRow["name"], (string)dataareaRow["size"], "", "");   //	TODO: fix for hbmame (string)dataareaRow["databits"], (string)dataareaRow["endian"]
 
 									row["size_text"] = Tools.DataSize(rom_size);
 

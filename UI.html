@@ -467,7 +467,6 @@
 				{ heading: 'Core', columnName: 'core' },
 				{ heading: 'Type', columnName: 'type' },
 				{ heading: 'Version', columnName: 'version' },
-				{ heading: 'Hash / Magnet Link', columnName: 'hash' },
 				{ heading: 'State', columnName: 'state' },
 				{ heading: 'File Count', columnName: 'file_count' },
 				{ heading: 'Open Connections', columnName: 'open_connections' },
@@ -490,7 +489,7 @@
 
 				switch (columnDef.columnName) {
 
-					case 'hash':
+					case 'name':
 						cell.innerHTML = `<a href="${result.magnet}" target="_blank">${value}</a>`;
 						break;
 
