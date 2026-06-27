@@ -322,50 +322,50 @@ For `get` operations if a new version if found the exit code will be set to 1.
 ### MAME
 |Operation|Description|Example|
 |:----|:----|:----|
-| mame_get | Get MAME | `mame-ao.exe mame_get directory="C:\ao-data\mame"` |
-| mame_xml | Extract XML | `mame-ao.exe mame_xml directory="C:\ao-data\mame"` |
-| mame_json | JSON | `mame-ao.exe mame_json directory="C:\ao-data\mame"` |
-| mame_sqlite | SQLite | `mame-ao.exe mame_sqlite directory="C:\ao-data\mame"` |
-| mame_msaccess | MS Access | `mame-ao.exe mame_msaccess directory="C:\ao-data\mame"` |
-| mame_zips | ZIPs | `mame-ao.exe mame_zips directory="C:\ao-data\mame"` |
-| mame_mssql | MS SQL | `mame-ao.exe mame_mssql directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
-| mame_mssql-payload | Web payloads | `mame-ao.exe mame_mssql-payload directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
+| mame_get | Get MAME | `.\mame-ao.exe mame_get directory="C:\ao-data\mame"` |
+| mame_xml | Extract XML | `.\mame-ao.exe mame_xml directory="C:\ao-data\mame"` |
+| mame_json | JSON | `.\mame-ao.exe mame_json directory="C:\ao-data\mame"` |
+| mame_sqlite | SQLite | `.\mame-ao.exe mame_sqlite directory="C:\ao-data\mame"` |
+| mame_msaccess | MS Access | `.\mame-ao.exe mame_msaccess directory="C:\ao-data\mame"` |
+| mame_zips | ZIPs | `.\mame-ao.exe mame_zips directory="C:\ao-data\mame"` |
+| mame_mssql | MS SQL | `.\mame-ao.exe mame_mssql directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
+| mame_mssql-payload | Web payloads | `.\mame-ao.exe mame_mssql-payload directory="C:\ao-data\mame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-mame-machine, ao-mame-software"` |
 
 ### HBMAME
 |Operation|Description|Example|
 |:----|:----|:----|
-| hbmame_get | Get HBMAME | `mame-ao.exe hbmame_get directory="C:\ao-data\hbmame"` |
-| hbmame_xml | Extract XML | `mame-ao.exe hbmame_xml directory="C:\ao-data\hbmame"` |
-| hbmame_json | JSON | `mame-ao.exe hbmame_json directory="C:\ao-data\hbmame"` |
-| hbmame_sqlite | SQLite | `mame-ao.exe hbmame_sqlite directory="C:\ao-data\hbmame"` |
-| hbmame_msaccess | MS Access | `mame-ao.exe hbmame_msaccess directory="C:\ao-data\mame"` |
-| hbmame_zips | ZIPs | `mame-ao.exe hbmame_zips directory="C:\ao-data\mame"` |
-| hbmame_mssql | MS SQL | `mame-ao.exe hbmame_mssql directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
-| hbmame_mssql-payload | Web payloads | `mame-ao.exe hbmame_mssql-payload directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
+| hbmame_get | Get HBMAME | `.\mame-ao.exe hbmame_get directory="C:\ao-data\hbmame"` |
+| hbmame_xml | Extract XML | `.\mame-ao.exe hbmame_xml directory="C:\ao-data\hbmame"` |
+| hbmame_json | JSON | `.\mame-ao.exe hbmame_json directory="C:\ao-data\hbmame"` |
+| hbmame_sqlite | SQLite | `.\mame-ao.exe hbmame_sqlite directory="C:\ao-data\hbmame"` |
+| hbmame_msaccess | MS Access | `.\mame-ao.exe hbmame_msaccess directory="C:\ao-data\mame"` |
+| hbmame_zips | ZIPs | `.\mame-ao.exe hbmame_zips directory="C:\ao-data\mame"` |
+| hbmame_mssql | MS SQL | `.\mame-ao.exe hbmame_mssql directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
+| hbmame_mssql-payload | Web payloads | `.\mame-ao.exe hbmame_mssql-payload directory="C:\ao-data\hbmame" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-hbmame-machine, ao-hbmame-software"` |
 
 ### FBNeo
 |Operation|Description|Example|
 |:----|:----|:----|
-| fbneo_get | Get FBNeo | `mame-ao.exe fbneo_get directory="C:\ao-data\fbneo"` |
-| fbneo_xml | Extract XML | `mame-ao.exe fbneo_xml directory="C:\ao-data\fbneo"` |
-| fbneo_json | JSON | `mame-ao.exe fbneo_json directory="C:\ao-data\fbneo"` |
-| fbneo_sqlite | SQLite | `mame-ao.exe fbneo_sqlite directory="C:\ao-data\fbneo"` |
-| fbneo_msaccess | MS Access | `mame-ao.exe fbneo_msaccess directory="C:\ao-data\mame"` |
-| fbneo_zips | ZIPs | `mame-ao.exe fbneo_zips directory="C:\ao-data\mame"` |
-| fbneo_mssql | MS SQL | `mame-ao.exe fbneo_mssql directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
-| fbneo_mssql-payload | Web payloads | `mame-ao.exe fbneo_mssql-payload directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
+| fbneo_get | Get FBNeo | `.\mame-ao.exe fbneo_get directory="C:\ao-data\fbneo"` |
+| fbneo_xml | Extract XML | `.\mame-ao.exe fbneo_xml directory="C:\ao-data\fbneo"` |
+| fbneo_json | JSON | `.\mame-ao.exe fbneo_json directory="C:\ao-data\fbneo"` |
+| fbneo_sqlite | SQLite | `.\mame-ao.exe fbneo_sqlite directory="C:\ao-data\fbneo"` |
+| fbneo_msaccess | MS Access | `.\mame-ao.exe fbneo_msaccess directory="C:\ao-data\mame"` |
+| fbneo_zips | ZIPs | `.\mame-ao.exe fbneo_zips directory="C:\ao-data\mame"` |
+| fbneo_mssql | MS SQL | `.\mame-ao.exe fbneo_mssql directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
+| fbneo_mssql-payload | Web payloads | `.\mame-ao.exe fbneo_mssql-payload directory="C:\ao-data\fbneo" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-fbneo"` |
 
 ### TOSEC
 |Operation|Description|Example|
 |:----|:----|:----|
-| tosec_get | Get TOSEC | `mame-ao.exe tosec_get directory="C:\ao-data\tosec"` |
-| tosec_xml | Extract XML | `mame-ao.exe tosec_xml directory="C:\ao-data\tosec"` |
-| tosec_json | JSON | `mame-ao.exe tosec_json directory="C:\ao-data\tosec"` |
-| tosec_sqlite | SQLite | `mame-ao.exe tosec_sqlite directory="C:\ao-data\tosec"` |
-| tosec_msaccess | MS Access | `mame-ao.exe tosec_msaccess directory="C:\ao-data\mame"` |
-| tosec_zips | ZIPs | `mame-ao.exe tosec_zips directory="C:\ao-data\mame"` |
-| tosec_mssql | MS SQL | `mame-ao.exe tosec_mssql directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
-| tosec_mssql-payload | Web payloads | `mame-ao.exe tosec_mssql-payload directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
+| tosec_get | Get TOSEC | `.\mame-ao.exe tosec_get directory="C:\ao-data\tosec"` |
+| tosec_xml | Extract XML | `.\mame-ao.exe tosec_xml directory="C:\ao-data\tosec"` |
+| tosec_json | JSON | `.\mame-ao.exe tosec_json directory="C:\ao-data\tosec"` |
+| tosec_sqlite | SQLite | `.\mame-ao.exe tosec_sqlite directory="C:\ao-data\tosec"` |
+| tosec_msaccess | MS Access | `.\mame-ao.exe tosec_msaccess directory="C:\ao-data\mame"` |
+| tosec_zips | ZIPs | `.\mame-ao.exe tosec_zips directory="C:\ao-data\mame"` |
+| tosec_mssql | MS SQL | `.\mame-ao.exe tosec_mssql directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
+| tosec_mssql-payload | Web payloads | `.\mame-ao.exe tosec_mssql-payload directory="C:\ao-data\tosec" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-tosec"` |
 
 ### Redump
 |Operation|Description|Example|

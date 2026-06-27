@@ -242,7 +242,7 @@ namespace Spludlow.MameAO
 			if (_Version == null)
 				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
 
-			OperationsPayload.TosecMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			OperationsDatish.TosecMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
 		public static DataSet TosecDataSet(string directory)
