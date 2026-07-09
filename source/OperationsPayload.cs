@@ -1207,8 +1207,10 @@ namespace Spludlow.MameAO
 
 				try
 				{
-					BitTorrent.EnableCore(coreName);
+					
 					BitTorrent.Initialize();
+					BitTorrent.WaitReady();
+					BitTorrent.EnableCore(coreName);
 					BitTorrent.WaitReady();
 
 					var torrentHashes = BitTorrent.TorrentHashes(coreName);

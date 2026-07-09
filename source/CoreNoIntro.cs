@@ -240,7 +240,8 @@ namespace Spludlow.MameAO
 			if (_Version == null)
 				_Version = LatestDownloadedVersion();
 
-			OperationsDatish.NoIntroMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			OperationsPayload.NoIntroMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			//OperationsDatish.NoIntroMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
 

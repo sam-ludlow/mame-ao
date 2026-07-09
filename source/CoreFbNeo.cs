@@ -322,7 +322,8 @@ namespace Spludlow.MameAO
 			if (_Version == null)
 				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
 
-			OperationsDatish.FBNeoMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			OperationsPayload.FBNeoMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			//OperationsDatish.FBNeoMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
 		void ICore.AllSHA1(HashSet<string> hashSet)

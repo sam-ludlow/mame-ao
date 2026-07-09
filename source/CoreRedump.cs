@@ -218,7 +218,8 @@ namespace Spludlow.MameAO
 				_Version = LatestDownloadedVersion();
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
-			OperationsDatish.RedumpMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			OperationsPayload.RedumpMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			//OperationsDatish.RedumpMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
 
