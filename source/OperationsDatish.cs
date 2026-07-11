@@ -257,19 +257,15 @@ namespace Spludlow.MameAO
 			level_root.Append($"<h2>Subsets</h2>");
 			level_root.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size");
 
-			long total_games = 0;
-			long total_roms = 0;
-			long total_size = 0;
+			Counts total_counts = new Counts();
 
 			foreach (DataRow subsetRow in dataSet.Tables["subset"].Rows)
 			{
 				long subset_id = (long)subsetRow["subset_id"];
 				string subset_name = (string)subsetRow["name"];
 				string subset_description = (string)subsetRow["description"];
-				
-				long subset_games = 0;
-				long subset_roms = 0;
-				long subset_size = 0;
+
+				Counts subset_counts = new Counts();
 
 				Tools.ConsoleHeading(2, $"{subset_name}\t{subset_description}");
 
@@ -285,9 +281,7 @@ namespace Spludlow.MameAO
 					string datafile_name_enc = Uri.EscapeDataString(datafile_name);
 					string datafile_key = (string)datafileRow["key"];
 
-					long datafile_games = 0;
-					long datafile_roms = 0;
-					long datafile_size = 0;
+					Counts datafile_counts = new Counts();
 
 					level_datafile.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {datafile_name}");
 					level_datafile.Append($"<h2>Games</h2>");
@@ -300,8 +294,8 @@ namespace Spludlow.MameAO
 						string game_description = (string)gameRow["description"];
 						string game_name_enc = Uri.EscapeDataString(game_name);
 
-						long game_roms = 0;
-						long game_size = 0;
+						Counts game_counts = new Counts();
+						game_counts.Games = 1;
 
 						level_game.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {datafile_name} &bull; {game_name}");
 						level_game.Append($"<h2>Roms</h2>");
@@ -318,43 +312,37 @@ namespace Spludlow.MameAO
 							string md5 = romRow.Field<string>("md5");
 							long rom_size = Int64.Parse(romRow.Field<string>("size") ?? "0");
 
-							game_roms += 1;
-							game_size += rom_size;
+							game_counts.Roms += 1;
+							game_counts.Size += rom_size;
 
 							level_game.TableRow(rom_name, rom_size.ToString(), Tools.DataSize(rom_size), crc, sha1, md5);
 						}
 
-						datafile_games += 1;
-						datafile_roms += game_roms;
-						datafile_size += game_size;
+						datafile_counts.Add(game_counts);
 
 						level_game.TableEnd();
 						level_game.Finish(subset_name, datafile_name, game_name);
 
 						level_datafile.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}/{game_name_enc}\">{game_name}</a>",
-							game_description, game_roms.ToString(), game_size.ToString(), Tools.DataSize(game_size));
+							game_description, game_counts.Roms.ToString(), game_counts.Size.ToString(), Tools.DataSize(game_counts.Size));
 					}
 
-					subset_games += datafile_games;
-					subset_roms += datafile_roms;
-					subset_size += datafile_size;
+					subset_counts.Add(datafile_counts);
 
 					level_datafile.TableEnd();
 					level_datafile.Finish(subset_name, datafile_name);
 
 					level_subset.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}\">{datafile_name}</a>",
-						datafile_description, datafile_games.ToString(), datafile_roms.ToString(), datafile_size.ToString(), Tools.DataSize(datafile_size), datafile_key);
+						datafile_description, datafile_counts.Games.ToString(), datafile_counts.Roms.ToString(), datafile_counts.Size.ToString(), Tools.DataSize(datafile_counts.Size), datafile_key);
 				}
 
-				total_games += subset_games;
-				total_roms += subset_roms;
-				total_size += subset_size;
+				total_counts.Add(subset_counts);
 
 				level_subset.TableEnd();
 				level_subset.Finish(subset_name);
 
 				level_root.TableRow($"<a href=\"/{coreName}/{subset_name}\">{subset_name}</a>",
-					subset_description, subset_games.ToString(), subset_roms.ToString(), subset_size.ToString(), Tools.DataSize(subset_size));
+					subset_description, subset_counts.Games.ToString(), subset_counts.Roms.ToString(), subset_counts.Size.ToString(), Tools.DataSize(subset_counts.Size));
 			}
 
 			level_root.TableEnd();
@@ -379,13 +367,28 @@ namespace Spludlow.MameAO
 
 		public enum PayloadLevel { Root, Subset, Datafile, Game };
 
+		public class Counts
+		{
+			public long Games = 0;
+			public long Roms = 0;
+			public long Size = 0;
+
+			public void Add(Counts counts)
+			{
+				Games += counts.Games;
+				Roms += counts.Roms;
+				Size += counts.Size;
+			}
+		}
+
 		public class PayloadLevelInfo
 		{
 			public DataTable DataTable;
 
 			private string HtmlTitle;
 			private StringBuilder HtmlPage = new StringBuilder();
-			private int Width = 0;
+
+			private int TableWidth = 0;
 
 			private Dictionary<string, string[]> XmlJsonPayloads;
 
@@ -461,14 +464,14 @@ namespace Spludlow.MameAO
 			}
 			public void TableStart(params string[] columnNames)
 			{
-				Width = columnNames.Length;
+				TableWidth = columnNames.Length;
 
 				HtmlPage.AppendLine("<table>");
 				HtmlPage.AppendLine($"<tr>{String.Join("", columnNames.Select(name => $"<th>{name}</th>"))}</tr>");
 			}
 			public void TableRow(params string[] values)
 			{
-				if (values.Length != Width)
+				if (values.Length != TableWidth)
 					throw new ApplicationException("Bad values width");
 
 				HtmlPage.AppendLine($"<tr>{String.Join("", values.Select(n => $"<td>{n}</td>"))}</tr>");
