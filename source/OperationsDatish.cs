@@ -1,16 +1,14 @@
-﻿using Newtonsoft.Json.Linq;
-using System;
+﻿using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
-using System.Runtime.Remoting.Messaging;
-using System.Security.Cryptography.X509Certificates;
 using System.Text;
-using System.Web.UI.HtmlControls;
 using System.Xml;
 using System.Xml.Linq;
+
+using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -36,12 +34,12 @@ namespace Spludlow.MameAO
 			var xmlJsonPayloads_datafile = new Dictionary<string, string[]>();
 			var xmlJsonPayloads_game = new Dictionary<string, string[]>();
 
-			using (var reader = XmlReader.Create(Path.Combine(directory, "_fbneo.xml"), _XmlReaderSettings))
+			using (var reader = XmlReader.Create(Path.Combine(directory, "_fbneo.xml")))	//, _XmlReaderSettings))
 			{
 				while (reader.ReadToFollowing("datafile"))
 				{
 					var datafile = (XElement)XElement.ReadFrom(reader);
-					var datafile_key = (string)datafile.Attribute("key");
+					var datafile_key = (string)datafile.Element("header").Element("name");
 
 					xmlJsonPayloads_datafile.Add($"{coreName}\t{datafile_key}", new string[] { datafile.ToString(), Tools.XML2JSON(datafile) });
 
@@ -58,7 +56,7 @@ namespace Spludlow.MameAO
 			//	Source Data	429 Megabytes (MiB)
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game, null);
+				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
 		}
 
 		/// <summary>
@@ -106,7 +104,7 @@ namespace Spludlow.MameAO
 			//	Sourcedata	3.6 Gigabytes (GiB)
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game, "category");
+				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
 		}
 
 		/// <summary>
@@ -148,7 +146,7 @@ namespace Spludlow.MameAO
 			//	Source Data	1.3 Gigabytes (GiB)
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game, null);
+				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
 		}
 
 		/// <summary>
@@ -198,7 +196,7 @@ namespace Spludlow.MameAO
 
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game, "subset");
+				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
 		}
 
 
@@ -209,8 +207,7 @@ namespace Spludlow.MameAO
 			string coreName,
 			string version,
 			Dictionary<string, string[]> xmlJsonPayloads_datafile,
-			Dictionary<string, string[]> xmlJsonPayloads_game,
-			string subsetColumnName)
+			Dictionary<string, string[]> xmlJsonPayloads_game)
 		{
 			Tools.ConsolePrintMemory();
 
@@ -228,7 +225,7 @@ namespace Spludlow.MameAO
 			//
 			// Source Data
 			//
-			HashSet<string> sortTableNames = new HashSet<string>(new string[] { "datafile", "game", "rom", "sample" });
+			HashSet<string> sortTableNames = new HashSet<string>(new string[] { "subset", "datafile", "game", "rom", "sample" });
 
 			var tableNames = Database.TableList(connection).Where(n => n.StartsWith("_") == false && n.EndsWith("_payload") == false).OrderBy(n => n).ToList();
 
@@ -249,14 +246,6 @@ namespace Spludlow.MameAO
 			}
 
 			//
-			// Subsets
-			//
-			string[] subsetNames = new string[] { coreName };
-			if (subsetColumnName != null)
-				subsetNames = Database.ExecuteFill(connection,
-					$"SELECT DISTINCT [{subsetColumnName}] FROM [datafile] ORDER BY [{subsetColumnName}];").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray();
-
-			//
 			// Traverse
 			//
 			PayloadLevelInfo level_root = new PayloadLevelInfo(PayloadLevel.Root, null);
@@ -264,56 +253,112 @@ namespace Spludlow.MameAO
 			PayloadLevelInfo level_datafile = new PayloadLevelInfo(PayloadLevel.Datafile, xmlJsonPayloads_datafile);
 			PayloadLevelInfo level_game = new PayloadLevelInfo(PayloadLevel.Game, xmlJsonPayloads_game);
 
-			level_root.StartHtmlTable($"{coreName} ({version})", $"{coreName} ({version}) Subsets",
-				new string[] { "Subset Name", "Game Count", "Rom Count", "Bytes", "Size" });
+			level_root.Start($"{coreName} ({version})");
+			level_root.Append($"<h2>Subsets</h2>");
+			level_root.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size");
 
-			foreach (string subset_name in subsetNames)
+			long total_games = 0;
+			long total_roms = 0;
+			long total_size = 0;
+
+			foreach (DataRow subsetRow in dataSet.Tables["subset"].Rows)
 			{
-				Console.WriteLine($"SUBSET:\t{subset_name}");
+				long subset_id = (long)subsetRow["subset_id"];
+				string subset_name = (string)subsetRow["name"];
+				string subset_description = (string)subsetRow["description"];
+				
+				long subset_games = 0;
+				long subset_roms = 0;
+				long subset_size = 0;
 
-				level_subset.StartHtmlTable($"{coreName}/{subset_name} ({version})", $"{coreName}/{subset_name} ({version}) Datafiles",
-					new string[] { "Datafile Name", "Game Count", "Rom Count", "Bytes", "Size" });
+				Tools.ConsoleHeading(2, $"{subset_name}\t{subset_description}");
 
-				IEnumerable<DataRow> datafileRows = subsetColumnName == null ?
-					dataSet.Tables["datafile"].Rows.Cast<DataRow>() : dataSet.Tables["datafile"].Select($"[{subsetColumnName}] = '{subset_name}'");
-				foreach (DataRow datafileRow in datafileRows)
+				level_subset.Start($"{coreName} ({version}) &bull; {subset_name}");
+				level_subset.Append($"<h2>Datafiles</h2>");
+				level_subset.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size", "Key");
+
+				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Select($"[subset_id] = {subset_id}"))
 				{
 					long datafile_id = (long)datafileRow["datafile_id"];
 					string datafile_name = (string)datafileRow["name"];
+					string datafile_description = (string)datafileRow["description"];
+					string datafile_name_enc = Uri.EscapeDataString(datafile_name);
+					string datafile_key = (string)datafileRow["key"];
 
-					level_datafile.StartHtmlTable($"{datafile_name}", $"{datafile_name} Games",
-						new string[] { "Game Name", "Rom Count", "Bytes", "Size" });
+					long datafile_games = 0;
+					long datafile_roms = 0;
+					long datafile_size = 0;
+
+					level_datafile.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {datafile_name}");
+					level_datafile.Append($"<h2>Games</h2>");
+					level_datafile.TableStart("Name", "Description", "Roms", "Bytes", "Size");
 
 					foreach (DataRow gameRow in dataSet.Tables["game"].Select($"[datafile_id] = {datafile_id}"))
 					{
 						long game_id = (long)gameRow["game_id"];
 						string game_name = (string)gameRow["name"];
+						string game_description = (string)gameRow["description"];
+						string game_name_enc = Uri.EscapeDataString(game_name);
 
+						long game_roms = 0;
+						long game_size = 0;
 
-						level_game.StartHtmlTable($"{game_name}", $"{game_name}", null);
+						level_game.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {datafile_name} &bull; {game_name}");
+						level_game.Append($"<h2>Roms</h2>");
+						level_game.TableStart("Name", "Bytes", "Size", "CRC", "SHA1", "MD5");
 
 						StringBuilder game_html = new StringBuilder();
 						game_html.AppendLine($"<h2>{game_name} DETAILS<h2>");
 
-						level_game.FinishHtmlTable(new string[] { subset_name, datafile_name, game_name }, game_html.ToString());
+						foreach (DataRow romRow in dataSet.Tables["rom"].Select($"[game_id] = {game_id}"))
+						{
+							string rom_name = (string)romRow["name"];
+							string crc = romRow.Field<string>("crc");
+							string sha1 = romRow.Field<string>("sha1");
+							string md5 = romRow.Field<string>("md5");
+							long rom_size = Int64.Parse(romRow.Field<string>("size") ?? "0");
 
+							game_roms += 1;
+							game_size += rom_size;
 
+							level_game.TableRow(rom_name, rom_size.ToString(), Tools.DataSize(rom_size), crc, sha1, md5);
+						}
 
+						datafile_games += 1;
+						datafile_roms += game_roms;
+						datafile_size += game_size;
 
-						level_datafile.AppendHtmlTable(new string[] { game_name, "", "", "" });
+						level_game.TableEnd();
+						level_game.Finish(subset_name, datafile_name, game_name);
+
+						level_datafile.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}/{game_name_enc}\">{game_name}</a>",
+							game_description, game_roms.ToString(), game_size.ToString(), Tools.DataSize(game_size));
 					}
 
-					level_datafile.FinishHtmlTable(new string[] { subset_name, datafile_name });
+					subset_games += datafile_games;
+					subset_roms += datafile_roms;
+					subset_size += datafile_size;
 
-					level_subset.AppendHtmlTable(new string[] { datafile_name, "", "", "", "" });
+					level_datafile.TableEnd();
+					level_datafile.Finish(subset_name, datafile_name);
+
+					level_subset.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}\">{datafile_name}</a>",
+						datafile_description, datafile_games.ToString(), datafile_roms.ToString(), datafile_size.ToString(), Tools.DataSize(datafile_size), datafile_key);
 				}
 
-				level_subset.FinishHtmlTable(new string[] { subset_name });
+				total_games += subset_games;
+				total_roms += subset_roms;
+				total_size += subset_size;
 
-				level_root.AppendHtmlTable(subset_name, "", "", "", "");
+				level_subset.TableEnd();
+				level_subset.Finish(subset_name);
+
+				level_root.TableRow($"<a href=\"/{coreName}/{subset_name}\">{subset_name}</a>",
+					subset_description, subset_games.ToString(), subset_roms.ToString(), subset_size.ToString(), Tools.DataSize(subset_size));
 			}
 
-			level_root.FinishHtmlTable(new string[] { "1" });
+			level_root.TableEnd();
+			level_root.Finish("1");
 
 			//
 			// Save payload tables
@@ -336,8 +381,6 @@ namespace Spludlow.MameAO
 
 		public class PayloadLevelInfo
 		{
-			private PayloadLevel Level;
-
 			public DataTable DataTable;
 
 			private string HtmlTitle;
@@ -350,8 +393,6 @@ namespace Spludlow.MameAO
 				PayloadLevel level,
 				Dictionary<string, string[]> xmlJsonPayloads)
 			{
-				Level = level;
-
 				XmlJsonPayloads = xmlJsonPayloads;
 
 				switch (level)
@@ -377,42 +418,14 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			public void StartHtmlTable(string title, string heading, string[] columnNames)
+			public void Start(string title)
 			{
+				if (HtmlPage.Length != 0)
+					throw new ApplicationException("Unfinished Business");
+
 				HtmlTitle = title;
-
-				if (columnNames == null)
-					return;
-
-				Width = columnNames.Length;
-
-				HtmlPage = new StringBuilder();
-				HtmlPage.AppendLine($"<h2>{heading}</h2>");
-				HtmlPage.AppendLine("<table>");
-				HtmlPage.AppendLine($"<tr>{String.Join("", columnNames.Select(n => $"<th>{n}</th>"))}</tr>");
 			}
-
-			public void AppendHtmlTable(params string[] values)
-			{
-				if (values.Length != Width)
-					throw new ApplicationException("Bad values width");
-
-				HtmlPage.AppendLine($"<tr>{String.Join("", values.Select(n => $"<td>{n}</td>"))}</tr>");
-			}
-
-			public void FinishHtmlTable(string[] keys)
-			{
-				if (keys.Length != DataTable.PrimaryKey.Length )
-					throw new ApplicationException("Bad keys width");
-
-				HtmlPage.AppendLine("</table>");
-
-				FinishHtmlTable(keys, HtmlPage.ToString());
-
-				HtmlPage.Length = 0;
-			}
-
-			public void FinishHtmlTable(string[] keys, string html)
+			public void Finish(params string[] keys)
 			{
 				if (keys.Length != DataTable.PrimaryKey.Length)
 					throw new ApplicationException("Bad keys width");
@@ -427,7 +440,7 @@ namespace Spludlow.MameAO
 				if (XmlJsonPayloads != null)
 				{
 					string key = String.Join("\t", keys);
-					
+
 					if (XmlJsonPayloads.ContainsKey(key) == false)
 						throw new ApplicationException($"Did not find xml json lookup {key}");
 					xmlJson = XmlJsonPayloads[key];
@@ -435,9 +448,35 @@ namespace Spludlow.MameAO
 
 				var rowData = new List<object>();
 				rowData.AddRange(keys);
-				rowData.AddRange(new string[] { HtmlTitle, xmlJson[0], xmlJson[1], html });
+				rowData.AddRange(new string[] { HtmlTitle, xmlJson[0], xmlJson[1], HtmlPage.ToString() });
 
 				DataTable.Rows.Add(rowData.ToArray());
+
+				HtmlPage.Length = 0;
+			}
+
+			public void Append(string html)
+			{
+				HtmlPage.Append(html);
+			}
+			public void TableStart(params string[] columnNames)
+			{
+				Width = columnNames.Length;
+
+				HtmlPage.AppendLine("<table>");
+				HtmlPage.AppendLine($"<tr>{String.Join("", columnNames.Select(name => $"<th>{name}</th>"))}</tr>");
+			}
+			public void TableRow(params string[] values)
+			{
+				if (values.Length != Width)
+					throw new ApplicationException("Bad values width");
+
+				HtmlPage.AppendLine($"<tr>{String.Join("", values.Select(n => $"<td>{n}</td>"))}</tr>");
+			}
+
+			public void TableEnd()
+			{
+				HtmlPage.AppendLine("</table>");
 			}
 
 			public void Save(SqlConnection connection)

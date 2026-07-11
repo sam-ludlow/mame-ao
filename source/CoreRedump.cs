@@ -7,6 +7,7 @@ using System.Linq;
 using System.Net.Http;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml;
 using System.Xml.Linq;
 
 namespace Spludlow.MameAO
@@ -189,25 +190,42 @@ namespace Spludlow.MameAO
 
 		public static DataSet RedumpDataSet(string directory)
 		{
+			Dictionary<string, string> subsets = new Dictionary<string, string>()
+			{
+				{ "redump", "Redump Optical Media" },
+			};
+
+			HashSet<string> datafileSkipColumns = new HashSet<string>(new string[] { "date", "homepage", "url" });
+
+			XElement subsetsElement = new XElement("subsets");
+
+			foreach (var subset in subsets)
+			{
+				XElement subsetElement = new XElement("subset");
+				subsetElement.SetAttributeValue("name", subset.Key);
+				subsetElement.SetAttributeValue("description", subset.Value);
+
+				foreach (string filename in Directory.GetFiles(directory, "*.xml"))
+				{
+					XElement datafileElement = XElement.Load(filename);
+
+					foreach (var itemElement in datafileElement.Element("header").Elements())
+						if (datafileSkipColumns.Contains(itemElement.Name.LocalName) == false)
+							datafileElement.SetAttributeValue(itemElement.Name, itemElement.Value);
+					datafileElement.Element("header").Remove();
+
+					string key = ((string)datafileElement.Attribute("name")).Replace(" ", "").ToLowerInvariant();
+
+					datafileElement.SetAttributeValue("key", key);
+
+					subsetElement.Add(datafileElement);
+				}
+				subsetsElement.Add(subsetElement);
+			}
+
 			DataSet dataSet = new DataSet();
 
-			foreach (string filename in Directory.GetFiles(directory, "*.xml"))
-			{
-				Console.WriteLine($"{filename}");
-
-				XElement document = XElement.Load(filename);
-
-				DataSet fileDataSet = new DataSet();
-				ReadXML.ImportXMLWork(document, fileDataSet, null, null);
-
-				Tools.DataFileMoveHeader(fileDataSet);
-
-				foreach (DataTable table in dataSet.Tables)
-					foreach (DataColumn column in table.Columns)
-						column.AutoIncrement = false;
-
-				Tools.DataFileMergeDataSet(fileDataSet, dataSet);
-			}
+			ReadXML.ImportXMLWork(subsetsElement, dataSet, null, null);
 
 			return dataSet;
 		}
@@ -218,8 +236,8 @@ namespace Spludlow.MameAO
 				_Version = LatestDownloadedVersion();
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
-			OperationsPayload.RedumpMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
-			//OperationsDatish.RedumpMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			//OperationsPayload.RedumpMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			OperationsDatish.RedumpMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
 
