@@ -4,11 +4,10 @@ using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
+using System.Net;
 using System.Text;
 using System.Xml;
 using System.Xml.Linq;
-
-using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -34,7 +33,7 @@ namespace Spludlow.MameAO
 			var xmlJsonPayloads_datafile = new Dictionary<string, string[]>();
 			var xmlJsonPayloads_game = new Dictionary<string, string[]>();
 
-			using (var reader = XmlReader.Create(Path.Combine(directory, "_fbneo.xml")))	//, _XmlReaderSettings))
+			using (var reader = XmlReader.Create(Path.Combine(directory, "_fbneo.xml")))    //, _XmlReaderSettings))	//	TODO dont use reader
 			{
 				while (reader.ReadToFollowing("datafile"))
 				{
@@ -56,7 +55,7 @@ namespace Spludlow.MameAO
 			//	Source Data	429 Megabytes (MiB)
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
+				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
 		}
 
 		/// <summary>
@@ -76,7 +75,7 @@ namespace Spludlow.MameAO
 			{
 				string subset = Path.GetFileNameWithoutExtension(filename).Substring(1);
 
-				using (var reader = XmlReader.Create(filename, _XmlReaderSettings))
+				using (var reader = XmlReader.Create(filename, _XmlReaderSettings)) //	TODO dont use reader
 				{
 					while (reader.ReadToFollowing("datafile"))
 					{
@@ -104,7 +103,7 @@ namespace Spludlow.MameAO
 			//	Sourcedata	3.6 Gigabytes (GiB)
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
+				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
 		}
 
 		/// <summary>
@@ -122,7 +121,7 @@ namespace Spludlow.MameAO
 
 			foreach (string filename in Directory.GetFiles(directory, "*.xml"))
 			{
-				using (var reader = XmlReader.Create(filename, _XmlReaderSettings))
+				using (var reader = XmlReader.Create(filename, _XmlReaderSettings))	//	TODO dont use reader
 				{
 					while (reader.ReadToFollowing("datafile"))
 					{
@@ -146,7 +145,7 @@ namespace Spludlow.MameAO
 			//	Source Data	1.3 Gigabytes (GiB)
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
+				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
 		}
 
 		/// <summary>
@@ -166,61 +165,43 @@ namespace Spludlow.MameAO
 			{
 				string subset = Path.GetFileNameWithoutExtension(filename);
 
-				using (var reader = XmlReader.Create(filename)) //, _XmlReaderSettings)) skips every other datafile ?
+				var subsetElement = XElement.Load(filename, LoadOptions.None);
+
+				foreach (var datafileElement in subsetElement.Elements("datafile"))
 				{
-					while (reader.ReadToFollowing("datafile"))
+					var datafile_name = datafileElement.Element("header").Element("name").Value;
+
+					Console.WriteLine(datafile_name);
+
+					xmlJsonPayloads_datafile.Add($"{subset}\t{datafile_name}", new string[] { datafileElement.ToString(), Tools.XML2JSON(datafileElement) });
+
+					foreach (var game in datafileElement.Elements("game"))
 					{
-						var datafile = (XElement)XElement.ReadFrom(reader);
-						var datafile_name = (string)datafile.Element("header").Element("name");
+						var game_name = game.Attribute("name").Value;
+						string key = $"{subset}\t{datafile_name}\t{game_name}";
 
-						Console.WriteLine(datafile_name);
-
-						xmlJsonPayloads_datafile.Add($"{subset}\t{datafile_name}", new string[] { datafile.ToString(), Tools.XML2JSON(datafile) });
-
-						foreach (var game in datafile.Elements("game"))
-						{
-							var game_name = (string)game.Attribute("name");
-
-							string key = $"{subset}\t{datafile_name}\t{game_name}";
-
-							if (xmlJsonPayloads_game.ContainsKey(key) == false)
-								xmlJsonPayloads_game.Add(key, new string[] { game.ToString(), Tools.XML2JSON(game) });
-							else
-								Console.WriteLine($"!!! Warning Duplicate XML game: {key}");
-						}
+						if (xmlJsonPayloads_game.ContainsKey(key) == false)
+							xmlJsonPayloads_game.Add(key, new string[] { game.ToString(), Tools.XML2JSON(game) });
+						else
+							Console.WriteLine($"!!! Warning Duplicate XML game: {key}");
 					}
 				}
 			}
 
-
-
-
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, directory, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
+				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
 		}
 
 
 
 		private static int DatishMSSQLPayloads(
 			SqlConnection connection,
-			string directory,
 			string coreName,
 			string version,
 			Dictionary<string, string[]> xmlJsonPayloads_datafile,
 			Dictionary<string, string[]> xmlJsonPayloads_game)
 		{
 			Tools.ConsolePrintMemory();
-
-			//
-			// Metadata
-			//
-			int datafileCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM datafile");
-			int gameCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM game");
-			int softRomCount = (int)Database.ExecuteScalar(connection, "SELECT COUNT(*) FROM rom");
-
-			string info = $"{coreName} {version} - datafiles: {datafileCount} - games: {gameCount} - rom: {softRomCount}";
-
-			OperationsPayload.CreateMetaDataTable(connection, coreName, version, info);
 
 			//
 			// Source Data
@@ -257,19 +238,21 @@ namespace Spludlow.MameAO
 			level_root.Append($"<h2>Subsets</h2>");
 			level_root.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size");
 
-			Counts total_counts = new Counts();
-
 			foreach (DataRow subsetRow in dataSet.Tables["subset"].Rows)
 			{
 				long subset_id = (long)subsetRow["subset_id"];
 				string subset_name = (string)subsetRow["name"];
 				string subset_description = (string)subsetRow["description"];
 
-				Counts subset_counts = new Counts();
-
-				Tools.ConsoleHeading(2, $"{subset_name}\t{subset_description}");
+				Tools.ConsoleHeading(2, $"{subset_name} : {subset_description}");
 
 				level_subset.Start($"{coreName} ({version}) &bull; {subset_name}");
+
+				level_subset.Append("<h2>Subset</h2>");
+				level_subset.Append(subsetRow);
+
+				level_subset.Append("<hr />");
+
 				level_subset.Append($"<h2>Datafiles</h2>");
 				level_subset.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size", "Key");
 
@@ -281,9 +264,13 @@ namespace Spludlow.MameAO
 					string datafile_name_enc = Uri.EscapeDataString(datafile_name);
 					string datafile_key = (string)datafileRow["key"];
 
-					Counts datafile_counts = new Counts();
+					level_datafile.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {WebUtility.HtmlEncode(datafile_name)}");
 
-					level_datafile.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {datafile_name}");
+					level_datafile.Append($"<div style=\"margin: 1em 0;\"><h2 style=\"display:inline;\">Datafile</h2> &bull; <a href=\"{datafile_name_enc}.xml\">XML</a> &bull; <a href=\"{datafile_name_enc}.json\">JSON</a></div>");
+					level_datafile.Append(datafileRow);
+
+					level_datafile.Append("<hr />");
+
 					level_datafile.Append($"<h2>Games</h2>");
 					level_datafile.TableStart("Name", "Description", "Roms", "Bytes", "Size");
 
@@ -294,15 +281,17 @@ namespace Spludlow.MameAO
 						string game_description = (string)gameRow["description"];
 						string game_name_enc = Uri.EscapeDataString(game_name);
 
-						Counts game_counts = new Counts();
-						game_counts.Games = 1;
+						level_game.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {WebUtility.HtmlEncode(datafile_name)} &bull; {WebUtility.HtmlEncode(game_name)}");
 
-						level_game.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {datafile_name} &bull; {game_name}");
+						level_game.Counts.Games = 1;
+
+						level_game.Append($"<div style=\"margin: 1em 0;\"><h2 style=\"display:inline;\">Game</h2> &bull; <a href=\"{game_name_enc}.xml\">XML</a> &bull; <a href=\"{game_name_enc}.json\">JSON</a></div>");
+						level_game.Append(gameRow);
+						
+						level_game.Append("<hr />");
+
 						level_game.Append($"<h2>Roms</h2>");
 						level_game.TableStart("Name", "Bytes", "Size", "CRC", "SHA1", "MD5");
-
-						StringBuilder game_html = new StringBuilder();
-						game_html.AppendLine($"<h2>{game_name} DETAILS<h2>");
 
 						foreach (DataRow romRow in dataSet.Tables["rom"].Select($"[game_id] = {game_id}"))
 						{
@@ -310,43 +299,54 @@ namespace Spludlow.MameAO
 							string crc = romRow.Field<string>("crc");
 							string sha1 = romRow.Field<string>("sha1");
 							string md5 = romRow.Field<string>("md5");
-							long rom_size = Int64.Parse(romRow.Field<string>("size") ?? "0");
 
-							game_counts.Roms += 1;
-							game_counts.Size += rom_size;
+							string size = romRow.Field<string>("size");
+							long rom_size = Int64.Parse(string.IsNullOrEmpty(size) ? "0" : size);
+
+							level_game.Counts.Roms += 1;
+							level_game.Counts.Size += rom_size;
 
 							level_game.TableRow(rom_name, rom_size.ToString(), Tools.DataSize(rom_size), crc, sha1, md5);
 						}
 
-						datafile_counts.Add(game_counts);
+						level_datafile.Counts.Add(level_game.Counts);
 
 						level_game.TableEnd();
 						level_game.Finish(subset_name, datafile_name, game_name);
 
+						//	TODO level_game ... rest of tables
+
 						level_datafile.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}/{game_name_enc}\">{game_name}</a>",
-							game_description, game_counts.Roms.ToString(), game_counts.Size.ToString(), Tools.DataSize(game_counts.Size));
+							game_description, level_game.Counts.Roms.ToString(), level_game.Counts.Size.ToString(), Tools.DataSize(level_game.Counts.Size));
 					}
 
-					subset_counts.Add(datafile_counts);
+					level_subset.Counts.Add(level_datafile.Counts);
 
 					level_datafile.TableEnd();
 					level_datafile.Finish(subset_name, datafile_name);
 
 					level_subset.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}\">{datafile_name}</a>",
-						datafile_description, datafile_counts.Games.ToString(), datafile_counts.Roms.ToString(), datafile_counts.Size.ToString(), Tools.DataSize(datafile_counts.Size), datafile_key);
+						datafile_description, level_datafile.Counts.Games.ToString(), level_datafile.Counts.Roms.ToString(), level_datafile.Counts.Size.ToString(), Tools.DataSize(level_datafile.Counts.Size), datafile_key);
 				}
 
-				total_counts.Add(subset_counts);
+				level_root.Counts.Add(level_subset.Counts);
 
 				level_subset.TableEnd();
 				level_subset.Finish(subset_name);
 
 				level_root.TableRow($"<a href=\"/{coreName}/{subset_name}\">{subset_name}</a>",
-					subset_description, subset_counts.Games.ToString(), subset_counts.Roms.ToString(), subset_counts.Size.ToString(), Tools.DataSize(subset_counts.Size));
+					subset_description, level_subset.Counts.Games.ToString(), level_subset.Counts.Roms.ToString(), level_subset.Counts.Size.ToString(), Tools.DataSize(level_subset.Counts.Size));
 			}
 
 			level_root.TableEnd();
 			level_root.Finish("1");
+
+			//
+			// Metadata
+			//
+			string info = $"{coreName} ({version}) &bull; {Tools.DataSize(level_root.Counts.Size)} &bull; subsets: {dataSet.Tables["subset"].Rows.Count} &bull; datafiles: {dataSet.Tables["datafile"].Rows.Count} &bull; games: {dataSet.Tables["game"].Rows.Count} &bull; roms: {dataSet.Tables["rom"].Rows.Count}";
+
+			OperationsPayload.CreateMetaDataTable(connection, coreName, version, info);
 
 			//
 			// Save payload tables
@@ -357,8 +357,36 @@ namespace Spludlow.MameAO
 			level_game.Save(connection);
 
 			//
-			// TODO indexes ...........
+			// Indexes
 			//
+			if (Database.IndexExists(connection, "rom", "IX_rom_name") == false)
+			{
+				Database.ExecuteNonQuery(connection, @"
+						CREATE NONCLUSTERED INDEX IX_rom_name
+						ON [rom] (name, game_id)
+						INCLUDE (size, sha1, crc);
+
+						CREATE NONCLUSTERED INDEX IX_rom_sha1
+						ON [rom] (sha1, game_id)
+						INCLUDE (name, size, crc);
+
+						CREATE NONCLUSTERED INDEX IX_rom_crc
+						ON [rom] (crc, game_id)
+						INCLUDE (name, size, sha1);
+					");
+			}
+
+			if (Database.FullTextColumnExists(connection, "game", "name") == false)
+				Database.ExecuteNonQuery(connection, @"
+						CREATE FULLTEXT INDEX ON [game]
+						(
+							[name],
+							[description]
+						)
+						KEY INDEX [PK_game]
+						ON [ao_catalog]
+						WITH CHANGE_TRACKING AUTO;
+					");
 
 			Tools.ConsolePrintMemory();
 
@@ -384,6 +412,8 @@ namespace Spludlow.MameAO
 		public class PayloadLevelInfo
 		{
 			public DataTable DataTable;
+
+			public Counts Counts = new Counts();
 
 			private string HtmlTitle;
 			private StringBuilder HtmlPage = new StringBuilder();
@@ -426,6 +456,8 @@ namespace Spludlow.MameAO
 				if (HtmlPage.Length != 0)
 					throw new ApplicationException("Unfinished Business");
 
+				Counts = new Counts();
+
 				HtmlTitle = title;
 			}
 			public void Finish(params string[] keys)
@@ -436,51 +468,73 @@ namespace Spludlow.MameAO
 				if (DataTable.Rows.Find(keys) != null)
 				{
 					Console.WriteLine($"!!! Warning Duplicate Item {DataTable.TableName}:\t{String.Join("\t", keys)}");
-					return;
 				}
-
-				string[] xmlJson = new string[] { "", "" };
-				if (XmlJsonPayloads != null)
+				else
 				{
-					string key = String.Join("\t", keys);
+					HtmlPage.AppendLine("<br />");
 
-					if (XmlJsonPayloads.ContainsKey(key) == false)
-						throw new ApplicationException($"Did not find xml json lookup {key}");
-					xmlJson = XmlJsonPayloads[key];
+					string[] xmlJson = new string[] { "", "" };
+					if (XmlJsonPayloads != null)
+					{
+						string key = String.Join("\t", keys);
+
+						if (XmlJsonPayloads.ContainsKey(key) == false)
+							throw new ApplicationException($"Did not find xml json lookup {key}");
+						xmlJson = XmlJsonPayloads[key];
+					}
+
+					var rowData = new List<object>();
+					rowData.AddRange(keys);
+					rowData.AddRange(new string[] { HtmlTitle, xmlJson[0], xmlJson[1], HtmlPage.ToString() });
+
+					DataTable.Rows.Add(rowData.ToArray());
 				}
-
-				var rowData = new List<object>();
-				rowData.AddRange(keys);
-				rowData.AddRange(new string[] { HtmlTitle, xmlJson[0], xmlJson[1], HtmlPage.ToString() });
-
-				DataTable.Rows.Add(rowData.ToArray());
 
 				HtmlPage.Length = 0;
 			}
 
 			public void Append(string html)
 			{
-				HtmlPage.Append(html);
+				HtmlPage.AppendLine(html);
+			}
+			public void Append(DataRow row)
+			{
+				string[] columnNames = row.Table.Columns.Cast<DataColumn>().Select(col => col.ColumnName).Where(name => name.EndsWith("_id") == false).ToArray();
+
+				TableStart(columnNames);
+				TableRow(columnNames.Select(col => row.IsNull(col) ? "" : (string)row[col]).ToArray());
+				TableEnd();
 			}
 			public void TableStart(params string[] columnNames)
 			{
 				TableWidth = columnNames.Length;
-
 				HtmlPage.AppendLine("<table>");
-				HtmlPage.AppendLine($"<tr>{String.Join("", columnNames.Select(name => $"<th>{name}</th>"))}</tr>");
+				HtmlPage.AppendLine(EncodeTableRow(columnNames, "th"));
 			}
 			public void TableRow(params string[] values)
 			{
 				if (values.Length != TableWidth)
 					throw new ApplicationException("Bad values width");
 
-				HtmlPage.AppendLine($"<tr>{String.Join("", values.Select(n => $"<td>{n}</td>"))}</tr>");
+				HtmlPage.AppendLine(EncodeTableRow(values, "td"));
 			}
 
 			public void TableEnd()
 			{
 				HtmlPage.AppendLine("</table>");
 			}
+
+			private string EncodeTableRow(IEnumerable<string> values, string type)
+			{
+				values = values.Select(value => {
+					if (value != null && value.StartsWith("<a href") == false)
+						value = WebUtility.HtmlEncode(value);
+					return value;
+				});
+
+				return $"<tr>{String.Join("", values.Select(value => $"<{type}>{value}</{type}>"))}</tr>";
+			}
+
 
 			public void Save(SqlConnection connection)
 			{

@@ -215,7 +215,6 @@ namespace Spludlow.MameAO
 					datafileElement.Element("header").Remove();
 
 					string key = ((string)datafileElement.Attribute("name")).Replace(" ", "").ToLowerInvariant();
-
 					datafileElement.SetAttributeValue("key", key);
 
 					subsetElement.Add(datafileElement);
@@ -224,9 +223,7 @@ namespace Spludlow.MameAO
 			}
 
 			DataSet dataSet = new DataSet();
-
 			ReadXML.ImportXMLWork(subsetsElement, dataSet, null, null);
-
 			return dataSet;
 		}
 

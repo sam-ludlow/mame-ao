@@ -175,21 +175,30 @@ namespace Spludlow.MameAO
 
 		public static DataSet NoIntroDataSet(string directory)
 		{
-			DataSet dataSet = new DataSet();
+			HashSet<string> datafileSkipColumns = new HashSet<string>(new string[] { "homepage", "url", "clrmamepro" });
 
-			foreach (string filename in Directory.GetFiles(directory, "*.dat"))
+			XElement subsetsElement = new XElement("subsets");
+
+			foreach (string filename in Directory.GetFiles(directory, "*.xml"))
 			{
-				Console.WriteLine($"{filename}");
+				XElement subsetElement = XElement.Load(filename);
 
-				XElement document = XElement.Load(filename);
+				string subset_name = Path.GetFileNameWithoutExtension(filename);
+				string subset_description = subsetElement.Attribute("name").Value;
 
-				foreach (var element in document.Descendants("game_id"))
+				subsetElement.SetAttributeValue("name", subset_name);
+				subsetElement.SetAttributeValue("description", subset_description);
+
+				//
+				// Fixes - TODO: XML parsing should handle this
+				//
+				foreach (var element in subsetElement.Descendants("game_id"))
 					element.Name = "game_code";
 
-				foreach (var element in document.Descendants("id"))
+				foreach (var element in subsetElement.Descendants("id"))
 					element.Name = "datafile_identity";
 
-				foreach (var game in document.Descendants("game"))
+				foreach (var game in subsetElement.Descendants("game"))
 				{
 					var attribute = game.Attribute("id");
 					if (attribute != null)
@@ -199,38 +208,35 @@ namespace Spludlow.MameAO
 					}
 				}
 
-				foreach (var category in document.Descendants("category"))
+				foreach (var category in subsetElement.Descendants("category"))
 					category.SetAttributeValue("name", category.Value);
 
-				foreach (var element in document.Descendants("game_code"))
+				foreach (var element in subsetElement.Descendants("game_code"))
 					element.SetAttributeValue("name", element.Value);
 
-				document.Descendants("clrmamepro").Remove();
 
-				DataSet fileDataSet = new DataSet();
-				ReadXML.ImportXMLWork(document, fileDataSet, null, null);
+				foreach (var datafileElement in subsetElement.Descendants("datafile"))
+				{
+					foreach (var itemElement in datafileElement.Element("header").Elements())
+						if (datafileSkipColumns.Contains(itemElement.Name.LocalName) == false)
+							datafileElement.SetAttributeValue(itemElement.Name, itemElement.Value);
+					datafileElement.Element("header").Remove();
 
-				Tools.DataFileMoveHeader(fileDataSet);
+					string key = ((string)datafileElement.Attribute("name")).Replace(" ", "").ToLowerInvariant();
+					datafileElement.SetAttributeValue("key", key);
+				}
 
-				foreach (DataTable table in dataSet.Tables)
-					foreach (DataColumn column in table.Columns)
-						column.AutoIncrement = false;
-
-				Tools.DataFileMergeDataSet(fileDataSet, dataSet);
+				subsetsElement.Add(subsetElement);
 			}
 
+			DataSet dataSet = new DataSet();
+			ReadXML.ImportXMLWork(subsetsElement, dataSet, null, null);
+
+			//
+			// Unwanted columns
+			//
 			dataSet.Tables["datafile"].Columns.Remove("xsi");
 			dataSet.Tables["datafile"].Columns.Remove("schemaLocation");
-			dataSet.Tables["datafile"].Columns.Remove("homepage");
-			dataSet.Tables["datafile"].Columns.Remove("url");
-
-			foreach (DataRow row in dataSet.Tables["datafile"].Rows)
-			{
-				string subset = row.IsNull("subset") == false ? (string)row["subset"] : "no-intro";
-				row["subset"] = subset.ToLower().Replace(' ', '-');
-			}
-
-			dataSet.Tables["datafile"].AcceptChanges();
 
 			return dataSet;
 		}
@@ -240,8 +246,8 @@ namespace Spludlow.MameAO
 			if (_Version == null)
 				_Version = LatestDownloadedVersion();
 
-			OperationsPayload.NoIntroMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
-			//OperationsDatish.NoIntroMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			//OperationsPayload.NoIntroMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			OperationsDatish.NoIntroMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
 
