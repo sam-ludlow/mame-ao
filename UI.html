@@ -433,9 +433,9 @@
 
 			div = document.createElement('div');
 			div.style = 'width:100%;';
-			div.innerHTML = '<h2>BitTorrent Client Information</h2><table style="width:100%;">' +
-				'<tr><th>Version</th><th>Start Time</th><th>Time Now</th><th>Running for</th></tr>' +
-				`<tr><td>DOME-BT ${btInfo.version}</td><td>${btInfo.start_time}</td><td>${btInfo.time_now}</td><td>${btInfo.run_time_text}</td></tr>` +
+            div.innerHTML = '<h2>BitTorrent Client Information</h2><table style="width:100%;">' +
+				'<tr><th>Version</th><th>Start Time</th><th>Time Now</th><th>Running for</th><th>Port</th></tr>' +
+				`<tr><td>DOME-BT ${btInfo.version}</td><td>${btInfo.start_time}</td><td>${btInfo.time_now}</td><td>${btInfo.run_time_text}</td><td>${btInfo.port_number}</td></tr>` +
 				'</table>';
 			canvas.appendChild(div);
 
@@ -468,11 +468,11 @@
 				{ heading: 'Type', columnName: 'type' },
 				{ heading: 'Version', columnName: 'version' },
 				{ heading: 'State', columnName: 'state' },
-				{ heading: 'File Count', columnName: 'file_count' },
-				{ heading: 'Open Connections', columnName: 'open_connections' },
-				{ heading: 'Peers Available', columnName: 'peers_available' },
-				{ heading: 'Peers Leechs', columnName: 'peers_leechs' },
-				{ heading: 'Peers Seeds', columnName: 'peers_seeds' },
+				{ heading: 'Files', columnName: 'file_count' },
+				{ heading: 'Connections', columnName: 'open_connections' },
+				{ heading: 'Available', columnName: 'peers_available' },
+				{ heading: 'Leechs', columnName: 'peers_leechs' },
+				{ heading: 'Seeds', columnName: 'peers_seeds' },
 				{ heading: 'Downloaded', columnName: 'bytes_received_text' },
 				{ heading: 'Uploaded', columnName: 'bytes_sent_text' },
 			];
@@ -1354,7 +1354,7 @@
 
 					switch (columnDef.columnName) {
 						case 'name':
-							cell.innerHTML = `<a ${target(result)} target="_blank">${result.name}</a>`;
+							cell.innerHTML = `<a ${target(result)}>${result.name}</a>`;
 							break;
 
 						case 'favorite':
@@ -1622,7 +1622,7 @@
 							break;
 
 						case 'description':
-							cell.innerHTML = `<a href="https://data.spludlow.co.uk/${_info.core_name}/software/${result.softwarelist_name}/${result.name}" target="_blank">${result.name}</a>`;
+							cell.innerHTML = `<a href="https://data.spludlow.co.uk/${_info.core_name}/software/${result.softwarelist_name}/${result.name}" target="_blank">${result.description}</a>`;
 							break;
 
 						case 'publisher':

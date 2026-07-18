@@ -127,11 +127,12 @@ namespace Spludlow.MameAO
 			Database.ExecuteNonQuery(connection, $"DROP TABLE IF EXISTS [{table.TableName}];");
 
 			string commandText = $"CREATE TABLE [{table.TableName}] ({String.Join(", ", columnDefs)});";
-
 			Console.WriteLine(commandText);
-
 			Database.ExecuteNonQuery(connection, commandText);
-			Database.BulkInsert(connection, table);
+
+			Console.Write($"Bulk insert {table.Rows.Count} ...");
+			Database.BulkInsertReport(connection, table);
+			Console.WriteLine("...done");
 		}
 
 		//

@@ -53,6 +53,8 @@ namespace Spludlow.MameAO
 		int ICore.Get()
 		{
 			//	https://datomatic.no-intro.org/index.php?page=download&s=64&op=daily
+			//	tick everything except "Numbered archives" (same as "Standard" with IDs at start)
+
 			string importDirectory = @"C:\tmp\No-Intro";
 
 			string[] filenames = Directory.GetFiles(importDirectory, "*.zip");
@@ -175,7 +177,7 @@ namespace Spludlow.MameAO
 
 		public static DataSet NoIntroDataSet(string directory)
 		{
-			HashSet<string> datafileSkipColumns = new HashSet<string>(new string[] { "homepage", "url", "clrmamepro" });
+			HashSet<string> datafileSkipColumns = new HashSet<string>(new string[] { "homepage", "url", "trademarks", "piracy", "clrmamepro" });
 
 			XElement subsetsElement = new XElement("subsets");
 
@@ -190,40 +192,45 @@ namespace Spludlow.MameAO
 				subsetElement.SetAttributeValue("description", subset_description);
 
 				//
-				// Fixes - TODO: XML parsing should handle this
+				// Fixes
 				//
-				foreach (var element in subsetElement.Descendants("game_id"))
-					element.Name = "game_code";
-
-				foreach (var element in subsetElement.Descendants("id"))
-					element.Name = "datafile_identity";
-
-				foreach (var game in subsetElement.Descendants("game"))
+				foreach (var datafileElement in subsetElement.Elements("datafile"))
 				{
-					var attribute = game.Attribute("id");
-					if (attribute != null)
-					{
-						game.SetAttributeValue("game_identity", attribute.Value);
-						attribute.Remove();
-					}
-				}
-
-				foreach (var category in subsetElement.Descendants("category"))
-					category.SetAttributeValue("name", category.Value);
-
-				foreach (var element in subsetElement.Descendants("game_code"))
-					element.SetAttributeValue("name", element.Value);
-
-
-				foreach (var datafileElement in subsetElement.Descendants("datafile"))
-				{
+					//	Move header
 					foreach (var itemElement in datafileElement.Element("header").Elements())
 						if (datafileSkipColumns.Contains(itemElement.Name.LocalName) == false)
 							datafileElement.SetAttributeValue(itemElement.Name, itemElement.Value);
 					datafileElement.Element("header").Remove();
 
-					string key = ((string)datafileElement.Attribute("name")).Replace(" ", "").ToLowerInvariant();
-					datafileElement.SetAttributeValue("key", key);
+					var datafileIdAttribute = datafileElement.Attribute("id");	//	PK clash
+					if (datafileIdAttribute != null)
+					{
+						datafileElement.SetAttributeValue("datafile_identity", datafileIdAttribute.Value);
+						datafileIdAttribute.Remove();
+					}
+
+					foreach (var element in datafileElement.Elements("machine"))	//	Everything else is "game"
+						element.Name = "game";
+
+					foreach (var gameElement in datafileElement.Elements("game"))
+					{
+						var gameIdAttribute = gameElement.Attribute("id");  //	PK clash
+						if (gameIdAttribute != null)
+						{
+							gameElement.SetAttributeValue("game_identity", gameIdAttribute.Value);
+							gameIdAttribute.Remove();
+						}
+
+						foreach (var element in gameElement.Elements("game_id"))  //	PK clash AND some >1 element
+						{
+							element.Name = "game_code";
+							element.SetAttributeValue("name", element.Value);
+						}
+
+
+						foreach (var element in gameElement.Elements("category"))	// some >1 element
+							element.SetAttributeValue("name", element.Value);
+					}
 				}
 
 				subsetsElement.Add(subsetElement);
@@ -246,7 +253,6 @@ namespace Spludlow.MameAO
 			if (_Version == null)
 				_Version = LatestDownloadedVersion();
 
-			//OperationsPayload.NoIntroMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 			OperationsDatish.NoIntroMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 

@@ -209,7 +209,7 @@ namespace Spludlow.MameAO
 			{
 				info = DomeInfo() ?? throw new ApplicationException("Lost connection to DOME-BT");
 
-				if (info.ready_minutes != null)
+				if (info.ready_seconds != null)
 					break;
 
 				Console.Write(".");

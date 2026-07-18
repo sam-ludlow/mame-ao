@@ -207,15 +207,12 @@ namespace Spludlow.MameAO
 
 				foreach (string filename in Directory.GetFiles(directory, "*.xml"))
 				{
-					XElement datafileElement = XElement.Load(filename);
+					XElement datafileElement = XElement.Load(filename, LoadOptions.None);
 
 					foreach (var itemElement in datafileElement.Element("header").Elements())
 						if (datafileSkipColumns.Contains(itemElement.Name.LocalName) == false)
 							datafileElement.SetAttributeValue(itemElement.Name, itemElement.Value);
 					datafileElement.Element("header").Remove();
-
-					string key = ((string)datafileElement.Attribute("name")).Replace(" ", "").ToLowerInvariant();
-					datafileElement.SetAttributeValue("key", key);
 
 					subsetElement.Add(datafileElement);
 				}
@@ -233,15 +230,8 @@ namespace Spludlow.MameAO
 				_Version = LatestDownloadedVersion();
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
-			//OperationsPayload.RedumpMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 			OperationsDatish.RedumpMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
-
-
-
-
-
-
 
 		void ICore.AllSHA1(HashSet<string> hashSet)
 		{

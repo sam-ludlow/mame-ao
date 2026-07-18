@@ -22,7 +22,6 @@ namespace Spludlow.MameAO
 
 		/// <summary>
 		/// xml: single file conatining all datafiles <datafiles version="2026-04-24T07-20-15">	<datafile key="arcade">
-		/// subset: single
 		/// </summary>
 		public static int FBNeoMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName)
 		{
@@ -51,16 +50,12 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			//	XML			---
-			//	Source Data	429 Megabytes (MiB)
-
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
 				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
 		}
 
 		/// <summary>
 		/// xml: file for each subset (category) (filename is subset key) <category name="TOSEC-ISO"> <datafile>
-		/// subset: 3 each category
 		/// </summary>
 		public static int TosecMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName)
 		{
@@ -99,16 +94,12 @@ namespace Spludlow.MameAO
 				}
 			}
 
-			//	XML			---
-			//	Sourcedata	3.6 Gigabytes (GiB)
-
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
 				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
 		}
 
 		/// <summary>
 		/// xml: file for each datafile <datafile>
-		/// subset: single
 		/// </summary>
 		public static int RedumpMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName)
 		{
@@ -121,28 +112,18 @@ namespace Spludlow.MameAO
 
 			foreach (string filename in Directory.GetFiles(directory, "*.xml"))
 			{
-				using (var reader = XmlReader.Create(filename, _XmlReaderSettings))	//	TODO dont use reader
+				var datafile = XElement.Load(filename, LoadOptions.None);
+				var datafile_name = (string)datafile.Element("header").Element("name");
+
+				xmlJsonPayloads_datafile.Add($"{coreName}\t{datafile_name}", new string[] { datafile.ToString(), Tools.XML2JSON(datafile) });
+
+				foreach (var game in datafile.Elements("game"))
 				{
-					while (reader.ReadToFollowing("datafile"))
-					{
-						var datafile = (XElement)XElement.ReadFrom(reader);
-						var datafile_name = (string)datafile.Element("header").Element("name");
-
-						xmlJsonPayloads_datafile.Add($"{coreName}\t{datafile_name}", new string[] { datafile.ToString(), Tools.XML2JSON(datafile) });
-
-						foreach (var game in datafile.Elements("game"))
-						{
-							var game_name = (string)game.Attribute("name");
-
-							string key = $"{coreName}\t{datafile_name}\t{game_name}";
-							xmlJsonPayloads_game.Add(key, new string[] { game.ToString(), Tools.XML2JSON(game) });
-						}
-					}
+					var game_name = (string)game.Attribute("name");
+					string key = $"{coreName}\t{datafile_name}\t{game_name}";
+					xmlJsonPayloads_game.Add(key, new string[] { game.ToString(), Tools.XML2JSON(game) });
 				}
 			}
-
-			//	XML			---
-			//	Source Data	1.3 Gigabytes (GiB)
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
 				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
@@ -150,7 +131,6 @@ namespace Spludlow.MameAO
 
 		/// <summary>
 		/// xml: file for each subset (filename is subset key) <subset name="Source Code"> <datafile
-		/// subset:4 each subset
 		/// </summary>
 		public static int NoIntroMSSQLPayloads(string directory, string version, string serverConnectionString, string databaseName)
 		{
@@ -169,6 +149,9 @@ namespace Spludlow.MameAO
 
 				foreach (var datafileElement in subsetElement.Elements("datafile"))
 				{
+					foreach (var element in datafileElement.Elements("machine"))    //	Everything else is "game"
+						element.Name = "game";
+
 					var datafile_name = datafileElement.Element("header").Element("name").Value;
 
 					Console.WriteLine(datafile_name);
@@ -254,7 +237,7 @@ namespace Spludlow.MameAO
 				level_subset.Append("<hr />");
 
 				level_subset.Append($"<h2>Datafiles</h2>");
-				level_subset.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size", "Key");
+				level_subset.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size");
 
 				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Select($"[subset_id] = {subset_id}"))
 				{
@@ -262,7 +245,6 @@ namespace Spludlow.MameAO
 					string datafile_name = (string)datafileRow["name"];
 					string datafile_description = (string)datafileRow["description"];
 					string datafile_name_enc = Uri.EscapeDataString(datafile_name);
-					string datafile_key = (string)datafileRow["key"];
 
 					level_datafile.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {WebUtility.HtmlEncode(datafile_name)}");
 
@@ -326,7 +308,7 @@ namespace Spludlow.MameAO
 					level_datafile.Finish(subset_name, datafile_name);
 
 					level_subset.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}\">{datafile_name}</a>",
-						datafile_description, level_datafile.Counts.Games.ToString(), level_datafile.Counts.Roms.ToString(), level_datafile.Counts.Size.ToString(), Tools.DataSize(level_datafile.Counts.Size), datafile_key);
+						datafile_description, level_datafile.Counts.Games.ToString(), level_datafile.Counts.Roms.ToString(), level_datafile.Counts.Size.ToString(), Tools.DataSize(level_datafile.Counts.Size));
 				}
 
 				level_root.Counts.Add(level_subset.Counts);
@@ -359,6 +341,8 @@ namespace Spludlow.MameAO
 			//
 			// Indexes
 			//
+			Console.Write("Create Indexes ...");
+
 			if (Database.IndexExists(connection, "rom", "IX_rom_name") == false)
 			{
 				Database.ExecuteNonQuery(connection, @"
@@ -387,6 +371,8 @@ namespace Spludlow.MameAO
 						ON [ao_catalog]
 						WITH CHANGE_TRACKING AUTO;
 					");
+
+			Console.WriteLine("...done");
 
 			Tools.ConsolePrintMemory();
 
@@ -535,13 +521,10 @@ namespace Spludlow.MameAO
 				return $"<tr>{String.Join("", values.Select(value => $"<{type}>{value}</{type}>"))}</tr>";
 			}
 
-
 			public void Save(SqlConnection connection)
 			{
 				OperationsPayload.MakeMSSQLPayloadsInsert(connection, DataTable);
 			}
-
-
 		}
 	}
 }
