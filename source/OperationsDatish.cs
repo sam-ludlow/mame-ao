@@ -13,13 +13,6 @@ namespace Spludlow.MameAO
 {
 	public class OperationsDatish
 	{
-		private static readonly XmlReaderSettings _XmlReaderSettings = new XmlReaderSettings()
-		{
-			DtdProcessing = DtdProcessing.Parse,
-			IgnoreComments = false,
-			IgnoreWhitespace = true,
-		};
-
 		/// <summary>
 		/// xml: single file conatining all datafiles <datafiles version="2026-04-24T07-20-15">	<datafile key="arcade">
 		/// </summary>
@@ -68,28 +61,27 @@ namespace Spludlow.MameAO
 
 			foreach (string filename in Directory.GetFiles(directory, "*.xml"))
 			{
-				string subset = Path.GetFileNameWithoutExtension(filename).Substring(1);
+				string subset_name = Path.GetFileNameWithoutExtension(filename).Substring(1);
 
-				using (var reader = XmlReader.Create(filename, _XmlReaderSettings)) //	TODO dont use reader
+				var categoryElement = XElement.Load(filename, LoadOptions.None);
+
+				foreach (var datafileElement in categoryElement.Elements("datafile"))
 				{
-					while (reader.ReadToFollowing("datafile"))
+					var datafile_name = datafileElement.Element("header").Element("name").Value;
+
+					Console.WriteLine(datafile_name);
+
+					xmlJsonPayloads_datafile.Add($"{subset_name}\t{datafile_name}", new string[] { datafileElement.ToString(), Tools.XML2JSON(datafileElement) });
+
+					foreach (var game in datafileElement.Elements("game"))
 					{
-						var datafile = (XElement)XElement.ReadFrom(reader);
-						var datafile_name = (string)datafile.Element("header").Element("name");
+						var game_name = game.Attribute("name").Value;
+						string key = $"{subset_name}\t{datafile_name}\t{game_name}";
 
-						xmlJsonPayloads_datafile.Add($"{subset}\t{datafile_name}", new string[] { datafile.ToString(), Tools.XML2JSON(datafile) });
-
-						foreach (var game in datafile.Elements("game"))
-						{
-							var game_name = (string)game.Attribute("name");
-
-							string key = $"{subset}\t{datafile_name}\t{game_name}";
-
-							if (xmlJsonPayloads_game.ContainsKey(key) == false)
-								xmlJsonPayloads_game.Add(key, new string[] { game.ToString(), Tools.XML2JSON(game) });
-							else
-								Console.WriteLine($"!!! Warning Duplicate XML game: {key}");
-						}
+						if (xmlJsonPayloads_game.ContainsKey(key) == false)
+							xmlJsonPayloads_game.Add(key, new string[] { game.ToString(), Tools.XML2JSON(game) });
+						else
+							Console.WriteLine($"!!! Warning Duplicate XML game: {key}");
 					}
 				}
 			}
@@ -219,7 +211,7 @@ namespace Spludlow.MameAO
 
 			level_root.Start($"{coreName} ({version})");
 			level_root.Append($"<h2>Subsets</h2>");
-			level_root.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size");
+			level_root.TableStart("Name", "Description", "Datafiles", "Games", "Roms", "Bytes", "Size", "Extentions");
 
 			foreach (DataRow subsetRow in dataSet.Tables["subset"].Rows)
 			{
@@ -237,7 +229,7 @@ namespace Spludlow.MameAO
 				level_subset.Append("<hr />");
 
 				level_subset.Append($"<h2>Datafiles</h2>");
-				level_subset.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size");
+				level_subset.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size", "Extentions");
 
 				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Select($"[subset_id] = {subset_id}"))
 				{
@@ -248,13 +240,15 @@ namespace Spludlow.MameAO
 
 					level_datafile.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {WebUtility.HtmlEncode(datafile_name)}");
 
+					level_datafile.Counts.Datafiles = 1;
+
 					level_datafile.Append($"<div style=\"margin: 1em 0;\"><h2 style=\"display:inline;\">Datafile</h2> &bull; <a href=\"{datafile_name_enc}.xml\">XML</a> &bull; <a href=\"{datafile_name_enc}.json\">JSON</a></div>");
 					level_datafile.Append(datafileRow);
 
 					level_datafile.Append("<hr />");
 
 					level_datafile.Append($"<h2>Games</h2>");
-					level_datafile.TableStart("Name", "Description", "Roms", "Bytes", "Size");
+					level_datafile.TableStart("Name", "Description", "Roms", "Bytes", "Size", "Extentions");
 
 					foreach (DataRow gameRow in dataSet.Tables["game"].Select($"[datafile_id] = {datafile_id}"))
 					{
@@ -266,6 +260,7 @@ namespace Spludlow.MameAO
 						level_game.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {WebUtility.HtmlEncode(datafile_name)} &bull; {WebUtility.HtmlEncode(game_name)}");
 
 						level_game.Counts.Games = 1;
+						//
 
 						level_game.Append($"<div style=\"margin: 1em 0;\"><h2 style=\"display:inline;\">Game</h2> &bull; <a href=\"{game_name_enc}.xml\">XML</a> &bull; <a href=\"{game_name_enc}.json\">JSON</a></div>");
 						level_game.Append(gameRow);
@@ -288,6 +283,9 @@ namespace Spludlow.MameAO
 							level_game.Counts.Roms += 1;
 							level_game.Counts.Size += rom_size;
 
+							string extention = Path.GetExtension(rom_name).ToLower();
+							level_game.Counts.AddExtention(extention);
+
 							level_game.TableRow(rom_name, rom_size.ToString(), Tools.DataSize(rom_size), crc, sha1, md5);
 						}
 
@@ -298,8 +296,10 @@ namespace Spludlow.MameAO
 
 						//	TODO level_game ... rest of tables
 
-						level_datafile.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}/{game_name_enc}\">{game_name}</a>",
-							game_description, level_game.Counts.Roms.ToString(), level_game.Counts.Size.ToString(), Tools.DataSize(level_game.Counts.Size));
+						level_datafile.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}/{game_name_enc}\">{game_name}</a>", game_description,
+							level_game.Counts.Roms.ToString(), level_game.Counts.Size.ToString(), Tools.DataSize(level_game.Counts.Size),
+							level_game.Counts.ExtentionsToString()
+						);
 					}
 
 					level_subset.Counts.Add(level_datafile.Counts);
@@ -307,8 +307,10 @@ namespace Spludlow.MameAO
 					level_datafile.TableEnd();
 					level_datafile.Finish(subset_name, datafile_name);
 
-					level_subset.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}\">{datafile_name}</a>",
-						datafile_description, level_datafile.Counts.Games.ToString(), level_datafile.Counts.Roms.ToString(), level_datafile.Counts.Size.ToString(), Tools.DataSize(level_datafile.Counts.Size));
+					level_subset.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}\">{datafile_name}</a>", datafile_description,
+						level_datafile.Counts.Games.ToString(), level_datafile.Counts.Roms.ToString(), level_datafile.Counts.Size.ToString(), Tools.DataSize(level_datafile.Counts.Size),
+						level_datafile.Counts.ExtentionsToString()
+					);
 				}
 
 				level_root.Counts.Add(level_subset.Counts);
@@ -316,8 +318,10 @@ namespace Spludlow.MameAO
 				level_subset.TableEnd();
 				level_subset.Finish(subset_name);
 
-				level_root.TableRow($"<a href=\"/{coreName}/{subset_name}\">{subset_name}</a>",
-					subset_description, level_subset.Counts.Games.ToString(), level_subset.Counts.Roms.ToString(), level_subset.Counts.Size.ToString(), Tools.DataSize(level_subset.Counts.Size));
+				level_root.TableRow($"<a href=\"/{coreName}/{subset_name}\">{subset_name}</a>", subset_description,
+					level_subset.Counts.Datafiles.ToString(), level_subset.Counts.Games.ToString(), level_subset.Counts.Roms.ToString(), level_subset.Counts.Size.ToString(), Tools.DataSize(level_subset.Counts.Size),
+					level_subset.Counts.ExtentionsToString()
+				);
 			}
 
 			level_root.TableEnd();
@@ -383,15 +387,58 @@ namespace Spludlow.MameAO
 
 		public class Counts
 		{
+			public long Datafiles = 0;
 			public long Games = 0;
 			public long Roms = 0;
 			public long Size = 0;
+			public Dictionary<string, int> Extentions = new Dictionary<string, int>();
 
 			public void Add(Counts counts)
 			{
+				Datafiles += counts.Datafiles;
 				Games += counts.Games;
 				Roms += counts.Roms;
 				Size += counts.Size;
+
+				foreach (var extention in counts.Extentions)
+				{
+					if (Extentions.ContainsKey(extention.Key) == false)
+						Extentions.Add(extention.Key, 0);
+					Extentions[extention.Key] += extention.Value;
+				}
+			}
+
+			public void AddExtention(string extention)
+			{
+				if (extention.Length == 0)
+					extention = "_";
+				else
+					extention = extention.Substring(1);
+
+				if (Extentions.ContainsKey(extention) == false)
+					Extentions.Add(extention, 0);
+
+				Extentions[extention] += 1;
+			}
+
+			public string ExtentionsToString()
+			{
+				int max = 10;
+
+				var extentions = Extentions.OrderByDescending(pair => pair.Value).Cast<KeyValuePair<string, int>>();
+				
+				if (extentions.Count() > max)
+				{
+					int remainingCount = 0;
+					foreach (int count in extentions.Skip(10).Select(pair => pair.Value))
+						remainingCount += count;
+
+					extentions = extentions.Take(max);
+					extentions = extentions.Append(new KeyValuePair<string, int>("...", remainingCount));
+					extentions = extentions.OrderByDescending(pair => pair.Value);
+				}
+
+				return String.Join(", ", extentions.Select(pair => $"{pair.Key}({pair.Value})"));
 			}
 		}
 

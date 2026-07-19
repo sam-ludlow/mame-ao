@@ -407,39 +407,19 @@ namespace Spludlow.MameAO
 
 		public static void BulkInsert(SqlConnection connection, DataTable table)
 		{
-			using (SqlBulkCopy sqlBulkCopy = new SqlBulkCopy(connection))
-			{
-				sqlBulkCopy.DestinationTableName = table.TableName;
+			Console.Write($"Bulk Insert: {table} ({table.Rows.Count}) ...");
 
-				sqlBulkCopy.BulkCopyTimeout = 1 * 60 * 60;
-
-				connection.Open();
-				try
-				{
-					sqlBulkCopy.WriteToServer(table);
-				}
-				finally
-				{
-					connection.Close();
-				}
-			}
-		}
-
-		public static void BulkInsertReport(SqlConnection connection, DataTable table)
-		{
 			using (SqlBulkCopy sqlBulkCopy = new SqlBulkCopy(connection, SqlBulkCopyOptions.TableLock, null))
 			{
 				sqlBulkCopy.DestinationTableName = table.TableName;
 				sqlBulkCopy.BulkCopyTimeout = 1 * 60 * 60;
 				sqlBulkCopy.BatchSize = 16 * 1024;
-
 				sqlBulkCopy.NotifyAfter = table.Rows.Count / 100;
 				sqlBulkCopy.SqlRowsCopied += (sender, e) =>
 				{
 					long percent = e.RowsCopied * 100 / table.Rows.Count;
 					Console.Write($"{percent}.");
 				};
-
 				connection.Open();
 				try
 				{
@@ -450,6 +430,8 @@ namespace Spludlow.MameAO
 					connection.Close();
 				}
 			}
+
+			Console.WriteLine("...done");
 		}
 
 		public static string[] TableList(SqlConnection connection)

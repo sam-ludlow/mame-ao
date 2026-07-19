@@ -242,58 +242,47 @@ namespace Spludlow.MameAO
 			if (_Version == null)
 				_Version = TosecGetLatestDownloadedVersion(_RootDirectory);
 
-			OperationsPayload.TosecMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
-			//OperationsDatish.TosecMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			//OperationsPayload.TosecMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			OperationsDatish.TosecMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
 		public static DataSet TosecDataSet(string directory)
 		{
-			DataSet dataSet = new DataSet();
-
-			string[] categories = new string[] { "TOSEC", "TOSEC-ISO", "TOSEC-PIX" };
-
-			foreach (string category in categories)
+			var subsets = new Dictionary<string, string>()
 			{
-				string groupDirectory = Path.Combine(directory, category);
+				{ "tosec", "TOSEC" },
+				{ "tosec-iso", "TOSEC-ISO" },
+				{ "tosec-pix", "TOSEC-PIX" },
+			};
 
-				foreach (string filename in Directory.GetFiles(groupDirectory, "*.dat"))
+			var datafileSkipColumns = new HashSet<string>(new string[] { "email", "homepage", "url", "clrmamepro" });
+
+			var subsetsElement = new XElement("subsets");
+
+			foreach (var subset in subsets)
+			{
+				var subsetElement = new XElement("subset");
+				subsetElement.SetAttributeValue("name", subset.Key);
+				subsetElement.SetAttributeValue("description", subset.Value);
+
+				var categoryElement = XElement.Load(Path.Combine(directory, $"_{subset.Key}.xml"));
+
+				foreach (var datafileElement in categoryElement.Elements("datafile"))
 				{
-					string name = Path.GetFileNameWithoutExtension(filename);
+					foreach (var itemElement in datafileElement.Element("header").Elements())
+						if (datafileSkipColumns.Contains(itemElement.Name.LocalName) == false)
+							datafileElement.SetAttributeValue(itemElement.Name, itemElement.Value);
+					datafileElement.Element("header").Remove();
 
-					int index;
+					datafileElement.SetAttributeValue("subset", subset.Key);
 
-					index = name.LastIndexOf("(");
-					if (index == -1)
-						throw new ApplicationException("No last index of open bracket");
-
-					string fileVersion = name.Substring(index).Trim(new char[] { '(', ')' });
-					name = name.Substring(0, index).Trim();
-
-					Console.WriteLine($"{category}\t{name}\t{fileVersion}");
-
-					XElement document = XElement.Load(filename);
-					DataSet fileDataSet = new DataSet();
-					ReadXML.ImportXMLWork(document, fileDataSet, null, null);
-
-					Tools.DataFileMoveHeader(fileDataSet);
-
-					foreach (DataTable table in dataSet.Tables)
-						foreach (DataColumn column in table.Columns)
-							column.AutoIncrement = false;
-
-					foreach (DataRow row in fileDataSet.Tables["datafile"].Rows)
-					{
-						if ((string)row["category"] != category)
-						{
-							row["category"] = category;
-							Console.WriteLine($"Bad datafile category: {filename}");
-                        }
-					}
-
-					Tools.DataFileMergeDataSet(fileDataSet, dataSet);
+					subsetElement.Add(datafileElement);
 				}
+				subsetsElement.Add(subsetElement);
 			}
 
+			var dataSet = new DataSet();
+			ReadXML.ImportXMLWork(subsetsElement, dataSet, null, null);
 			return dataSet;
 		}
 

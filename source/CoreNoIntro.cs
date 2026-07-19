@@ -202,6 +202,8 @@ namespace Spludlow.MameAO
 							datafileElement.SetAttributeValue(itemElement.Name, itemElement.Value);
 					datafileElement.Element("header").Remove();
 
+					datafileElement.SetAttributeValue("subset", subset_name);	//	use key not name
+
 					var datafileIdAttribute = datafileElement.Attribute("id");	//	PK clash
 					if (datafileIdAttribute != null)
 					{
