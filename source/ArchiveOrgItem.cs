@@ -331,5 +331,27 @@ namespace Spludlow.MameAO
 			return result;
 		}
 
+		public static void UtilGetItemsinSubject()
+		{
+			string subject = "noaen";
+			string search = "redump";
+
+			string url = $"https://archive.org/advancedsearch.php?q=subject:%22{subject}%22+{search}&fl[]=identifier&fl[]=title&sort[]=titleSorter%20asc&rows=1000&page=1&output=json";
+
+			string json = Tools.FetchTextCached(url) ?? throw new ApplicationException("Can't get subject JSON");
+			dynamic metadata = JObject.Parse(json);
+			JArray docs = metadata.response.docs;
+
+			SortedDictionary<string, string> results = new SortedDictionary<string, string>();
+
+			foreach (dynamic doc in docs)
+			{
+				results.Add((string)doc.identifier, (string)doc.title);
+			}
+
+			Tools.PopText(metadata.ToString());
+			Tools.PopText(String.Join(Environment.NewLine, results.Select(pair => $"{pair.Key}"))); //	\t{pair.Value}
+		}
+
 	}
 }

@@ -9,6 +9,8 @@ using System.Text;
 using System.Xml;
 using System.Xml.Linq;
 
+using Newtonsoft.Json.Linq;
+
 namespace Spludlow.MameAO
 {
 	public class OperationsDatish
@@ -44,7 +46,7 @@ namespace Spludlow.MameAO
 			}
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
+				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game, Path.GetDirectoryName(Path.GetDirectoryName(directory)));
 		}
 
 		/// <summary>
@@ -87,7 +89,7 @@ namespace Spludlow.MameAO
 			}
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
+				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game, Path.GetDirectoryName(Path.GetDirectoryName(directory)));
 		}
 
 		/// <summary>
@@ -118,7 +120,7 @@ namespace Spludlow.MameAO
 			}
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
+				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game, Path.GetDirectoryName(Path.GetDirectoryName(directory)));
 		}
 
 		/// <summary>
@@ -164,17 +166,16 @@ namespace Spludlow.MameAO
 			}
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game);
+				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game, Path.GetDirectoryName(Path.GetDirectoryName(directory)));
 		}
-
-
 
 		private static int DatishMSSQLPayloads(
 			SqlConnection connection,
 			string coreName,
 			string version,
 			Dictionary<string, string[]> xmlJsonPayloads_datafile,
-			Dictionary<string, string[]> xmlJsonPayloads_game)
+			Dictionary<string, string[]> xmlJsonPayloads_game,
+			string serverDirectory)
 		{
 			Tools.ConsolePrintMemory();
 
@@ -202,7 +203,154 @@ namespace Spludlow.MameAO
 			}
 
 			//
-			// Traverse
+			//	Performance Dictionaries
+			//
+			var gameRowsByDatafileId = new Dictionary<long, List<DataRow>>();
+			foreach (DataRow gameRow in dataSet.Tables["game"].Rows)
+			{
+				long datafile_id = (long)gameRow["datafile_id"];
+				if (gameRowsByDatafileId.ContainsKey(datafile_id) == false)
+					gameRowsByDatafileId.Add(datafile_id, new List<DataRow>());
+				gameRowsByDatafileId[datafile_id].Add(gameRow);
+			}
+			var romRowsByGameId = new Dictionary<long, List<DataRow>>();
+			foreach (DataRow romRow in dataSet.Tables["rom"].Rows)
+			{
+				long game_id = (long)romRow["game_id"];
+				if (romRowsByGameId.ContainsKey(game_id) == false)
+					romRowsByGameId.Add(game_id, new List<DataRow>());
+				romRowsByGameId[game_id].Add(romRow);
+			}
+
+			//
+			//	Traverse - Archive.org links
+			//
+			Tools.ConsolePrintMemory();
+
+			string iaLinksFilename = Path.Combine(serverDirectory, "archive.org-link-items.txt");
+
+			dataSet.Tables["datafile"].Columns.Add("ia_link");
+			dataSet.Tables["game"].Columns.Add("ia_link");
+			dataSet.Tables["rom"].Columns.Add("ia_link");
+
+			foreach (DataRow subsetRow in dataSet.Tables["subset"].Rows)
+			{
+				long subset_id = (long)subsetRow["subset_id"];
+				string subset_name = (string)subsetRow["name"];
+
+				JArray ia_datafiles = GetArchiveOrgFiles(iaLinksFilename, coreName, subset_name, "d");
+				JArray ia_games = GetArchiveOrgFiles(iaLinksFilename, coreName, subset_name, "g");
+
+				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Select($"[subset_id] = {subset_id}"))
+				{
+					long datafile_id = (long)datafileRow["datafile_id"];
+					string datafile_name = (string)datafileRow["name"];
+					string datafile_description = (string)datafileRow["description"];
+
+					string datafile_url = null;
+					List<JToken> files;
+
+					files = ia_datafiles.Where(f => ((string)f["base_name"]).StartsWith(datafile_name, StringComparison.OrdinalIgnoreCase) == true).ToList();
+
+					if (files.Count == 1)
+					{
+						//Console.WriteLine($"Datafile Match 1\t{datafile_id}\t{datafile_name}\t{datafile_description}");
+					}
+					else
+					{
+						if (files.Count > 1)
+						{
+							//	'name' matched too many so try with 'description'
+							files = ia_datafiles.Where(f => ((string)f["base_name"]).StartsWith(datafile_description, StringComparison.OrdinalIgnoreCase) == true).ToList();
+
+							if (files.Count == 1)
+							{
+								//Console.WriteLine($"Datafile Match 2\t{datafile_id}\t{datafile_name}\t{datafile_description}");
+							}
+						}
+					}
+					if (files.Count == 1)
+					{
+						JToken file = files[0];
+						string url = (string)file["url"];
+						string extention = (string)file["extention"];
+						datafileRow["ia_link"] = $"<a href=\"{url}\">{extention}</a>";
+						datafile_url = url;
+					}
+					else
+					{
+						//Console.WriteLine($"Datafile Match Fail\t{files.Count()}\t{datafile_id}\t{datafile_name}\t{datafile_description}");
+					}
+
+					foreach (DataRow gameRow in gameRowsByDatafileId[datafile_id])
+					{
+						long game_id = (long)gameRow["game_id"];
+						string game_name = (string)gameRow["name"];
+						string game_description = (string)gameRow["description"];
+
+						string game_url = null;
+						files = ia_games.Where(f => ((string)f["base_name"]).StartsWith(game_name + ".", StringComparison.OrdinalIgnoreCase) == true).ToList();
+
+						// Narrow down with datafile name if required
+						if (files.Count > 1)
+							files = files.Where(f => ((string)f["name"]).Contains(datafile_name) == true).ToList();
+
+						if (files.Count == 1)
+						{
+							//Console.WriteLine($"Game Match 1\t{game_id}\t{datafile_name}\t{datafile_description}\t{game_name}\t{game_description}");
+						}
+						else
+						{
+							if (files.Count > 1)
+							{
+								// 'filename' matched too many so try to narrow down with 'format' (in sqaure brackets) - tosec only? - doing anythng?
+								int index = datafile_name.LastIndexOf('[');
+								if (index != -1)
+								{
+									string format = datafile_name.Substring(index);
+
+									files = files.Where(f => ((string)f["name"]).Contains(format) == true).ToList();
+
+									if (files.Count == 1)
+									{
+										Console.WriteLine($"Game MULTI 2 FOUND {files.Count}\t{game_id}\t{datafile_name}\t{datafile_description}\t{game_name}\t{game_description}");
+									}
+									else
+									{
+										throw new ApplicationException($"Game MULTI not one {files.Count}\t{game_id}\t{datafile_name}\t{datafile_description}\t{game_name}\t{game_description}");
+									}
+								}
+								else
+								{
+									throw new ApplicationException($"Game MULTI no square {files.Count}\t{game_id}\t{datafile_name}\t{datafile_description}\t{game_name}\t{game_description}");
+								}
+							}
+						}
+
+						if (files.Count == 1)
+						{
+							JToken file = files[0];
+							string url = (string)file["url"];
+							string extention = (string)file["extention"];
+							gameRow["ia_link"] = $"<a href=\"{url}\">{extention}</a>";
+							game_url = url;
+
+							foreach (DataRow romRow in romRowsByGameId[game_id])
+							{
+								string rom_name = (string)romRow["name"];
+								url = $"{game_url}/{Uri.EscapeDataString(rom_name)}";
+								extention = Path.GetExtension(rom_name);
+								romRow["ia_link"] = $"<a href=\"{url}\">{extention}</a>";
+							}
+						}
+					}
+				}
+			}
+
+			Tools.ConsolePrintMemory();
+
+			//
+			// Traverse - Main
 			//
 			PayloadLevelInfo level_root = new PayloadLevelInfo(PayloadLevel.Root, null);
 			PayloadLevelInfo level_subset = new PayloadLevelInfo(PayloadLevel.Subset, null);
@@ -229,7 +377,7 @@ namespace Spludlow.MameAO
 				level_subset.Append("<hr />");
 
 				level_subset.Append($"<h2>Datafiles</h2>");
-				level_subset.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size", "Extentions");
+				level_subset.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size", "Extentions", "IA");
 
 				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Select($"[subset_id] = {subset_id}"))
 				{
@@ -237,6 +385,7 @@ namespace Spludlow.MameAO
 					string datafile_name = (string)datafileRow["name"];
 					string datafile_description = (string)datafileRow["description"];
 					string datafile_name_enc = Uri.EscapeDataString(datafile_name);
+					string datafile_ia_link = datafileRow.Field<string>("ia_link");
 
 					level_datafile.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {WebUtility.HtmlEncode(datafile_name)}");
 
@@ -248,14 +397,15 @@ namespace Spludlow.MameAO
 					level_datafile.Append("<hr />");
 
 					level_datafile.Append($"<h2>Games</h2>");
-					level_datafile.TableStart("Name", "Description", "Roms", "Bytes", "Size", "Extentions");
+					level_datafile.TableStart("Name", "Description", "Roms", "Bytes", "Size", "Extentions", "IA");
 
-					foreach (DataRow gameRow in dataSet.Tables["game"].Select($"[datafile_id] = {datafile_id}"))
+					foreach (DataRow gameRow in gameRowsByDatafileId[datafile_id])
 					{
 						long game_id = (long)gameRow["game_id"];
 						string game_name = (string)gameRow["name"];
 						string game_description = (string)gameRow["description"];
 						string game_name_enc = Uri.EscapeDataString(game_name);
+						string game_ia_link = gameRow.Field<string>("ia_link");
 
 						level_game.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {WebUtility.HtmlEncode(datafile_name)} &bull; {WebUtility.HtmlEncode(game_name)}");
 
@@ -268,14 +418,15 @@ namespace Spludlow.MameAO
 						level_game.Append("<hr />");
 
 						level_game.Append($"<h2>Roms</h2>");
-						level_game.TableStart("Name", "Bytes", "Size", "CRC", "SHA1", "MD5");
+						level_game.TableStart("Name", "Bytes", "Size", "CRC", "SHA1", "MD5", "IA");
 
-						foreach (DataRow romRow in dataSet.Tables["rom"].Select($"[game_id] = {game_id}"))
+						foreach (DataRow romRow in romRowsByGameId[game_id])
 						{
 							string rom_name = (string)romRow["name"];
 							string crc = romRow.Field<string>("crc");
 							string sha1 = romRow.Field<string>("sha1");
 							string md5 = romRow.Field<string>("md5");
+							string rom_ia_link = romRow.Field<string>("ia_link");
 
 							string size = romRow.Field<string>("size");
 							long rom_size = Int64.Parse(string.IsNullOrEmpty(size) ? "0" : size);
@@ -286,7 +437,7 @@ namespace Spludlow.MameAO
 							string extention = Path.GetExtension(rom_name).ToLower();
 							level_game.Counts.AddExtention(extention);
 
-							level_game.TableRow(rom_name, rom_size.ToString(), Tools.DataSize(rom_size), crc, sha1, md5);
+							level_game.TableRow(rom_name, rom_size.ToString(), Tools.DataSize(rom_size), crc, sha1, md5, rom_ia_link);
 						}
 
 						level_datafile.Counts.Add(level_game.Counts);
@@ -298,7 +449,7 @@ namespace Spludlow.MameAO
 
 						level_datafile.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}/{game_name_enc}\">{game_name}</a>", game_description,
 							level_game.Counts.Roms.ToString(), level_game.Counts.Size.ToString(), Tools.DataSize(level_game.Counts.Size),
-							level_game.Counts.ExtentionsToString()
+							level_game.Counts.ExtentionsToString(), game_ia_link
 						);
 					}
 
@@ -309,7 +460,7 @@ namespace Spludlow.MameAO
 
 					level_subset.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}\">{datafile_name}</a>", datafile_description,
 						level_datafile.Counts.Games.ToString(), level_datafile.Counts.Roms.ToString(), level_datafile.Counts.Size.ToString(), Tools.DataSize(level_datafile.Counts.Size),
-						level_datafile.Counts.ExtentionsToString()
+						level_datafile.Counts.ExtentionsToString(), datafile_ia_link
 					);
 				}
 
@@ -381,6 +532,69 @@ namespace Spludlow.MameAO
 			Tools.ConsolePrintMemory();
 
 			return 0;
+		}
+
+		private static JArray GetArchiveOrgFiles(string filename, string core, string subset, string type)
+		{
+			var archiveExtentions = new HashSet<string>(new string[] { ".zip", ".7z" });
+
+			string current_core = null;
+			string current_subset = null;
+			string current_type = null;
+
+			var itemNames = new List<string>();
+			foreach (string rawLine in File.ReadAllLines(filename))
+			{
+				string line = rawLine.Trim();
+				if (line.Length == 0 || line.StartsWith("#") == true)
+					continue;
+
+				string[] parts = line.Split(new char[] { '\t' }, StringSplitOptions.RemoveEmptyEntries);
+
+				if (parts.Length == 3)
+				{
+					current_core = parts[0];
+					current_subset = parts[1];
+					current_type = parts[2];
+					continue;
+				}
+
+				if (parts.Length != 1)
+					throw new ApplicationException($"Bad line {line}");
+
+				if (current_core == core && current_subset == subset && current_type == type)
+					itemNames.Add(line);
+			}
+			itemNames.Sort();
+
+			JArray files = new JArray();
+
+			foreach (string itemName in itemNames)
+			{
+				JObject item = JObject.Parse(Tools.FetchTextCached($"https://archive.org/metadata/{itemName}"));
+				JArray item_files = (JArray)item["files"];
+
+				foreach (JObject file in item_files)
+				{
+					string name = (string)file["name"];
+					string extention = Path.GetExtension(name).ToLower();
+
+					if (archiveExtentions.Contains(extention) == false)
+					{
+						Console.WriteLine($"Ignore extention: '{extention}' {name}");
+						continue;
+					}
+
+					//	use partial match for datafile, search for game with '.' on end to prevent sub contains matches
+					file["base_name"] = type == "d" ? Path.GetFileNameWithoutExtension(name) : Path.GetFileName(name);
+
+					file["extention"] = extention;
+					file["url"] = $"https://archive.org/download/{itemName}/" + String.Join("/", ((string)file["name"]).Split('/').Select(n => Uri.EscapeDataString(n)));
+
+					files.Add(file);
+				}
+			}
+			return files;
 		}
 
 		public enum PayloadLevel { Root, Subset, Datafile, Game };
