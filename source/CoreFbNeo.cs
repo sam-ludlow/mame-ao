@@ -279,27 +279,50 @@ namespace Spludlow.MameAO
 
 		public static DataSet FBNeoDataSet(string directory)
 		{
-			DataSet dataSet = new DataSet();
-
-			XElement mainDocument = XElement.Load(Path.Combine(directory, "_fbneo.xml"));
-
-			foreach (var datafileElement in mainDocument.Elements("datafile"))
+			Dictionary<string, string> subsets = new Dictionary<string, string>()
 			{
-				XElement clrmamepro = datafileElement.Element("header").Element("clrmamepro");
-				if (clrmamepro != null)
-					clrmamepro.Remove();
+				{ "fbneo", "Emulator for Arcade Games & Select Consoles" },
+			};
 
-				DataSet fileDataSet = new DataSet();
-				ReadXML.ImportXMLWork(datafileElement, fileDataSet, null, null);
+			HashSet<string> datafileSkipColumns = new HashSet<string>(new string[] { "category", "homepage", "url", "clrmamepro" });
 
-				Tools.DataFileMoveHeader(fileDataSet);
+			XElement subsetsElement = new XElement("subsets");
 
-				foreach (DataTable table in dataSet.Tables)
-					foreach (DataColumn column in table.Columns)
-						column.AutoIncrement = false;
+			foreach (var subset in subsets)
+			{
+				XElement subsetElement = new XElement("subset");
+				subsetElement.SetAttributeValue("name", subset.Key);
+				subsetElement.SetAttributeValue("description", subset.Value);
 
-				Tools.DataFileMergeDataSet(fileDataSet, dataSet);
+				XElement datafilesElement = XElement.Load(Path.Combine(directory, "_fbneo.xml"), LoadOptions.None);
+
+				foreach (var datafileElement in datafilesElement.Elements("datafile"))
+				{
+					foreach (var itemElement in datafileElement.Element("header").Elements())
+						if (datafileSkipColumns.Contains(itemElement.Name.LocalName) == false)
+							datafileElement.SetAttributeValue(itemElement.Name, itemElement.Value);
+					datafileElement.Element("header").Remove();
+
+					string description = datafileElement.Attribute("name").Value;
+					int index = description.IndexOf('-');
+					if (index != -1)
+						description = description.Substring(index + 1).Trim();
+
+					datafileElement.SetAttributeValue("name", datafileElement.Attribute("key").Value);
+					datafileElement.SetAttributeValue("description", description);
+					datafileElement.Attribute("key").Remove();
+
+					subsetElement.Add(datafileElement);
+				}
+
+				subsetsElement.Add(subsetElement);
 			}
+
+			DataSet dataSet = new DataSet();
+			ReadXML.ImportXMLWork(subsetsElement, dataSet, null, null);
+
+			foreach (string dummyColumn in new string[] { "sha1", "md5" })
+				dataSet.Tables["rom"].Columns.Add(dummyColumn, typeof(string));
 
 			return dataSet;
 		}
@@ -322,8 +345,7 @@ namespace Spludlow.MameAO
 			if (_Version == null)
 				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
 
-			OperationsPayload.FBNeoMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
-			//OperationsDatish.FBNeoMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
+			OperationsDatish.FBNeoMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
 		void ICore.AllSHA1(HashSet<string> hashSet)

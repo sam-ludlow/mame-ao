@@ -6,7 +6,6 @@ using System.IO;
 using System.Linq;
 using System.Net;
 using System.Text;
-using System.Xml;
 using System.Xml.Linq;
 
 using Newtonsoft.Json.Linq;
@@ -27,21 +26,20 @@ namespace Spludlow.MameAO
 			var xmlJsonPayloads_datafile = new Dictionary<string, string[]>();
 			var xmlJsonPayloads_game = new Dictionary<string, string[]>();
 
-			using (var reader = XmlReader.Create(Path.Combine(directory, "_fbneo.xml")))    //, _XmlReaderSettings))	//	TODO dont use reader
+			var datafilesElement = XElement.Load(Path.Combine(directory, "_fbneo.xml"), LoadOptions.None);
+
+			foreach (var datafileElement in datafilesElement.Elements("datafile"))
 			{
-				while (reader.ReadToFollowing("datafile"))
+				var datafile_name = datafileElement.Attribute("key").Value;
+
+				xmlJsonPayloads_datafile.Add($"{coreName}\t{datafile_name}", new string[] { datafileElement.ToString(), Tools.XML2JSON(datafileElement) });
+
+				foreach (var game in datafileElement.Elements("game"))
 				{
-					var datafile = (XElement)XElement.ReadFrom(reader);
-					var datafile_key = (string)datafile.Element("header").Element("name");
+					var game_name = game.Attribute("name").Value;
+					string key = $"{coreName}\t{datafile_name}\t{game_name}";
 
-					xmlJsonPayloads_datafile.Add($"{coreName}\t{datafile_key}", new string[] { datafile.ToString(), Tools.XML2JSON(datafile) });
-
-					foreach (var game in datafile.Elements("game"))
-					{
-						var game_name = (string)game.Attribute("name");
-
-						xmlJsonPayloads_game.Add($"{coreName}\t{datafile_key}\t{game_name}", new string[] { game.ToString(), Tools.XML2JSON(game) });
-					}
+					xmlJsonPayloads_game.Add(key, new string[] { game.ToString(), Tools.XML2JSON(game) });
 				}
 			}
 
@@ -357,6 +355,8 @@ namespace Spludlow.MameAO
 			level_root.Append($"<h2>Subsets</h2>");
 			level_root.TableStart("Name", "Description", "Datafiles", "Games", "Roms", "Bytes", "Size", "Extentions");
 
+			string core_url = coreName != "fbneo" ? $"/{coreName}" : "";	//	No subsets on Web for FBNeo
+
 			foreach (DataRow subsetRow in dataSet.Tables["subset"].Rows)
 			{
 				long subset_id = (long)subsetRow["subset_id"];
@@ -403,9 +403,9 @@ namespace Spludlow.MameAO
 						string game_name_enc = Uri.EscapeDataString(game_name);
 						string game_ia_link = gameRow.Field<string>("ia_link");
 
-						level_game.Counts.Games = 1;
-
 						level_game.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {WebUtility.HtmlEncode(datafile_name)} &bull; {WebUtility.HtmlEncode(game_name)}");
+
+						level_game.Counts.Games = 1;
 
 						level_game.Append($"<div style=\"margin: 1em 0;\"><h2 style=\"display:inline;\">Game</h2> &bull; <a href=\"{game_name_enc}.xml\">XML</a> &bull; <a href=\"{game_name_enc}.json\">JSON</a></div>");
 						level_game.Append(gameRow);
@@ -439,11 +439,29 @@ namespace Spludlow.MameAO
 
 						level_game.TableEnd();
 
-						//	TODO level_game ... rest of tables
+						//	fbneo		driver, sample, video
+						//	tosec		n/a
+						//	redump		n/a
+						//	no-intro	category, game_code
+
+						foreach (string tableName in new string[] { "driver", "sample", "video", "category", "game_code" })
+						{
+							if (dataSet.Tables.Contains(tableName) == false)
+								continue;
+
+							DataRow[] rows = dataSet.Tables[tableName].Select($"game_id = {game_id}");
+
+							if (rows.Length == 0)
+								continue;
+
+							level_game.Append("<hr />");
+							level_game.Append($"<h2>{tableName}</h2>");
+							level_game.Append(Reports.MakeHtmlTable(dataSet.Tables[tableName], rows, null));
+						}
 
 						level_game.Finish(subset_name, datafile_name, game_name);
 
-						level_datafile.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}/{game_name_enc}\">{game_name}</a>", game_description,
+						level_datafile.TableRow($"<a href=\"{core_url}/{subset_name}/{datafile_name_enc}/{game_name_enc}\">{game_name}</a>", game_description,
 							level_game.Counts.Roms.ToString(), level_game.Counts.Size.ToString(), Tools.DataSize(level_game.Counts.Size),
 							level_game.Counts.ExtentionsToString(), game_ia_link
 						);
@@ -454,7 +472,7 @@ namespace Spludlow.MameAO
 					level_datafile.TableEnd();
 					level_datafile.Finish(subset_name, datafile_name);
 
-					level_subset.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}\">{datafile_name}</a>", datafile_description,
+					level_subset.TableRow($"<a href=\"{core_url}/{subset_name}/{datafile_name_enc}\">{datafile_name}</a>", datafile_description,
 						level_datafile.Counts.Games.ToString(), level_datafile.Counts.Roms.ToString(), level_datafile.Counts.Size.ToString(), Tools.DataSize(level_datafile.Counts.Size),
 						level_datafile.Counts.ExtentionsToString(), datafile_ia_link
 					);
@@ -467,7 +485,7 @@ namespace Spludlow.MameAO
 				level_subset.TableEnd();
 				level_subset.Finish(subset_name);
 
-				level_root.TableRow($"<a href=\"/{coreName}/{subset_name}\">{subset_name}</a>", subset_description,
+				level_root.TableRow($"<a href=\"{core_url}/{subset_name}\">{subset_name}</a>", subset_description,
 					level_subset.Counts.Datafiles.ToString(), level_subset.Counts.Games.ToString(), level_subset.Counts.Roms.ToString(), level_subset.Counts.Size.ToString(), Tools.DataSize(level_subset.Counts.Size),
 					level_subset.Counts.ExtentionsToString()
 				);
