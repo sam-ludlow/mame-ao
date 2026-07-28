@@ -213,6 +213,12 @@ namespace Spludlow.MameAO
 					gameRowsByDatafileId.Add(datafile_id, new List<DataRow>());
 				gameRowsByDatafileId[datafile_id].Add(gameRow);
 			}
+			// no-intro some empty datafiles
+			foreach (long datafile_id in dataSet.Tables["datafile"].Rows.Cast<DataRow>().Select(row => (long)row["datafile_id"]))
+			{
+				if (gameRowsByDatafileId.ContainsKey(datafile_id) == false)
+					gameRowsByDatafileId.Add(datafile_id, new List<DataRow>());
+			}
 			var romRowsByGameId = new Dictionary<long, List<DataRow>>();
 			foreach (DataRow romRow in dataSet.Tables["rom"].Rows)
 			{
@@ -226,6 +232,17 @@ namespace Spludlow.MameAO
 			//	Traverse - Archive.org links
 			//
 			Tools.ConsolePrintMemory();
+
+			// ??? From old TOSEC code - Data Fix - parent directory mismatch
+			//if (itemKey == "noaen-tosec-iso-sony")
+			//{
+			//	foreach (string oldKey in item.Files.Keys.Where(key => key.Contains("/[BIN]/")).ToArray())
+			//	{
+			//		string newKey = oldKey.Replace("/[BIN]/", "/[BIN-CUE]/");
+			//		item.Files.Add(newKey, item.Files[oldKey]);
+			//		item.Files.Remove(oldKey);
+			//	}
+			//}
 
 			string iaLinksFilename = Path.Combine(serverDirectory, "archive.org-link-items.txt");
 
@@ -247,40 +264,22 @@ namespace Spludlow.MameAO
 					string datafile_name = (string)datafileRow["name"];
 					string datafile_description = (string)datafileRow["description"];
 
-					string datafile_url = null;
+					string datafile_ia_archive_url = null;
+
 					List<JToken> files;
 
+					//	TODO: Refine
 					files = ia_datafiles.Where(f => ((string)f["base_name"]).StartsWith(datafile_name, StringComparison.OrdinalIgnoreCase) == true).ToList();
+					
+					if (files.Count > 1)
+					{
+						files = ia_datafiles.Where(f => ((string)f["base_name"]).StartsWith(datafile_description, StringComparison.OrdinalIgnoreCase) == true).ToList();
+					}
 
 					if (files.Count == 1)
-					{
-						//Console.WriteLine($"Datafile Match 1\t{datafile_id}\t{datafile_name}\t{datafile_description}");
-					}
-					else
-					{
-						if (files.Count > 1)
-						{
-							//	'name' matched too many so try with 'description'
-							files = ia_datafiles.Where(f => ((string)f["base_name"]).StartsWith(datafile_description, StringComparison.OrdinalIgnoreCase) == true).ToList();
+						datafile_ia_archive_url = files[0]["url"].Value<string>();
 
-							if (files.Count == 1)
-							{
-								//Console.WriteLine($"Datafile Match 2\t{datafile_id}\t{datafile_name}\t{datafile_description}");
-							}
-						}
-					}
-					if (files.Count == 1)
-					{
-						JToken file = files[0];
-						string url = (string)file["url"];
-						string extention = (string)file["extention"];
-						datafileRow["ia_link"] = $"<a href=\"{url}\">{extention}</a>";
-						datafile_url = url;
-					}
-					else
-					{
-						//Console.WriteLine($"Datafile Match Fail\t{files.Count()}\t{datafile_id}\t{datafile_name}\t{datafile_description}");
-					}
+					int game_ia_count = 0;
 
 					foreach (DataRow gameRow in gameRowsByDatafileId[datafile_id])
 					{
@@ -288,62 +287,59 @@ namespace Spludlow.MameAO
 						string game_name = (string)gameRow["name"];
 						string game_description = (string)gameRow["description"];
 
-						string game_url = null;
+						string game_ai_archive_url = null;
+
+						//	TODO: Refine
 						files = ia_games.Where(f => ((string)f["base_name"]).StartsWith(game_name + ".", StringComparison.OrdinalIgnoreCase) == true).ToList();
 
-						// Narrow down with datafile name if required
 						if (files.Count > 1)
-							files = files.Where(f => ((string)f["name"]).Contains(datafile_name) == true).ToList();
-
-						if (files.Count == 1)
 						{
-							//Console.WriteLine($"Game Match 1\t{game_id}\t{datafile_name}\t{datafile_description}\t{game_name}\t{game_description}");
-						}
-						else
-						{
-							if (files.Count > 1)
-							{
-								// 'filename' matched too many so try to narrow down with 'format' (in sqaure brackets) - tosec only? - doing anythng?
-								int index = datafile_name.LastIndexOf('[');
-								if (index != -1)
-								{
-									string format = datafile_name.Substring(index);
+							//	redump is just ZIP no directories (matches accross everything)
 
-									files = files.Where(f => ((string)f["name"]).Contains(format) == true).ToList();
-
-									if (files.Count == 1)
-									{
-										Console.WriteLine($"Game MULTI 2 FOUND {files.Count}\t{game_id}\t{datafile_name}\t{datafile_description}\t{game_name}\t{game_description}");
-									}
-									else
-									{
-										throw new ApplicationException($"Game MULTI not one {files.Count}\t{game_id}\t{datafile_name}\t{datafile_description}\t{game_name}\t{game_description}");
-									}
-								}
-								else
-								{
-									throw new ApplicationException($"Game MULTI no square {files.Count}\t{game_id}\t{datafile_name}\t{datafile_description}\t{game_name}\t{game_description}");
-								}
-							}
+							files = files.Where(file => {
+								string path = file["name"].Value<string>();
+								string[] parts = path.Split('/');
+								return parts.Length > 1 ? datafile_name.Contains(parts[parts.Length - 2]) : false;
+							}).ToList();
 						}
 
 						if (files.Count == 1)
-						{
-							JToken file = files[0];
-							string url = (string)file["url"];
-							string extention = (string)file["extention"];
-							gameRow["ia_link"] = $"<a href=\"{url}\">{extention}</a>";
-							game_url = url;
+							game_ai_archive_url = files[0]["url"].Value<string>();
 
-							foreach (DataRow romRow in romRowsByGameId[game_id])
-							{
-								string rom_name = (string)romRow["name"];
-								url = $"{game_url}/{Uri.EscapeDataString(rom_name)}";
-								extention = Path.GetExtension(rom_name);
-								romRow["ia_link"] = $"<a href=\"{url}\">{extention}</a>";
-							}
+						int rom_ia_count = 0;
+
+						foreach (DataRow romRow in romRowsByGameId[game_id])
+						{
+							string rom_name = (string)romRow["name"];
+							string rom_extention = Path.GetExtension(rom_name);
+
+							if (datafile_ia_archive_url != null)
+								romRow["ia_link"] = $"<a href=\"{datafile_ia_archive_url}/{Uri.EscapeDataString(game_name)}%2F{Uri.EscapeDataString(rom_name)}\">{rom_extention}</a>";
+							
+							if (game_ai_archive_url != null)
+								romRow["ia_link"] = $"<a href=\"{game_ai_archive_url}/{Uri.EscapeDataString(rom_name)}\">{rom_extention}</a>";
+
+							if (romRow.IsNull("ia_link") == false)
+								++rom_ia_count;
 						}
+
+						if (datafile_ia_archive_url != null)
+							gameRow["ia_link"] = $"{rom_ia_count}";
+
+						if (game_ai_archive_url != null)
+							gameRow["ia_link"] = $"<a href=\"{game_ai_archive_url}\">{Path.GetExtension(game_ai_archive_url)}</a>";
+
+						if (gameRow.IsNull("ia_link") == false)
+							++game_ia_count;
 					}
+
+					if (datafile_ia_archive_url != null)
+						datafileRow["ia_link"] = $"<a href=\"{datafile_ia_archive_url}\">{Path.GetExtension(datafile_ia_archive_url)}</a>";
+					else
+						if (game_ia_count > 0)
+							datafileRow["ia_link"] = $"{game_ia_count}";
+
+					//break;
 				}
 			}
 
@@ -407,10 +403,9 @@ namespace Spludlow.MameAO
 						string game_name_enc = Uri.EscapeDataString(game_name);
 						string game_ia_link = gameRow.Field<string>("ia_link");
 
-						level_game.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {WebUtility.HtmlEncode(datafile_name)} &bull; {WebUtility.HtmlEncode(game_name)}");
-
 						level_game.Counts.Games = 1;
-						//
+
+						level_game.Start($"{coreName} ({version}) &bull; {subset_name} &bull; {WebUtility.HtmlEncode(datafile_name)} &bull; {WebUtility.HtmlEncode(game_name)}");
 
 						level_game.Append($"<div style=\"margin: 1em 0;\"><h2 style=\"display:inline;\">Game</h2> &bull; <a href=\"{game_name_enc}.xml\">XML</a> &bull; <a href=\"{game_name_enc}.json\">JSON</a></div>");
 						level_game.Append(gameRow);
@@ -443,9 +438,10 @@ namespace Spludlow.MameAO
 						level_datafile.Counts.Add(level_game.Counts);
 
 						level_game.TableEnd();
-						level_game.Finish(subset_name, datafile_name, game_name);
 
 						//	TODO level_game ... rest of tables
+
+						level_game.Finish(subset_name, datafile_name, game_name);
 
 						level_datafile.TableRow($"<a href=\"/{coreName}/{subset_name}/{datafile_name_enc}/{game_name_enc}\">{game_name}</a>", game_description,
 							level_game.Counts.Roms.ToString(), level_game.Counts.Size.ToString(), Tools.DataSize(level_game.Counts.Size),
@@ -462,6 +458,8 @@ namespace Spludlow.MameAO
 						level_datafile.Counts.Games.ToString(), level_datafile.Counts.Roms.ToString(), level_datafile.Counts.Size.ToString(), Tools.DataSize(level_datafile.Counts.Size),
 						level_datafile.Counts.ExtentionsToString(), datafile_ia_link
 					);
+
+					//break;
 				}
 
 				level_root.Counts.Add(level_subset.Counts);
@@ -581,7 +579,7 @@ namespace Spludlow.MameAO
 
 					if (archiveExtentions.Contains(extention) == false)
 					{
-						Console.WriteLine($"Ignore extention: '{extention}' {name}");
+						//Console.WriteLine($"Ignore extention: '{extention}' {name}");
 						continue;
 					}
 
