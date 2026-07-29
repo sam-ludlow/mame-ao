@@ -1848,7 +1848,7 @@ namespace Spludlow.MameAO
 				bool isdevice = (string)machineRow["isdevice"] == "yes";
 
 				int coins = machineRow.IsNull("coins") == false ? Int32.Parse((string)machineRow["coins"]) : 0;
-				machineRow["type"] = OperationsPayload.MameishMachineType(machineRow, isdevice, coins, deviceRefTable, softwarelistTable, inputControlTable);
+				machineRow["type"] = OperationsMameish.MameishMachineType(machineRow, isdevice, coins, deviceRefTable, softwarelistTable, inputControlTable);
 
 				DataRow snapRow = snapTable.Rows.Find(machine_name);
 
@@ -2053,7 +2053,7 @@ namespace Spludlow.MameAO
 
 				machineRow["flags"] = flags.ToString();
 
-				machineRow["type"] = OperationsPayload.MameishMachineType(machineRow, isdevice, coins, deviceRefTable, softwarelistTable, inputControlTable);
+				machineRow["type"] = OperationsMameish.MameishMachineType(machineRow, isdevice, coins, deviceRefTable, softwarelistTable, inputControlTable);
 
 				machineRow["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/machine/{machine_name}\" target=\"_blank\" >{machine_name}</a>";
 			}
@@ -2089,7 +2089,7 @@ namespace Spludlow.MameAO
 
 			foreach (string yearString in yearStrings)
 			{
-				int year = OperationsPayload.ParseFixYear(yearString);
+				int year = Operations.ParseFixYear(yearString);
 
 				resultTable.Rows.Add(yearString, year);
 			}

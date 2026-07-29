@@ -499,7 +499,7 @@ namespace Spludlow.MameAO
 			//
 			string info = $"{coreName} ({version}) &bull; {Tools.DataSize(level_root.Counts.Size)} &bull; subsets: {dataSet.Tables["subset"].Rows.Count} &bull; datafiles: {dataSet.Tables["datafile"].Rows.Count} &bull; games: {dataSet.Tables["game"].Rows.Count} &bull; roms: {dataSet.Tables["rom"].Rows.Count}";
 
-			OperationsPayload.CreateMetaDataTable(connection, coreName, version, info);
+			Operations.CreateMetaDataTable(connection, coreName, version, info);
 
 			//
 			// Save payload tables
@@ -694,19 +694,19 @@ namespace Spludlow.MameAO
 				switch (level)
 				{
 					case PayloadLevel.Root:
-						DataTable = OperationsPayload.MakePayloadDataTable("root_payload", new string[] { "key_1" });
+						DataTable = Operations.MakePayloadDataTable("root_payload", new string[] { "key_1" });
 						break;
 
 					case PayloadLevel.Subset:
-						DataTable = OperationsPayload.MakePayloadDataTable("subset_payload", new string[] { "subset_name" });
+						DataTable = Operations.MakePayloadDataTable("subset_payload", new string[] { "subset_name" });
 						break;
 
 					case PayloadLevel.Datafile:
-						DataTable = OperationsPayload.MakePayloadDataTable("datafile_payload", new string[] { "subset_name", "datafile_name" });
+						DataTable = Operations.MakePayloadDataTable("datafile_payload", new string[] { "subset_name", "datafile_name" });
 						break;
 
 					case PayloadLevel.Game:
-						DataTable = OperationsPayload.MakePayloadDataTable("game_payload", new string[] { "subset_name", "datafile_name", "game_name" });
+						DataTable = Operations.MakePayloadDataTable("game_payload", new string[] { "subset_name", "datafile_name", "game_name" });
 						break;
 
 					default:
@@ -800,7 +800,7 @@ namespace Spludlow.MameAO
 
 			public void Save(SqlConnection connection)
 			{
-				OperationsPayload.MakeMSSQLPayloadsInsert(connection, DataTable);
+				Operations.MakeMSSQLPayloadsInsert(connection, DataTable);
 			}
 		}
 	}

@@ -332,13 +332,13 @@ namespace Spludlow.MameAO
 					foreach (string displayType in displayRows.Select(row => (string)row["type"]))
 						machineRow[displayType] = true;
 
-					machineRow["ao_type"] = OperationsPayload.MameishMachineType(machineRow, (string)machineRow["isdevice"] == "yes", coins, dataSet.Tables["device_ref"], softwarelistTable, inputControlTable);
+					machineRow["ao_type"] = OperationsMameish.MameishMachineType(machineRow, (string)machineRow["isdevice"] == "yes", coins, dataSet.Tables["device_ref"], softwarelistTable, inputControlTable);
 
 					if (driverRows.Length == 1)
-						machineRow["ao_status"] = OperationsPayload.MachineAoStatusLookup[$"{(string)driverRows[0]["status"]}-{(string)driverRows[0]["emulation"]}"];
+						machineRow["ao_status"] = OperationsMameish.MachineAoStatusLookup[$"{(string)driverRows[0]["status"]}-{(string)driverRows[0]["emulation"]}"];
 
 					if (machineRow.IsNull("year") == false)
-						machineRow["ao_year"] = OperationsPayload.ParseFixYear((string)machineRow["year"]);
+						machineRow["ao_year"] = Operations.ParseFixYear((string)machineRow["year"]);
 				}
 			}
 
@@ -363,7 +363,7 @@ namespace Spludlow.MameAO
 					softwareRow["softwarelist_name"] = listNames[(long)softwareRow["softwarelist_id"]];
 
 					if (softwareRow.IsNull("year") == false)
-						softwareRow["ao_year"] = OperationsPayload.ParseFixYear((string)softwareRow["year"]);
+						softwareRow["ao_year"] = Operations.ParseFixYear((string)softwareRow["year"]);
 				}
 			}
 		}

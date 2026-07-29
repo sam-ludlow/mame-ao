@@ -263,7 +263,7 @@ namespace Spludlow.MameAO
 			if (_Version == null)
 				_Version = LatestLocalVersion(_RootDirectory);
 
-			OperationsPayload.MameMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames);
+			OperationsMameish.MameMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames);
 		}
 
 
