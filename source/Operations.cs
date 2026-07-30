@@ -4,6 +4,8 @@ using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
+using System.Net;
+using System.Text;
 
 namespace Spludlow.MameAO
 {
@@ -289,6 +291,209 @@ namespace Spludlow.MameAO
 			Database.ExecuteNonQuery(connection, commandText);
 
 			Database.BulkInsert(connection, table);
+		}
+	}
+
+	public enum PayloadLevel { Root, Subset, Datafile, Game, Machine, Softwarelist, Software };
+
+	public class Counts
+	{
+		public long Datafiles = 0;
+		public long Games = 0;
+		public long Roms = 0;
+		public long Size = 0;
+		public Dictionary<string, int> Extentions = new Dictionary<string, int>();
+
+		public void Add(Counts counts)
+		{
+			Datafiles += counts.Datafiles;
+			Games += counts.Games;
+			Roms += counts.Roms;
+			Size += counts.Size;
+
+			foreach (var extention in counts.Extentions)
+			{
+				if (Extentions.ContainsKey(extention.Key) == false)
+					Extentions.Add(extention.Key, 0);
+				Extentions[extention.Key] += extention.Value;
+			}
+		}
+
+		public void AddExtention(string extention)
+		{
+			if (extention.Length == 0)
+				extention = "_";
+			else
+				extention = extention.Substring(1);
+
+			if (Extentions.ContainsKey(extention) == false)
+				Extentions.Add(extention, 0);
+
+			Extentions[extention] += 1;
+		}
+
+		public string ExtentionsToString()
+		{
+			int max = 10;
+
+			var extentions = Extentions.OrderByDescending(pair => pair.Value).Cast<KeyValuePair<string, int>>();
+
+			if (extentions.Count() > max)
+			{
+				int remainingCount = 0;
+				foreach (int count in extentions.Skip(10).Select(pair => pair.Value))
+					remainingCount += count;
+
+				extentions = extentions.Take(max);
+				extentions = extentions.Append(new KeyValuePair<string, int>("...", remainingCount));
+				extentions = extentions.OrderByDescending(pair => pair.Value);
+			}
+
+			return String.Join(", ", extentions.Select(pair => $"{pair.Key}({pair.Value})"));
+		}
+	}
+
+	public class PayloadLevelInfo
+	{
+		public DataTable DataTable;
+
+		public Counts Counts = new Counts();
+
+		private string HtmlTitle;
+		private StringBuilder HtmlPage = new StringBuilder();
+
+		private int TableWidth = 0;
+
+		private Dictionary<string, string[]> XmlJsonPayloads;
+
+		public PayloadLevelInfo(
+			PayloadLevel level,
+			Dictionary<string, string[]> xmlJsonPayloads)
+		{
+			XmlJsonPayloads = xmlJsonPayloads;
+
+			switch (level)
+			{
+				case PayloadLevel.Root:
+					DataTable = Operations.MakePayloadDataTable("root_payload", new string[] { "key_1" });
+					break;
+
+				case PayloadLevel.Subset:
+					DataTable = Operations.MakePayloadDataTable("subset_payload", new string[] { "subset_name" });
+					break;
+
+				case PayloadLevel.Datafile:
+					DataTable = Operations.MakePayloadDataTable("datafile_payload", new string[] { "subset_name", "datafile_name" });
+					break;
+
+				case PayloadLevel.Game:
+					DataTable = Operations.MakePayloadDataTable("game_payload", new string[] { "subset_name", "datafile_name", "game_name" });
+					break;
+
+				case PayloadLevel.Machine:
+					DataTable = Operations.MakePayloadDataTable("machine_payload", new string[] { "machine_name" });
+					break;
+
+				case PayloadLevel.Softwarelist:
+					DataTable = Operations.MakePayloadDataTable("softwarelist_payload", new string[] { "softwarelist_name" });
+					break;
+
+				case PayloadLevel.Software:
+					DataTable = Operations.MakePayloadDataTable("software_payload", new string[] { "softwarelist_name", "software_name" });
+					break;
+
+				default:
+					throw new ApplicationException("On another level.");
+			}
+		}
+
+		public void Start(string title)
+		{
+			if (HtmlPage.Length != 0)
+				throw new ApplicationException("Unfinished Business");
+
+			Counts = new Counts();
+
+			HtmlTitle = title;
+		}
+		public void Finish(params string[] keys)
+		{
+			if (keys.Length != DataTable.PrimaryKey.Length)
+				throw new ApplicationException("Bad keys width");
+
+			if (DataTable.Rows.Find(keys) != null)
+			{
+				Console.WriteLine($"!!! Warning Duplicate Item {DataTable.TableName}:\t{String.Join("\t", keys)}");
+			}
+			else
+			{
+				HtmlPage.AppendLine("<br />");
+
+				string[] xmlJson = new string[] { "", "" };
+				if (XmlJsonPayloads != null)
+				{
+					string key = String.Join("\t", keys);
+
+					if (XmlJsonPayloads.ContainsKey(key) == false)
+						throw new ApplicationException($"Did not find xml json lookup {key}");
+					xmlJson = XmlJsonPayloads[key];
+				}
+
+				var rowData = new List<object>();
+				rowData.AddRange(keys);
+				rowData.AddRange(new string[] { HtmlTitle, xmlJson[0], xmlJson[1], HtmlPage.ToString() });
+
+				DataTable.Rows.Add(rowData.ToArray());
+			}
+
+			HtmlPage.Length = 0;
+		}
+
+		public void Append(string html)
+		{
+			HtmlPage.AppendLine(html);
+		}
+		public void Append(DataRow row)
+		{
+			string[] columnNames = row.Table.Columns.Cast<DataColumn>().Select(col => col.ColumnName).Where(name => name.EndsWith("_id") == false).ToArray();
+
+			TableStart(columnNames);
+			TableRow(columnNames.Select(col => row.IsNull(col) ? "" : (string)row[col]).ToArray());
+			TableEnd();
+		}
+		public void TableStart(params string[] columnNames)
+		{
+			TableWidth = columnNames.Length;
+			HtmlPage.AppendLine("<table>");
+			HtmlPage.AppendLine(EncodeTableRow(columnNames, "th"));
+		}
+		public void TableRow(params string[] values)
+		{
+			if (values.Length != TableWidth)
+				throw new ApplicationException("Bad values width");
+
+			HtmlPage.AppendLine(EncodeTableRow(values, "td"));
+		}
+
+		public void TableEnd()
+		{
+			HtmlPage.AppendLine("</table>");
+		}
+
+		private string EncodeTableRow(IEnumerable<string> values, string type)
+		{
+			values = values.Select(value => {
+				if (value != null && value.StartsWith("<a href") == false)
+					value = WebUtility.HtmlEncode(value);
+				return value;
+			});
+
+			return $"<tr>{String.Join("", values.Select(value => $"<{type}>{value}</{type}>"))}</tr>";
+		}
+
+		public void Save(SqlConnection connection)
+		{
+			Operations.MakeMSSQLPayloadsInsert(connection, DataTable);
 		}
 	}
 }
