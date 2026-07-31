@@ -2089,7 +2089,7 @@ namespace Spludlow.MameAO
 
 			foreach (string yearString in yearStrings)
 			{
-				int year = Operations.ParseFixYear(yearString);
+				int year = Tools.ParseFixYear(yearString);
 
 				resultTable.Rows.Add(yearString, year);
 			}

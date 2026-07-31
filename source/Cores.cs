@@ -338,7 +338,7 @@ namespace Spludlow.MameAO
 						machineRow["ao_status"] = OperationsMameish.MachineAoStatusLookup[$"{(string)driverRows[0]["status"]}-{(string)driverRows[0]["emulation"]}"];
 
 					if (machineRow.IsNull("year") == false)
-						machineRow["ao_year"] = Operations.ParseFixYear((string)machineRow["year"]);
+						machineRow["ao_year"] = Tools.ParseFixYear((string)machineRow["year"]);
 				}
 			}
 
@@ -363,7 +363,7 @@ namespace Spludlow.MameAO
 					softwareRow["softwarelist_name"] = listNames[(long)softwareRow["softwarelist_id"]];
 
 					if (softwareRow.IsNull("year") == false)
-						softwareRow["ao_year"] = Operations.ParseFixYear((string)softwareRow["year"]);
+						softwareRow["ao_year"] = Tools.ParseFixYear((string)softwareRow["year"]);
 				}
 			}
 		}

@@ -153,37 +153,7 @@ namespace Spludlow.MameAO
 
 			if (missing.Count > 0)
 				throw new ApplicationException($"This operation requires these parameters '{String.Join(", ", missing)}'.");
-		}
 
-		private readonly static HashSet<string> yearFixMatch = new HashSet<string>(new string[] {
-			"?", "??", "???", "0", "00", "000", "0000"
-		});
-		public static int ParseFixYear(string year)
-		{
-			string yearFix = year;
-
-			if (yearFix.Length > 4)
-				yearFix = yearFix.Substring(0, 4);
-
-			yearFix = yearFix.ToUpper().Replace("X", "?");
-
-			if (yearFixMatch.Contains(yearFix))
-				yearFix = "????";
-
-			if (yearFix == "20??")
-				yearFix = "2005";
-
-			if (yearFix[3] == '?')
-				yearFix = yearFix.Substring(0, 3) + "5";
-
-			if (yearFix.Contains("?") == true)
-				yearFix = "1985";
-
-			int year_fixed;
-			if (Int32.TryParse(yearFix, out year_fixed) == false)
-				throw new ApplicationException($"Bad year:\t{year}\t{yearFix}");
-
-			return year_fixed;
 		}
 
 		public static void CreateMetaDataTable(SqlConnection connection, string coreName, string version, string info)
