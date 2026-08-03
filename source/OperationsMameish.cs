@@ -1134,10 +1134,11 @@ namespace Spludlow.MameAO
 				if (tableOrderBys.ContainsKey(tableName) == true)
 					commandText += $" ORDER BY [{tableOrderBys[tableName]}]";
 
+				var table = new DataTable(tableName);
 				using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connections[1]))
-					adapter.Fill(dataSet);
+					adapter.Fill(table);
 
-				dataSet.Tables[dataSet.Tables.Count - 1].TableName = tableName;
+				dataSet.Tables.Add(table);
 			}
 
 			DataTable machineListTable = Database.ExecuteFill(connections[0], "SELECT machine.name AS machine_name, driver.status, softwarelist.name AS softwarelist_name " +
@@ -1159,6 +1160,10 @@ namespace Spludlow.MameAO
 			PayloadLevelInfo level_softwarelist = new PayloadLevelInfo(PayloadLevel.Softwarelist, xmlJsonPayloads_softwarelist);
 			PayloadLevelInfo level_software = new PayloadLevelInfo(PayloadLevel.Software, xmlJsonPayloads_software);
 
+			level_root.Start($"{coreName.ToUpper()} ({version}) software lists");
+			level_root.Append("<h2>Software Lists</h2>");
+			level_root.TableStart("name", "description", "roms", "disks", "rom_size", "rom_size_text", "disk_size", "disk_size_text");
+
 			DataTable romTable = new DataTable();
 			foreach (DataColumn column in dataSet.Tables["dataarea"].Columns)
 				if (column.ColumnName.EndsWith("_id") == false)
@@ -1177,11 +1182,6 @@ namespace Spludlow.MameAO
 					if (column.ColumnName.EndsWith("_id") == false)
 						diskTable.Columns.Add(column.ColumnName);
 			}
-
-			DataTable listTable = Tools.MakeDataTable(
-				"name	description	roms	disks	rom_size	rom_size_text	disk_size	disk_size_text",
-				"String	String		Int32	Int32	Int64		String			Int64		String"
-			);
 
 			//
 			//	Search Payloads - software
@@ -1211,7 +1211,7 @@ namespace Spludlow.MameAO
 			foreach (string name in new string[] { "xml", "json", "html", "html_card" })
 				searchTable.Columns.Add(name, typeof(string));
 
-			foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Select(null, "description"))
+			foreach (DataRow softwarelistRow in dataSet.Tables["softwarelist"].Rows)
 			{
 				long softwarelist_id = (long)softwarelistRow["softwarelist_id"];
 				string softwarelist_name = (string)softwarelistRow["name"];
@@ -1219,8 +1219,6 @@ namespace Spludlow.MameAO
 
 				//if (softwarelist_name != "a5200")
 				//	continue;
-
-				DataRow[] softwareRows = dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}");
 
 				//
 				// SoftwareLists
@@ -1230,17 +1228,11 @@ namespace Spludlow.MameAO
 				level_softwarelist.Append("<br />");
 				level_softwarelist.Append($"<div><h2 style=\"display:inline;\">softwarelist</h2> &bull; <a href=\"{softwarelist_name}.xml\">XML</a> &bull; <a href=\"{softwarelist_name}.json\">JSON</a> </div>");
 				level_softwarelist.Append("<br />");
-				level_softwarelist.Append(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new DataRow[] { softwarelistRow }, null));
+				level_softwarelist.Append(softwarelistRow);
 
 				level_softwarelist.Append("<hr />");
 				level_softwarelist.Append("<h2>software</h2>");
-				DataTable softwareTable = dataSet.Tables["software"].Clone();
-				softwareTable.Columns.Add("roms", typeof(int));
-				softwareTable.Columns.Add("disks", typeof(int));
-				softwareTable.Columns.Add("rom_size", typeof(long));
-				softwareTable.Columns.Add("rom_size_text", typeof(string));
-				softwareTable.Columns.Add("disk_size", typeof(long));
-				softwareTable.Columns.Add("disk_size_text", typeof(string));
+				level_softwarelist.TableStart("name", "description", "roms", "disks", "rom_size", "rom_size_text", "disk_size", "disk_size_text");
 
 				long softwarelist_rom_count = 0;
 				long softwarelist_rom_size = 0;
@@ -1253,7 +1245,7 @@ namespace Spludlow.MameAO
 
 				softwarelistRow["name"] = $"<a href=\"/{coreName}/software/{softwarelist_name}\">{softwarelist_name}</a>";
 
-				foreach (DataRow softwareRow in softwareRows)
+				foreach (DataRow softwareRow in dataSet.Tables["software"].Select($"softwarelist_id = {softwarelist_id}"))
 				{
 					long software_id = (long)softwareRow["software_id"];
 					string software_name = (string)softwareRow["name"];
@@ -1264,7 +1256,7 @@ namespace Spludlow.MameAO
 					long software_disk_size = 0;
 
 					string software_cloneof = null;
-					if (softwareTable.Columns.Contains("cloneof") == true && softwareRow.IsNull("cloneof") == false)
+					if (dataSet.Tables["software"].Columns.Contains("cloneof") == true && softwareRow.IsNull("cloneof") == false)
 						software_cloneof = (string)softwareRow["cloneof"];
 
 					if (software_cloneof != null)
@@ -1275,7 +1267,7 @@ namespace Spludlow.MameAO
 					level_software.Append("<br />");
 					level_software.Append($"<div><h2 style=\"display:inline;\">software</h2> &bull; <a href=\"{software_name}.xml\">XML</a> &bull; <a href=\"{software_name}.json\">JSON</a> </div>");
 					level_software.Append("<br />");
-					level_software.Append(Reports.MakeHtmlTable(dataSet.Tables["software"], new[] { softwareRow }, null));
+					level_software.Append(softwareRow);
 
 					DataRow snapRow = null;
 					if (snapTable != null)
@@ -1287,13 +1279,13 @@ namespace Spludlow.MameAO
 							level_software.Append("<h2>snap</h2>");
 							level_software.Append($"<img src=\"/{coreName}/software/{softwarelist_name}/{software_name}.png\" alt=\"{softwarelist_name}/{software_name} png snap\">");
 							level_software.Append($"<img src=\"/{coreName}/software/{softwarelist_name}/{software_name}.jpg\" alt=\"{softwarelist_name}/{software_name} jpg snap thumbnail\">");
-							level_software.Append(Reports.MakeHtmlTable(snapTable, new DataRow[] { snapRow }, null));
+							level_software.Append(snapRow);
 						}
 					}
 
 					level_software.Append("<hr />");
 					level_software.Append("<h2>softwarelist</h2>");
-					level_software.Append(Reports.MakeHtmlTable(dataSet.Tables["softwarelist"], new[] { softwarelistRow }, null));
+					level_software.Append(softwarelistRow);
 
 					DataRow[] rows;
 
@@ -1304,7 +1296,7 @@ namespace Spludlow.MameAO
 						{
 							level_software.Append("<hr />");
 							level_software.Append("<h2>info</h2>");
-							level_software.Append(Reports.MakeHtmlTable(dataSet.Tables["info"], rows, null));
+							level_software.Append(rows);
 						}
 					}
 
@@ -1315,7 +1307,7 @@ namespace Spludlow.MameAO
 						{
 							level_software.Append("<hr />");
 							level_software.Append("<h2>sharedfeat</h2>");
-							level_software.Append(Reports.MakeHtmlTable(dataSet.Tables["sharedfeat"], rows, null));
+							level_software.Append(rows);
 						}
 					}
 
@@ -1345,7 +1337,7 @@ namespace Spludlow.MameAO
 							{
 								level_software.Append("<hr />");
 								level_software.Append("<h2>part, feature</h2>");
-								level_software.Append(Reports.MakeHtmlTable(table, null));
+								level_software.Append(table.Rows.Cast<DataRow>());
 							}
 						}
 
@@ -1393,7 +1385,7 @@ namespace Spludlow.MameAO
 						{
 							level_software.Append("<hr />");
 							level_software.Append("<h2>part, dataarea, rom</h2>");
-							level_software.Append(Reports.MakeHtmlTable(table, null));
+							level_software.Append(table.Rows.Cast<DataRow>());
 						}
 
 						// part, diskarea, disk
@@ -1454,7 +1446,7 @@ namespace Spludlow.MameAO
 							{
 								level_software.Append("<hr />");
 								level_software.Append("<h2>part, diskarea, disk</h2>");
-								level_software.Append(Reports.MakeHtmlTable(table, null));
+								level_software.Append(table.Rows.Cast<DataRow>());
 							}
 						}
 
@@ -1464,23 +1456,10 @@ namespace Spludlow.MameAO
 						softwarelist_disk_size += software_disk_size;
 
 						//
-						// Software on SoftwareList
+						// Software on SoftwareList - TODO NOT USED HTML
 						//
-						softwareTable.ImportRow(softwareRow);
-						DataRow software_row = softwareTable.Rows[softwareTable.Rows.Count - 1];
-						software_row["name"] = $"<a href=\"/{coreName}/software/{softwarelist_name}/{software_name}\">{software_name}</a>";
-						if (software_rom_count > 0)
-						{
-							software_row["roms"] = software_rom_count;
-							software_row["rom_size"] = software_rom_size;
-							software_row["rom_size_text"] = Tools.DataSize(software_rom_size);
-						}
-						if (software_disk_count > 0)
-						{
-							software_row["disks"] = software_disk_count;
-							software_row["disk_size"] = software_disk_size;
-							software_row["disk_size_text"] = Tools.DataSize(software_disk_size);
-						}
+						level_softwarelist.TableRow($"<a href=\"/{coreName}/software/{softwarelist_name}/{software_name}\">{software_name}</a>", (string)softwareRow["description"],
+							software_rom_count.ToString(), software_disk_count.ToString(), software_rom_size.ToString(), Tools.DataSize(software_rom_size), software_disk_size.ToString(), Tools.DataSize(software_disk_size));
 					}
 
 					DataRow[] machineListRows = machineListTable.Select($"softwarelist_name = '{softwarelist_name}'");
@@ -1506,7 +1485,7 @@ namespace Spludlow.MameAO
 
 							level_software.Append("<hr />");
 							level_software.Append($"<h2>machines ({status})</h2>");
-							level_software.Append(Reports.MakeHtmlTable(machinesTable, null));
+							level_software.Append(machinesTable.Rows.Cast<DataRow>());
 						}
 					}
 
@@ -1585,28 +1564,16 @@ namespace Spludlow.MameAO
 					searchRow["html_card"] = item.ToString();
 				}
 
-				level_softwarelist.Append(Reports.MakeHtmlTable(softwareTable, null));
+				level_root.TableRow($"<a href=\"/{coreName}/software/{softwarelist_name}\">{softwarelist_name}</a>", softwarelist_description,
+					softwarelist_rom_count.ToString(), softwarelist_disk_count.ToString(),
+					softwarelist_rom_size.ToString(), Tools.DataSize(softwarelist_rom_size), softwarelist_disk_size.ToString(), Tools.DataSize(softwarelist_disk_size));
 
-				DataRow softwarelist_row = listTable.Rows.Add($"<a href=\"/{coreName}/software/{softwarelist_name}\">{softwarelist_name}</a>", softwarelist_description);
-
-				if (softwarelist_rom_count > 0)
-				{
-					softwarelist_row["roms"] = softwarelist_rom_count;
-					softwarelist_row["rom_size"] = softwarelist_rom_size;
-					softwarelist_row["rom_size_text"] = Tools.DataSize(softwarelist_rom_size);
-				}
-				if (softwarelist_disk_count > 0)
-				{
-					softwarelist_row["disks"] = softwarelist_disk_count;
-					softwarelist_row["disk_size"] = softwarelist_disk_size;
-					softwarelist_row["disk_size_text"] = Tools.DataSize(softwarelist_disk_size);
-				}
-
+				level_softwarelist.TableEnd();
 				level_softwarelist.Finish(softwarelist_name);
 			}
 
-			level_root.Start($"{coreName.ToUpper()} ({version}) software lists");
-			level_root.Append(Reports.MakeHtmlTable(listTable, null));
+
+			level_root.TableEnd();
 			level_root.Finish("1");
 
 			//

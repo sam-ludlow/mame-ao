@@ -425,10 +425,18 @@ namespace Spludlow.MameAO
 		}
 		public void Append(DataRow row)
 		{
-			string[] columnNames = row.Table.Columns.Cast<DataColumn>().Select(col => col.ColumnName).Where(name => name.EndsWith("_id") == false).ToArray();
+			Append(new DataRow[] { row });
+		}
+		public void Append(IEnumerable<DataRow> rows)
+		{
+			if (rows.Any() == false)
+				return;
+
+			string[] columnNames = rows.First().Table.Columns.Cast<DataColumn>().Select(col => col.ColumnName).Where(name => name.EndsWith("_id") == false).ToArray();
 
 			TableStart(columnNames);
-			TableRow(columnNames.Select(col => row.IsNull(col) ? "" : (string)row[col]).ToArray());
+			foreach (var row in rows)
+				TableRow(columnNames.Select(col => row.IsNull(col) ? "" : (string)row[col]).ToArray());
 			TableEnd();
 		}
 		public void TableStart(params string[] columnNames)

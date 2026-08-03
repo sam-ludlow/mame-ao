@@ -31,6 +31,8 @@ namespace Spludlow.MameAO
 
 			HttpClient = new HttpClient(handler);
 			HttpClient.DefaultRequestHeaders.Add("User-Agent", $"mame-ao/{Globals.AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)");
+
+			ServicePointManager.FindServicePoint(new Uri("https://archive.org")).Expect100Continue = false;
 		}
 
 		public static string GetCookie()
@@ -136,7 +138,6 @@ namespace Spludlow.MameAO
 
 			return String.Join("; ", cookies.ToArray());
 		}
-
 	}
 
 	public class ArchiveOrgFile
