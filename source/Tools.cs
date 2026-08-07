@@ -4,6 +4,7 @@ using System.ComponentModel;
 using System.Data;
 using System.Diagnostics;
 using System.Drawing;
+using System.Globalization;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
@@ -238,6 +239,12 @@ namespace Spludlow.MameAO
 				throw new ApplicationException($"Bad year:\t{year}\t{yearFix}");
 
 			return year_fixed;
+		}
+
+		public static long ParseMameSize(DataRow row)
+		{
+			string size = row.Field<string>("size") ?? "0";
+			return size.StartsWith("0x") == true ? Int64.Parse(size.Substring(2), NumberStyles.HexNumber) : Int64.Parse(size);
 		}
 
 		public static string TextTable(DataTable table)

@@ -179,51 +179,15 @@ namespace Spludlow.MameAO
 			//
 			// Source Data
 			//
-			HashSet<string> sortTableNames = new HashSet<string>(new string[] { "subset", "datafile", "game", "rom", "sample" });
+			DataSet dataSet = Operations.SourceData(connection, new Dictionary<string, string>() {
+				{ "subset",		"name" },
+				{ "datafile",	"name" },
+				{ "game",		"name" },
+				{ "rom",		"name" },
+				{ "sample",		"name" },
+			});
 
-			var tableNames = Database.TableList(connection).Where(n => n.StartsWith("_") == false && n.EndsWith("_payload") == false).OrderBy(n => n).ToList();
-
-			var dataSet = new DataSet();
-			foreach (string tableName in tableNames)
-			{
-				var commandText = $"SELECT * FROM [{tableName}]";
-				if (sortTableNames.Contains(tableName))
-					commandText += " ORDER BY [name]";
-
-				Console.Write($"{commandText} ...");
-				
-				var table = Database.ExecuteFill(connection, commandText);
-				table.TableName = tableName;
-				dataSet.Tables.Add(table);
-
-				Console.WriteLine("...done");
-			}
-
-			//
-			//	Performance Dictionaries
-			//
-			var gameRowsByDatafileId = new Dictionary<long, List<DataRow>>();
-			foreach (DataRow gameRow in dataSet.Tables["game"].Rows)
-			{
-				long datafile_id = (long)gameRow["datafile_id"];
-				if (gameRowsByDatafileId.ContainsKey(datafile_id) == false)
-					gameRowsByDatafileId.Add(datafile_id, new List<DataRow>());
-				gameRowsByDatafileId[datafile_id].Add(gameRow);
-			}
-			// no-intro some empty datafiles
-			foreach (long datafile_id in dataSet.Tables["datafile"].Rows.Cast<DataRow>().Select(row => (long)row["datafile_id"]))
-			{
-				if (gameRowsByDatafileId.ContainsKey(datafile_id) == false)
-					gameRowsByDatafileId.Add(datafile_id, new List<DataRow>());
-			}
-			var romRowsByGameId = new Dictionary<long, List<DataRow>>();
-			foreach (DataRow romRow in dataSet.Tables["rom"].Rows)
-			{
-				long game_id = (long)romRow["game_id"];
-				if (romRowsByGameId.ContainsKey(game_id) == false)
-					romRowsByGameId.Add(game_id, new List<DataRow>());
-				romRowsByGameId[game_id].Add(romRow);
-			}
+			var rowLookups = Operations.PerformanceDictionaries(dataSet);
 
 			//
 			//	Traverse - Archive.org links
@@ -255,7 +219,7 @@ namespace Spludlow.MameAO
 				JArray ia_datafiles = GetArchiveOrgFiles(iaLinksFilename, coreName, subset_name, "d");
 				JArray ia_games = GetArchiveOrgFiles(iaLinksFilename, coreName, subset_name, "g");
 
-				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Select($"[subset_id] = {subset_id}"))
+				foreach (DataRow datafileRow in rowLookups["datafile"][subset_id])
 				{
 					long datafile_id = (long)datafileRow["datafile_id"];
 					string datafile_name = (string)datafileRow["name"];
@@ -278,7 +242,7 @@ namespace Spludlow.MameAO
 
 					int game_ia_count = 0;
 
-					foreach (DataRow gameRow in gameRowsByDatafileId[datafile_id])
+					foreach (DataRow gameRow in rowLookups["game"][datafile_id])
 					{
 						long game_id = (long)gameRow["game_id"];
 						string game_name = (string)gameRow["name"];
@@ -305,7 +269,7 @@ namespace Spludlow.MameAO
 
 						int rom_ia_count = 0;
 
-						foreach (DataRow romRow in romRowsByGameId[game_id])
+						foreach (DataRow romRow in rowLookups["rom"][game_id])
 						{
 							string rom_name = (string)romRow["name"];
 							string rom_extention = Path.GetExtension(rom_name);
@@ -374,7 +338,7 @@ namespace Spludlow.MameAO
 				level_subset.Append($"<h2>Datafiles</h2>");
 				level_subset.TableStart("Name", "Description", "Games", "Roms", "Bytes", "Size", "Extentions", "IA");
 
-				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Select($"[subset_id] = {subset_id}"))
+				foreach (DataRow datafileRow in rowLookups["datafile"][subset_id])
 				{
 					long datafile_id = (long)datafileRow["datafile_id"];
 					string datafile_name = (string)datafileRow["name"];
@@ -394,7 +358,7 @@ namespace Spludlow.MameAO
 					level_datafile.Append($"<h2>Games</h2>");
 					level_datafile.TableStart("Name", "Description", "Roms", "Bytes", "Size", "Extentions", "IA");
 
-					foreach (DataRow gameRow in gameRowsByDatafileId[datafile_id])
+					foreach (DataRow gameRow in rowLookups["game"][datafile_id])
 					{
 						long game_id = (long)gameRow["game_id"];
 						string game_name = (string)gameRow["name"];
@@ -414,7 +378,7 @@ namespace Spludlow.MameAO
 						level_game.Append($"<h2>Roms</h2>");
 						level_game.TableStart("Name", "Bytes", "Size", "CRC", "SHA1", "MD5", "IA");
 
-						foreach (DataRow romRow in romRowsByGameId[game_id])
+						foreach (DataRow romRow in rowLookups["rom"][game_id])
 						{
 							string rom_name = (string)romRow["name"];
 							string crc = romRow.Field<string>("crc");
@@ -448,9 +412,9 @@ namespace Spludlow.MameAO
 							if (dataSet.Tables.Contains(tableName) == false)
 								continue;
 
-							DataRow[] rows = dataSet.Tables[tableName].Select($"game_id = {game_id}");
+							var rows = rowLookups[tableName][game_id];
 
-							if (rows.Length == 0)
+							if (rows.Count == 0)
 								continue;
 
 							level_game.Append("<hr />");

@@ -156,6 +156,69 @@ namespace Spludlow.MameAO
 
 		}
 
+		public static DataSet SourceData(SqlConnection connection, Dictionary<string, string> tableNameColumnNameOrders)
+		{
+			DataSet dataSet = new DataSet();
+
+			foreach (string tableName in Database.TableList(connection))
+			{
+				if (tableName.StartsWith("_") == true || tableName.EndsWith("_payload") == true || tableName == "sysdiagrams")
+					continue;
+
+				string commandText = $"SELECT * FROM [{tableName}]";
+				if (tableNameColumnNameOrders.ContainsKey(tableName) == true)
+					commandText += $" ORDER BY [{tableNameColumnNameOrders[tableName]}]";
+
+				var table = new DataTable(tableName);
+				using (SqlDataAdapter adapter = new SqlDataAdapter(commandText, connection))
+					adapter.Fill(table);
+
+				dataSet.Tables.Add(table);
+			}
+
+			return dataSet;
+		}
+
+		public static Dictionary<string, Dictionary<long, List<DataRow>>> PerformanceDictionaries(DataSet dataSet)
+		{
+			var result = new Dictionary<string, Dictionary<long, List<DataRow>>>();
+
+			Console.Write("Make Performance Dictionaries...");
+			foreach (DataTable table in dataSet.Tables)
+			{
+				if (table.Columns.Count == 1)
+					continue;
+
+				var column = table.Columns[1];
+				if (column.ColumnName.EndsWith("_id") == false || column.DataType != typeof(long))
+					continue;
+
+				var lookup = new Dictionary<long, List<DataRow>>();
+
+				foreach (DataRow row in table.Rows)
+				{
+					long id = (long)row[column.ColumnName];
+					if (lookup.ContainsKey(id) == false)
+						lookup.Add(id, new List<DataRow>());
+					lookup[id].Add(row);
+				}
+
+				string parentTableName = column.ColumnName.Substring(0, column.ColumnName.Length - 3);
+
+				foreach (DataRow row in dataSet.Tables[parentTableName].Rows)
+				{
+					long id = (long)row[0];
+					if (lookup.ContainsKey(id) == false)
+						lookup.Add(id, new List<DataRow>());
+				}
+
+				result.Add(table.TableName, lookup);
+			}
+			Console.WriteLine("...done");
+
+			return result;
+		}
+
 		public static void CreateMetaDataTable(SqlConnection connection, string coreName, string version, string info)
 		{
 			string agent = $"mame-ao/{Globals.AssemblyVersion} (https://github.com/sam-ludlow/mame-ao)";
@@ -272,6 +335,9 @@ namespace Spludlow.MameAO
 		public long Games = 0;
 		public long Roms = 0;
 		public long Size = 0;
+		public long Disks = 0;
+		public long DiskSize = 0;
+
 		public Dictionary<string, int> Extentions = new Dictionary<string, int>();
 
 		public void Add(Counts counts)
@@ -280,6 +346,8 @@ namespace Spludlow.MameAO
 			Games += counts.Games;
 			Roms += counts.Roms;
 			Size += counts.Size;
+			Disks += counts.Disks;
+			DiskSize += counts.DiskSize;
 
 			foreach (var extention in counts.Extentions)
 			{
@@ -330,11 +398,11 @@ namespace Spludlow.MameAO
 		public Counts Counts = new Counts();
 
 		private string HtmlTitle;
-		private StringBuilder HtmlPage = new StringBuilder();
+		private readonly StringBuilder HtmlPage = new StringBuilder();
 
 		private int TableWidth = 0;
 
-		private Dictionary<string, string[]> XmlJsonPayloads;
+		private readonly Dictionary<string, string[]> XmlJsonPayloads;
 
 		public PayloadLevelInfo(
 			PayloadLevel level,
