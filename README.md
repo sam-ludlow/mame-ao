@@ -107,10 +107,12 @@ You should use a joystick but you will need a few keyboard commands. Full keyboa
 | Left Alt | Player 1 Button 2 |
 | Space bar | Player 1 Button 3 |
 | Tab | Configuration menu |
-| F2 | Service Mode |
+| F3 | Soft reset |
+| Left Shift + F3 | Hard reset |
 | F6 | Create Saved State |
 | F7 | Load Saved State |
 | F12 | Snap the screen |
+| Insert | Fast forward. While held, run machine as fast as posible |
 | Escape | Exit MAME |
 | Scroll Lock | Keyboard UI controls OR full keyboard |
 

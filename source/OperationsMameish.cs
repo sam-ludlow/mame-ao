@@ -46,8 +46,11 @@ namespace Spludlow.MameAO
 
 			MameishMSSQLSoftwarePayloads(directory, version, connections, coreName, versionDirectory, exeTime, snapTable);
 
+			MameishMSSQLSoftwarePayloadsSearch(connections, coreName, snapTable);
+
 			return 0;
 		}
+
 
 		public static void MameishMSSQLMachinePayloadsSearch(SqlConnection[] connections, string coreName, DataTable snapTable)
 		{
@@ -1217,9 +1220,6 @@ namespace Spludlow.MameAO
 				string softwarelist_name = (string)softwarelistRow["name"];
 				string softwarelist_description = (string)softwarelistRow["description"];
 
-				//if (softwarelist_name != "a5200")
-				//	continue;
-
 				//
 				// SoftwareLists
 				//
@@ -1625,6 +1625,12 @@ namespace Spludlow.MameAO
 
 			Tools.ConsolePrintMemory();
 		}
+
+		public static void MameishMSSQLSoftwarePayloadsSearch(SqlConnection[] connections, string coreName, DataTable snapTable)
+		{
+
+		}
+
 
 	}
 }

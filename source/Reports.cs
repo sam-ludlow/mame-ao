@@ -186,6 +186,13 @@ namespace Spludlow.MameAO
 				Decription = "What snaps are covered and required.",
 			},
 			new ReportType(){
+				Key = "snap-unkown",
+				Group = "interesting",
+				Code = "SNAPUNK",
+				Text = "Snap Unknown",
+				Decription = "What snaps are not in the database. Find bulk renames.",
+			},
+			new ReportType(){
 				Key = "machine-type",
 				Group = "interesting",
 				Code = "IMTYPE",
@@ -1933,6 +1940,44 @@ namespace Spludlow.MameAO
 			view.Sort = "[software_coverage] DESC, description";
 
 			SaveHtmlReport(Tools.DataTableFromView(view, software_list_table.TableName), software_list_table.TableName);
+		}
+
+		public void Report_SNAPUNK()
+		{
+			if (Globals.Config.ContainsKey("ServerPath") == false)
+				throw new ApplicationException("You must have ServerPath set in _config.txt");
+
+			DataTable snapTable = Snap.LoadSnapIndex(Path.Combine(Globals.Config["ServerPath"], "snap"), Globals.Core.Name);
+
+			if (snapTable == null)
+				throw new ApplicationException("Snap index not available");
+
+			HashSet<string> databaseNames = new HashSet<string>();
+
+			var machineConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]);
+			var softwareConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[1]);
+
+			foreach (DataRow row in Database.ExecuteFill(machineConnection, "SELECT [name] from [machine]").Rows)
+				databaseNames.Add((string)row["name"]);
+
+			foreach (DataRow row in Database.ExecuteFill(softwareConnection, "SELECT [softwarelist].[name] AS softwarelist_name, [software].[name] AS software_name FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id").Rows)
+				databaseNames.Add((string)row["softwarelist_name"] + @"\" + (string)row["software_name"]);
+
+			DataTable resultTable = snapTable.Clone();
+			resultTable.TableName = "Unkown Snaps";
+
+			foreach (DataRow row in snapTable.Rows)
+			{
+				string key = (string)row["Key"];
+
+				if (databaseNames.Contains(key) == false)
+					resultTable.ImportRow(row);
+			}
+
+			DataView view = new DataView(resultTable);
+			view.Sort = "[Key]";
+
+			SaveHtmlReport(Tools.DataTableFromView(view, resultTable.TableName), resultTable.TableName);
 		}
 
 		public void Report_IMTYPE()

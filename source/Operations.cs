@@ -436,7 +436,7 @@ namespace Spludlow.MameAO
 
 			TableStart(columnNames);
 			foreach (var row in rows)
-				TableRow(columnNames.Select(col => row.IsNull(col) ? "" : (string)row[col]).ToArray());
+				TableRow(columnNames.Select(col => row.IsNull(col) ? "" : Convert.ToString(row[col])).ToArray());
 			TableEnd();
 		}
 		public void TableStart(params string[] columnNames)

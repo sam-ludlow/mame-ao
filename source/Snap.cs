@@ -661,6 +661,54 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static void UtilRenameSnaps()
+		{
+			string directory = @"\\splcal-app\e$\ao-data\snap";
+			string coreName = "hbmame";
+
+			string directory_png = Path.Combine(directory, coreName, "png");
+			string directory_jpg = Path.Combine(directory, coreName, "jpg");
+
+			DataTable snapTable = Snap.LoadSnapIndex(directory, coreName);
+
+			StringBuilder command = new StringBuilder();
+			command.AppendLine("REM top 1");
+			command.AppendLine("REM top 2");
+
+			foreach (DataRow row in snapTable.Select(null, "[key]"))
+			{
+				string key = (string)row["Key"];
+
+				string start = "captcomms";
+				string newStart = "captcomm";
+
+				if (key.StartsWith(start) == true && key.Length > start.Length)
+				{
+					bool notDigit = false;
+					for (int index = start.Length; index < key.Length; ++index)
+					{ 
+						if (char.IsDigit(key[index]) == false)
+							notDigit = true;
+					}
+
+					if (notDigit == true)
+						continue;
+
+					int series = Int32.Parse(key.Substring(start.Length));
+
+					string newKey = newStart + series.ToString("000");
+
+					command.AppendLine($"rename \"{directory_png}\\{key}.png\" \"{newKey}.png\"");
+					command.AppendLine($"rename \"{directory_jpg}\\{key}.jpg\" \"{newKey}.jpg\"");
+
+				}
+			}
+
+			command.AppendLine("REM now re-index !!!");
+
+			Tools.PopText(command.ToString());
+		}
+
 
 	}
 }
