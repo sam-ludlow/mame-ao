@@ -90,10 +90,9 @@ namespace Spludlow.MameAO
 
 		private static string GetAuthCookie(string username, string password)
 		{
-			string url = "https://archive.org/services/account/login/";
 			string token;
 
-			using (Task<HttpResponseMessage> responseMessageTask = HttpClient.GetAsync(url))
+			using (Task<HttpResponseMessage> responseMessageTask = HttpClient.GetAsync("https://archive.org/services/csrf-token"))
 			{
 				responseMessageTask.Wait();
 
@@ -118,8 +117,10 @@ namespace Spludlow.MameAO
 			payload.remember = "true";
 			payload.t = token;
 
-			using (var requestMessage = new HttpRequestMessage(HttpMethod.Post, url))
+			using (var requestMessage = new HttpRequestMessage(HttpMethod.Post, "https://archive.org/services/account/login/"))
 			{
+				requestMessage.Headers.Add("x-csrf-token", token);
+
 				requestMessage.Content = new StringContent(payload.ToString(), Encoding.UTF8, "application/json");
 
 				using (Task<HttpResponseMessage> requestTask = HttpClient.SendAsync(requestMessage))
@@ -133,7 +134,7 @@ namespace Spludlow.MameAO
 			}
 
 			List<string> cookies = new List<string>();
-			foreach (Cookie cookie in CookieContainer.GetCookies(new Uri(url)))
+			foreach (Cookie cookie in CookieContainer.GetCookies(new Uri("https://archive.org")))
 				cookies.Add($"{cookie.Name}={cookie.Value}");
 
 			return String.Join("; ", cookies.ToArray());
