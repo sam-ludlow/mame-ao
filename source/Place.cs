@@ -275,7 +275,7 @@ namespace Spludlow.MameAO
 			string machineName = Tools.DataRowValue(machineRow, "name");
 
 			string diskName = Tools.DataRowValue(diskRow, "name");
-			string merge = Tools.DataRowValue(diskRow, "merge");
+			string merge = diskRow.Table.Columns.Contains("merge") ? Tools.DataRowValue(diskRow, "merge") : null;
 
 			List<string> machineNames = new List<string>(new string[] { machineName });
 

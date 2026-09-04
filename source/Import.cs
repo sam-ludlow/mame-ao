@@ -121,7 +121,7 @@ namespace Spludlow.MameAO
 		public static void FetchMachineDisk()
 		{
 			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
-			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
+			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT * FROM disk WHERE sha1 IS NOT NULL");
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 

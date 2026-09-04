@@ -300,7 +300,7 @@ namespace Spludlow.MameAO
 			InitializeConnections();
 
 			Console.Write($"Load all database SHA1 ...");
-			Cores.AllSHA1(hashSet, _ConnectionStringMachine, new string[] { "rom" });
+			Cores.AllSHA1(hashSet, _ConnectionStringMachine, new string[] { "rom", "disk" });
 			Cores.AllSHA1(hashSet, _ConnectionStringSoftware, new string[] { "rom" });
 			Console.WriteLine("...done");
 		}
@@ -344,7 +344,7 @@ namespace Spludlow.MameAO
 		
 		DataRow[] ICore.GetMachineRoms(string machine_name) => Cores.GetMachineRoms(_ConnectionStringMachine, machine_name);
 
-		DataRow[] ICore.GetMachineDisks(DataRow machine) => new DataRow[0];
+		DataRow[] ICore.GetMachineDisks(DataRow machine) => Cores.GetMachineDisks(_ConnectionStringMachine, machine);
 
 		DataRow[] ICore.GetMachineSamples(DataRow machine) => Cores.GetMachineSamples(_ConnectionStringMachine, machine);
 

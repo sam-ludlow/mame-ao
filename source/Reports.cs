@@ -1947,7 +1947,9 @@ namespace Spludlow.MameAO
 			if (Globals.Config.ContainsKey("ServerPath") == false)
 				throw new ApplicationException("You must have ServerPath set in _config.txt");
 
-			DataTable snapTable = Snap.LoadSnapIndex(Path.Combine(Globals.Config["ServerPath"], "snap"), Globals.Core.Name);
+			string snapDirectory = Path.Combine(Globals.Config["ServerPath"], "snap");
+
+			DataTable snapTable = Snap.LoadSnapIndex(snapDirectory, Globals.Core.Name);
 
 			if (snapTable == null)
 				throw new ApplicationException("Snap index not available");
@@ -1978,6 +1980,15 @@ namespace Spludlow.MameAO
 			view.Sort = "[Key]";
 
 			SaveHtmlReport(Tools.DataTableFromView(view, resultTable.TableName), resultTable.TableName);
+
+			//StringBuilder commands = new StringBuilder();
+			//foreach (DataRowView rowView in view)
+			//{
+			//	string key = (string)rowView.Row["Key"];
+			//	commands.AppendLine($"del {snapDirectory}\\{Globals.Core.Name}\\png\\{key}.png");
+			//	commands.AppendLine($"del {snapDirectory}\\{Globals.Core.Name}\\jpg\\{key}.jpg");
+			//}
+			//Tools.PopText(commands.ToString());
 		}
 
 		public void Report_IMTYPE()
