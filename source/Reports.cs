@@ -1229,8 +1229,7 @@ namespace Spludlow.MameAO
 			List<HashSet<string>> databaseHashes = new List<HashSet<string>>();
 
 			databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
-			if (Globals.Core.Name == "mame")
-				databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
+			databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
 			databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
 			if (Globals.Core.Name == "mame")
 				databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
@@ -1241,7 +1240,7 @@ namespace Spludlow.MameAO
 
 			if (Globals.Core.Name == "hbmame")
 			{
-				foreach (int removeIndex in new int[] { 3, 1 })
+				foreach (int removeIndex in new int[] { 3 })
 				{
 					names.RemoveAt(removeIndex);
 					hashStores.RemoveAt(removeIndex);
@@ -1959,7 +1958,7 @@ namespace Spludlow.MameAO
 			var machineConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]);
 			var softwareConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[1]);
 
-			foreach (DataRow row in Database.ExecuteFill(machineConnection, "SELECT [name] from [machine]").Rows)
+			foreach (DataRow row in Database.ExecuteFill(machineConnection, "SELECT [name] from [machine] WHERE [isdevice] = 'no'").Rows)
 				databaseNames.Add((string)row["name"]);
 
 			foreach (DataRow row in Database.ExecuteFill(softwareConnection, "SELECT [softwarelist].[name] AS softwarelist_name, [software].[name] AS software_name FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id").Rows)
