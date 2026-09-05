@@ -385,6 +385,12 @@ For `get` operations if a new version if found the exit code will be set to 1.
 | no-intro_mssql | MS SQL | `.\mame-ao.exe no-intro_mssql directory="C:\ao-data\no-intro" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-no-intro"` |
 | no-intro_mssql-payload | Web payloads | `.\mame-ao.exe no-intro_mssql-payload directory="C:\ao-data\no-intro" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-no-intro"` |
 
+### Visual Pinball
+|Operation|Description|Example|
+|:----|:----|:----|
+| pinball-visual_get | Get Visual Pinball | `.\mame-ao.exe pinball-visual_get directory="C:\ao-data\pinball-visual"` |
+| pinball-visual_xml | Extract XML | `.\mame-ao.exe pinball-visual_xml directory="C:\ao-data\pinball-visual"` |
+
 ### Spludlow Data Web Operations
 |Operation|Description|Example|
 |:----|:----|:----|

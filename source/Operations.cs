@@ -89,6 +89,10 @@ namespace Spludlow.MameAO
 						core = new CoreNoIntro();
 						break;
 
+					case "pinball-visual":
+						core = new CorePinballVisual();
+						break;
+
 					default:
 						throw new ApplicationException($"Bad core: {coreName}");
 				}
