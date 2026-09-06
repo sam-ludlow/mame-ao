@@ -344,9 +344,9 @@ namespace Spludlow.MameAO
 				else
 				{
 					if (machine_isdevice == true)
-						item.Append($"<p>DEVICE</p>");
+						item.Append("<img src=\"/images/device.jpg\" alt=\"device\" class=\"card-img\" />");
 					else
-						item.Append($"<p>NO SNAP</p>");
+						item.Append("<p>NO SNAP</p>");
 				}
 					
 				item.Append("</a></div>");
