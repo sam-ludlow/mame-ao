@@ -4,6 +4,7 @@ using System.Data;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+using System.Xml.Linq;
 
 using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
@@ -230,7 +231,70 @@ namespace Spludlow.MameAO
 
 		void ICore.MSSql(string serverConnectionString, string[] databaseNames)
 		{
-			throw new NotImplementedException();
+			if (_Version == null)   //	TODO
+				_Version = "v10.8.0-2051-28dd6c3";
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			string[] directories = Directory.GetDirectories(_CoreDirectory).Where(dir => Path.GetFileName(dir).StartsWith("_dat_") == true).ToArray();
+			if (directories.Length != 1)
+				throw new ApplicationException($"Did not find one _dat_ directory {directories.Length} {_CoreDirectory}");
+
+			DataSet dataSet = PinballVisualDataSet(directories[0]);
+			//Database.DataSet2MSSQL(dataSet, serverConnectionString, databaseNames[0]);
+			//Database.MakeForeignKeys(serverConnectionString, databaseNames[0]);
+
+			string filename = Path.Combine(_CoreDirectory, "VPinMAME", "_pinmame.xml");
+			if (File.Exists(filename) == false)
+				throw new ApplicationException($"Did not find one PinMAME XML {filename}");
+
+			dataSet = PinMameDataSet(filename);
+			Database.DataSet2MSSQL(dataSet, serverConnectionString, databaseNames[1]);
+			Database.MakeForeignKeys(serverConnectionString, databaseNames[1]);
+		}
+
+		public static DataSet PinballVisualDataSet(string directory)
+		{
+			XElement subsetsElement = new XElement("subsets");
+			XElement subsetElement = new XElement("subset");
+			subsetElement.SetAttributeValue("name", "pinball-visual");
+			subsetElement.SetAttributeValue("description", "Visual Pinball");
+			subsetsElement.Add(subsetElement);
+
+			foreach (string filename in Directory.GetFiles(directory, "*.xml"))
+			{
+				XElement datafileElement = XElement.Load(filename);
+
+				//	Move header
+				foreach (var itemElement in datafileElement.Element("header").Elements())
+					datafileElement.SetAttributeValue(itemElement.Name, itemElement.Value);
+				datafileElement.Element("header").Remove();
+
+				subsetElement.Add(datafileElement);
+			}
+
+			DataSet dataSet = new DataSet();
+			ReadXML.ImportXMLWork(subsetsElement, dataSet, null, null);
+			return dataSet;
+		}
+
+		public static DataSet PinMameDataSet(string filename)
+		{
+			XElement subsetsElement = new XElement("subsets");
+			XElement subsetElement = new XElement("subset");
+			subsetElement.SetAttributeValue("name", "pinmame");
+			subsetElement.SetAttributeValue("description", "PinMAME");
+			subsetsElement.Add(subsetElement);
+
+			XElement mameElement = XElement.Load(filename);
+
+			foreach (XElement gameElement in mameElement.Elements())
+			{
+				subsetElement.Add(gameElement);
+			}
+
+			DataSet dataSet = new DataSet();
+			ReadXML.ImportXMLWork(subsetsElement, dataSet, null, null);
+			return dataSet;
 		}
 
 		void ICore.SQLite()
@@ -238,11 +302,11 @@ namespace Spludlow.MameAO
 			throw new NotImplementedException();
 		}
 
+
 		void ICore.SQLiteAo()
 		{
 			throw new NotImplementedException();
 		}
-
 
 
 		void ICore.AllSHA1(HashSet<string> hashSet)

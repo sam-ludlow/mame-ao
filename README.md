@@ -390,6 +390,8 @@ For `get` operations if a new version if found the exit code will be set to 1.
 |:----|:----|:----|
 | pinball-visual_get | Get Visual Pinball | `.\mame-ao.exe pinball-visual_get directory="C:\ao-data\pinball-visual"` |
 | pinball-visual_xml | Extract XML | `.\mame-ao.exe pinball-visual_xml directory="C:\ao-data\pinball-visual"` |
+| pinball-visual_mssql | MS SQL | `.\mame-ao.exe pinball-visual_mssql directory="C:\ao-data\pinball-visual" server="Data Source='my-mssql-server';Integrated Security=True;TrustServerCertificate=True;" names="ao-pinball-visual, ao-pinmame"` |
+
 
 ### Spludlow Data Web Operations
 |Operation|Description|Example|
