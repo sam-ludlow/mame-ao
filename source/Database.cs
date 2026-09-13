@@ -133,6 +133,8 @@ namespace Spludlow.MameAO
 							using (SQLiteCommand command = new SQLiteCommand(commandText, connection))
 								command.ExecuteNonQuery();
 					}
+
+					//	TODO: Pinball indexes
 				}
 				finally
 				{

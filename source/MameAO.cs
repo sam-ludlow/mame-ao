@@ -781,6 +781,18 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 				}
 			}
 
+			//	TODO bodged in for now
+			if (Globals.Core.Name == "pinball-visual")
+			{
+				string vpxName = CorePinballVisual.PlacePinball(Globals.Core, "Visual Pinball [VPX08] PinMame Tables", line);
+
+				Globals.PhoneHome.Ready();
+
+				Mame.RunMame(Path.Combine(Globals.Core.Directory, "VPinballX64.exe"), $"-play \"tables\\{vpxName}\"");
+
+				return line;
+			}
+
 			parts = args.Arguments(3, true);
 
 			machine = parts[0];

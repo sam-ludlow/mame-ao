@@ -75,6 +75,10 @@ namespace Spludlow.MameAO
 					core = new CoreHbMame();
 					break;
 
+				case "pinball-visual":
+					core = new CorePinballVisual();
+					break;
+
 				default:
 					throw new ApplicationException($"Unknow core: {name}");
 			}
@@ -88,7 +92,8 @@ namespace Spludlow.MameAO
 
 			Globals.Core = core;
 
-			Globals.Genre.InitializeCore(core);
+			if (name == "mame" || name == "hbmame")
+				Globals.Genre.InitializeCore(core);
 
 			Globals.Favorites = new Favorites();
 		}
