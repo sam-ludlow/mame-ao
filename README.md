@@ -75,6 +75,40 @@ Enable HBMAME from the about page or use the command `.core hbmame`. Only works 
 
 ![MAME-AO using HBMAME](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-hbmame.png)
 
+## Visual Pinball
+This is currently **Preliminary**, the UI machine pages are broken, follow the instructions carefully.
+
+Only supporting the `Visual Pinball [VPX08] PinMame Tables` tables at the moment.
+
+### Pinball Prerequisites
+- Install the DirectX runtimes https://www.microsoft.com/en-US/download/details.aspx?id=35
+- Configure DOME-BT `mame-ao\_BT\_config.txt` must contain line (TAB after cores) `cores	mame, pinmame, pinball` and restart DOME-BT
+- First time only run the COM installer after enabling core in MAME-AO `.core pinball-visual` run the installer here `mame-ao\pinball-visual\v10.8.0-2051-28dd6c3\VPinMAME\Setup64.exe` accept all defaults
+
+### Enable Pinball
+In the MAME-AO command line enter `.core pinball-visual`
+
+### Pinball UI Workaround
+The UI is not ready yet to get list of tables goto http://localhost:12380/reports/sql and paste in this command
+```
+SELECT machine.name AS [table], rom.name AS variant, machine.name || '@' || rom.name AS [command_line treble-click to select then copy] FROM datafile
+INNER JOIN machine ON datafile.datafile_id = machine.datafile_id
+INNER JOIN rom ON machine.machine_id = rom.machine_id
+WHERE (datafile.name = 'Visual Pinball [VPX08] PinMame Tables' AND rom.name LIKE '%.vpx')
+ORDER BY machine.name, rom.name;
+```
+
+You can treble-click click the last column to select then copy then paste into the MAME-AO command line.
+
+![MAME-AO Visual Pinball UI Workaround](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-visual-pinball-ui-workaround.png)
+
+### Note on Pinball torrents
+As there are not as many seeders for the pinball stuff you may struggle to download if DOME-BT is not using UPnP or port-mapping with your router.
+
+You may be better off downloading the torrents manually and then importing into MAME-AO. You need all of `PinMAME` and only need these `Visual Pinball` tables for now, use command `.import C:\tmp\Visual Pinball [VPX08] PinMame Tables`. Ensure you enable pinball core in MAME-AO first.
+
+Get the magnets by clicking on the `Visual Pinball` & `PinMAME` links on the MAME-AO torrents page http://localhost:12380/bittorrent
+
 ## Symbolic Links - Save disk space
 When MAME-AO downloads assets it keeps them in a "hash store", this makes keeping account of them very simple, you don’t have to keep grooming a bunch of ZIP files.
 

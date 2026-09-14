@@ -335,22 +335,22 @@ namespace Spludlow.MameAO
 
 		public static BitTorrentFile MachineRom(string core, string machine)
 		{
-			return Download($"{ClientUrl}/api/file?core={core}&machine={machine}");
+			return Download($"{ClientUrl}/api/file?core={core}&machine={HttpUtility.UrlEncode(machine)}");
 		}
 
 		public static BitTorrentFile MachineDisk(string core, string machine, string disk)
 		{
-			return Download($"{ClientUrl}/api/file?core={core}&machine={machine}&disk={HttpUtility.UrlEncode(disk)}");
+			return Download($"{ClientUrl}/api/file?core={core}&machine={HttpUtility.UrlEncode(machine)}&disk={HttpUtility.UrlEncode(disk)}");
 		}
 
 		public static BitTorrentFile SoftwareRom(string core, string list, string software)
 		{
-			return Download($"{ClientUrl}/api/file?core={core}&list={list}&software={software}");
+			return Download($"{ClientUrl}/api/file?core={core}&list={HttpUtility.UrlEncode(list)}&software={HttpUtility.UrlEncode(software)}");
 		}
 
 		public static BitTorrentFile SoftwareDisk(string core, string list, string software, string disk)
 		{
-			return Download($"{ClientUrl}/api/file?core={core}&list={list}&software={software}&disk={HttpUtility.UrlEncode(disk)}");
+			return Download($"{ClientUrl}/api/file?core={core}&list={HttpUtility.UrlEncode(list)}&software={HttpUtility.UrlEncode(software)}&disk={HttpUtility.UrlEncode(disk)}");
 		}
 
 		public static BitTorrentFile Download(string apiUrl)

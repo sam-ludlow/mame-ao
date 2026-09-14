@@ -784,7 +784,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			//	TODO bodged in for now
 			if (Globals.Core.Name == "pinball-visual")
 			{
-				string vpxName = CorePinballVisual.PlacePinball(Globals.Core, "Visual Pinball [VPX08] PinMame Tables", line);
+				string vpxName = CorePinballVisual.PlacePinball(Globals.Core, line);
 
 				Globals.PhoneHome.Ready();
 
