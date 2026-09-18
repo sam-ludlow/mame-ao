@@ -420,19 +420,13 @@ namespace Spludlow.MameAO
 
 		public static string PlacePinball(ICore core, string line)
 		{
-			string datafile_name = "Visual Pinball [VPX08] PinMame Tables";	//	TODO: Allow others later
-			string machine_name = line;
-			string vpxName = null;
+			string[] parts = line.Split('@');
+			if (parts.Length != 3)
+				throw new ApplicationException("Bad Line");
 
-			if (machine_name.Contains("@") == true)
-			{
-				string[] parts = machine_name.Split('@');
-				if (parts.Length != 2)
-					throw new ApplicationException("Bad Line");
-
-				machine_name = parts[0];
-				vpxName = parts[1];
-			}
+			string datafile_name = parts[0];
+			string machine_name = parts[1];
+			string vpxName = parts[2];
 
 			SQLiteConnection connectionVisualPinball = new SQLiteConnection(core.ConnectionStrings[0]);
 			SQLiteConnection connectionPinMAME = new SQLiteConnection(core.ConnectionStrings[1]);

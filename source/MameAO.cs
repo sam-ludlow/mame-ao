@@ -678,6 +678,28 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						BitTorrent.Stop();
 						return null;
 
+					case ".btrestart":
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
+							throw new ApplicationException($"Usage: {parts[0]} <hash>");
+						BitTorrent.StopTorrent(parts[1]);
+						BitTorrent.StartTorrent(parts[1]);
+						return null;
+
+					case ".btstop":
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
+							throw new ApplicationException($"Usage: {parts[0]} <hash>");
+						BitTorrent.StopTorrent(parts[1]);
+						return null;
+
+					case ".btstart":
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
+							throw new ApplicationException($"Usage: {parts[0]} <hash>");
+						BitTorrent.StartTorrent(parts[1]);
+						return null;
+
 					case ".creds":
 						File.Delete(ArchiveOrgAuth.CacheFilename);
 						Globals.AuthCookie = ArchiveOrgAuth.GetCookie();

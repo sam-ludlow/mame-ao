@@ -78,8 +78,6 @@ Enable HBMAME from the about page or use the command `.core hbmame`. Only works 
 ## Visual Pinball
 This is currently **Preliminary**, the UI machine pages are broken, follow the instructions carefully.
 
-Only supporting the `Visual Pinball [VPX08] PinMame Tables` tables at the moment.
-
 ### Pinball Prerequisites
 - Install the DirectX runtimes https://www.microsoft.com/en-US/download/details.aspx?id=35
 - Configure DOME-BT `mame-ao\_BT\_config.txt` must contain line (TAB after cores) `cores	mame, pinmame, pinball` and restart DOME-BT
@@ -91,12 +89,13 @@ In the MAME-AO command line enter `.core pinball-visual`
 ### Pinball UI Workaround
 The UI is not ready yet to get list of tables goto http://localhost:12380/reports/sql and paste in this command
 ```
-SELECT machine.name AS [table], rom.name AS variant, machine.name || '@' || rom.name AS [command_line treble-click to select then copy] FROM datafile
+SELECT machine.name AS [table], rom.name AS variant, datafile.name || '@' || machine.name || '@' || rom.name AS [command_line treble-click to select then copy] FROM datafile
 INNER JOIN machine ON datafile.datafile_id = machine.datafile_id
 INNER JOIN rom ON machine.machine_id = rom.machine_id
 WHERE (datafile.name = 'Visual Pinball [VPX08] PinMame Tables' AND rom.name LIKE '%.vpx')
 ORDER BY machine.name, rom.name;
 ```
+Swap out `Visual Pinball [VPX08] PinMame Tables` for other table sets.
 
 You can treble-click click the last column to select then copy then paste into the MAME-AO command line.
 
@@ -196,6 +195,9 @@ There are also commands available they all start with a dot `.`
 |.btr|Restart the bit torrent client|`.btr`|
 |.bts|Stop the bit torrent client|`.bts`|
 |.btx|Remove the bit torrent client|`.btx`|
+|.btrestart|Restart a torrent|`.btx 9B345E3B057D50542C7FF418E1F258A28CB9372E`|
+|.btstop|Stop a torrent|`.btx 9B345E3B057D50542C7FF418E1F258A28CB9372E`|
+|.btstart|Start a torrent|`.btx 9B345E3B057D50542C7FF418E1F258A28CB9372E`|
 |.core|Change emulation core|`.core hbmame`|
 |.creds|Enter archive.org credentials, If you press `ENTER` twice your auth cookie will be deleted.|`.creds`|
 |.dbm|Machine database SQL query|`.dbm SELECT rom.* FROM machine INNER JOIN rom ON machine.machine_id = rom.machine_id WHERE machine.name = 'mrdo'`|

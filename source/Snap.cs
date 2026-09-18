@@ -535,8 +535,11 @@ namespace Spludlow.MameAO
 				}
 			}
 		}
-		public static void UtilDeleteBadSnaps(string snapDirectory, string coreName)
+		public static void UtilDeleteBadSnaps()
 		{
+			string snapDirectory = @"\\splcal-app\e$\ao-data\snap";
+			string coreName = "mame";
+
 			string pngDirectory = Path.Combine(Path.Combine(snapDirectory, coreName), "png");
 			string jpgDirectory = Path.Combine(Path.Combine(snapDirectory, coreName), "jpg");
 
@@ -546,12 +549,15 @@ namespace Spludlow.MameAO
 			{
 				string sha1 = (string)row["PixelSHA1"];
 
-				if (sha1 == "6f5b7ca1ab2965228a7025292a1eb500eddcd2cb" || sha1 == "cca44353fde08d05f87a844a9072d9fbd6d24209")
+				if (sha1 == "239de889c8d0a223eda7d41172fc0bf1caf7312c" || sha1 == "6f5b7ca1ab2965228a7025292a1eb500eddcd2cb" || sha1 == "cca44353fde08d05f87a844a9072d9fbd6d24209")
 				{
 					string key = (string)row["key"];
 
 					string pngFilename = Path.Combine(pngDirectory, key + ".png");
 					string jpgFilename = Path.Combine(jpgDirectory, key + ".jpg");
+
+					Console.WriteLine(pngFilename);
+					//Console.WriteLine(jpgFilename);
 
 					if (File.Exists(pngFilename) == false)
 						throw new ApplicationException(pngFilename);
@@ -559,12 +565,8 @@ namespace Spludlow.MameAO
 					if (File.Exists(jpgFilename) == false)
 						throw new ApplicationException(jpgFilename);
 
-					Console.WriteLine(pngFilename);
-					Console.WriteLine(jpgFilename);
-
-					File.Delete(pngFilename);
-					File.Delete(jpgFilename);
-
+					//File.Delete(pngFilename);
+					//File.Delete(jpgFilename);
 				}
 			}
 		}

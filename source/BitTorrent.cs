@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
+using System.Linq;
 using System.Net.Http;
 using System.Reflection;
 using System.Threading;
@@ -260,6 +261,53 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static void StopTorrent(string hash)
+		{
+			dynamic info = DomeInfo();
+
+			if (info != null)
+			{
+				Console.Write("Stopping Torrent...");
+				Tools.Query($"{ClientUrl}/api/stop_torrent?hash={hash}");
+
+				WaitTorrentState(hash, new string[] { "Stopped" });
+
+				Console.WriteLine("...done");
+			}
+		}
+
+		public static void StartTorrent(string hash)
+		{
+			dynamic info = DomeInfo();
+
+			if (info != null)
+			{
+				Console.Write("Starting Torrent...");
+				Tools.Query($"{ClientUrl}/api/start_torrent?hash={hash}");
+
+				WaitTorrentState(hash, new string[] { "Downloading", "Seeding" });
+
+				Console.WriteLine("...done");
+			}
+		}
+		public static void WaitTorrentState(string hash, string[] states)
+		{
+			var statesSet = new HashSet<string>(states);
+
+			string state = null;
+			while (statesSet.Contains(state) == false)
+			{
+				if (state != null)
+					Thread.Sleep(1000);
+
+				dynamic info = DomeInfo();
+				state = (string)((JArray)info.torrents).Single(torrent => (string)torrent["hash"] == hash)["state"];
+
+				Console.Write(".");
+			}
+		}
+
+
 		public static void EnableCore(string coreName)
 		{
 			dynamic info = JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/info"));
@@ -400,12 +448,16 @@ namespace Spludlow.MameAO
 				{
 					if (waitSpan > RestartLimit)
 					{
+						string hash = (string)fileInfo.torrent_hash;
+
 						Tools.ConsoleHeading(2, new string[] {
-							"DOME-BT is not downloading. Restarting it.",
-							"",
-							"Sometimes there aren't enough Seeders connected, a restart may help."
+							"DOME-BT is not downloading. Restarting torrent.",
+							hash
 						});
-						Restart();
+
+						StopTorrent(hash);
+						StartTorrent(hash);
+
 						changeTime = DateTime.Now;
 					}
 				}
