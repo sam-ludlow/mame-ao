@@ -134,6 +134,8 @@ namespace Spludlow.MameAO
 								command.ExecuteNonQuery();
 					}
 
+					//	TODO: FbNeo indexes
+
 					//	TODO: Pinball indexes
 				}
 				finally

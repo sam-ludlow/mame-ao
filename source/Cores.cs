@@ -75,6 +75,10 @@ namespace Spludlow.MameAO
 					core = new CoreHbMame();
 					break;
 
+				case "fbneo":
+					core = new CoreFbNeo();
+					break;
+
 				case "pinball-visual":
 					core = new CorePinballVisual();
 					break;
@@ -253,13 +257,35 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static void AddExtraAoData(DataSet dataSet, string assemblyVersion)
+		public static void AddAoMetaData(DataSet dataSet, string assemblyVersion)
 		{
 			DataTable table = new DataTable("ao_info");
 			table.Columns.Add("ao_info_id", typeof(long));
 			table.Columns.Add("assembly_version", typeof(string));
 			table.Rows.Add(1L, assemblyVersion);
 			dataSet.Tables.Add(table);
+		}
+
+		public static string GetAoMetaDataAssemblyVersion(string connectionString)
+		{
+			using (SQLiteConnection connection = new SQLiteConnection(connectionString))
+			{
+				if (Database.TableExists(connection, "ao_info") == true)
+				{
+					object obj = Database.ExecuteScalar(connection, "SELECT [assembly_version] FROM [ao_info] WHERE ([ao_info_id] = 1)");
+
+					if (obj == null || !(obj is string))
+						throw new ApplicationException("MAME ao_info bad table");
+
+					return (string)obj;
+				}
+			}
+			return null;
+		}
+
+		public static void AddExtraAoData(DataSet dataSet, string assemblyVersion)
+		{
+			AddAoMetaData(dataSet, assemblyVersion);
 
 			if (dataSet.Tables.Contains("machine") == true)
 			{

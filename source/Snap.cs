@@ -549,7 +549,7 @@ namespace Spludlow.MameAO
 			{
 				string sha1 = (string)row["PixelSHA1"];
 
-				if (sha1 == "239de889c8d0a223eda7d41172fc0bf1caf7312c" || sha1 == "6f5b7ca1ab2965228a7025292a1eb500eddcd2cb" || sha1 == "cca44353fde08d05f87a844a9072d9fbd6d24209")
+				if (sha1 == "239de889c8d0a223eda7d41172fc0bf1caf7312c")
 				{
 					string key = (string)row["key"];
 

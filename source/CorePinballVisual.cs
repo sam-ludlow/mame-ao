@@ -373,11 +373,7 @@ namespace Spludlow.MameAO
 					throw new ApplicationException($"Did not find one _dat_ directory {directories.Length} {_CoreDirectory}");
 				dataSet = PinballVisualDataSet(directories[0]);
 
-				DataTable table = new DataTable("ao_info");
-				table.Columns.Add("ao_info_id", typeof(long));
-				table.Columns.Add("assembly_version", typeof(string));
-				table.Rows.Add(1L, Globals.AssemblyVersion);
-				dataSet.Tables.Add(table);
+				Cores.AddAoMetaData(dataSet, Globals.AssemblyVersion);
 
 				Database.DataSet2SQLite(name, Database.MakeSQLiteConnectionString(sqliteFilename), dataSet);
 			}
@@ -392,11 +388,7 @@ namespace Spludlow.MameAO
 					throw new ApplicationException($"Did not find one PinMAME XML {filename}");
 				dataSet = PinMameDataSet(filename);
 
-				DataTable table = new DataTable("ao_info");
-				table.Columns.Add("ao_info_id", typeof(long));
-				table.Columns.Add("assembly_version", typeof(string));
-				table.Rows.Add(1L, Globals.AssemblyVersion);
-				dataSet.Tables.Add(table);
+				Cores.AddAoMetaData(dataSet, Globals.AssemblyVersion);
 
 				Database.DataSet2SQLite(name, Database.MakeSQLiteConnectionString(Path.Combine(_CoreDirectory, $"_{name}.sqlite")), dataSet);
 			}

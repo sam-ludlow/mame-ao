@@ -804,6 +804,19 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			}
 
 			//	TODO bodged in for now
+			if (Globals.Core.Name == "fbneo")
+			{
+				string vpxName = CoreFbNeo.PlaceFbNeo(Globals.Core, line);
+
+				Globals.PhoneHome.Ready();
+
+				//	 nes_pacman
+
+				//Mame.RunMame(Path.Combine(Globals.Core.Directory, "VPinballX64.exe"), $"-play \"tables\\{vpxName}\"");
+
+				return line;
+			}
+
 			if (Globals.Core.Name == "pinball-visual")
 			{
 				string vpxName = CorePinballVisual.PlacePinball(Globals.Core, line);

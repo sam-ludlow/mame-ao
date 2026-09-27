@@ -239,27 +239,10 @@ namespace Spludlow.MameAO
 
 			Cores.MakeSQLite(_CoreDirectory, ReadXML.RequiredMachineTables, ReadXML.RequiredSoftwareTables, false, Globals.AssemblyVersion, Cores.AddExtraAoData);
 
-			//
-			// AO bump check
-			//
-			using (SQLiteConnection connection = new SQLiteConnection(_ConnectionStringMachine))
+			if (Cores.GetAoMetaDataAssemblyVersion(_ConnectionStringMachine) != Globals.AssemblyVersion)
 			{
-				string databaseAssemblyVersion = null;
-				if (Database.TableExists(connection, "ao_info") == true)
-				{
-					object obj = Database.ExecuteScalar(connection, "SELECT [assembly_version] FROM [ao_info] WHERE ([ao_info_id] = 1)");
-
-					if (obj == null || !(obj is string))
-						throw new ApplicationException("MAME ao_info bad table");
-
-					databaseAssemblyVersion = (string)obj;
-				}
-
-				if (databaseAssemblyVersion != Globals.AssemblyVersion)
-				{
-					Console.WriteLine("SQLite database from previous version re-creating.");
-					Cores.MakeSQLite(_CoreDirectory, ReadXML.RequiredMachineTables, ReadXML.RequiredSoftwareTables, true, Globals.AssemblyVersion, Cores.AddExtraAoData);
-				}
+				Console.WriteLine("SQLite database from previous version re-creating.");
+				Cores.MakeSQLite(_CoreDirectory, ReadXML.RequiredMachineTables, ReadXML.RequiredSoftwareTables, true, Globals.AssemblyVersion, Cores.AddExtraAoData);
 			}
 
 			//

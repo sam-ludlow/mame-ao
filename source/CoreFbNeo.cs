@@ -10,6 +10,8 @@ using System.Xml;
 using System.Xml.Linq;
 
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
+using System.Data.SQLite;
 
 namespace Spludlow.MameAO
 {
@@ -91,6 +93,11 @@ namespace Spludlow.MameAO
 			if (_Version == null)
 				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			string completeFilename = Path.Combine(_CoreDirectory, "_fbneo.xml");
+
+			if (File.Exists(completeFilename) == true)
+				return;
 
 			//	https://github.com/finalburnneo/FBNeo/blob/master/src/burner/win32/main.cpp
 			string[] listInfos = new string[] { "arcade", "channelf", "coleco", "fds", "gg", "md", "msx", "neogeo", "nes", "ngp", "pce", "sg1000", "sgx", "sms", "snes", "spectrum", "tg16" };
@@ -186,9 +193,6 @@ namespace Spludlow.MameAO
 				File.Delete(systemFilename);
 			}
 
-			string completeFilename = Path.Combine(_CoreDirectory, "_fbneo.xml");
-			File.Delete(completeFilename);
-
 			XmlWriterSettings settings = new XmlWriterSettings
 			{
 				OmitXmlDeclaration = false,
@@ -238,7 +242,278 @@ namespace Spludlow.MameAO
 			Console.WriteLine("... done");
 		}
 
-        void ICore.MsAccess()
+		void ICore.SQLiteAo()
+		{
+			if (_Version == null)
+				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			string sqlLiteFilename = Path.Combine(_CoreDirectory, "_fbneo.sqlite");
+
+			_ConnectionString = Database.MakeSQLiteConnectionString(sqlLiteFilename);
+
+			if (File.Exists(sqlLiteFilename) == false  || (Cores.GetAoMetaDataAssemblyVersion(_ConnectionString) != Globals.AssemblyVersion))
+			{
+				if (File.Exists(sqlLiteFilename) == true)
+				{
+					Console.WriteLine($"Delete SQLite database from old version {sqlLiteFilename}");
+					File.Delete(sqlLiteFilename);
+				}
+
+				DataSet dataSet = FBNeoDataSet(_CoreDirectory);
+
+				Cores.AddAoMetaData(dataSet, Globals.AssemblyVersion);
+
+				Console.Write("Creating SHA1 lookup ...");
+				Dictionary<string, string> sha1Lookup = new Dictionary<string, string>();
+
+				var datDataSet = GetDatDataSet();
+				
+				foreach (DataRow datafileRow in datDataSet.Tables["datafile"].Rows)
+				{
+					long datafile_id = (long)datafileRow["datafile_id"];
+					string datafile_name = (string)datafileRow["name"];
+					foreach (DataRow machineRow in datDataSet.Tables["machine"].Select($"datafile_id = {datafile_id}"))
+					{
+						long machine_id = (long)machineRow["machine_id"];
+						string machine_name = (string)machineRow["name"];
+						foreach (DataRow romRow in datDataSet.Tables["rom"].Select($"machine_id = {machine_id}"))
+						{
+							string rom_name = (string)romRow["name"];
+							string crc = (string)romRow["crc"];
+							string sha1 = (string)romRow["sha1"];
+
+							sha1Lookup.Add($"{datafile_name}\t{machine_name}\t{rom_name}\t{crc}", sha1);
+						}
+					}
+				}
+				Console.WriteLine("... done");
+
+				Console.Write("Setting SHA1 ...");
+
+				//	Maybe just rename game => machine ???
+
+				var rowLookups = Operations.PerformanceDictionaries(dataSet);
+
+				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Rows)
+				{
+					long datafile_id = (long)datafileRow["datafile_id"];
+					string datafile_name = (string)datafileRow["name"];
+					foreach (DataRow gameRow in rowLookups["game"][datafile_id])
+					{
+						long game_id = (long)gameRow["game_id"];
+						string game_name = (string)gameRow["name"];
+						string romof = gameRow.Field<string>("romof");
+
+						foreach (DataRow romRow in rowLookups["rom"][game_id])
+						{
+							if (romRow.IsNull("crc") == true)
+								continue;
+
+							string rom_name = (string)romRow["name"];
+							string crc = (string)romRow["crc"];
+							string merge = romRow.Field<string>("merge");
+
+							string key = $"{datafile_name}\t{game_name}\t{rom_name}\t{crc}";
+
+							if (sha1Lookup.ContainsKey(key) == true)
+							{
+								romRow["sha1"] = sha1Lookup[key];
+							}
+							else
+							{
+								if (romof != null)
+								{
+									key = $"{datafile_name}\t{romof}\t{merge ?? rom_name}\t{crc}";
+									if (sha1Lookup.ContainsKey(key) == true)
+										romRow["sha1"] = sha1Lookup[key];
+								}
+							}
+						}
+					}
+				}
+				Console.WriteLine("... done");
+
+				Console.Write($"Creating SQLite database {sqlLiteFilename} ...");
+				Database.DataSet2SQLite("fbneo", _ConnectionString, dataSet);
+				Console.WriteLine("... done");
+			}
+
+		}
+
+		public static DataSet GetDatDataSet()
+		{
+			dynamic info = BitTorrent.DomeInfo();
+
+			var torrents = ((JArray)info.torrents).Where(token => ((string)token["core"]) == "fbneo").ToArray();
+			if (torrents.Length != 1)
+				throw new ApplicationException($"Did not find single fbneo torrent: {torrents.Length}");
+
+			var datUrl = (string)torrents[0]["dat"];
+
+			string datName = Path.GetFileNameWithoutExtension(datUrl);
+
+			string datCacheFilename = Path.Combine(Globals.CacheDirectory, datName + ".xml");
+
+			XElement datafilesElement;
+			if (File.Exists(datCacheFilename) == false)
+			{
+				using (TempDirectory tempDir = new TempDirectory())
+				{
+					string datZipFilename = Path.Combine(tempDir.Path, "dat.zip");
+
+					Console.Write($"Downloading {datUrl} {datZipFilename} ...");
+					Tools.Download(datUrl, datZipFilename);
+					Console.WriteLine("...done");
+
+					string datDirectory = Path.Combine(tempDir.Path, "dats");
+					Directory.CreateDirectory(datDirectory);
+
+					Console.Write($"Extracting {datZipFilename} {datDirectory} ...");
+					ZipFile.ExtractToDirectory(datZipFilename, datDirectory);
+					Console.WriteLine("...done");
+
+					datafilesElement = new XElement("datafiles");
+
+					foreach (string xmlFilename in Directory.GetFiles(datDirectory, "*.dat"))
+					{
+						var datafileElement = XElement.Load(xmlFilename, LoadOptions.None);
+
+						//	Move header
+						foreach (var itemElement in datafileElement.Element("header").Elements())
+							datafileElement.SetAttributeValue(itemElement.Name, itemElement.Value);
+						datafileElement.Element("header").Remove();
+
+						datafilesElement.Add(datafileElement);
+					}
+
+					datafilesElement.Save(datCacheFilename);
+				}
+			}
+			else
+			{
+				datafilesElement = XElement.Load(datCacheFilename, LoadOptions.None);
+			}
+
+			DataSet dataSet = new DataSet();
+			ReadXML.ImportXMLWork(datafilesElement, dataSet, null, null);
+
+			return dataSet;
+		}
+
+		void ICore.AllSHA1(HashSet<string> hashSet)
+		{
+			if (_Version == null)
+				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			string sqlLiteFilename = Path.Combine(_CoreDirectory, "_fbneo.sqlite");
+			_ConnectionString = Database.MakeSQLiteConnectionString(sqlLiteFilename);
+
+			Console.Write($"Load all database SHA1 ...");
+			Cores.AllSHA1(hashSet, _ConnectionString, new string[] { "rom" });
+			Console.WriteLine("...done");
+		}
+
+		public static string PlaceFbNeo(ICore core, string line)
+		{
+			string[] parts = line.Split('@');
+			if (parts.Length != 2)
+				throw new ApplicationException("Bad Line");
+
+			string datafile_name = parts[1];
+			string game_name = parts[0];
+
+			SQLiteConnection connection = new SQLiteConnection(core.ConnectionStrings[0]);
+
+			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
+
+			string[] info;
+			long game_id;
+			string game_description;
+
+			using (SQLiteCommand command = new SQLiteCommand(
+				"SELECT [game].[game_id], [game].[description] FROM [datafile] INNER JOIN [game] ON [datafile].[datafile_id] = [game].[datafile_id] " +
+				"WHERE ([game].[name] = @game_name AND [datafile].[name] = @datafile_name)", connection))
+			{
+				command.Parameters.AddWithValue("@datafile_name", datafile_name);
+				command.Parameters.AddWithValue("@game_name", game_name);
+
+				DataTable gameTable = Database.ExecuteFill(command);
+
+				if (gameTable.Rows.Count == 0)
+					throw new ApplicationException($"Game not found {datafile_name} / {game_name}");
+
+				game_id = (long)gameTable.Rows[0]["game_id"];
+				game_description = (string)gameTable.Rows[0]["description"];
+			}
+
+			Tools.ConsoleHeading(1, new string[] { game_description, core.Directory });
+
+			DataTable romTable = Database.ExecuteFill(connection, $"SELECT * FROM [rom] WHERE ([rom].[game_id] = {game_id}) ORDER BY [name] DESC");
+
+			if (romTable.Rows.Count == 0)
+				throw new ApplicationException($"No game roms found {datafile_name} / {game_id}");
+
+			bool downloadRequired = false;
+
+			foreach (DataRow romRow in romTable.Rows)
+			{
+				if (romRow.IsNull("sha1") == true)
+					continue;
+				string sha1 = (string)romRow["sha1"];
+
+				if (Globals.RomHashStore.Exists(sha1) == false)
+				{
+					downloadRequired = true;
+					break;
+				}
+			}
+
+			info = new string[] { "fbneo game", datafile_name, game_name };
+
+			if (downloadRequired == true)
+			{
+				var btFile = BitTorrent.SoftwareRom(core.Name, datafile_name, game_name);
+				if (btFile != null)
+					Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
+			}
+
+			string romDirectory = Path.Combine(core.Directory, "roms", datafile_name, game_name);
+
+			Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, romDirectory, null, info);
+
+
+			// TDOO: needs ZIP
+
+			//	TODO: return what will be passed to exe
+
+			//	-w is window
+
+
+//			arcade = ""
+//channelf = "chf_"
+//coleco = "cv_"
+//gamegear = "gg_"
+//megadrive = "md_"
+//msx = "msx_"
+//nes = "nes_"
+//ngp = "ngp_"
+//ngpc = "ngpc_"
+//spectrum = "spec_"
+//sms = "sms_"
+//sg1000 = "sg1k_"
+//pce = "pce_"
+//tg16 = "tg16_"
+//sgx = "sgx_"
+//neocd = "neocd_"
+
+
+
+			return null;
+		}
+
+		void ICore.MsAccess()
         {
 			if (_Version == null)
 				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
@@ -348,10 +623,7 @@ namespace Spludlow.MameAO
 			OperationsDatish.FBNeoMSSQLPayloads(_RootDirectory, _Version, serverConnectionString, databaseNames[0]);
 		}
 
-		void ICore.AllSHA1(HashSet<string> hashSet)
-		{
-			throw new NotImplementedException();
-		}
+
 
 		DataRow ICore.GetMachine(string machine_name)
 		{
@@ -443,10 +715,7 @@ namespace Spludlow.MameAO
 			throw new NotImplementedException();
 		}
 
-		void ICore.SQLiteAo()
-		{
-			throw new NotImplementedException();
-		}
+
 
 
 	}
