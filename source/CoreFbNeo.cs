@@ -100,13 +100,32 @@ namespace Spludlow.MameAO
 				return;
 
 			//	https://github.com/finalburnneo/FBNeo/blob/master/src/burner/win32/main.cpp
-			string[] listInfos = new string[] { "arcade", "channelf", "coleco", "fds", "gg", "md", "msx", "neogeo", "nes", "ngp", "pce", "sg1000", "sgx", "sms", "snes", "spectrum", "tg16" };
-
+			string[] listInfos = new string[] {
+				"arcade",
+				"astrocade",
+				"channelf",
+				"coleco",
+				"fds",
+				"gba",
+				"gg",
+				"md",
+				"msx",
+				"neogeo",
+				"nes",
+				"ngp",
+				"pce",
+				"sg1000",
+				"sgx",
+				"sms",
+				"snes",
+				"spectrum",
+				"tg16",
+			};
 			var fixNames = new Dictionary<string, string>()
-            {
-                { "gg", "gamegear" },
+			{
+				{ "gg", "gamegear" },
                 { "md", "megadrive" }
-            };
+			};
 
 			//
 			// Extract XML
@@ -428,89 +447,111 @@ namespace Spludlow.MameAO
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
-			string[] info;
-			long game_id;
-			string game_description;
+			HashSet<string> game_names = new HashSet<string>();
+			string game_description = null;
 
-			using (SQLiteCommand command = new SQLiteCommand(
-				"SELECT [game].[game_id], [game].[description] FROM [datafile] INNER JOIN [game] ON [datafile].[datafile_id] = [game].[datafile_id] " +
-				"WHERE ([game].[name] = @game_name AND [datafile].[name] = @datafile_name)", connection))
+			string romof = game_name;
+			while (romof != null)
 			{
-				command.Parameters.AddWithValue("@datafile_name", datafile_name);
-				command.Parameters.AddWithValue("@game_name", game_name);
-
-				DataTable gameTable = Database.ExecuteFill(command);
-
-				if (gameTable.Rows.Count == 0)
-					throw new ApplicationException($"Game not found {datafile_name} / {game_name}");
-
-				game_id = (long)gameTable.Rows[0]["game_id"];
-				game_description = (string)gameTable.Rows[0]["description"];
-			}
-
-			Tools.ConsoleHeading(1, new string[] { game_description, core.Directory });
-
-			DataTable romTable = Database.ExecuteFill(connection, $"SELECT * FROM [rom] WHERE ([rom].[game_id] = {game_id}) ORDER BY [name] DESC");
-
-			if (romTable.Rows.Count == 0)
-				throw new ApplicationException($"No game roms found {datafile_name} / {game_id}");
-
-			bool downloadRequired = false;
-
-			foreach (DataRow romRow in romTable.Rows)
-			{
-				if (romRow.IsNull("sha1") == true)
-					continue;
-				string sha1 = (string)romRow["sha1"];
-
-				if (Globals.RomHashStore.Exists(sha1) == false)
+				using (SQLiteCommand command = new SQLiteCommand(
+					"SELECT [game].[game_id], [game].[description], [game].[romof] FROM [datafile] INNER JOIN [game] ON [datafile].[datafile_id] = [game].[datafile_id] " +
+					"WHERE ([game].[name] = @game_name AND [datafile].[name] = @datafile_name)", connection))
 				{
-					downloadRequired = true;
-					break;
+					command.Parameters.AddWithValue("@datafile_name", datafile_name);
+					command.Parameters.AddWithValue("@game_name", romof);
+
+					DataTable gameTable = Database.ExecuteFill(command);
+
+					if (gameTable.Rows.Count == 0)
+						throw new ApplicationException($"Game not found {datafile_name} / {game_name}");
+
+					game_names.Add(romof);
+
+					if (romof == game_name)
+						game_description = (string)gameTable.Rows[0]["description"];
+
+					romof = gameTable.Rows[0].Field<string>("romof");
 				}
 			}
 
-			info = new string[] { "fbneo game", datafile_name, game_name };
+			Tools.ConsoleHeading(1, new string[] { game_description, String.Join(", ", game_names), core.Directory });
 
-			if (downloadRequired == true)
+			foreach (string name in game_names)
 			{
-				var btFile = BitTorrent.SoftwareRom(core.Name, datafile_name, game_name);
-				if (btFile != null)
-					Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
+				using (SQLiteCommand command = new SQLiteCommand(
+					"SELECT [rom].* FROM [datafile] INNER JOIN [game] ON [datafile].[datafile_id] = [game].[datafile_id] INNER JOIN [rom] ON [game].[game_id] = [rom].[game_id] " +
+					"WHERE ([datafile].[name] = @datafile_name AND [game].[name] = @game_name);", connection))
+				{
+					command.Parameters.AddWithValue("@datafile_name", datafile_name);
+					command.Parameters.AddWithValue("@game_name", name);
+
+					DataTable romTable = Database.ExecuteFill(command);
+
+					if (romTable.Rows.Count == 0)
+						throw new ApplicationException($"No game roms found {datafile_name} / {name}");
+
+					bool downloadRequired = false;
+
+					foreach (DataRow romRow in romTable.Rows)
+					{
+						if (romRow.IsNull("sha1") == true)
+							continue;
+						string sha1 = (string)romRow["sha1"];
+
+						if (Globals.RomHashStore.Exists(sha1) == false)
+						{
+							downloadRequired = true;
+							break;
+						}
+					}
+					string[] info = new string[] { "fbneo game", datafile_name, name };
+
+					if (downloadRequired == true)
+					{
+						var btFile = BitTorrent.SoftwareRom(core.Name, datafile_name, name);
+						if (btFile != null)
+							Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
+					}
+
+					string romDirectory = Path.Combine(core.Directory, "roms", datafile_name, name);
+
+					Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, romDirectory, null, info);
+
+					string zipFilename = romDirectory + ".zip";
+
+					File.Delete(zipFilename);
+
+					ZipFile.CreateFromDirectory(romDirectory, zipFilename);
+				}
 			}
 
-			string romDirectory = Path.Combine(core.Directory, "roms", datafile_name, game_name);
 
-			Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, romDirectory, null, info);
+			//	game_name
 
+			Dictionary<string, string> systemPrefixes = new Dictionary<string, string>()
+			{
+				{ "arcade", "" },					//	ok
+				{ "astrocade",  "astrocade_" },
+				{ "channelf",   "chf_" },			//	ok
+				{ "coleco", "cv_" },				//	ok
+				{ "fds",    "fds_" },
+				{ "gamegear",   "gg_" },
+				{ "gba",    "gba_" },
+				{ "megadrive",  "md_" },
+				{ "msx",    "msx_" },
+				{ "neogeo", "neogeo_" },
+				{ "nes",    "nes_" },
+				{ "ngp",    "ngp_" },
+				{ "pce",    "pce_" },
+				{ "sg1000", "sg1k_" },
+				{ "sgx",    "sgx_" },
+				{ "sms",    "sms_" },
+				{ "snes",   "snes_" },
+				{ "spectrum",   "spec_" },
+				{ "tg16",   "tg16_" },
+			};
 
-			// TDOO: needs ZIP
-
-			//	TODO: return what will be passed to exe
-
-			//	-w is window
-
-
-//			arcade = ""
-//channelf = "chf_"
-//coleco = "cv_"
-//gamegear = "gg_"
-//megadrive = "md_"
-//msx = "msx_"
-//nes = "nes_"
-//ngp = "ngp_"
-//ngpc = "ngpc_"
-//spectrum = "spec_"
-//sms = "sms_"
-//sg1000 = "sg1k_"
-//pce = "pce_"
-//tg16 = "tg16_"
-//sgx = "sgx_"
-//neocd = "neocd_"
-
-
-
-			return null;
+			return $"{systemPrefixes[datafile_name]}{game_name}";
 		}
 
 		void ICore.MsAccess()
