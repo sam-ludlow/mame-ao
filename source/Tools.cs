@@ -47,6 +47,23 @@ namespace Spludlow.MameAO
 
 		private static readonly SHA1Managed _SHA1Managed = new SHA1Managed();
 
+
+		private static readonly uint[] _CRC32_Table;
+
+		static Tools()
+		{
+			_CRC32_Table = new uint[256];
+			for (uint index = 0; index < _CRC32_Table.Length; index++)
+			{
+				uint crc = index;
+				for (int bit = 0; bit < 8; bit++)
+					crc = (crc & 1) != 0 ? 0xEDB88320u ^ (crc >> 1) : crc >> 1;
+
+				_CRC32_Table[index] = crc;
+			}
+
+		}
+
 		public static string DataRowValue(DataRow row, string columnName)
 		{
 			if (row.IsNull(columnName))
@@ -424,6 +441,31 @@ namespace Spludlow.MameAO
 			foreach (byte b in hash)
 				hex.Append(b.ToString("x2"));
 			return hex.ToString();
+		}
+
+		public static string CRC32Hex(Stream stream)
+		{
+			uint crc = 0xFFFFFFFFu;
+			byte[] buffer = new byte[1024 * 1024];
+
+			int count;
+			while ((count = stream.Read(buffer, 0, buffer.Length)) > 0)
+			{
+				for (int index = 0; index < count; index++)
+					crc = _CRC32_Table[(crc ^ buffer[index]) & 0xFF] ^ (crc >> 8);
+			}
+
+			return (~crc).ToString("x8");
+		}
+
+		public static string CRC32Hex(byte[] data)
+		{
+			uint crc = 0xFFFFFFFFu;
+
+			for (int index = 0; index < data.Length; index++)
+				crc = _CRC32_Table[(crc ^ data[index]) & 0xFF] ^ (crc >> 8);
+
+			return (~crc).ToString("x8");
 		}
 
 		public static void ClearAttributes(string directory)

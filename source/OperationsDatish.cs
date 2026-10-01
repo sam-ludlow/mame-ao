@@ -314,6 +314,12 @@ namespace Spludlow.MameAO
 			PayloadLevelInfo level_datafile = new PayloadLevelInfo(PayloadLevel.Datafile, xmlJsonPayloads_datafile);
 			PayloadLevelInfo level_game = new PayloadLevelInfo(PayloadLevel.Game, xmlJsonPayloads_game);
 
+			foreach (string columnName in new string[] { "merge", "status" })
+			{
+				if (dataSet.Tables["rom"].Columns.Contains(columnName) == false)
+					dataSet.Tables["rom"].Columns.Add(columnName, typeof(string));
+			}
+
 			level_root.Start($"{coreName} ({version})");
 			level_root.Append($"<h2>Subsets</h2>");
 			level_root.TableStart("Name", "Description", "Datafiles", "Games", "Roms", "Bytes", "Size", "Extentions");
@@ -376,11 +382,13 @@ namespace Spludlow.MameAO
 						level_game.Append("<hr />");
 
 						level_game.Append($"<h2>Roms</h2>");
-						level_game.TableStart("Name", "Bytes", "Size", "CRC", "SHA1", "MD5", "IA");
+						level_game.TableStart("Name", "Merge", "Status", "Bytes", "Size", "CRC", "SHA1", "MD5", "IA");
 
 						foreach (DataRow romRow in rowLookups["rom"][game_id])
 						{
 							string rom_name = (string)romRow["name"];
+							string rom_merge = romRow.Field<string>("merge");
+							string rom_status = romRow.Field<string>("status");
 							string crc = romRow.Field<string>("crc");
 							string sha1 = romRow.Field<string>("sha1");
 							string md5 = romRow.Field<string>("md5");
@@ -395,7 +403,7 @@ namespace Spludlow.MameAO
 							string extention = Path.GetExtension(rom_name).ToLower();
 							level_game.Counts.AddExtention(extention);
 
-							level_game.TableRow(rom_name, rom_size.ToString(), Tools.DataSize(rom_size), crc, sha1, md5, rom_ia_link);
+							level_game.TableRow(rom_name, rom_merge, rom_status, rom_size.ToString(), Tools.DataSize(rom_size), crc, sha1, md5, rom_ia_link);
 						}
 
 						level_datafile.Counts.Add(level_game.Counts);

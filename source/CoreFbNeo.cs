@@ -22,7 +22,7 @@ namespace Spludlow.MameAO
 		string ICore.Directory { get => _CoreDirectory; }
 		string[] ICore.ConnectionStrings { get => new string[] { _ConnectionString }; }
 
-		Dictionary<string, string> ICore.SoftwareListDescriptions { get => null; }
+		Dictionary<string, string> ICore.SoftwareListDescriptions { get => _SoftwareListDescriptions; }
 		Dictionary<string, string[]> ICore.Filters { get => throw new NotImplementedException(); }
 
 		private string _RootDirectory = null;
@@ -31,6 +31,8 @@ namespace Spludlow.MameAO
 		private string _Version = null;
 
 		private string _ConnectionString = null;
+
+		private Dictionary<string, string> _SoftwareListDescriptions = new Dictionary<string, string>();
 
 		void ICore.Initialize(string directory, string version)
 		{
@@ -43,6 +45,8 @@ namespace Spludlow.MameAO
 
 		int ICore.Get()
 		{
+			//TODO:	dont auto bumnp (new command to bump)
+
 			string releasesJson = Tools.FetchTextCached("https://api.github.com/repos/finalburnneo/FBNeo/releases") ?? throw new ApplicationException("Unanle to get core's github releases");
 
 			dynamic releases = JsonConvert.DeserializeObject<dynamic>(releasesJson);
@@ -100,17 +104,17 @@ namespace Spludlow.MameAO
 				return;
 
 			//	https://github.com/finalburnneo/FBNeo/blob/master/src/burner/win32/main.cpp
-			string[] listInfos = new string[] {
+			string[] listInfos = new string[] {	//	19
 				"arcade",
-				"astrocade",
+				"astrocade",	//	? new - in retro roms
 				"channelf",
 				"coleco",
 				"fds",
-				"gba",
-				"gg",
-				"md",
+				"gba",			//	? new - from mame SL
+				"gg",			// rename gamegear
+				"md",			// rename megadrive
 				"msx",
-				"neogeo",
+				"neogeo",		//	not in roms dir? in archive.org fbneo_1003_bestset/fbneo_1_0_0_3_best.zip
 				"nes",
 				"ngp",
 				"pce",
@@ -284,28 +288,31 @@ namespace Spludlow.MameAO
 				Cores.AddAoMetaData(dataSet, Globals.AssemblyVersion);
 
 				Console.Write("Creating SHA1 lookup ...");
-				Dictionary<string, string> sha1Lookup = new Dictionary<string, string>();
 
-				var datDataSet = GetDatDataSet();
-				
-				foreach (DataRow datafileRow in datDataSet.Tables["datafile"].Rows)
-				{
-					long datafile_id = (long)datafileRow["datafile_id"];
-					string datafile_name = (string)datafileRow["name"];
-					foreach (DataRow machineRow in datDataSet.Tables["machine"].Select($"datafile_id = {datafile_id}"))
-					{
-						long machine_id = (long)machineRow["machine_id"];
-						string machine_name = (string)machineRow["name"];
-						foreach (DataRow romRow in datDataSet.Tables["rom"].Select($"machine_id = {machine_id}"))
-						{
-							string rom_name = (string)romRow["name"];
-							string crc = (string)romRow["crc"];
-							string sha1 = (string)romRow["sha1"];
+				var sha1Lookup = UtilLoadHashLookup(@"C:\ao-data\fbneo-sha1-lookup.txt");
 
-							sha1Lookup.Add($"{datafile_name}\t{machine_name}\t{rom_name}\t{crc}", sha1);
-						}
-					}
-				}
+				//Dictionary<string, string> sha1Lookup = new Dictionary<string, string>();
+
+				//var datDataSet = GetDatDataSet();
+
+				//foreach (DataRow datafileRow in datDataSet.Tables["datafile"].Rows)
+				//{
+				//	long datafile_id = (long)datafileRow["datafile_id"];
+				//	string datafile_name = (string)datafileRow["name"];
+				//	foreach (DataRow machineRow in datDataSet.Tables["machine"].Select($"datafile_id = {datafile_id}"))
+				//	{
+				//		long machine_id = (long)machineRow["machine_id"];
+				//		string machine_name = (string)machineRow["name"];
+				//		foreach (DataRow romRow in datDataSet.Tables["rom"].Select($"machine_id = {machine_id}"))
+				//		{
+				//			string rom_name = (string)romRow["name"];
+				//			string crc = (string)romRow["crc"];
+				//			string sha1 = (string)romRow["sha1"];
+
+				//			sha1Lookup.Add($"{datafile_name}\t{machine_name}\t{rom_name}\t{crc}", sha1);
+				//		}
+				//	}
+				//}
 				Console.WriteLine("... done");
 
 				Console.Write("Setting SHA1 ...");
@@ -330,23 +337,23 @@ namespace Spludlow.MameAO
 								continue;
 
 							string rom_name = (string)romRow["name"];
+							string size = Int64.Parse((string)romRow["size"]).ToString();
 							string crc = (string)romRow["crc"];
 							string merge = romRow.Field<string>("merge");
 
-							string key = $"{datafile_name}\t{game_name}\t{rom_name}\t{crc}";
+							string key = $"{datafile_name}\t{game_name}\t{rom_name}\t{size}\t{crc}".ToLower();
 
 							if (sha1Lookup.ContainsKey(key) == true)
 							{
 								romRow["sha1"] = sha1Lookup[key];
 							}
-							else
+
+							//	merge is not in lookup
+							if (romof != null && merge != null)
 							{
-								if (romof != null)
-								{
-									key = $"{datafile_name}\t{romof}\t{merge ?? rom_name}\t{crc}";
-									if (sha1Lookup.ContainsKey(key) == true)
-										romRow["sha1"] = sha1Lookup[key];
-								}
+								key = $"{datafile_name}\t{romof}\t{merge}\t{size}\t{crc}".ToLower();
+								if (sha1Lookup.ContainsKey(key) == true)
+									romRow["sha1"] = sha1Lookup[key];
 							}
 						}
 					}
@@ -357,6 +364,14 @@ namespace Spludlow.MameAO
 				Database.DataSet2SQLite("fbneo", _ConnectionString, dataSet);
 				Console.WriteLine("... done");
 			}
+
+			//
+			// Cache softwarelists for description
+			//
+			_SoftwareListDescriptions = new Dictionary<string, string>();
+
+			foreach (DataRow row in Database.ExecuteFill(_ConnectionString, "SELECT [name], [description] FROM [datafile] ORDER BY [description]").Rows)
+				_SoftwareListDescriptions.Add((string)row["name"], (string)row["description"]);
 
 		}
 
@@ -518,9 +533,7 @@ namespace Spludlow.MameAO
 					Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, romDirectory, null, info);
 
 					string zipFilename = romDirectory + ".zip";
-
 					File.Delete(zipFilename);
-
 					ZipFile.CreateFromDirectory(romDirectory, zipFilename);
 				}
 			}
@@ -530,16 +543,16 @@ namespace Spludlow.MameAO
 
 			Dictionary<string, string> systemPrefixes = new Dictionary<string, string>()
 			{
-				{ "arcade", "" },					//	ok
-				{ "astrocade",  "astrocade_" },
-				{ "channelf",   "chf_" },			//	ok
-				{ "coleco", "cv_" },				//	ok
-				{ "fds",    "fds_" },
-				{ "gamegear",   "gg_" },
-				{ "gba",    "gba_" },
-				{ "megadrive",  "md_" },
-				{ "msx",    "msx_" },
-				{ "neogeo", "neogeo_" },
+				{ "arcade",		"" },			//	ok
+				{ "astrocade",	"astro_" },		//	ok
+				{ "channelf",	"chf_" },		//	ok
+				{ "coleco",		"cv_" },		//	ok
+				{ "fds",		"fds_" },		//	ok
+				{ "gamegear",	"gg_" },		//	ok
+				{ "gba",		"gba_" },		//	ok
+				{ "megadrive",  "md_" },		//	ok
+				{ "msx",		"msx_" },		//	ok
+				{ "neogeo",		"neogeo_" },	//	??? cant launch directly used by arcade
 				{ "nes",    "nes_" },
 				{ "ngp",    "ngp_" },
 				{ "pce",    "pce_" },
@@ -754,6 +767,222 @@ namespace Spludlow.MameAO
 		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine)
 		{
 			throw new NotImplementedException();
+		}
+
+		public static void UtilImportXmlHashLookup(string lookupFilename, string xmlFilename)
+		{
+			var lookup = new Dictionary<string, string>();
+
+			var datafilesElement = XElement.Load(xmlFilename, LoadOptions.None);
+
+			foreach (var datafileElement in datafilesElement.Elements())
+			{
+				string datafile_name = datafileElement.Attribute("name").Value;
+
+				//	TODO: samples
+				if (datafile_name == "samples")
+					continue;
+
+				Console.WriteLine(datafile_name);
+
+				foreach (var machineElement in datafileElement.Elements())
+				{
+					string machine_name = machineElement.Attribute("name").Value;
+
+					foreach (var romElement in machineElement.Elements("rom"))
+					{
+						string rom_name = romElement.Attribute("name").Value;
+						long rom_size = Int64.Parse(romElement.Attribute("size").Value);
+						string rom_crc = romElement.Attribute("crc").Value;
+						string rom_sha1 = romElement.Attribute("sha1").Value;
+
+						string key = $"{datafile_name}\t{machine_name}\t{rom_name}\t{rom_size}\t{rom_crc}".ToLower();
+
+						lookup.Add(key, rom_sha1);
+					}
+				}
+			}
+
+			UtilSaveHashLookup(lookupFilename, lookup);
+		}
+
+		public static Dictionary<string, string> UtilGetHashLookup(string lookupFilename, string sqlLiteFilename)
+		{
+			var lookup = new Dictionary<string, string>();
+
+			SQLiteConnection connection = new SQLiteConnection(Database.MakeSQLiteConnectionString(sqlLiteFilename));
+
+			DataTable table = Database.ExecuteFill(connection, @"
+				SELECT [datafile].[name], [game].[name], [rom].[name], [rom].[size], [rom].[crc], [rom].[sha1]
+				FROM [datafile] INNER JOIN [game] ON [datafile].[datafile_id] = [game].[datafile_id] INNER JOIN [rom] ON [game].[game_id] = [rom].[game_id]
+				WHERE ([rom].[crc] IS NOT NULL AND [rom].[merge] IS NULL)
+				ORDER BY [datafile].[name], [game].[name], [rom].[name];
+			");
+
+			foreach (DataRow row in table.Rows)
+			{
+				string key = $"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\t{row[4]}".ToLower();
+				if (lookup.ContainsKey(key) == false)
+					lookup.Add(key, row.Field<string>(5) ?? "");
+				//else
+				//	Console.WriteLine($"Duplicate ROM in data: {key}");
+
+			}
+
+			if (File.Exists(lookupFilename) == true)
+			{
+				foreach (var existingPair in UtilLoadHashLookup(lookupFilename))
+				{
+					if (lookup.ContainsKey(existingPair.Key) == true)
+					{
+						if (String.IsNullOrEmpty(lookup[existingPair.Key]) == true)
+							lookup[existingPair.Key] = existingPair.Value;
+						else
+							if (lookup[existingPair.Key] != existingPair.Value)
+								throw new ApplicationException($"SHA1 mismatch {existingPair.Key}\t'{lookup[existingPair.Key]}'\t'{existingPair.Value}'");
+					}
+					else
+					{
+						Console.WriteLine($"Merge existing not in database: {existingPair.Key}");
+					}
+				}
+			}
+
+			UtilSaveHashLookup(lookupFilename, lookup);
+
+			return lookup;
+		}
+
+		public static void UtilLearnHashLookup(string lookupFilename, string sqlLiteFilename, string importDirectory)
+		{
+			string datafile_name = Path.GetFileName(importDirectory);
+
+			var lookup = UtilGetHashLookup(lookupFilename, sqlLiteFilename);
+
+			int set_count = 0;
+			int got_count = 0;
+			int not_count = 0;
+
+			foreach (string zipFilename in Directory.GetFiles(importDirectory, "*.zip"))
+			{
+				string game_name = Path.GetFileNameWithoutExtension(zipFilename);
+
+				using (var zipArchive = ZipFile.OpenRead(zipFilename))
+				{
+					foreach (var zipEntry in zipArchive.Entries)
+					{
+						if (zipEntry.FullName.Contains("/") == true)
+							throw new ApplicationException($"Did not expect directory in ZIP {zipFilename} {zipEntry.FullName}");
+
+						byte[] data;
+						using (var stream = zipEntry.Open())
+						{
+							using (var memoryStream = new MemoryStream())
+							{
+								stream.CopyTo(memoryStream);
+								data = memoryStream.ToArray();
+							}
+						}
+
+						string crc32 = Tools.CRC32Hex(data);
+						string sha1 = Tools.SHA1Hex(data);
+
+						string key = $"{datafile_name}\t{game_name}\t{zipEntry.FullName}\t{data.Length}\t{crc32}".ToLower();
+
+						if (lookup.ContainsKey(key) == true)
+						{
+							if (String.IsNullOrEmpty(lookup[key]) == true)
+							{
+								lookup[key] = sha1;
+								Console.WriteLine($"Learn\t{key}");
+								++set_count;
+							}
+							else
+							{
+								if (lookup[key] != sha1)
+									throw new ApplicationException($"Learn SHA1 mismatch {key}");
+
+								++got_count;
+							}
+						}
+						else
+						{
+							++not_count;
+						}
+					}
+				}
+			}
+
+			Console.WriteLine($"Learn {datafile_name} SET:{set_count} GOT:{got_count} NOT:{not_count}");
+
+			UtilSaveHashLookup(lookupFilename, lookup);
+		}
+		public static void UtilReportHashLookup(string lookupFilename, string sqlLiteFilename)
+		{
+			var lookup = UtilGetHashLookup(lookupFilename, sqlLiteFilename);
+
+			StringBuilder result = new StringBuilder();
+
+			var systemCounts = new Dictionary<string, int[]>();
+
+			foreach (var pair in lookup)
+			{
+				string[] parts = pair.Key.Split('\t');
+
+				string system = parts[0];
+
+				if (systemCounts.ContainsKey(system) == false)
+					systemCounts.Add(system, new int[] { 0, 0, 0 });
+
+				systemCounts[system][1] += 1;
+
+				if (String.IsNullOrEmpty(pair.Value) == true)
+				{
+					systemCounts[system][0] += 1;
+					result.AppendLine(pair.Key);
+				}
+			}
+
+			Tools.PopText(result.ToString());
+
+			result.Length = 0;
+
+			foreach (var pair in systemCounts)
+				pair.Value[2] = (int)Math.Floor(((decimal)(pair.Value[1] - pair.Value[0]) / pair.Value[1]) * 100.0M);
+
+			foreach (var pair in systemCounts.OrderBy(p => p.Key))
+				result.AppendLine($"{pair.Key}\t{(pair.Value[0] == 0 ? "" : pair.Value[0].ToString())}\t{pair.Value[1]}\t{pair.Value[2]}");
+
+			Tools.PopText(result.ToString());
+		}
+
+
+		public static void UtilSaveHashLookup(string lookupFilename, Dictionary<string, string> lookup)
+		{
+			using (var writer = new StreamWriter(lookupFilename, false, Encoding.UTF8))
+			{
+				foreach (var pair in lookup)
+					writer.WriteLine($"{pair.Key}\t{pair.Value}");
+			}
+		}
+
+		public static Dictionary<string, string> UtilLoadHashLookup(string lookupFilename)
+		{
+			var lookup = new Dictionary<string, string>();
+
+			using (var reader = new StreamReader(lookupFilename, Encoding.UTF8))
+			{
+				string line;
+				while ((line = reader.ReadLine()) != null)
+				{
+					int index = line.LastIndexOf("\t");
+					string key = line.Substring(0, index);
+					string sha1 = line.Substring(index + 1);
+					lookup.Add(key, sha1);
+				}
+			}
+
+			return lookup;
 		}
 
 
