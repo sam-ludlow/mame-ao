@@ -31,6 +31,29 @@ namespace Spludlow.MameAO
 		private Dictionary<string, string> _SoftwareListDescriptions = null;
 		private Dictionary<string, string[]> _Filters = null;
 
+		private List<DataQueryProfile> _DataQueryProfiles = new List<DataQueryProfile>();
+
+		public CoreHbMame()
+		{
+			string[][] types = new string[][] {
+				new string[] { "arcade",        "Arcade",       "Arcade Machines" },
+				new string[] { "software",      "Software",     "Computers & Consoles with Software" },
+				//new string[] { "pinball",       "Pinball",      "Pinball Machines" },
+				new string[] { "gamble",        "Gamble",       "Gamble Machines" },
+				new string[] { "other",         "Other",        "Other Machines" },
+				new string[] { "everything",    "Everything",   "Every Machine" },
+				new string[] { "favorites",     "Favorites",    "Favorite Machines" },
+			};
+			foreach (string[] type in types)
+			{
+				_DataQueryProfiles.Add(new DataQueryProfile()
+				{
+					Key = type[0],
+					Text = type[1],
+					Decription = type[2],
+				});
+			}
+		}
 		void ICore.Initialize(string directory, string version)
 		{
 			//	TODO: validate version
@@ -272,6 +295,10 @@ namespace Spludlow.MameAO
 			_ConnectionStringSoftware = Database.MakeSQLiteConnectionString(Path.Combine(_CoreDirectory, "_software.sqlite"));
 		}
 
+		List<DataQueryProfile> ICore.GetDataQueryProfiles()
+		{
+			return _DataQueryProfiles;
+		}
 
 		void ICore.AllSHA1(HashSet<string> hashSet)
 		{
@@ -361,6 +388,7 @@ namespace Spludlow.MameAO
 
 		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine) =>
 			Cores.QuerySoftware(_ConnectionStringSoftware, softwarelist_name, offset, limit, search, publisher, order, sort, favorites_machine);
+
 
 	}
 }

@@ -331,7 +331,7 @@ namespace Spludlow.MameAO
 		{
 			dynamic results = new JArray();
 
-			foreach (DataQueryProfile profile in Database.DataQueryProfiles)
+			foreach (DataQueryProfile profile in Globals.Core.GetDataQueryProfiles())
 			{
 				dynamic result = new JObject();
 
@@ -1130,25 +1130,37 @@ namespace Spludlow.MameAO
 			tr { background: #ddd; }
 			tr:nth-child(even) { background: #eee; }
 
-			table.nav {
+			#nav {
 				width: 100%;
-				border-collapse: separate;
-				border-spacing: 2px;
-				background: transparent;
-				border: 0;
+				display: flex;
+				flex-direction: column;
+				gap: 2px;
+				background: #c6eafb;
 			}
-			td.nav-off, td.nav-on {
+			.nav-row {
+				width: 100%;
+				display: flex;
+				flex-wrap: wrap;
+				gap: 2px;
+			}
+			.nav-row a {
+				flex: 1 1 auto;
+				display: block;
+				padding: 4px 8px;
 				text-align: center;
-				border: 0;
-			}
-			td.nav-off { background: #1a75bc; }
-			td.nav-on  { background: #00adef; }
-
-			a.nav-off, a.nav-on {
+				white-space: nowrap;
+				box-sizing: border-box;
 				text-decoration: none;
 			}
-			a.nav-off { color: #fff; }
-			a.nav-on  { color: #ff0; }
+			.nav-on {
+				background: #00adef;
+				color: #ff0;
+			}
+			.nav-off {
+				background: #1a75bc;
+				color: #fff;
+			}
+
 
 			.card-grid {
 				display: grid;

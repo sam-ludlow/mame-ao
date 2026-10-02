@@ -9,7 +9,7 @@ namespace Spludlow.MameAO
 		static int Main(string[] args)
 		{
 			string lookupFilename = @"C:\ao-data\fbneo-sha1-lookup.txt";
-			string sqlLiteFilename = @"C:\GIT\mame-ao\bin\Debug\fbneo\2026-10-01T13-44-45\_fbneo.sqlite";
+			string sqlLiteFilename = @"C:\GIT\mame-ao\bin\Debug\fbneo\2026-10-02T05-57-20\_fbneo.sqlite";
 
 			//	TODO Learn command - dont have to remake database
 
@@ -17,7 +17,7 @@ namespace Spludlow.MameAO
 
 			//CoreFbNeo.UtilGetHashLookup(lookupFilename, sqlLiteFilename);
 
-			//CoreFbNeo.UtilLearnHashLookup(lookupFilename, sqlLiteFilename, @"C:\tmp\FBNeo mame-ao export\gba\gba");
+			//CoreFbNeo.UtilLearnHashLookup(lookupFilename, sqlLiteFilename, @"C:\tmp\fbneo_1_0_0_3_best\games\arcade");
 
 			//CoreFbNeo.UtilReportHashLookup(lookupFilename, sqlLiteFilename);
 

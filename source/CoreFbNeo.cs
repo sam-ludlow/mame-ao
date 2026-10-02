@@ -23,7 +23,7 @@ namespace Spludlow.MameAO
 		string[] ICore.ConnectionStrings { get => new string[] { _ConnectionString }; }
 
 		Dictionary<string, string> ICore.SoftwareListDescriptions { get => _SoftwareListDescriptions; }
-		Dictionary<string, string[]> ICore.Filters { get => throw new NotImplementedException(); }
+		Dictionary<string, string[]> ICore.Filters { get => _Filters; }
 
 		private string _RootDirectory = null;
 		private string _CoreDirectory = null;
@@ -34,6 +34,8 @@ namespace Spludlow.MameAO
 
 		private Dictionary<string, string> _SoftwareListDescriptions = new Dictionary<string, string>();
 
+		private Dictionary<string, string[]> _Filters = null;
+
 		void ICore.Initialize(string directory, string version)
 		{
 			//	TODO: validate version
@@ -41,6 +43,13 @@ namespace Spludlow.MameAO
 			Directory.CreateDirectory(_RootDirectory);
 
 			_Version = null;    //	Always use latest
+		}
+
+		private List<DataQueryProfile> _DataQueryProfiles = new List<DataQueryProfile>();
+
+		public CoreFbNeo()
+		{
+
 		}
 
 		int ICore.Get()
@@ -287,37 +296,24 @@ namespace Spludlow.MameAO
 
 				Cores.AddAoMetaData(dataSet, Globals.AssemblyVersion);
 
+				Cores.AddExtraAoData(dataSet, Globals.AssemblyVersion);
+
+				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Rows)
+				{
+					string datafile_name = (string)datafileRow["name"];
+					foreach (DataRow machineRow in dataSet.Tables["machine"].Select($"datafile_id = {(long)datafileRow["datafile_id"]}"))
+						machineRow["ao_type"] = datafile_name;
+				}
+
+
 				Console.Write("Creating SHA1 lookup ...");
 
 				var sha1Lookup = UtilLoadHashLookup(@"C:\ao-data\fbneo-sha1-lookup.txt");
 
-				//Dictionary<string, string> sha1Lookup = new Dictionary<string, string>();
 
-				//var datDataSet = GetDatDataSet();
-
-				//foreach (DataRow datafileRow in datDataSet.Tables["datafile"].Rows)
-				//{
-				//	long datafile_id = (long)datafileRow["datafile_id"];
-				//	string datafile_name = (string)datafileRow["name"];
-				//	foreach (DataRow machineRow in datDataSet.Tables["machine"].Select($"datafile_id = {datafile_id}"))
-				//	{
-				//		long machine_id = (long)machineRow["machine_id"];
-				//		string machine_name = (string)machineRow["name"];
-				//		foreach (DataRow romRow in datDataSet.Tables["rom"].Select($"machine_id = {machine_id}"))
-				//		{
-				//			string rom_name = (string)romRow["name"];
-				//			string crc = (string)romRow["crc"];
-				//			string sha1 = (string)romRow["sha1"];
-
-				//			sha1Lookup.Add($"{datafile_name}\t{machine_name}\t{rom_name}\t{crc}", sha1);
-				//		}
-				//	}
-				//}
 				Console.WriteLine("... done");
 
 				Console.Write("Setting SHA1 ...");
-
-				//	Maybe just rename game => machine ???
 
 				var rowLookups = Operations.PerformanceDictionaries(dataSet);
 
@@ -325,13 +321,13 @@ namespace Spludlow.MameAO
 				{
 					long datafile_id = (long)datafileRow["datafile_id"];
 					string datafile_name = (string)datafileRow["name"];
-					foreach (DataRow gameRow in rowLookups["game"][datafile_id])
+					foreach (DataRow machineRow in rowLookups["machine"][datafile_id])
 					{
-						long game_id = (long)gameRow["game_id"];
-						string game_name = (string)gameRow["name"];
-						string romof = gameRow.Field<string>("romof");
+						long machine_id = (long)machineRow["machine_id"];
+						string machine_name = (string)machineRow["name"];
+						string romof = machineRow.Field<string>("romof");
 
-						foreach (DataRow romRow in rowLookups["rom"][game_id])
+						foreach (DataRow romRow in rowLookups["rom"][machine_id])
 						{
 							if (romRow.IsNull("crc") == true)
 								continue;
@@ -341,7 +337,7 @@ namespace Spludlow.MameAO
 							string crc = (string)romRow["crc"];
 							string merge = romRow.Field<string>("merge");
 
-							string key = $"{datafile_name}\t{game_name}\t{rom_name}\t{size}\t{crc}".ToLower();
+							string key = $"{datafile_name}\t{machine_name}\t{rom_name}\t{size}\t{crc}".ToLower();
 
 							if (sha1Lookup.ContainsKey(key) == true)
 							{
@@ -373,10 +369,61 @@ namespace Spludlow.MameAO
 			foreach (DataRow row in Database.ExecuteFill(_ConnectionString, "SELECT [name], [description] FROM [datafile] ORDER BY [description]").Rows)
 				_SoftwareListDescriptions.Add((string)row["name"], (string)row["description"]);
 
+
+			_Filters = Cores.GetFilters(_ConnectionString);
+		}
+
+		List<DataQueryProfile> ICore.GetDataQueryProfiles()
+		{
+			if (_DataQueryProfiles.Count == 0)
+			{
+				var table = Database.ExecuteFill(_ConnectionString, "SELECT [name], [description] FROM [datafile] WHERE ([name] != 'neogeo') ORDER BY [name]");
+
+				foreach (DataRow row in table.Rows)
+				{
+					string name = row.Field<string>("name");
+					string description = row.Field<string>("description");
+
+					_DataQueryProfiles.Add(new DataQueryProfile()
+					{
+						Key = name,
+						Text = name.Substring(0, 1).ToUpper() + name.Substring(1),
+						Decription = description,
+					});
+				}
+
+				_DataQueryProfiles.Add(new DataQueryProfile(){ Key = "everything", Text = "Everything", Decription = "Every Machine" });
+				_DataQueryProfiles.Add(new DataQueryProfile() { Key = "favorites", Text = "Favorites", Decription = "Favorite Machines" });
+			}
+
+			return _DataQueryProfiles;
 		}
 
 		public static DataSet GetDatDataSet()
 		{
+			//Dictionary<string, string> sha1Lookup = new Dictionary<string, string>();
+
+			//var datDataSet = GetDatDataSet();
+
+			//foreach (DataRow datafileRow in datDataSet.Tables["datafile"].Rows)
+			//{
+			//	long datafile_id = (long)datafileRow["datafile_id"];
+			//	string datafile_name = (string)datafileRow["name"];
+			//	foreach (DataRow machineRow in datDataSet.Tables["machine"].Select($"datafile_id = {datafile_id}"))
+			//	{
+			//		long machine_id = (long)machineRow["machine_id"];
+			//		string machine_name = (string)machineRow["name"];
+			//		foreach (DataRow romRow in datDataSet.Tables["rom"].Select($"machine_id = {machine_id}"))
+			//		{
+			//			string rom_name = (string)romRow["name"];
+			//			string crc = (string)romRow["crc"];
+			//			string sha1 = (string)romRow["sha1"];
+
+			//			sha1Lookup.Add($"{datafile_name}\t{machine_name}\t{rom_name}\t{crc}", sha1);
+			//		}
+			//	}
+			//}
+
 			dynamic info = BitTorrent.DomeInfo();
 
 			var torrents = ((JArray)info.torrents).Where(token => ((string)token["core"]) == "fbneo").ToArray();
@@ -456,54 +503,54 @@ namespace Spludlow.MameAO
 				throw new ApplicationException("Bad Line");
 
 			string datafile_name = parts[1];
-			string game_name = parts[0];
+			string machine_name = parts[0];
 
 			SQLiteConnection connection = new SQLiteConnection(core.ConnectionStrings[0]);
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
-			HashSet<string> game_names = new HashSet<string>();
-			string game_description = null;
+			HashSet<string> machine_names = new HashSet<string>();
+			string machine_description = null;
 
-			string romof = game_name;
+			string romof = machine_name;
 			while (romof != null)
 			{
 				using (SQLiteCommand command = new SQLiteCommand(
-					"SELECT [game].[game_id], [game].[description], [game].[romof] FROM [datafile] INNER JOIN [game] ON [datafile].[datafile_id] = [game].[datafile_id] " +
-					"WHERE ([game].[name] = @game_name AND [datafile].[name] = @datafile_name)", connection))
+					"SELECT [machine].[machine_id], [machine].[description], [machine].[romof] FROM [datafile] INNER JOIN [machine] ON [datafile].[datafile_id] = [machine].[datafile_id] " +
+					"WHERE ([machine].[name] = @machine_name AND [datafile].[name] = @datafile_name)", connection))
 				{
 					command.Parameters.AddWithValue("@datafile_name", datafile_name);
-					command.Parameters.AddWithValue("@game_name", romof);
+					command.Parameters.AddWithValue("@machine_name", romof);
 
-					DataTable gameTable = Database.ExecuteFill(command);
+					DataTable machineTable = Database.ExecuteFill(command);
 
-					if (gameTable.Rows.Count == 0)
-						throw new ApplicationException($"Game not found {datafile_name} / {game_name}");
+					if (machineTable.Rows.Count == 0)
+						throw new ApplicationException($"Machine not found {datafile_name} / {machine_name}");
 
-					game_names.Add(romof);
+					machine_names.Add(romof);
 
-					if (romof == game_name)
-						game_description = (string)gameTable.Rows[0]["description"];
+					if (romof == machine_name)
+						machine_description = (string)machineTable.Rows[0]["description"];
 
-					romof = gameTable.Rows[0].Field<string>("romof");
+					romof = machineTable.Rows[0].Field<string>("romof");
 				}
 			}
 
-			Tools.ConsoleHeading(1, new string[] { game_description, String.Join(", ", game_names), core.Directory });
+			Tools.ConsoleHeading(1, new string[] { machine_description, String.Join(", ", machine_names), core.Directory });
 
-			foreach (string name in game_names)
+			foreach (string name in machine_names)
 			{
 				using (SQLiteCommand command = new SQLiteCommand(
-					"SELECT [rom].* FROM [datafile] INNER JOIN [game] ON [datafile].[datafile_id] = [game].[datafile_id] INNER JOIN [rom] ON [game].[game_id] = [rom].[game_id] " +
-					"WHERE ([datafile].[name] = @datafile_name AND [game].[name] = @game_name);", connection))
+					"SELECT [rom].* FROM [datafile] INNER JOIN [machine] ON [datafile].[datafile_id] = [machine].[datafile_id] INNER JOIN [rom] ON [machine].[machine_id] = [rom].[machine_id] " +
+					"WHERE ([datafile].[name] = @datafile_name AND [machine].[name] = @machine_name);", connection))
 				{
 					command.Parameters.AddWithValue("@datafile_name", datafile_name);
-					command.Parameters.AddWithValue("@game_name", name);
+					command.Parameters.AddWithValue("@machine_name", name);
 
 					DataTable romTable = Database.ExecuteFill(command);
 
 					if (romTable.Rows.Count == 0)
-						throw new ApplicationException($"No game roms found {datafile_name} / {name}");
+						throw new ApplicationException($"No machine roms found {datafile_name} / {name}");
 
 					bool downloadRequired = false;
 
@@ -519,7 +566,7 @@ namespace Spludlow.MameAO
 							break;
 						}
 					}
-					string[] info = new string[] { "fbneo game", datafile_name, name };
+					string[] info = new string[] { "fbneo machine", datafile_name, name };
 
 					if (downloadRequired == true)
 					{
@@ -539,32 +586,31 @@ namespace Spludlow.MameAO
 			}
 
 
-			//	game_name
 
 			Dictionary<string, string> systemPrefixes = new Dictionary<string, string>()
 			{
-				{ "arcade",		"" },			//	ok
-				{ "astrocade",	"astro_" },		//	ok
-				{ "channelf",	"chf_" },		//	ok
-				{ "coleco",		"cv_" },		//	ok
-				{ "fds",		"fds_" },		//	ok
-				{ "gamegear",	"gg_" },		//	ok
-				{ "gba",		"gba_" },		//	ok
-				{ "megadrive",  "md_" },		//	ok
-				{ "msx",		"msx_" },		//	ok
+				{ "arcade",		"" },
+				{ "astrocade",	"astro_" },
+				{ "channelf",	"chf_" },
+				{ "coleco",		"cv_" },
+				{ "fds",		"fds_" },
+				{ "gamegear",	"gg_" },
+				{ "gba",		"gba_" },
+				{ "megadrive",  "md_" },
+				{ "msx",		"msx_" },
 				{ "neogeo",		"neogeo_" },	//	??? cant launch directly used by arcade
-				{ "nes",    "nes_" },
-				{ "ngp",    "ngp_" },
-				{ "pce",    "pce_" },
-				{ "sg1000", "sg1k_" },
-				{ "sgx",    "sgx_" },
-				{ "sms",    "sms_" },
-				{ "snes",   "snes_" },
-				{ "spectrum",   "spec_" },
-				{ "tg16",   "tg16_" },
+				{ "nes",		"nes_" },
+				{ "ngp",		"ngp_" },
+				{ "pce",		"pce_" },
+				{ "sg1000",		"sg1k_" },
+				{ "sgx",		"sgx_" },
+				{ "sms",		"sms_" },
+				{ "snes",		"snes_" },
+				{ "spectrum",	"spec_" },
+				{ "tg16",		"tg_" },
 			};
 
-			return $"{systemPrefixes[datafile_name]}{game_name}";
+			return $"{systemPrefixes[datafile_name]}{machine_name}";
 		}
 
 		void ICore.MsAccess()
@@ -646,6 +692,12 @@ namespace Spludlow.MameAO
 
 				subsetsElement.Add(subsetElement);
 			}
+
+			//	FBNeo renames
+			foreach (var element in subsetsElement.Descendants("game"))
+				element.Name = "machine";
+			foreach (var element in subsetsElement.Descendants("video"))
+				element.Name = "display";
 
 			DataSet dataSet = new DataSet();
 			ReadXML.ImportXMLWork(subsetsElement, dataSet, null, null);
@@ -761,7 +813,7 @@ namespace Spludlow.MameAO
 
 		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] players, string[] control, bool? mechanical, bool? clone, string order, string sort)
 		{
-			throw new NotImplementedException();
+			return Cores.QueryMachines(_ConnectionString, profile, offset, limit, search, manufacturer, status, display, players, control, mechanical, clone, order, sort);
 		}
 
 		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine)
@@ -813,10 +865,10 @@ namespace Spludlow.MameAO
 			SQLiteConnection connection = new SQLiteConnection(Database.MakeSQLiteConnectionString(sqlLiteFilename));
 
 			DataTable table = Database.ExecuteFill(connection, @"
-				SELECT [datafile].[name], [game].[name], [rom].[name], [rom].[size], [rom].[crc], [rom].[sha1]
-				FROM [datafile] INNER JOIN [game] ON [datafile].[datafile_id] = [game].[datafile_id] INNER JOIN [rom] ON [game].[game_id] = [rom].[game_id]
+				SELECT [datafile].[name], [machine].[name], [rom].[name], [rom].[size], [rom].[crc], [rom].[sha1]
+				FROM [datafile] INNER JOIN [machine] ON [datafile].[datafile_id] = [machine].[datafile_id] INNER JOIN [rom] ON [machine].[machine_id] = [rom].[machine_id]
 				WHERE ([rom].[crc] IS NOT NULL AND [rom].[merge] IS NULL)
-				ORDER BY [datafile].[name], [game].[name], [rom].[name];
+				ORDER BY [datafile].[name], [machine].[name], [rom].[name];
 			");
 
 			foreach (DataRow row in table.Rows)
@@ -865,7 +917,7 @@ namespace Spludlow.MameAO
 
 			foreach (string zipFilename in Directory.GetFiles(importDirectory, "*.zip"))
 			{
-				string game_name = Path.GetFileNameWithoutExtension(zipFilename);
+				string machine_name = Path.GetFileNameWithoutExtension(zipFilename);
 
 				using (var zipArchive = ZipFile.OpenRead(zipFilename))
 				{
@@ -887,7 +939,7 @@ namespace Spludlow.MameAO
 						string crc32 = Tools.CRC32Hex(data);
 						string sha1 = Tools.SHA1Hex(data);
 
-						string key = $"{datafile_name}\t{game_name}\t{zipEntry.FullName}\t{data.Length}\t{crc32}".ToLower();
+						string key = $"{datafile_name}\t{machine_name}\t{zipEntry.FullName}\t{data.Length}\t{crc32}".ToLower();
 
 						if (lookup.ContainsKey(key) == true)
 						{

@@ -359,5 +359,10 @@ namespace Spludlow.MameAO
 		{
 			throw new NotImplementedException();
 		}
+
+		List<DataQueryProfile> ICore.GetDataQueryProfiles()
+		{
+			throw new NotImplementedException();
+		}
 	}
 }

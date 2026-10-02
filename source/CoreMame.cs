@@ -33,6 +33,30 @@ namespace Spludlow.MameAO
 		private Dictionary<string, string> _SoftwareListDescriptions = null;
 		private Dictionary<string, string[]> _Filters = null;
 
+		private List<DataQueryProfile> _DataQueryProfiles = new List<DataQueryProfile>();
+
+		public CoreMame()
+		{
+			string[][] types = new string[][] {
+				new string[] { "arcade",        "Arcade",       "Arcade Machines" },
+				new string[] { "software",      "Software",     "Computers & Consoles with Software" },
+				new string[] { "pinball",       "Pinball",      "Pinball Machines" },
+				new string[] { "gamble",        "Gamble",       "Gamble Machines" },
+				new string[] { "other",         "Other",        "Other Machines" },
+				new string[] { "everything",    "Everything",   "Every Machine" },
+				new string[] { "favorites",     "Favorites",    "Favorite Machines" },
+			};
+			foreach (string[] type in types)
+			{
+				_DataQueryProfiles.Add(new DataQueryProfile()
+				{
+					Key = type[0],
+					Text = type[1],
+					Decription = type[2],
+				});
+			}
+		}
+
 		void ICore.Initialize(string directory, string version)
 		{
 			//	TODO: validate version
@@ -192,6 +216,11 @@ namespace Spludlow.MameAO
 				_SoftwareListDescriptions.Add((string)row["name"], (string)row["description"]);
 
 			_Filters = Cores.GetFilters(_ConnectionStringMachine);
+		}
+
+		List<DataQueryProfile> ICore.GetDataQueryProfiles()
+		{
+			return _DataQueryProfiles;
 		}
 
 		private void InitializeConnections()

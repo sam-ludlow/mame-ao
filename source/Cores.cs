@@ -52,6 +52,7 @@ namespace Spludlow.MameAO
 
 		DataTable QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] players, string[] control, bool? mechanical, bool? clone, string order, string sort);
 		DataTable QuerySoftware(string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine);
+		List<DataQueryProfile> GetDataQueryProfiles();
 	}
 	public class Cores
 	{
@@ -259,6 +260,9 @@ namespace Spludlow.MameAO
 
 		public static void AddAoMetaData(DataSet dataSet, string assemblyVersion)
 		{
+			if (dataSet.Tables.Contains("ao_info") == true)
+				return;
+
 			DataTable table = new DataTable("ao_info");
 			table.Columns.Add("ao_info_id", typeof(long));
 			table.Columns.Add("assembly_version", typeof(string));
@@ -307,9 +311,13 @@ namespace Spludlow.MameAO
 				machineTable.Columns.Add("ao_year", typeof(int));
 				machineTable.Columns.Add("ao_players", typeof(int));
 
-				List<string> controlTypes = new List<string>(dataSet.Tables["control"].Rows.Cast<DataRow>().Select(row => (string)row["type"]).Distinct().OrderBy(x => x));
-				foreach (string controlType in controlTypes)
-					machineTable.Columns.Add(controlType, typeof(bool));
+				List<string> controlTypes = new List<string>();
+				if (dataSet.Tables["control"] != null)
+				{
+					controlTypes = new List<string>(dataSet.Tables["control"].Rows.Cast<DataRow>().Select(row => (string)row["type"]).Distinct().OrderBy(x => x));
+					foreach (string controlType in controlTypes)
+						machineTable.Columns.Add(controlType, typeof(bool));
+				}
 
 				List<string> displayTypes = new List<string>(dataSet.Tables["display"].Rows.Cast<DataRow>().Select(row => (string)row["type"]).Distinct().OrderBy(x => x));
 				foreach (string displayType in displayTypes)
@@ -321,9 +329,9 @@ namespace Spludlow.MameAO
 
 					DataRow[] romRows = romTable.Select($"machine_id={machine_id}");
 					DataRow[] diskRows = diskTable != null ? diskTable.Select($"machine_id={machine_id}") : new DataRow[0];
-					DataRow[] softwarelistRows = softwarelistTable.Select($"machine_id={machine_id}");
+					DataRow[] softwarelistRows = softwarelistTable != null ? softwarelistTable.Select($"machine_id={machine_id}") : new DataRow[0];
 					DataRow[] driverRows = driverTable.Select($"machine_id={machine_id}");
-					DataRow[] inputRows = inputTable.Select($"machine_id={machine_id}");
+					DataRow[] inputRows = inputTable != null ? inputTable.Select($"machine_id={machine_id}") : new DataRow[0];
 					DataRow[] displayRows = displayTable.Select($"machine_id={machine_id}");
 
 					machineRow["ao_rom_count"] = romRows.Count(row => row.IsNull("sha1") == false);
@@ -363,12 +371,14 @@ namespace Spludlow.MameAO
 					foreach (string displayType in displayRows.Select(row => (string)row["type"]))
 						machineRow[displayType] = true;
 
-					machineRow["ao_type"] = OperationsMameish.MameishMachineType(machineRow, (string)machineRow["isdevice"] == "yes", coins, dataSet.Tables["device_ref"], softwarelistTable, inputControlTable);
+					machineRow["ao_type"] = machineRow.Table.Columns.Contains("isdevice") == true ?
+						OperationsMameish.MameishMachineType(machineRow, (string)machineRow["isdevice"] == "yes", coins, dataSet.Tables["device_ref"], softwarelistTable, inputControlTable) : "";
 
 					if (driverRows.Length == 1)
-						machineRow["ao_status"] = OperationsMameish.MachineAoStatusLookup[$"{(string)driverRows[0]["status"]}-{(string)driverRows[0]["emulation"]}"];
+						machineRow["ao_status"] = driverRows[0].Table.Columns.Contains("emulation") == true ?
+						OperationsMameish.MachineAoStatusLookup[$"{(string)driverRows[0]["status"]}-{(string)driverRows[0]["emulation"]}"] : "";
 
-					if (machineRow.IsNull("year") == false)
+					if (machineRow.IsNull("year") == false && softwarelistTable != null)	//	fbneo bodge
 						machineRow["ao_year"] = Tools.ParseFixYear((string)machineRow["year"]);
 				}
 			}
@@ -837,14 +847,20 @@ namespace Spludlow.MameAO
 			result.Add("clone", new string[] { "parent", "clone", "all" });
 			result.Add("mechanical", new string[] { "electronic", "mechanical", "all" });
 
+
 			using (SQLiteConnection connection = new SQLiteConnection(connectionStringMachine))
 			{
-				result.Add("players",
-					Database.ExecuteFill(connection, "SELECT DISTINCT [players] FROM [input] ORDER BY [players]").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray());
-				result.Add("display",
-					Database.ExecuteFill(connection, "SELECT DISTINCT [type] FROM [display] ORDER BY [type]").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray());
-				result.Add("control",
-					Database.ExecuteFill(connection, "SELECT DISTINCT [type] FROM [control] ORDER BY [type]").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray());
+				if (Database.TableExists(connection, "input") == true)
+					result.Add("players",
+						Database.ExecuteFill(connection, "SELECT DISTINCT [players] FROM [input] ORDER BY [players]").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray());
+
+				if (Database.TableExists(connection, "display") == true)
+					result.Add("display",
+						Database.ExecuteFill(connection, "SELECT DISTINCT [type] FROM [display] ORDER BY [type]").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray());
+
+				if (Database.TableExists(connection, "control") == true)
+					result.Add("control",
+						Database.ExecuteFill(connection, "SELECT DISTINCT [type] FROM [control] ORDER BY [type]").Rows.Cast<DataRow>().Select(row => (string)row[0]).ToArray());
 			}
 
 			return result;

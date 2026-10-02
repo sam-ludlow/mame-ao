@@ -11,30 +11,6 @@ namespace Spludlow.MameAO
 {
 	public class Database
 	{
-		public static List<DataQueryProfile> DataQueryProfiles = new List<DataQueryProfile>();
-
-		static Database()
-		{
-			string[][] types = new string[][] {
-				new string[] { "arcade",		"Arcade",		"Arcade Machines" },
-				new string[] { "software",		"Software",		"Computers & Consoles with Software" },
-				new string[] { "pinball",		"Pinball",		"Pinball Machines" },
-				new string[] { "gamble",		"Gamble",		"Gamble Machines" },
-				new string[] { "other",			"Other",		"Other Machines" },
-				new string[] { "everything",	"Everything",	"Every Machine" },
-				new string[] { "favorites",		"Favorites",	"Favorite Machines" },
-			};
-
-			foreach (string[] type in types)
-			{
-				DataQueryProfiles.Add(new DataQueryProfile() {
-					Key = type[0],
-					Text = type[1],
-					Decription = type[2],
-				});
-			}
-		}
-
 		public static string MakeSQLiteConnectionString(string filename)
 		{
 			return $"Data Source={filename};";	// Mode=ReadWrite;Cache=Shared;Pooling=True;Max Pool Size=8;Journal Mode=WAL;Synchronous=Normal;";

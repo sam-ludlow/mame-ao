@@ -754,6 +754,11 @@ namespace Spludlow.MameAO
 			throw new NotImplementedException();
 		}
 
+		List<DataQueryProfile> ICore.GetDataQueryProfiles()
+		{
+			throw new NotImplementedException();
+		}
+
 		public static void UtilTestFindPinMameGameName()
 		{
 			string directory = @"C:\tmp\Visual Pinball [VPX08] PinMame Tables";

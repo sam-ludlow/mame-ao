@@ -151,7 +151,7 @@
 
 				document.body.className = status.busy === true ? 'busy' : '';
 
-				const topRow = document.getElementById('nav').children[0].rows[0];
+				const topRow = document.getElementById('nav').children[0];
 
 				let statusElement = [...topRow.children].find(element => element.id === 'status');
 
@@ -160,7 +160,7 @@
 
 				if (status.busy == true) {
 					if (!statusElement) {
-						statusElement = document.createElement('td');
+						statusElement = document.createElement('a');
 						statusElement.id = 'status';
 						topRow.appendChild(statusElement);
 					}
@@ -1931,22 +1931,19 @@
 			const nav = document.getElementById('nav');
 			const heading = document.getElementById('heading');
 
-			const table = document.createElement('table');
-			table.className = 'nav';
-
-			const row = document.createElement('tr');
-			row.className = 'nav';
+            const div = document.createElement('div');
+			div.className = 'nav-row';
 
 			let found;
 
 			menu.forEach((item) => {
-				const cell = document.createElement('td');
-
-				let itemClass = 'nav-off';
+				const ahref = document.createElement('a');
+				ahref.className = 'nav-off';
 
 				if (_pathParts.includes(item.href)) {
 
-					itemClass = 'nav-on';
+                    ahref.className = 'nav-on';
+
 					found = item;
 					document.title = item.title;
 					heading.innerHTML = item.title;
@@ -1955,18 +1952,17 @@
 				if (_path === item.href)
 					_currentMenu = item;
 
-				cell.className = itemClass;
+                if (item.style)
+					ahref.style = item.style;
 
-				if (item.style)
-					cell.style = item.style;
+                ahref.href = item.href;
+				ahref.title = item.title;
+				ahref.innerHTML = item.text;
 
-				cell.innerHTML = `<a href="${item.href}" title="${item.title}" class="${itemClass}">${item.text}</a>`;
-
-				row.appendChild(cell);
+				div.appendChild(ahref);
 			});
 
-			table.appendChild(row);
-			nav.appendChild(table);
+			nav.appendChild(div);
 
 			if (found && found.menu)
 				displayMenuWalk(found.menu);

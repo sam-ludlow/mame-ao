@@ -378,9 +378,12 @@ namespace Spludlow.MameAO
 			throw new NotImplementedException();
 		}
 
-
-
 		void ICore.Zips()
+		{
+			throw new NotImplementedException();
+		}
+
+		List<DataQueryProfile> ICore.GetDataQueryProfiles()
 		{
 			throw new NotImplementedException();
 		}
