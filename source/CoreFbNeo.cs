@@ -294,6 +294,18 @@ namespace Spludlow.MameAO
 
 				DataSet dataSet = FBNeoDataSet(_CoreDirectory);
 
+				foreach (string[] rename in new string[][] { new string[] { "game", "machine" }, new string[] { "video", "display" } })
+				{
+					foreach (DataTable table in dataSet.Tables)
+					{
+						foreach (DataColumn column in table.Columns.Cast<DataColumn>().Where(col => col.ColumnName == $"{rename[0]}_id"))
+							column.ColumnName = $"{rename[1]}_id";
+
+						if (table.TableName == rename[0])
+							table.TableName = rename[1];
+					}
+				}
+
 				Cores.AddAoMetaData(dataSet, Globals.AssemblyVersion);
 
 				Cores.AddExtraAoData(dataSet, Globals.AssemblyVersion);
@@ -305,13 +317,7 @@ namespace Spludlow.MameAO
 						machineRow["ao_type"] = datafile_name;
 				}
 
-
-				Console.Write("Creating SHA1 lookup ...");
-
-				var sha1Lookup = UtilLoadHashLookup(@"C:\ao-data\fbneo-sha1-lookup.txt");
-
-
-				Console.WriteLine("... done");
+				var sha1Lookup = HashLookupGetWeb();
 
 				Console.Write("Setting SHA1 ...");
 
@@ -693,12 +699,6 @@ namespace Spludlow.MameAO
 				subsetsElement.Add(subsetElement);
 			}
 
-			//	FBNeo renames
-			foreach (var element in subsetsElement.Descendants("game"))
-				element.Name = "machine";
-			foreach (var element in subsetsElement.Descendants("video"))
-				element.Name = "display";
-
 			DataSet dataSet = new DataSet();
 			ReadXML.ImportXMLWork(subsetsElement, dataSet, null, null);
 
@@ -821,95 +821,203 @@ namespace Spludlow.MameAO
 			throw new NotImplementedException();
 		}
 
-		public static void UtilImportXmlHashLookup(string lookupFilename, string xmlFilename)
+		//public static void UtilImportXmlHashLookup(string lookupFilename, string xmlFilename)
+		//{
+		//	var lookup = new Dictionary<string, string>();
+
+		//	var datafilesElement = XElement.Load(xmlFilename, LoadOptions.None);
+
+		//	foreach (var datafileElement in datafilesElement.Elements())
+		//	{
+		//		string datafile_name = datafileElement.Attribute("name").Value;
+
+		//		//	TODO: samples
+		//		if (datafile_name == "samples")
+		//			continue;
+
+		//		Console.WriteLine(datafile_name);
+
+		//		foreach (var machineElement in datafileElement.Elements())
+		//		{
+		//			string machine_name = machineElement.Attribute("name").Value;
+
+		//			foreach (var romElement in machineElement.Elements("rom"))
+		//			{
+		//				string rom_name = romElement.Attribute("name").Value;
+		//				long rom_size = Int64.Parse(romElement.Attribute("size").Value);
+		//				string rom_crc = romElement.Attribute("crc").Value;
+		//				string rom_sha1 = romElement.Attribute("sha1").Value;
+
+		//				string key = $"{datafile_name}\t{machine_name}\t{rom_name}\t{rom_size}\t{rom_crc}".ToLower();
+
+		//				lookup.Add(key, rom_sha1);
+		//			}
+		//		}
+		//	}
+
+		//	UtilSaveHashLookup(lookupFilename, lookup);
+		//}
+
+		public static Dictionary<string, string> HashLookupGetWeb()
 		{
 			var lookup = new Dictionary<string, string>();
 
-			var datafilesElement = XElement.Load(xmlFilename, LoadOptions.None);
+			string version = Tools.FetchTextCached("https://data.spludlow.co.uk/api/fbneo-sha1-lookup/latest.txt");
 
-			foreach (var datafileElement in datafilesElement.Elements())
+			if (version == null)
+				throw new ApplicationException("Hash Lookup Get Web - Cant download version");
+
+			string url = $"https://data.spludlow.co.uk/api/fbneo-sha1-lookup/{version}.zip";
+
+			string zipCacheFilename = Path.Combine(Globals.CacheDirectory, Tools.ValidFileName(url));
+
+			if (File.Exists(zipCacheFilename) == false)
 			{
-				string datafile_name = datafileElement.Attribute("name").Value;
+				Console.Write($"Dowbloading FBNeo SHA1 lookup: {zipCacheFilename} ...");
+				Tools.Download(url, zipCacheFilename);
+				Console.WriteLine("...done.");
+			}
 
-				//	TODO: samples
-				if (datafile_name == "samples")
-					continue;
-
-				Console.WriteLine(datafile_name);
-
-				foreach (var machineElement in datafileElement.Elements())
+			using (var zipFile = ZipFile.OpenRead(zipCacheFilename))
+			{
+				var entry = zipFile.Entries.Single();
+				using (var reader = new StreamReader(entry.Open(), Encoding.UTF8))
 				{
-					string machine_name = machineElement.Attribute("name").Value;
-
-					foreach (var romElement in machineElement.Elements("rom"))
+					string line;
+					while ((line = reader.ReadLine()) != null)
 					{
-						string rom_name = romElement.Attribute("name").Value;
-						long rom_size = Int64.Parse(romElement.Attribute("size").Value);
-						string rom_crc = romElement.Attribute("crc").Value;
-						string rom_sha1 = romElement.Attribute("sha1").Value;
+						int index = line.LastIndexOf("\t");
+						string key = line.Substring(0, index);
+						string sha1 = line.Substring(index + 1);
 
-						string key = $"{datafile_name}\t{machine_name}\t{rom_name}\t{rom_size}\t{rom_crc}".ToLower();
-
-						lookup.Add(key, rom_sha1);
+						lookup.Add(key, sha1);
 					}
 				}
 			}
-
-			UtilSaveHashLookup(lookupFilename, lookup);
-		}
-
-		public static Dictionary<string, string> UtilGetHashLookup(string lookupFilename, string sqlLiteFilename)
-		{
-			var lookup = new Dictionary<string, string>();
-
-			SQLiteConnection connection = new SQLiteConnection(Database.MakeSQLiteConnectionString(sqlLiteFilename));
-
-			DataTable table = Database.ExecuteFill(connection, @"
-				SELECT [datafile].[name], [machine].[name], [rom].[name], [rom].[size], [rom].[crc], [rom].[sha1]
-				FROM [datafile] INNER JOIN [machine] ON [datafile].[datafile_id] = [machine].[datafile_id] INNER JOIN [rom] ON [machine].[machine_id] = [rom].[machine_id]
-				WHERE ([rom].[crc] IS NOT NULL AND [rom].[merge] IS NULL)
-				ORDER BY [datafile].[name], [machine].[name], [rom].[name];
-			");
-
-			foreach (DataRow row in table.Rows)
-			{
-				string key = $"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\t{row[4]}".ToLower();
-				if (lookup.ContainsKey(key) == false)
-					lookup.Add(key, row.Field<string>(5) ?? "");
-				//else
-				//	Console.WriteLine($"Duplicate ROM in data: {key}");
-
-			}
-
-			if (File.Exists(lookupFilename) == true)
-			{
-				foreach (var existingPair in UtilLoadHashLookup(lookupFilename))
-				{
-					if (lookup.ContainsKey(existingPair.Key) == true)
-					{
-						if (String.IsNullOrEmpty(lookup[existingPair.Key]) == true)
-							lookup[existingPair.Key] = existingPair.Value;
-						else
-							if (lookup[existingPair.Key] != existingPair.Value)
-								throw new ApplicationException($"SHA1 mismatch {existingPair.Key}\t'{lookup[existingPair.Key]}'\t'{existingPair.Value}'");
-					}
-					else
-					{
-						Console.WriteLine($"Merge existing not in database: {existingPair.Key}");
-					}
-				}
-			}
-
-			UtilSaveHashLookup(lookupFilename, lookup);
 
 			return lookup;
 		}
 
-		public static void UtilLearnHashLookup(string lookupFilename, string sqlLiteFilename, string importDirectory)
+		public static void HashLookupLoad(string filename)
 		{
+			var lookup = HashLookupGetDatabase();
+
+			var romIdLookup = HashLookupRomIdLookup();
+			var sha1RomIdUpdates = new Dictionary<long[], string>();
+
+			using (var reader = new StreamReader(filename, Encoding.UTF8))
+			{
+				string line;
+				while ((line = reader.ReadLine()) != null)
+				{
+					int index = line.LastIndexOf("\t");
+					string key = line.Substring(0, index);
+					string sha1 = line.Substring(index + 1);
+
+					if (lookup.ContainsKey(key) == true)
+					{
+						if (String.IsNullOrEmpty(lookup[key]) == true)
+						{
+							lookup[key] = sha1;
+							sha1RomIdUpdates.Add(romIdLookup[key].ToArray(), sha1);
+						}
+						else
+						{
+							if (lookup[key] != sha1)
+								throw new ApplicationException($"SHA1 mismatch {key}\t'{lookup[key]}'\t'{sha1}'");
+						}
+					}
+					else
+					{
+						Console.WriteLine($"Merge existing not in database: {key}");
+					}
+				}
+			}
+
+			HashLookupUpdateDatabase(sha1RomIdUpdates);
+		}
+
+		private static Dictionary<string, HashSet<long>> HashLookupRomIdLookup()
+		{
+			var romIdLookup = new Dictionary<string, HashSet<long>>();
+			using (SQLiteConnection connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]))
+			{
+				DataTable table = Database.ExecuteFill(connection, @"
+					SELECT [datafile].[name], [machine].[name], [rom].[name], [rom].[size], [rom].[crc], [rom].[rom_id]
+					FROM [datafile] INNER JOIN [machine] ON [datafile].[datafile_id] = [machine].[datafile_id]
+					INNER JOIN [rom] ON [machine].[machine_id] = [rom].[machine_id]
+					WHERE ([rom].[crc] IS NOT NULL);
+				");
+
+				foreach (DataRow row in table.Rows)
+				{
+					string key = $"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\t{row[4]}".ToLower();
+					if (romIdLookup.ContainsKey(key) == false)
+						romIdLookup.Add(key, new HashSet<long>());
+
+					romIdLookup[key].Add(row.Field<long>(5));
+				}
+			}
+
+			return romIdLookup;
+		}
+
+		private static void HashLookupUpdateDatabase(Dictionary<long[], string> sha1RomIdUpdates)
+		{
+			if (sha1RomIdUpdates.Count == 0)
+				return;
+
+			Console.Write("update sha1 in database ...");
+			using (SQLiteConnection connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]))
+			{
+				using (SQLiteCommand command = new SQLiteCommand("UPDATE [rom] SET [sha1] = @sha1 WHERE [rom_id] = @rom_id", connection))
+				{
+					command.Parameters.Add("@sha1", DbType.String);
+					command.Parameters.Add("@rom_id", DbType.Int64);
+
+					connection.Open();
+
+					SQLiteTransaction transaction = connection.BeginTransaction();
+					try
+					{
+						foreach (var pair in sha1RomIdUpdates)
+						{
+							foreach (var rom_id in pair.Key)
+							{
+								command.Parameters["@sha1"].Value = pair.Value;
+								command.Parameters["@rom_id"].Value = rom_id;
+								command.ExecuteNonQuery();
+							}
+						}
+
+						transaction.Commit();
+					}
+					catch
+					{
+						transaction.Rollback();
+						throw;
+					}
+					finally
+					{
+						connection.Close();
+					}
+				}
+			}
+			Console.WriteLine("...done");
+		}
+
+
+		public static void HashLookupLearn(string importDirectory)
+		{
+			if (Globals.Core.Name != "fbneo")
+				throw new ApplicationException("Learn is for fbneo only");
+
 			string datafile_name = Path.GetFileName(importDirectory);
 
-			var lookup = UtilGetHashLookup(lookupFilename, sqlLiteFilename);
+			var romIdLookup = HashLookupRomIdLookup();
+			var sha1RomIdUpdates = new Dictionary<long[], string>();
+
+			var lookup = HashLookupGetDatabase();
 
 			int set_count = 0;
 			int got_count = 0;
@@ -948,6 +1056,8 @@ namespace Spludlow.MameAO
 								lookup[key] = sha1;
 								Console.WriteLine($"Learn\t{key}");
 								++set_count;
+
+								sha1RomIdUpdates.Add(romIdLookup[key].ToArray(), sha1);
 							}
 							else
 							{
@@ -967,12 +1077,72 @@ namespace Spludlow.MameAO
 
 			Console.WriteLine($"Learn {datafile_name} SET:{set_count} GOT:{got_count} NOT:{not_count}");
 
-			UtilSaveHashLookup(lookupFilename, lookup);
-		}
-		public static void UtilReportHashLookup(string lookupFilename, string sqlLiteFilename)
-		{
-			var lookup = UtilGetHashLookup(lookupFilename, sqlLiteFilename);
+			HashLookupUpdateDatabase(sha1RomIdUpdates);
 
+			lookup = HashLookupGetDatabase();
+			HashLookupReport(lookup);
+		}
+
+		public static void HashLookupSave()
+		{
+			if (Globals.Core.Name != "fbneo")
+				throw new ApplicationException("Learn is for fbneo only");
+
+			string targetDirectory = Path.Combine(Globals.TempDirectory, "fbneo-sha1-lookup");
+			Directory.CreateDirectory(targetDirectory);
+
+			var lookup = HashLookupGetDatabase();
+
+			HashLookupReport(lookup);
+
+			string filename = Path.Combine(targetDirectory, $"{Globals.Core.Version}.txt");
+			string filenameZip = Path.Combine(targetDirectory, $"{Globals.Core.Version}.zip");
+
+			File.Delete(filename);
+			File.Delete(filenameZip);
+
+			using (var writer = new StreamWriter(filename, false, Encoding.UTF8))
+			{
+				foreach (var pair in lookup)
+					writer.WriteLine($"{pair.Key}\t{pair.Value}");
+			}
+
+			using (var zipFile = ZipFile.Open(filenameZip, ZipArchiveMode.Create))
+				zipFile.CreateEntryFromFile(filename, Path.GetFileName(filename));
+
+			File.WriteAllText(Path.Combine(targetDirectory, "latest.txt"), Globals.Core.Version, Encoding.ASCII);
+
+			Console.WriteLine($"FBNeo SHA1 Lookup saved: {targetDirectory}");
+		}
+
+		private static Dictionary<string, string> HashLookupGetDatabase()
+		{
+			var lookup = new Dictionary<string, string>();
+
+			using (SQLiteConnection connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]))
+			{
+				DataTable table = Database.ExecuteFill(connection, @"
+					SELECT [datafile].[name], [machine].[name], [rom].[name], [rom].[size], [rom].[crc], [rom].[sha1]
+					FROM [datafile] INNER JOIN [machine] ON [datafile].[datafile_id] = [machine].[datafile_id] INNER JOIN [rom] ON [machine].[machine_id] = [rom].[machine_id]
+					WHERE ([rom].[crc] IS NOT NULL AND [rom].[merge] IS NULL)
+					ORDER BY [datafile].[name], [machine].[name], [rom].[name];
+				");
+
+				foreach (DataRow row in table.Rows)
+				{
+					string key = $"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\t{row[4]}".ToLower();
+					if (lookup.ContainsKey(key) == false)
+						lookup.Add(key, row.Field<string>(5) ?? "");
+					//else
+					//	Console.WriteLine($"Duplicate ROM in data: {key}");
+				}
+			}
+
+			return lookup;
+		}
+
+		public static void HashLookupReport(Dictionary<string, string> lookup)
+		{
 			StringBuilder result = new StringBuilder();
 
 			var systemCounts = new Dictionary<string, int[]>();
@@ -1007,38 +1177,6 @@ namespace Spludlow.MameAO
 
 			Tools.PopText(result.ToString());
 		}
-
-
-		public static void UtilSaveHashLookup(string lookupFilename, Dictionary<string, string> lookup)
-		{
-			using (var writer = new StreamWriter(lookupFilename, false, Encoding.UTF8))
-			{
-				foreach (var pair in lookup)
-					writer.WriteLine($"{pair.Key}\t{pair.Value}");
-			}
-		}
-
-		public static Dictionary<string, string> UtilLoadHashLookup(string lookupFilename)
-		{
-			var lookup = new Dictionary<string, string>();
-
-			using (var reader = new StreamReader(lookupFilename, Encoding.UTF8))
-			{
-				string line;
-				while ((line = reader.ReadLine()) != null)
-				{
-					int index = line.LastIndexOf("\t");
-					string key = line.Substring(0, index);
-					string sha1 = line.Substring(index + 1);
-					lookup.Add(key, sha1);
-				}
-			}
-
-			return lookup;
-		}
-
-
-
 
 	}
 }

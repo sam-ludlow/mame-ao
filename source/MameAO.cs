@@ -776,6 +776,27 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 							Tools.MsAccessFromXML(filename);
 						return null;
 
+					case ".learn":
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
+							throw new ApplicationException($"Usage: {parts[0]} <directory>");
+						CoreFbNeo.HashLookupLearn(parts[1]);
+						return null;
+
+					case ".learnsave":
+						parts = args.Arguments(1);
+						if (parts.Length != 1)
+							throw new ApplicationException($"Usage: {parts[0]}");
+						CoreFbNeo.HashLookupSave();
+						return null;
+
+					case ".learnload":
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
+							throw new ApplicationException($"Usage: {parts[0]} <filename>");
+						CoreFbNeo.HashLookupLoad(parts[1]);
+						return null;
+
 					case ".core":
 						parts = args.Arguments(3);
 						if (parts.Length != 2 && parts.Length != 3)
