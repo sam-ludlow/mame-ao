@@ -34,6 +34,11 @@ namespace Spludlow.MameAO
 						Snap.ImportSnapSoftware(parameters["source"], parameters["target"]);
 						break;
 
+					case "snap-fbneo":
+						ValidateRequiredParameters(parameters, new string[] { "source", "target" });
+						Snap.ImportSnapFbNeo(parameters["source"], parameters["target"]);
+						break;
+
 					case "snap-index":
 						Snap.IndexSnapDirectory(Path.Combine(parameters["directory"]));
 						break;

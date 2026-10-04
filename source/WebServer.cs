@@ -425,7 +425,17 @@ namespace Spludlow.MameAO
 
 				string name = (string)row["name"];
 
-				result.ao_image = MACHINE_IMAGE_URL.Replace("@machine", name).Replace("@core", Globals.Core.Name);
+				switch (Globals.Core.Name)
+				{
+					case "fbneo":
+						string type = (string)row["ao_type"];
+						result.ao_image = $"https://data.spludlow.co.uk/fbneo/{type}/{name}.jpg";
+						break;
+
+					default:
+						result.ao_image = MACHINE_IMAGE_URL.Replace("@machine", name).Replace("@core", Globals.Core.Name);
+						break;
+				}
 
 				results.Add(result);
 			}

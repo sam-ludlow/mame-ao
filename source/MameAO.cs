@@ -101,7 +101,7 @@ namespace Spludlow.MameAO
 
 		public static ICore Core = null;
 
-		public static string[] CoreNames = new string[] { "mame", "hbmame" };
+		public static string[] CoreNames = new string[] { "mame", "hbmame", "fbneo" };
 	}
 
 	public class MameAOProcessor

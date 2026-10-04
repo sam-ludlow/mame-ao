@@ -36,6 +36,67 @@ namespace Spludlow.MameAO
 
 		private Dictionary<string, string[]> _Filters = null;
 
+		private List<DataQueryProfile> _DataQueryProfiles = new List<DataQueryProfile>();
+
+		public static Dictionary<string, string> _LookupSystemListInfo;
+		public static Dictionary<string, string> _LookupSystemPrefix;
+		public static Dictionary<string, string> _LookupPrefixSystem;
+
+
+		static CoreFbNeo()
+		{
+			//	https://github.com/finalburnneo/FBNeo/blob/master/src/burner/win32/main.cpp
+
+			_LookupSystemListInfo = new Dictionary<string, string>()	//	19
+			{
+				{ "arcade",     "" },
+				{ "astrocade",  "" },
+				{ "channelf",   "" },
+				{ "coleco",     "" },
+				{ "fds",        "" },
+				{ "gamegear",   "gg" },
+				{ "gba",        "" },
+				{ "megadrive",  "md" },
+				{ "msx",        "" },
+				{ "neogeo",     "" },	//	not used subset of arcade
+				{ "nes",        "" },
+				{ "ngp",        "" },
+				{ "pce",        "" },
+				{ "sg1000",     "" },
+				{ "sgx",        "" },
+				{ "sms",        "" },
+				{ "snes",       "" },
+				{ "spectrum",   "" },
+				{ "tg16",       "" },
+			};
+			_LookupSystemListInfo = _LookupSystemListInfo.ToDictionary(x => x.Key, x => string.IsNullOrEmpty(x.Value) ? x.Key : x.Value);
+
+
+			_LookupSystemPrefix = new Dictionary<string, string>()	//	19
+			{
+				{ "arcade",     "" },
+				{ "astrocade",  "astro_" },
+				{ "channelf",   "chf_" },
+				{ "coleco",     "cv_" },
+				{ "fds",        "fds_" },
+				{ "gamegear",   "gg_" },
+				{ "gba",        "gba_" },
+				{ "megadrive",  "md_" },
+				{ "msx",        "msx_" },
+				{ "neogeo",     "neogeo_" },	//	not used subset of arcade
+				{ "nes",        "nes_" },
+				{ "ngp",        "ngp_" },
+				{ "pce",        "pce_" },
+				{ "sg1000",     "sg1k_" },
+				{ "sgx",        "sgx_" },
+				{ "sms",        "sms_" },
+				{ "snes",       "snes_" },
+				{ "spectrum",   "spec_" },
+				{ "tg16",       "tg_" },
+			};
+			_LookupPrefixSystem = _LookupSystemPrefix.ToDictionary(x => x.Value, x => x.Key);
+		}
+
 		void ICore.Initialize(string directory, string version)
 		{
 			//	TODO: validate version
@@ -43,13 +104,6 @@ namespace Spludlow.MameAO
 			Directory.CreateDirectory(_RootDirectory);
 
 			_Version = null;    //	Always use latest
-		}
-
-		private List<DataQueryProfile> _DataQueryProfiles = new List<DataQueryProfile>();
-
-		public CoreFbNeo()
-		{
-
 		}
 
 		int ICore.Get()
@@ -112,34 +166,6 @@ namespace Spludlow.MameAO
 			if (File.Exists(completeFilename) == true)
 				return;
 
-			//	https://github.com/finalburnneo/FBNeo/blob/master/src/burner/win32/main.cpp
-			string[] listInfos = new string[] {	//	19
-				"arcade",
-				"astrocade",	//	? new - in retro roms
-				"channelf",
-				"coleco",
-				"fds",
-				"gba",			//	? new - from mame SL
-				"gg",			// rename gamegear
-				"md",			// rename megadrive
-				"msx",
-				"neogeo",		//	not in roms dir? in archive.org fbneo_1003_bestset/fbneo_1_0_0_3_best.zip
-				"nes",
-				"ngp",
-				"pce",
-				"sg1000",
-				"sgx",
-				"sms",
-				"snes",
-				"spectrum",
-				"tg16",
-			};
-			var fixNames = new Dictionary<string, string>()
-			{
-				{ "gg", "gamegear" },
-                { "md", "megadrive" }
-			};
-
 			//
 			// Extract XML
 			//
@@ -148,16 +174,13 @@ namespace Spludlow.MameAO
 			Directory.CreateDirectory(configDirectory);
 			File.WriteAllText(Path.Combine(configDirectory, "fbneo64.ini"), iniFileData);
 
-			foreach (string listInfo in listInfos)
+			foreach (var system in _LookupSystemListInfo.Keys)
 			{
-				string system = fixNames.ContainsKey(listInfo) == true ? fixNames[listInfo] : listInfo;
-
 				string filename = Path.Combine(_CoreDirectory, $"_{system}.xml");
-
 				if (File.Exists(filename) == true)
 					continue;
 
-				string arguments = listInfo == "arcade" ? "-listinfo" : $"-listinfo{listInfo}only";
+				string arguments = system == "arcade" ? "-listinfo" : $"-listinfo{_LookupSystemListInfo[system]}only";
 
 				StringBuilder output = new StringBuilder();
 
@@ -202,10 +225,8 @@ namespace Spludlow.MameAO
 			attribute.Value = _Version;
 			datafilesElement.Attributes.Append(attribute);
 
-			foreach (string listInfo in listInfos)
+			foreach (string system in _LookupSystemListInfo.Keys)
 			{
-				string system = fixNames.ContainsKey(listInfo) == true ? fixNames[listInfo] : listInfo;
-
 				string systemFilename = Path.Combine(_CoreDirectory, $"_{system}.xml");
 
 				XmlDocument systemDocument = new XmlDocument();
@@ -505,6 +526,10 @@ namespace Spludlow.MameAO
 		public static string PlaceFbNeo(ICore core, string line)
 		{
 			string[] parts = line.Split('@');
+
+			if (parts.Length == 3 && parts[2] == "fbneo")
+				parts = parts.Take(2).ToArray();
+
 			if (parts.Length != 2)
 				throw new ApplicationException("Bad Line");
 
@@ -558,8 +583,15 @@ namespace Spludlow.MameAO
 					if (romTable.Rows.Count == 0)
 						throw new ApplicationException($"No machine roms found {datafile_name} / {name}");
 
-					bool downloadRequired = false;
+					if (romTable.Rows.Cast<DataRow>().Count(row => row.IsNull("sha1") == true) > 0)
+					{
+						Console.WriteLine($"!!! SHA1 not known, game will not run\t{datafile_name}\t{name}");
+						continue;
+					}
 
+					string[] info = new string[] { "fbneo machine", datafile_name, name };
+
+					bool downloadRequired = false;
 					foreach (DataRow romRow in romTable.Rows)
 					{
 						if (romRow.IsNull("sha1") == true)
@@ -572,7 +604,6 @@ namespace Spludlow.MameAO
 							break;
 						}
 					}
-					string[] info = new string[] { "fbneo machine", datafile_name, name };
 
 					if (downloadRequired == true)
 					{
@@ -591,32 +622,7 @@ namespace Spludlow.MameAO
 				}
 			}
 
-
-
-			Dictionary<string, string> systemPrefixes = new Dictionary<string, string>()
-			{
-				{ "arcade",		"" },
-				{ "astrocade",	"astro_" },
-				{ "channelf",	"chf_" },
-				{ "coleco",		"cv_" },
-				{ "fds",		"fds_" },
-				{ "gamegear",	"gg_" },
-				{ "gba",		"gba_" },
-				{ "megadrive",  "md_" },
-				{ "msx",		"msx_" },
-				{ "neogeo",		"neogeo_" },	//	??? cant launch directly used by arcade
-				{ "nes",		"nes_" },
-				{ "ngp",		"ngp_" },
-				{ "pce",		"pce_" },
-				{ "sg1000",		"sg1k_" },
-				{ "sgx",		"sgx_" },
-				{ "sms",		"sms_" },
-				{ "snes",		"snes_" },
-				{ "spectrum",	"spec_" },
-				{ "tg16",		"tg_" },
-			};
-
-			return $"{systemPrefixes[datafile_name]}{machine_name}";
+			return $"{_LookupSystemPrefix[datafile_name]}{machine_name}";
 		}
 
 		void ICore.MsAccess()
@@ -860,8 +866,6 @@ namespace Spludlow.MameAO
 
 		public static Dictionary<string, string> HashLookupGetWeb()
 		{
-			var lookup = new Dictionary<string, string>();
-
 			string version = Tools.FetchTextCached("https://data.spludlow.co.uk/api/fbneo-sha1-lookup/latest.txt");
 
 			if (version == null)
@@ -877,6 +881,8 @@ namespace Spludlow.MameAO
 				Tools.Download(url, zipCacheFilename);
 				Console.WriteLine("...done.");
 			}
+
+			var lookup = new Dictionary<string, string>();
 
 			using (var zipFile = ZipFile.OpenRead(zipCacheFilename))
 			{

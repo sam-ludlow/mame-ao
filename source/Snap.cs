@@ -172,6 +172,50 @@ namespace Spludlow.MameAO
 			Console.WriteLine($"Software process:{processCount}, skip: {skipCount}, took:{(DateTime.Now - startTime).TotalMinutes}");
 		}
 
+		public static void ImportSnapFbNeo(string sourceDirectory, string targetDirectory)
+		{
+			string targetDirectoryPNG = Path.Combine(targetDirectory, "png");
+			Directory.CreateDirectory(targetDirectoryPNG);
+			string targetDirectoryJPG = Path.Combine(targetDirectory, "jpg");
+			Directory.CreateDirectory(targetDirectoryJPG);
+
+			//Console.Write("Clearing Attributes...");
+			//Tools.ClearAttributes(sourceDirectory);
+			//Console.WriteLine("...done");
+
+			foreach (var system in CoreFbNeo._LookupSystemPrefix.Keys)
+			{
+				Directory.CreateDirectory(Path.Combine(targetDirectoryPNG, system));
+				Directory.CreateDirectory(Path.Combine(targetDirectoryJPG, system));
+			}
+
+			foreach (string sourceFilename in Directory.GetFiles(sourceDirectory, "*.png"))
+			{
+				string system = "arcade";
+				string name = Path.GetFileNameWithoutExtension(sourceFilename).ToLower();
+
+				int index = name.IndexOf('_');
+				if (index != -1)
+				{
+					string prefix = name.Substring(0, index + 1);
+					if (CoreFbNeo._LookupPrefixSystem.ContainsKey(prefix) == true)
+					{
+						system = CoreFbNeo._LookupPrefixSystem[prefix];
+						name = name.Substring(index + 1);
+					}
+				}
+				
+				Console.WriteLine($"{name}\t{system}\t{sourceFilename}");
+
+				string targetFilename = Path.Combine(targetDirectoryPNG, system, name + ".png");
+
+				File.Copy(sourceFilename, targetFilename, true);
+
+				//	TODO: JPEG
+			}
+
+		}
+
 		public static bool ImportSnapFile(string sourceFilenamePNG, string targetDirectoryPNG, string targetDirectoryJPG)
 		{
 			FileInfo sourceInfo = new FileInfo(sourceFilenamePNG);
@@ -659,6 +703,65 @@ namespace Spludlow.MameAO
 					//Console.WriteLine($"{softwarelistName}\t{softwareName}\t{size.Value.Width}\t{size.Value.Height}");
 
 					CreateThumbnail(pngFilename, jpgFilename, size.Value);
+				}
+			}
+		}
+
+		public static void UtilMakeThumbsFBNeo(string connectionString, string snapCoreDirectory)
+		{
+			DataTable gameVideoTable = Database.ExecuteFill(new SqlConnection(connectionString), @"
+				SELECT
+					datafile.name AS datafile_name,
+					game.name AS game_name,
+					video.*
+				FROM
+					(
+						datafile
+						INNER JOIN game ON datafile.datafile_id = game.datafile_id
+					)
+					LEFT JOIN video ON game.game_id = video.game_id
+				ORDER BY
+					datafile.name,
+					game.name;
+			");
+
+			gameVideoTable.PrimaryKey = new DataColumn[] { gameVideoTable.Columns["datafile_name"], gameVideoTable.Columns["game_name"] };
+
+			string pngDirectory = Path.Combine(snapCoreDirectory, "png");
+			string jpgDirectory = Path.Combine(snapCoreDirectory, "jpg");
+
+			foreach (string systemDirectory in Directory.GetDirectories(pngDirectory))
+			{
+				string system = Path.GetFileName(systemDirectory);
+
+				foreach (string pngFilename in Directory.GetFiles(systemDirectory, "*.png"))
+				{
+					string game = Path.GetFileNameWithoutExtension(pngFilename).ToLower();
+
+					DataRow gameVideoRow = gameVideoTable.Rows.Find(new object[] { system, game });
+					if (gameVideoRow == null)
+					{
+						Console.WriteLine($"Not Found:\t{pngFilename}");
+						File.Delete(pngFilename);
+						continue;
+					}
+
+					string jpgFilename = Path.Combine(jpgDirectory, system, game + ".jpg");
+					if (File.Exists(jpgFilename) == true)
+						continue;
+
+					string orientation = gameVideoRow.Field<string>("orientation") ?? "horizontal";
+
+					Size size;
+					using (var image = Image.FromFile(pngFilename))
+						size = new Size(image.Width, image.Height);
+
+					if (orientation == "horizontal")
+						size.Height = (int)Math.Round(size.Width / 4.0 * 3.0, 0);
+					else
+						size.Width = (int)Math.Round(size.Height / 4.0 * 3.0, 0);
+
+					CreateThumbnail(pngFilename, jpgFilename, size);
 				}
 			}
 		}
