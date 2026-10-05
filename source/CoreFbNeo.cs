@@ -589,7 +589,7 @@ namespace Spludlow.MameAO
 						continue;
 					}
 
-					string[] info = new string[] { "fbneo machine", datafile_name, name };
+					string[] info = new string[] { "fbneo game ZIP", datafile_name, name };
 
 					bool downloadRequired = false;
 					foreach (DataRow romRow in romTable.Rows)
@@ -613,12 +613,25 @@ namespace Spludlow.MameAO
 					}
 
 					string romDirectory = Path.Combine(core.Directory, "roms", datafile_name, name);
-
-					Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, romDirectory, null, info);
-
 					string zipFilename = romDirectory + ".zip";
 					File.Delete(zipFilename);
-					ZipFile.CreateFromDirectory(romDirectory, zipFilename);
+
+					DateTime when = DateTime.Now;
+					using (var zipFile = ZipFile.Open(zipFilename, ZipArchiveMode.Create))
+					{
+						foreach (DataRow row in romTable.Rows)
+						{
+							string rom_name = (string)row["name"];
+							string sha1 = (string)row["sha1"];
+							bool have = Globals.RomHashStore.Exists(sha1);
+
+							if (have == true)
+								zipFile.CreateEntryFromFile(Globals.RomHashStore.Filename(sha1), rom_name);
+
+							Globals.WorkerTaskReport.Tables["Place"].Rows.Add(when, info[0], info[1], info[2], sha1, have, have, name);
+						}
+					}
+
 				}
 			}
 

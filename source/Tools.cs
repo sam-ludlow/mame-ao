@@ -854,6 +854,46 @@ namespace Spludlow.MameAO
 					zipArchive.CreateEntryFromFile(filename, Path.GetFileName(filename));
 		}
 
+		public static void ZipFileExtractToDirectory(string filename, string directory)
+		{
+			using (var zipFile = ZipFile.OpenRead(filename))
+			{
+				var subDirectories = new HashSet<string>() { directory };
+				foreach (var entry in zipFile.Entries)
+				{
+					if (string.IsNullOrEmpty(entry.Name) == true)
+						continue;
+
+					string name = Path.GetDirectoryName(entry.FullName.Trim('/').Replace('/', Path.DirectorySeparatorChar));
+					subDirectories.Add(Path.Combine(directory, name));
+				}
+				foreach (var subDirectory in subDirectories)
+					Directory.CreateDirectory(subDirectory);
+
+				foreach (var entry in zipFile.Entries)
+				{
+					if (string.IsNullOrEmpty(entry.Name) == true)
+						continue;
+
+					string name = Path.Combine(directory, entry.FullName.Replace('/', Path.DirectorySeparatorChar));
+
+					int index = name.LastIndexOf(Path.DirectorySeparatorChar);
+
+					name = Path.Combine(name.Substring(0, index), ValidFileName(name.Substring(index + 1)));
+
+					Console.WriteLine(name);
+
+					using (var writeStream = new FileStream(name, FileMode.CreateNew))
+					{
+						using (var readStream = entry.Open())
+						{
+							readStream.CopyTo(writeStream);
+						}
+					}
+				}
+			}
+		}
+
 		public static void Compress7Zip(string sourcePath, string targetFilename)
 		{
 			string programFilename = @"C:\Program Files\7-Zip\7z.exe";

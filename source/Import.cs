@@ -51,7 +51,7 @@ namespace Spludlow.MameAO
 						{
 							try
 							{
-								ZipFile.ExtractToDirectory(filename, tempDir.Path);
+								Tools.ZipFileExtractToDirectory(filename, tempDir.Path);
 							}
 							catch (InvalidDataException e)
 							{
