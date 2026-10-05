@@ -1019,22 +1019,24 @@ namespace Spludlow.MameAO
 
 		public void Report_AVM()
 		{
-			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name, description, romof, cloneof FROM machine ORDER BY machine.name");
-			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
-			DataTable diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM disk WHERE sha1 IS NOT NULL");
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, ao_type, name, description, romof, cloneof FROM machine ORDER BY machine.ao_type, machine.name");
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name FROM rom WHERE sha1 IS NOT NULL");
+			DataTable diskTable = null;
+			if (Database.TableExists(new SQLiteConnection(Globals.Core.ConnectionStrings[0]), "disk") == true)
+				diskTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name FROM disk WHERE sha1 IS NOT NULL");
+
+			//	rom merge ?
 
 			DataTable table = Tools.MakeDataTable(
-				"Status	Name	Description	Complete	RomCount	DiskCount	RomHave	DiskHave",
-				"String	String	String		Boolean		Int64		Int64		Int64	Int64");
+				"Status	Type	Name	Description	Complete	RomCount	DiskCount	RomHave	DiskHave",
+				"String	String	String	String		Boolean		Int64		Int64		Int64	Int64");
 
 			foreach (DataRow machineRow in machineTable.Rows)
 			{
 				long machine_id = (long)machineRow["machine_id"];
 
-				DataRow[] romRows = romTable.Select($"machine_id = {machine_id}");
-				DataRow[] diskRows = diskTable.Select($"machine_id = {machine_id}");
-
 				int romHaveCount = 0;
+				DataRow[] romRows = romTable.Select($"machine_id = {machine_id}");
 				foreach (DataRow romRow in romRows)
 				{
 					string sha1 = (string)romRow["sha1"];
@@ -1043,11 +1045,16 @@ namespace Spludlow.MameAO
 				}
 
 				int diskHaveCount = 0;
-				foreach (DataRow diskRow in diskRows)
+				DataRow[] diskRows = new DataRow[0];
+				if (diskTable != null)
 				{
-					string sha1 = (string)diskRow["sha1"];
-					if (Globals.DiskHashStore.Exists(sha1) == true)
-						++diskHaveCount;
+					diskTable.Select($"machine_id = {machine_id}");
+					foreach (DataRow diskRow in diskRows)
+					{
+						string sha1 = (string)diskRow["sha1"];
+						if (Globals.DiskHashStore.Exists(sha1) == true)
+							++diskHaveCount;
+					}
 				}
 
 				if (romRows.Length == 0 && diskRows.Length == 0)
@@ -1057,7 +1064,7 @@ namespace Spludlow.MameAO
 				if (romRows.Length == romHaveCount && diskRows.Length == diskHaveCount)
 					complete = true;
 
-				table.Rows.Add("", (string)machineRow["name"], (string)machineRow["description"], complete, romRows.Length, diskRows.Length, romHaveCount, diskHaveCount);
+				table.Rows.Add("", (string)machineRow["ao_type"], (string)machineRow["name"], (string)machineRow["description"], complete, romRows.Length, diskRows.Length, romHaveCount, diskHaveCount);
 			}
 
 			DataSet dataSet;
@@ -1197,79 +1204,96 @@ namespace Spludlow.MameAO
 			SaveHtmlReport(dataSet, "Missing Software ROM and DISK");
 		}
 
+		private class SummaryInfo
+		{
+			public string Name;
+			public HashStore HashStore;
+			public HashSet<string> SHA1s;
+		}
+
 		public void Report_AVSUM()
 		{
-			List<string> names = new List<string>(new string[] {
-				"Machine Rom",
-				"Machine Disk",
-				"Software Rom",
-				"Software Disk",
-				"Artworks",
-				"Artworks Alt",
-				"Artworks Wide Screen",
-				"Samples",
-			});
-
-			List<HashStore> hashStores = new List<HashStore>(new HashStore[] {
-				Globals.RomHashStore,
-				Globals.DiskHashStore,
-				Globals.RomHashStore,
-				Globals.DiskHashStore,
-				Globals.RomHashStore,
-				Globals.RomHashStore,
-				Globals.RomHashStore,
-				Globals.RomHashStore,
-			});
-
 			foreach (ArtworkTypes type in new ArtworkTypes[] { ArtworkTypes.Artworks, ArtworkTypes.ArtworksAlt, ArtworkTypes.ArtworksWideScreen })
 				Globals.Artwork.Initialize(type);
 
 			Globals.Samples.Initialize();
 
-			List<HashSet<string>> databaseHashes = new List<HashSet<string>>();
+			List<SummaryInfo> infos = new List<SummaryInfo>();
 
-			databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
-			databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
-			databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
-			if (Globals.Core.Name == "mame")
-				databaseHashes.Add(new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"])));
-			databaseHashes.Add(new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.Artworks].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])));
-			databaseHashes.Add(new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.ArtworksAlt].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])));
-			databaseHashes.Add(new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.ArtworksWideScreen].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])));
-			databaseHashes.Add(new HashSet<string>(Globals.Samples.DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"])));
-
-			if (Globals.Core.Name == "hbmame")
+			infos.Add(new SummaryInfo()
 			{
-				foreach (int removeIndex in new int[] { 3 })
+				Name = "Machine Rom",
+				HashStore = Globals.RomHashStore,
+				SHA1s = new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"]))
+			});
+			if (Globals.Core.Name != "fbneo")
+			{
+				infos.Add(new SummaryInfo()
 				{
-					names.RemoveAt(removeIndex);
-					hashStores.RemoveAt(removeIndex);
+					Name = "Machine Disk",
+					HashStore = Globals.DiskHashStore,
+					SHA1s = new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"]))
+				});
+				infos.Add(new SummaryInfo()
+				{
+					Name = "Software Rom",
+					HashStore = Globals.RomHashStore,
+					SHA1s = new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"]))
+				});
+				if (Globals.Core.Name == "mame")
+				{
+					infos.Add(new SummaryInfo()
+					{
+						Name = "Software Disk",
+						HashStore = Globals.DiskHashStore,
+						SHA1s = new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"]))
+					});
 				}
 			}
+			infos.Add(new SummaryInfo()
+			{
+				Name = "Artworks",
+				HashStore = Globals.RomHashStore,
+				SHA1s = new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.Artworks].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"]))
+			});
+			infos.Add(new SummaryInfo()
+			{
+				Name = "Artworks Alt",
+				HashStore = Globals.RomHashStore,
+				SHA1s = new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.ArtworksAlt].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"]))
+			});
+			infos.Add(new SummaryInfo()
+			{
+				Name = "Artworks Wide Screen",
+				HashStore = Globals.RomHashStore,
+				SHA1s = new HashSet<string>(Globals.Artwork.ArtworkDatas[ArtworkTypes.ArtworksWideScreen].DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"]))
+			});
+			infos.Add(new SummaryInfo()
+			{
+				Name = "Samples",
+				HashStore = Globals.RomHashStore,
+				SHA1s = new HashSet<string>(Globals.Samples.DataSet.Tables["rom"].Rows.Cast<DataRow>().Where(row => row.IsNull("sha1") == false).Select(row => (string)row["sha1"]))
+			});
 
 			DataTable table = Tools.MakeDataTable("Summary",
 				"Asset Type	Total	Have	Missing	Complete",
 				"String		Int32	Int32	Int32	String"
 			);
 
-			for (int index = 0; index < names.Count; ++index)
+			foreach (var info in  infos)
 			{
-				string name = names[index];
-				HashSet<string> databaseHash = databaseHashes[index];
-				HashStore hashStore = hashStores[index];
-
 				HashSet<string> missingHashes = new HashSet<string>();
-				foreach (string sha1 in databaseHash)
+				foreach (string sha1 in info.SHA1s)
 				{
-					if (hashStore.Exists(sha1) == false)
+					if (info.HashStore.Exists(sha1) == false)
 						missingHashes.Add(sha1);
 				}
 
-				int have = databaseHash.Count - missingHashes.Count;
+				int have = info.SHA1s.Count - missingHashes.Count;
 
-				decimal complete = Math.Round((100.0M / databaseHash.Count) * (databaseHash.Count - missingHashes.Count), 3);
+				decimal complete = Math.Round((100.0M / info.SHA1s.Count) * (info.SHA1s.Count - missingHashes.Count), 3);
 
-				table.Rows.Add(name, databaseHash.Count, have, missingHashes.Count, $"{complete} %");
+				table.Rows.Add(info.Name, info.SHA1s.Count, have, missingHashes.Count, $"{complete} %");
 			}
 
 			SaveHtmlReport(table, "Summary of all store completeness");
