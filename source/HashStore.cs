@@ -1,9 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
+using System.IO;
 using System.Linq;
 using System.Text;
-using System.IO;
-using System.Data;
+using System.Threading;
+using System.Threading.Tasks;
 
 namespace Spludlow.MameAO
 {
@@ -175,22 +177,34 @@ namespace Spludlow.MameAO
 
 			return path.ToString();
 		}
-
 		public static void ValidateHashStore(HashStore hashStore, string type)
 		{
-			string[] filenames = hashStore.FileNames();
+			int progressFrequency = type == "DISK" ? 10 : 1000;
+
+			string[] filenames = hashStore.FileNames().ToArray();
+
+			string title = $"Validate Hash Store: {type} {filenames.Length}";
+
+			Tools.ConsoleHeading(1, title);
 
 			DataTable table = Tools.MakeDataTable(
 				"Filename	Problem",
 				"String		String"
 			);
 
-			string title = $"Validate hashstore {type} count: {filenames.Length}";
+			DateTime startTime = DateTime.Now;
 
-			Console.Write($"{title} ...");
+			long progress = 0;
 
-			foreach (string filename in filenames)
+			var options = new ParallelOptions
 			{
+				MaxDegreeOfParallelism = 4
+			};
+			Parallel.ForEach(filenames, options, (filename) =>
+			{
+				long current = Interlocked.Increment(ref progress);
+				if ((current % progressFrequency) == 0 || current == 1)
+					Console.WriteLine($"{Math.Round((double)progress / (double)filenames.Length * 100.0, 1)} %\t\t{Math.Round((DateTime.Now - startTime).TotalMinutes, 1)} m");
 
 				try
 				{
@@ -199,27 +213,28 @@ namespace Spludlow.MameAO
 
 					if (storeHash != actualHash)
 						throw new ApplicationException($"storeHash:{storeHash}, actualHash:{actualHash}");
-
-					Console.Write(".");
-
 				}
 				catch (Exception ee)
 				{
-					table.Rows.Add(filename, ee.Message);
+					Console.WriteLine($"{filename}\t{ee.Message}");
 
-					Console.Write("X");
+					lock (table)
+						table.Rows.Add(filename, ee.Message);
 				}
-			}
+			});
 
-			Console.WriteLine("...done");
-
-			title += $", bad: {table.Rows.Count}";
+			Console.WriteLine($"Took Minutes: {Math.Round((DateTime.Now - startTime).TotalMinutes, 1)}");
 
 			if (table.Rows.Count > 0)
 			{
-				Console.WriteLine("!!! Bad files found see the report.");
+				Console.WriteLine("!!! Bad files found see report.");
 				Globals.Reports.SaveHtmlReport(table, title);
 			}
+			else
+			{
+				Console.WriteLine("All files are OK.");
+			}
 		}
+
 	}
 }

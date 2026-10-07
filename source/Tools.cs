@@ -45,8 +45,8 @@ namespace Spludlow.MameAO
 
 		private static readonly char[] _HeadingChars = new char[] { ' ', '#', '=', '-' };
 
-		private static readonly SHA1Managed _SHA1Managed = new SHA1Managed();
-
+		[ThreadStatic]
+		private static SHA1Managed _SHA1Managed = null;
 
 		private static readonly uint[] _CRC32_Table;
 
@@ -427,6 +427,9 @@ namespace Spludlow.MameAO
 
 		public static string SHA1Hex(byte[] data)
 		{
+			if (_SHA1Managed == null)
+				_SHA1Managed = new SHA1Managed();
+
 			byte[] hash = _SHA1Managed.ComputeHash(data);
 			StringBuilder hex = new StringBuilder();
 			foreach (byte b in hash)
@@ -436,6 +439,9 @@ namespace Spludlow.MameAO
 
 		public static string SHA1Hex(Stream stream)
 		{
+			if (_SHA1Managed == null)
+				_SHA1Managed = new SHA1Managed();
+
 			byte[] hash = _SHA1Managed.ComputeHash(stream);
 			StringBuilder hex = new StringBuilder();
 			foreach (byte b in hash)
