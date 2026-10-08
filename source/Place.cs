@@ -9,8 +9,8 @@ namespace Spludlow.MameAO
 {
 	public class Place
 	{
-		private static bool _BtStarted;
-		private static void StartBitTorrent()
+		public static bool _BtStarted;
+		public static void StartBitTorrent()
 		{
 			if (_BtStarted == true)
 				return;

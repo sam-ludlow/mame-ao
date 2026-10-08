@@ -533,6 +533,8 @@ namespace Spludlow.MameAO
 			if (parts.Length != 2)
 				throw new ApplicationException("Bad Line");
 
+			Place._BtStarted = false;	//	TODO tidy up
+
 			string datafile_name = parts[1];
 			string machine_name = parts[0];
 
@@ -607,6 +609,8 @@ namespace Spludlow.MameAO
 
 					if (downloadRequired == true)
 					{
+						Place.StartBitTorrent();	//	TODO tidy up
+
 						var btFile = BitTorrent.SoftwareRom(core.Name, datafile_name, name);
 						if (btFile != null)
 							Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
@@ -621,6 +625,9 @@ namespace Spludlow.MameAO
 					{
 						foreach (DataRow row in romTable.Rows)
 						{
+							if (row.IsNull("sha1") == true)
+								continue;
+
 							string rom_name = (string)row["name"];
 							string sha1 = (string)row["sha1"];
 							bool have = Globals.RomHashStore.Exists(sha1);

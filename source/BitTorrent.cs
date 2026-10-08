@@ -323,7 +323,7 @@ namespace Spludlow.MameAO
 			if (btCores.Contains(coreName) == true)
 				return;
 
-			List<string> config = new List<string>(new string[] { "cores\tmame, hbmame" });
+			var config = new List<string>();
 
 			string configFilename = Path.Combine(Globals.BitTorrentDirectory, "_config.txt");
 			if (File.Exists(configFilename) == true)
@@ -334,11 +334,11 @@ namespace Spludlow.MameAO
 					while ((line = reader.ReadLine()) != null)
 					{
 						line = line.Trim();
-						if (line.Length == 0)
-							continue;
 
-						if (line.StartsWith("cores\t") == false)
-							config.Add(line);
+						if (line.StartsWith("cores\t") == true)
+							line += $", {coreName}";
+
+						config.Add(line);
 					}
 				}
 			}
