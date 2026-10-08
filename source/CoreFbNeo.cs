@@ -1098,6 +1098,9 @@ namespace Spludlow.MameAO
 
 			HashLookupUpdateDatabase(sha1RomIdUpdates);
 
+			if (set_count > 0)
+				Globals.Core.AllSHA1(Globals.AllSHA1);
+				
 			lookup = HashLookupGetDatabase();
 			HashLookupReport(lookup);
 		}
@@ -1162,6 +1165,19 @@ namespace Spludlow.MameAO
 
 		public static void HashLookupReport(Dictionary<string, string> lookup)
 		{
+			var gameDescriptionLookup = new Dictionary<string, string>();
+			using (var connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]))
+			{
+				using (var adapter = new SQLiteDataAdapter("SELECT datafile.[name], machine.[name], machine.description FROM datafile " +
+					"INNER JOIN machine ON datafile.datafile_id = machine.datafile_id ORDER BY datafile.[name], machine.[name];", connection))
+				{
+					var table = new DataTable();
+					adapter.Fill(table);
+					foreach (DataRow row in table.Rows)
+						gameDescriptionLookup.Add($"{row[0]}\t{row[1]}", row.Field<string>(2));
+				}
+			}
+
 			StringBuilder result = new StringBuilder();
 
 			var systemCounts = new Dictionary<string, int[]>();
@@ -1171,6 +1187,7 @@ namespace Spludlow.MameAO
 				string[] parts = pair.Key.Split('\t');
 
 				string system = parts[0];
+				string machine = parts[1];
 
 				if (systemCounts.ContainsKey(system) == false)
 					systemCounts.Add(system, new int[] { 0, 0, 0 });
@@ -1180,7 +1197,7 @@ namespace Spludlow.MameAO
 				if (String.IsNullOrEmpty(pair.Value) == true)
 				{
 					systemCounts[system][0] += 1;
-					result.AppendLine(pair.Key);
+					result.AppendLine(pair.Key + "\t" + gameDescriptionLookup[$"{system}\t{machine}"]);
 				}
 			}
 

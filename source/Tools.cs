@@ -975,6 +975,50 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static void UtilConvert7Zip2Zip(string sourceDirectory, string targetDirectory)
+		{
+			foreach (string filename7Zip in Directory.GetFiles(sourceDirectory, "*.7z"))
+			{
+				string filenameZip = Path.Combine(targetDirectory, Path.GetFileNameWithoutExtension(filename7Zip) + ".zip");
+
+				Console.WriteLine(filenameZip);
+
+				try
+				{
+					using (TempDirectory tempDir = new TempDirectory())
+					{
+						ExtractToDirectory7Zip(filename7Zip, tempDir.Path);
+						File.Delete(filenameZip);
+						ZipFile.CreateFromDirectory(tempDir.Path, filenameZip);
+					}
+				}
+				catch (Exception e)
+				{
+					Console.WriteLine(e.Message);
+				}
+			}
+		}
+
+		public static void UtilDownloadFromWeb(string dataFilename, int columnIndex, string downloadUrlTemplate, string targetDirectory)
+		{
+			foreach (string line in File.ReadLines(dataFilename))
+			{
+				string[] parts = line.Split('\t');
+				string name = parts[columnIndex];
+
+				string url = downloadUrlTemplate.Replace("@", name);
+				string filename = Path.Combine(targetDirectory, Path.GetFileName(url));
+
+				if (File.Exists(filename) == true)
+					continue;
+
+				Console.WriteLine($"{url}\t=>\t{filename}");
+
+				Tools.Download(url, filename);
+			}
+
+		}
+
 		public static string XML2JSON(XElement element)
 		{
 			JsonSerializerSettings serializerSettings = new JsonSerializerSettings
