@@ -312,40 +312,25 @@ namespace Spludlow.MameAO
 		{
 			dynamic info = JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/info"));
 
-			if (info.cores == null)
-			{
-				Console.WriteLine("!!! Update your dome-bt so it can use other cores.");
-				return;
-			}
-
 			List<string> btCores = ((JArray)info.cores).ToObject<List<string>>();
 
 			if (btCores.Contains(coreName) == true)
 				return;
 
-			var config = new List<string>();
+			btCores.Add(coreName);
+			string value = String.Join(", ", btCores);
 
-			string configFilename = Path.Combine(Globals.BitTorrentDirectory, "_config.txt");
-			if (File.Exists(configFilename) == true)
-			{
-				using (StreamReader reader = new StreamReader(configFilename))
-				{
-					string line;
-					while ((line = reader.ReadLine()) != null)
-					{
-						line = line.Trim();
+			string filename = Path.Combine(Globals.BitTorrentDirectory, "_config.txt");
+			var dictionary = Tools.LoadDictionary(filename);
 
-						if (line.StartsWith("cores\t") == true)
-							line += $", {coreName}";
+			if (dictionary.ContainsKey("cores") == false)
+				dictionary.Add("cores", value);
+			else
+				dictionary["cores"] = value;
 
-						config.Add(line);
-					}
-				}
-			}
+			Tools.SaveDictionary(filename, dictionary);
 
-			File.WriteAllLines(configFilename, config.ToArray());
-
-			Tools.ConsoleHeading(2, new string[] { "Restarting BOME-BT to enable core, configuration updated.", configFilename });
+			Tools.ConsoleHeading(2, new string[] { "Restarting BOME-BT to enable core, configuration updated.", filename });
 
 			Restart();
 		}

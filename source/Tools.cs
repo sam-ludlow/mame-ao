@@ -64,6 +64,40 @@ namespace Spludlow.MameAO
 
 		}
 
+		public static Dictionary<string, string> LoadDictionary(string filename)
+		{
+			var dictionary = new Dictionary<string, string>();
+
+			if (File.Exists(filename) == true)
+			{
+				using (StreamReader reader = new StreamReader(filename, Encoding.UTF8))
+				{
+					string line;
+					while ((line = reader.ReadLine()) != null)
+					{
+						line = line.Trim();
+						if (line.Length == 0)
+							continue;
+
+						int index = line.IndexOf('\t');
+						if (index == -1)
+							throw new ApplicationException($"Bad line in Dictionary file {filename}\t{line}");
+
+						dictionary.Add(line.Substring(0, index), line.Substring(index + 1));
+					}
+				}
+			}
+
+			return dictionary;
+		}
+
+		public static void SaveDictionary(string filename, Dictionary<string, string> dictionary)
+		{
+			string[] lines = dictionary.Select(pair =>  $"{pair.Key}\t{pair.Value}").ToArray();
+
+			File.WriteAllLines(filename, lines, Encoding.UTF8);
+		}
+
 		public static string DataRowValue(DataRow row, string columnName)
 		{
 			if (row.IsNull(columnName))

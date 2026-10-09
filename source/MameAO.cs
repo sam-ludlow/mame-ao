@@ -178,19 +178,7 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			Globals.Settings = new Settings();
 
 			string configFilename = Path.Combine(Globals.RootDirectory, "_config.txt");
-			if (File.Exists(configFilename) == true)
-			{
-				using (StreamReader reader = new StreamReader(configFilename, Encoding.UTF8))
-				{
-					string line;
-					while ((line = reader.ReadLine()) != null)
-					{
-						string[] parts = line.Split('\t');
-						if (parts.Length == 2)
-							Globals.Config.Add(parts[0], parts[1]);
-					}
-				}
-			}
+			Globals.Config = Tools.LoadDictionary(configFilename);
 
 			Globals.MameArguments = Globals.Config.ContainsKey("MameArguments") == true ? Globals.Config["MameArguments"] : "";
 
