@@ -286,7 +286,7 @@ namespace Spludlow.MameAO
 			if (File.Exists(sqlLiteFilename) == true)
 				return;
 
-			DataSet dataSet = FBNeoDataSet(_CoreDirectory);
+			DataSet dataSet = FBNeoDataSet(_CoreDirectory, false);
 
 			string connectionString = Database.MakeSQLiteConnectionString(sqlLiteFilename);
 
@@ -313,7 +313,7 @@ namespace Spludlow.MameAO
 					File.Delete(sqlLiteFilename);
 				}
 
-				DataSet dataSet = FBNeoDataSet(_CoreDirectory);
+				DataSet dataSet = FBNeoDataSet(_CoreDirectory, true);
 
 				foreach (string[] rename in new string[][] { new string[] { "game", "machine" }, new string[] { "video", "display" } })
 				{
@@ -684,7 +684,7 @@ namespace Spludlow.MameAO
 			return versions.Last();
 		}
 
-		public static DataSet FBNeoDataSet(string directory)
+		public static DataSet FBNeoDataSet(string directory, bool skipNeoGeo)
 		{
 			Dictionary<string, string> subsets = new Dictionary<string, string>()
 			{
@@ -705,6 +705,9 @@ namespace Spludlow.MameAO
 
 				foreach (var datafileElement in datafilesElement.Elements("datafile"))
 				{
+					if (skipNeoGeo == true && datafileElement.Attribute("key").Value == "neogeo")
+						continue;
+
 					foreach (var itemElement in datafileElement.Element("header").Elements())
 						if (datafileSkipColumns.Contains(itemElement.Name.LocalName) == false)
 							datafileElement.SetAttributeValue(itemElement.Name, itemElement.Value);
@@ -734,13 +737,122 @@ namespace Spludlow.MameAO
 			return dataSet;
 		}
 
+		public static void UtilMakeZipsFromOtherCore()
+		{
+			string fbNeoFilename = @"C:\GIT\mame-ao\bin\Debug\fbneo\2026-10-10T05-54-14\_fbneo.sqlite";
+			string otherFilename = @"C:\GIT\mame-ao\bin\Debug\mame\0289\_software.sqlite";
+
+			string targetDirectory = @"C:\tmp\FBNeo found\gba";
+
+			var store = new HashStore(@"E:\STORE_ROM", Tools.SHA1HexFile);
+
+			SQLiteConnection fbNeoConnection = new SQLiteConnection(Database.MakeSQLiteConnectionString(fbNeoFilename));
+			var fbNeoTable = Database.ExecuteFill(fbNeoConnection, @"
+				SELECT
+					datafile.name AS datafile_name,
+					machine.name AS machine_name,
+					rom.name AS rom_name,
+					rom.size,
+					rom.crc
+				FROM
+					(
+						datafile
+						INNER JOIN machine ON datafile.datafile_id = machine.datafile_id
+					)
+					INNER JOIN rom ON machine.machine_id = rom.machine_id
+				WHERE
+					(
+						((datafile.name) = 'gba')
+						AND ((rom.merge) IS NULL)
+						AND (
+							(rom.sha1) IS NULL
+							OR (rom.sha1) = ''
+						)
+					)
+				ORDER BY
+					datafile.name,
+					machine.name,
+					rom.name;
+			");
+
+			SQLiteConnection otherConnection = new SQLiteConnection(Database.MakeSQLiteConnectionString(otherFilename));
+			var otherTable = Database.ExecuteFill(otherConnection, @"
+				SELECT
+					softwarelist.name,
+					software.name AS software_name,
+					rom.name AS rom_name,
+					rom.size,
+					rom.crc,
+					rom.sha1
+				FROM
+					(
+						(
+							(
+								softwarelist
+								INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id
+							)
+							INNER JOIN part ON software.software_id = part.software_id
+						)
+						INNER JOIN dataarea ON part.part_id = dataarea.part_id
+					)
+					INNER JOIN rom ON dataarea.dataarea_id = rom.dataarea_id
+				WHERE
+					(((softwarelist.name) = 'gba'))
+				ORDER BY
+					softwarelist.name,
+					software.name;
+			");
+
+			fbNeoTable.Columns.Add("from", typeof(string));
+
+			foreach (DataRow row in fbNeoTable.Rows)
+			{
+				//string datafile_name = (string)row["datafile_name"];
+				string machine_name = (string)row["machine_name"];
+				string rom_name = (string)row["rom_name"];
+				string size = (string)row["size"];
+				string crc = (string)row["crc"];
+
+				DataRow[] otherRows = otherTable.Select($"size = '{size}' AND crc = '{crc}'");
+
+				if (otherRows.Length > 1)
+					throw new ApplicationException("Multi match on CRC & Size");
+
+				if (otherRows.Length == 1)
+				{
+					string other_software_name = (string)otherRows[0]["software_name"];
+					string other_rom_name = (string)otherRows[0]["rom_name"];
+					string sha1 = (string)otherRows[0]["sha1"];
+
+					if (store.Exists(sha1) == false)
+						throw new ApplicationException($"sha1 not in store:\t{sha1}");
+
+					row["from"] = $"{other_software_name}\\{other_rom_name}";
+
+					string zipFilename = Path.Combine(targetDirectory, machine_name + ".zip");
+
+					//	!!! Only handles single rom in zip at the moment
+					//File.Delete(zipFilename);
+					if (File.Exists(zipFilename) == true)
+						throw new ApplicationException($"ZIP already exists:\t{zipFilename}");
+
+					using (var zipFile = ZipFile.Open(zipFilename, ZipArchiveMode.Create))
+					{
+						zipFile.CreateEntryFromFile(store.Filename(sha1), rom_name);
+					}
+				}
+			}
+
+			Tools.PopText(fbNeoTable);
+		}
+
 		void ICore.MSSql(string serverConnectionString, string[] databaseNames)
 		{
 			if (_Version == null)
 				_Version = FBNeoGetLatestDownloadedVersion(_RootDirectory);
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
-			DataSet dataSet = CoreFbNeo.FBNeoDataSet(_CoreDirectory);
+			DataSet dataSet = CoreFbNeo.FBNeoDataSet(_CoreDirectory, false);
 
 			Database.DataSet2MSSQL(dataSet, serverConnectionString, databaseNames[0]);
 
