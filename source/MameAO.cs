@@ -817,9 +817,12 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			{
 				string commandName = CoreFbNeo.PlaceFbNeo(Globals.Core, line);
 
-				Globals.PhoneHome.Ready();
+				if (commandName != null)
+				{
+					Globals.PhoneHome.Ready();
 
-				Mame.RunMame(Path.Combine(Globals.Core.Directory, "fbneo64.exe"), $"{commandName} -w");
+					Mame.RunMame(Path.Combine(Globals.Core.Directory, "fbneo64.exe"), $"{commandName} -w");
+				}
 
 				return line;
 			}

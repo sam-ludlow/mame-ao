@@ -352,7 +352,18 @@ namespace Spludlow.MameAO
 					{
 						long machine_id = (long)machineRow["machine_id"];
 						string machine_name = (string)machineRow["name"];
-						string romof = machineRow.Field<string>("romof");
+
+						List<string> machines_names = new List<string>();
+
+						string romof = machine_name;
+						while (romof != null)
+						{
+							machines_names.Add(romof);
+							var rows = rowLookups["machine"][datafile_id].Where(row => (string)row["name"] == romof).ToArray();
+							romof = null;
+							if (rows.Length == 1)
+								romof = rows[0].IsNull("romof") ? null : (string)rows[0]["romof"];
+						}
 
 						foreach (DataRow romRow in rowLookups["rom"][machine_id])
 						{
@@ -371,12 +382,14 @@ namespace Spludlow.MameAO
 								romRow["sha1"] = sha1Lookup[key];
 							}
 
-							//	merge is not in lookup
-							if (romof != null && merge != null)
+							if (machines_names.Count > 1 && merge != null)
 							{
-								key = $"{datafile_name}\t{romof}\t{merge}\t{size}\t{crc}".ToLower();
-								if (sha1Lookup.ContainsKey(key) == true)
-									romRow["sha1"] = sha1Lookup[key];
+								foreach (string romof_name in machines_names.Skip(1))
+								{
+									key = $"{datafile_name}\t{romof_name}\t{merge}\t{size}\t{crc}".ToLower();
+									if (sha1Lookup.ContainsKey(key) == true)
+										romRow["sha1"] = sha1Lookup[key];
+								}
 							}
 						}
 					}
@@ -571,6 +584,8 @@ namespace Spludlow.MameAO
 
 			Tools.ConsoleHeading(1, new string[] { machine_description, String.Join(", ", machine_names), core.Directory });
 
+			int zipCount = 0;
+
 			foreach (string name in machine_names)
 			{
 				using (SQLiteCommand command = new SQLiteCommand(
@@ -585,26 +600,31 @@ namespace Spludlow.MameAO
 					if (romTable.Rows.Count == 0)
 						throw new ApplicationException($"No machine roms found {datafile_name} / {name}");
 
-					if (romTable.Rows.Cast<DataRow>().Count(row => row.IsNull("sha1") == true) > 0)
-					{
-						Console.WriteLine($"!!! SHA1 not known, game will not run\t{datafile_name}\t{name}");
-						continue;
-					}
+					string[] info = new string[] { "fbneo", datafile_name, name };
 
-					string[] info = new string[] { "fbneo game ZIP", datafile_name, name };
-
+					bool sha1NotKnown = false;
 					bool downloadRequired = false;
 					foreach (DataRow romRow in romTable.Rows)
 					{
-						if (romRow.IsNull("sha1") == true)
-							continue;
-						string sha1 = (string)romRow["sha1"];
+						string sha1 = romRow.Field<string>("sha1") ?? "";
+
+						if (sha1 == "")
+						{
+							sha1NotKnown = true;
+							break;
+						}
 
 						if (Globals.RomHashStore.Exists(sha1) == false)
 						{
 							downloadRequired = true;
 							break;
 						}
+					}
+
+					if (sha1NotKnown == true)
+					{
+						Console.WriteLine($"!!! SHA1 not known, can not use:\t{name}");
+						continue;
 					}
 
 					if (downloadRequired == true)
@@ -616,6 +636,24 @@ namespace Spludlow.MameAO
 							Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
 					}
 
+					bool complete = true;
+					foreach (DataRow row in romTable.Rows)
+					{
+						if (row.IsNull("merge") == false)
+							continue;
+
+						if (Globals.RomHashStore.Exists(row.Field<string>("sha1")) == false)
+						{
+							complete = false;
+							break;
+						}
+					}
+					if (complete == false)
+					{
+						Console.WriteLine($"!!! Dont have assets, can not use:\t{name}");
+						continue;
+					}
+
 					string romDirectory = Path.Combine(core.Directory, "roms", datafile_name, name);
 					string zipFilename = romDirectory + ".zip";
 					File.Delete(zipFilename);
@@ -625,21 +663,26 @@ namespace Spludlow.MameAO
 					{
 						foreach (DataRow row in romTable.Rows)
 						{
-							if (row.IsNull("sha1") == true)
+							if (row.IsNull("merge") == false)
 								continue;
 
 							string rom_name = (string)row["name"];
 							string sha1 = (string)row["sha1"];
-							bool have = Globals.RomHashStore.Exists(sha1);
 
-							if (have == true)
-								zipFile.CreateEntryFromFile(Globals.RomHashStore.Filename(sha1), rom_name);
+							zipFile.CreateEntryFromFile(Globals.RomHashStore.Filename(sha1), rom_name);
 
-							Globals.WorkerTaskReport.Tables["Place"].Rows.Add(when, info[0], info[1], info[2], sha1, have, have, name);
+							Globals.WorkerTaskReport.Tables["Place"].Rows.Add(when, info[0], info[1], info[2], sha1, true, true, name);
 						}
 					}
 
+					++zipCount;
 				}
+			}
+
+			if (zipCount != machine_names.Count)
+			{
+				Console.WriteLine($"Missing assets not running fbneo:\t{machine_name}");
+				return null;
 			}
 
 			return $"{_LookupSystemPrefix[datafile_name]}{machine_name}";
