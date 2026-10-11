@@ -819,12 +819,15 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 				if (commandName != null)
 				{
+					if (Globals.Settings.Options["SnapHome"] == "Yes")
+						Snap.CollectSnaps(commandName);
+
 					Globals.PhoneHome.Ready();
 
 					Mame.RunMame(Path.Combine(Globals.Core.Directory, "fbneo64.exe"), $"{commandName} -w");
 				}
 
-				return line;
+				return commandName;
 			}
 
 			if (Globals.Core.Name == "pinball-visual")

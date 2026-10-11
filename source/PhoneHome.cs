@@ -186,6 +186,8 @@ namespace Spludlow.MameAO
 
 		public static void ProcessPhoneHome(string directory, string masterConnectionString, string serverConnectionString, string[] machineDatabaseNames)
 		{
+			string[] coreNames = new string[] { "mame", "hbmame", "fbneo" };
+
 			string snapHomeDirectory = Path.Combine(directory, "snap-home");
 			string snapSubmitDirectory = Path.Combine(directory, "snap-submit");
 
@@ -210,7 +212,7 @@ namespace Spludlow.MameAO
 				if (snapIndexTables == null)
 				{
 					snapIndexTables = new Dictionary<string, DataTable>();
-					foreach (string core in new string[] { "mame", "hbmame" })
+					foreach (string core in coreNames)
 					{
 						DataTable table = Snap.LoadSnapIndex(Path.Combine(directory, "snap"), core);
 						if (table == null)
@@ -226,12 +228,12 @@ namespace Spludlow.MameAO
 				if (displayTables == null)
 				{
 					displayTables = new Dictionary<string, DataTable>();
-					string[] coreNames = new string[] { "mame", "hbmame" };
-					for (int index = 0; index < 2; ++index)
+					for (int index = 0; index < coreNames.Length; ++index)
 					{
 						string core = coreNames[index];
 						SqlConnection machineConnection = new SqlConnection(serverConnectionString + $"Initial Catalog='{machineDatabaseNames[index]}';");
-						displayTables.Add(core, Snap.GetDisplayTable(machineConnection));
+
+						displayTables.Add(core, core == "fbneo" ? Snap.GetDisplayTableFbNeo(machineConnection) : Snap.GetDisplayTable(machineConnection));
 					}
 				}
 
@@ -251,14 +253,40 @@ namespace Spludlow.MameAO
 					if (display_name.Length > 32)
 						display_name = display_name.Substring(0, 32);
 
-					string[] parts = line.Split(new char[] { ' ', '@' });
-					if (parts.Length != 2 && parts.Length != 4)
-						throw new ApplicationException("Bad line");
+					string[] words = line.Split(' ');
 
-					string machine = parts[0];
-					string core = parts[1];
-					string software = parts.Length == 4 ? parts[2] : null;
-					string softwarelist = parts.Length == 4 ? parts[3] : null;
+					string[] firstWords = words[0].Split('@');
+					string[] secondWords = words.Length > 1 ? words[1].Split('@') : new string[0];
+
+					if (firstWords.Length == 1)
+						throw new ApplicationException($"Bad line first words length:\t{line}");
+
+					string core = firstWords[firstWords.Length - 1];
+					string machine = null;
+					string software = null;
+					string softwarelist = null;
+
+					switch (core)
+					{
+						case "mame":
+						case "hbmame":
+							machine = firstWords[0];
+							if (secondWords.Length == 2)
+							{
+								software = secondWords[0];
+								softwarelist = secondWords[1];
+							}
+							break;
+
+						case "fbneo":
+							machine = "";
+							software = firstWords[0];
+							softwarelist = firstWords[1];
+							break;
+
+						default:
+							throw new ApplicationException($"Bad line unkown core:\t{line}");
+					}
 
 					DataTable indexTable = snapIndexTables[core];
 					DataRow indexRow = indexTable.Rows.Find(software == null ? machine : $"{softwarelist}\\{software}");
@@ -287,7 +315,7 @@ namespace Spludlow.MameAO
 
 					File.Copy(snapFilename, targetFilename);
 
-					Size targetSize = Snap.FixedSize(machine, displayTables[core]);
+					Size targetSize = core == "fbneo" ? Snap.FixedSizeFbNeo(software, softwarelist, displayTables[core]) : Snap.FixedSize(machine, displayTables[core]);
 
 					Snap.CreateThumbnail(targetFilename, thumbFilename, targetSize);
 

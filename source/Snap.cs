@@ -32,7 +32,8 @@ namespace Spludlow.MameAO
 		{
 			string snapFilename = null;
 
-			string snapDirectory = Path.Combine(Globals.Core.Directory, "snap", machine_name);
+			string snapDirectory = Globals.Core.Name == "fbneo" ? Path.Combine(Globals.Core.Directory, "screenshots") : Path.Combine(Globals.Core.Directory, "snap", machine_name);
+
 			if (Directory.Exists(snapDirectory) == true)
 			{
 				var sourceSnapFilenames = new DirectoryInfo(snapDirectory).GetFiles("*.png").OrderByDescending(fileInfo => fileInfo.LastWriteTime).Select(fileInfo => fileInfo.FullName).ToArray();
@@ -466,6 +467,27 @@ namespace Spludlow.MameAO
 			return Database.ExecuteFill(connection, commandText);
 		}
 
+		public static DataTable GetDisplayTableFbNeo(SqlConnection connection)
+		{
+			string commandText = @"
+				SELECT
+					datafile.name AS datafile_name,
+					game.name AS game_name,
+					video.*
+				FROM
+					(
+						datafile
+						INNER JOIN game ON datafile.datafile_id = game.datafile_id
+					)
+					INNER JOIN video ON game.game_id = video.game_id
+				ORDER BY
+					datafile.name,
+					game.name;
+			";
+
+			return Database.ExecuteFill(connection, commandText);
+		}
+
 		public static Size FixedSize(string machine_name, DataTable displayTable)
 		{
 			DataRow[] rows = displayTable.Select($"[name] = '{machine_name}'");
@@ -508,6 +530,29 @@ namespace Spludlow.MameAO
 			bool isRotate = rotate == 90 || rotate == 270;
 
 			return new Size(isRotate ? height_visible : width_visible, isRotate ? width_visible : height_visible);
+		}
+
+		public static Size FixedSizeFbNeo(string software, string softwarelist, DataTable displayTable)
+		{
+			DataRow[] rows = displayTable.Select($"[datafile_name] = '{softwarelist}' AND [game_name] = '{software}'");
+
+			if (rows.Length != 1)
+				return new Size();
+
+			DataRow row = rows[0];
+
+			string orientation = row.Field<string>("orientation") ?? "horizontal";
+			int width = Int32.Parse(row.Field<string>("width"));
+			int height = Int32.Parse(row.Field<string>("height"));
+
+			Size size = new Size(width, height);
+
+			if (orientation == "horizontal")
+				size.Height = (int)Math.Round(size.Width / 4.0 * 3.0, 0);
+			else
+				size.Width = (int)Math.Round(size.Height / 4.0 * 3.0, 0);
+
+			return size;
 		}
 
 		public static void UtilCopyDatabaseRows(string sourceConnectionString, string targetConnectionString, string sourceTableName, string targetTableName)
