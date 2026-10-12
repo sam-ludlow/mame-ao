@@ -189,6 +189,8 @@ namespace Spludlow.MameAO
 
 			var rowLookups = Operations.PerformanceDictionaries(dataSet);
 
+			DataTable snapTable = Snap.LoadSnapIndex(Path.Combine(serverDirectory, "snap"), coreName);
+
 			//
 			//	Traverse - Archive.org links
 			//
@@ -376,8 +378,29 @@ namespace Spludlow.MameAO
 
 						level_game.Counts.Games = 1;
 
-						level_game.Append($"<div style=\"margin: 1em 0;\"><h2 style=\"display:inline;\">Game</h2> &bull; <a href=\"{game_name_enc}.xml\">XML</a> &bull; <a href=\"{game_name_enc}.json\">JSON</a></div>");
+						string runLink = coreName == "fbneo" ? $" &bull; <a href=\"#\" onclick=\"mameAO('{game_name}@{datafile_name}@{coreName}'); return false\">RUN</a>" : "";
+
+						level_game.Append($"<div style=\"margin: 1em 0;\"><h2 style=\"display:inline;\">Game</h2> &bull; <a href=\"{game_name_enc}.xml\">XML</a> &bull; <a href=\"{game_name_enc}.json\">JSON</a>{runLink}</div>");
 						level_game.Append(gameRow);
+
+						if (snapTable != null && coreName == "fbneo")
+						{
+							DataRow snapRow = snapTable.Rows.Find($"{datafile_name}\\{game_name}");
+							if (snapRow != null)
+							{
+								level_game.Append("<hr />");
+								level_game.Append("<h2>snap</h2>");
+								level_game.Append($"<img src=\"/{coreName}/{datafile_name}/{game_name}.png\" alt=\"{game_description} png snap\">");
+								level_game.Append($"<img src=\"/{coreName}/{datafile_name}/{game_name}.jpg\" alt=\"{game_description} jpg snap thumbnail\">");
+								level_game.TableStart("Size", "Modified", "Width", "Height", "X res", "Y res", "Palette Size", "Pixel Format", "Metadata", "Pixel SHA1");
+								level_game.TableRow(snapRow.Field<long>("Length").ToString(), snapRow.Field<DateTime>("LastWriteTime").ToString(),
+									snapRow.Field<int>("Width").ToString(), snapRow.Field<int>("Height").ToString(),
+									snapRow.Field<float>("HorizontalResolution").ToString(), snapRow.Field<float>("VerticalResolution").ToString(),
+									snapRow.Field<long>("PaletteLength").ToString(),
+									snapRow.Field<string>("PixelFormat"), snapRow.Field<string>("PropertyItems"), snapRow.Field<string>("PixelSHA1"));
+								level_game.TableEnd();
+							}
+						}
 						
 						level_game.Append("<hr />");
 
