@@ -175,6 +175,11 @@ namespace Spludlow.MameAO
 
 		public static void ImportSnapFbNeo(string sourceDirectory, string targetDirectory)
 		{
+			ImportSnapSoftware(sourceDirectory, targetDirectory);
+		}
+
+		public static void ImportSnapFbNeoFromExternal(string sourceDirectory, string targetDirectory)
+		{
 			string targetDirectoryPNG = Path.Combine(targetDirectory, "png");
 			Directory.CreateDirectory(targetDirectoryPNG);
 			string targetDirectoryJPG = Path.Combine(targetDirectory, "jpg");

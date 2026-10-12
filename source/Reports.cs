@@ -1805,6 +1805,43 @@ namespace Spludlow.MameAO
 			if (snapTable == null)
 				throw new ApplicationException("Snap index not available");
 
+			if (Globals.Core.Name == "fbneo")
+			{
+				DataTable table = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], @"
+					SELECT
+						machine.ao_type AS [type],
+						machine.name,
+						machine.description,
+						machine.cloneof,
+						machine.romof,
+						machine.isbios
+					FROM
+						machine
+					ORDER BY
+						machine.ao_type,
+						machine.name;
+				");
+				table.Columns.Add("snap", typeof(bool));
+
+				foreach (DataRow row in table.Rows)
+				{
+					string system = (string)row["type"];
+					string machine_name = (string)row["name"];
+					row["snap"] = snapTable.Rows.Find($"{system}\\{machine_name}") != null;
+					row["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/{system}/{machine_name}\" target=\"_blank\" >{machine_name}</a>";
+				}
+
+				foreach (string type in table.Rows.Cast<DataRow>().Select(row => (string)row["type"]).Distinct().OrderBy(type => type))
+				{
+					DataView typeView = new DataView(table);
+					typeView.RowFilter = $"[type] = '{type}' AND [snap] = 0";
+					string reportName = $"{type} Snap Coverage";
+					SaveHtmlReport(Tools.DataTableFromView(typeView, reportName), reportName);
+				}
+
+				return;
+			}
+
 			//
 			// Machine
 			//
@@ -1819,71 +1856,19 @@ namespace Spludlow.MameAO
 					machine.isdevice,
 					machine.ismechanical,
 					machine.sourcefile,
-					driver.status,
-					driver.emulation,
-					input.players,
-					input.coins
+					machine.ao_type AS [type]
 				FROM machine
-					LEFT JOIN [input] ON machine.machine_id = [input].machine_id
-					LEFT JOIN [driver] ON machine.machine_id = [driver].machine_id
 				WHERE
 					(machine.isdevice = 'no')
 				ORDER BY
-					machine.ismechanical,
 					machine.description;
 			");
-			DataTable deviceRefTable = Database.ExecuteFill(machineConnection, @"
-				SELECT
-					device_ref.machine_id,
-					device_ref.name
-				FROM
-					device_ref
-				ORDER BY
-					device_ref.machine_id,
-					device_ref.name;
-			");
-			DataTable softwarelistTable = Database.ExecuteFill(machineConnection, @"
-				SELECT
-					softwarelist.machine_id,
-					softwarelist.name
-				FROM
-					softwarelist
-				ORDER BY
-					softwarelist.machine_id,
-					softwarelist.name;
-			");
-			DataTable inputControlTable = Database.ExecuteFill(machineConnection, @"
-				SELECT
-					machine.name,
-					control.*
-				FROM
-					(
-						machine
-						INNER JOIN [input] ON machine.machine_id = input.machine_id
-					)
-					INNER JOIN control ON input.input_id = control.input_id
-				ORDER BY
-					machine.name,
-					control.type,
-					control.player;
-			");
-
-			machineTable.Columns.Add("type", typeof(string));
 			machineTable.Columns.Add("snap", typeof(bool));
 
 			foreach (DataRow machineRow in machineTable.Rows)
 			{
-				long machine_id = (long)machineRow["machine_id"];
 				string machine_name = (string)machineRow["name"];
-				bool isdevice = (string)machineRow["isdevice"] == "yes";
-
-				int coins = machineRow.IsNull("coins") == false ? Int32.Parse((string)machineRow["coins"]) : 0;
-				machineRow["type"] = OperationsMameish.MameishMachineType(machineRow, isdevice, coins, deviceRefTable, softwarelistTable, inputControlTable);
-
-				DataRow snapRow = snapTable.Rows.Find(machine_name);
-
-				machineRow["snap"] = snapRow != null;
-
+				machineRow["snap"] = snapTable.Rows.Find(machine_name) != null;
 				machineRow["name"] = $"<a href=\"https://data.spludlow.co.uk/{Globals.Core.Name}/machine/{machine_name}\" target=\"_blank\" >{machine_name}</a>";
 			}
 
@@ -1891,9 +1876,7 @@ namespace Spludlow.MameAO
 			{
 				DataView typeView = new DataView(machineTable);
 				typeView.RowFilter = $"[type] = '{type}' AND [snap] = 0";
-
 				string reportName = $"{type} Snap Coverage";
-
 				SaveHtmlReport(Tools.DataTableFromView(typeView, reportName), reportName);
 			}
 
