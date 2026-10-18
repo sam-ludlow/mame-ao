@@ -688,6 +688,15 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						BitTorrent.StartTorrent(parts[1]);
 						return null;
 
+					case ".btreload":
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
+							throw new ApplicationException($"Usage: {parts[0]} <hash>");
+						BitTorrent.StopTorrent(parts[1]);
+						BitTorrent.ReloadTorrent(parts[1]);
+						BitTorrent.StartTorrent(parts[1]);
+						return null;
+
 					case ".creds":
 						File.Delete(ArchiveOrgAuth.CacheFilename);
 						Globals.AuthCookie = ArchiveOrgAuth.GetCookie();
@@ -791,6 +800,13 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 							throw new ApplicationException($"Usage: {parts[0]} <core name> [version]");
 
 						Cores.EnableCore(parts[1], parts.Length == 3 ? parts[2] : null);
+						return null;
+
+					case ".7z2zip":
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
+							throw new ApplicationException($"Usage: {parts[0]} <directory>");
+						Tools.UtilConvert7Zip2Zip(parts[1], parts[1]);
 						return null;
 
 					case ".":

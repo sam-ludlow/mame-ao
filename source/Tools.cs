@@ -1015,7 +1015,7 @@ namespace Spludlow.MameAO
 			{
 				string filenameZip = Path.Combine(targetDirectory, Path.GetFileNameWithoutExtension(filename7Zip) + ".zip");
 
-				Console.WriteLine(filenameZip);
+				Console.WriteLine($"{filename7Zip}\t=>\t{filenameZip}");
 
 				try
 				{

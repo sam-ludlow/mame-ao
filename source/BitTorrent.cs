@@ -301,9 +301,27 @@ namespace Spludlow.MameAO
 					Thread.Sleep(1000);
 
 				dynamic info = DomeInfo();
-				state = (string)((JArray)info.torrents).Single(torrent => (string)torrent["hash"] == hash)["state"];
+
+				var torrent = ((JArray)info.torrents).SingleOrDefault(t => (string)t["hash"] == hash);
+
+				state = torrent != null ? (string)torrent["state"] : "";
 
 				Console.Write(".");
+			}
+		}
+
+		public static void ReloadTorrent(string hash)
+		{
+			dynamic info = DomeInfo();
+
+			if (info != null)
+			{
+				Console.Write("Reloading Torrent...");
+				Tools.Query($"{ClientUrl}/api/reload_torrent?hash={hash}");
+
+				WaitTorrentState(hash, new string[] { "Stopped" });
+
+				Console.WriteLine("...done");
 			}
 		}
 
@@ -394,6 +412,8 @@ namespace Spludlow.MameAO
 
 			DateTime changeTime = DateTime.Now;
 
+			int restartAttempt = 1;
+
 			while (true)
 			{
 				dynamic fileInfo;
@@ -436,12 +456,27 @@ namespace Spludlow.MameAO
 						string hash = (string)fileInfo.torrent_hash;
 
 						Tools.ConsoleHeading(2, new string[] {
-							"DOME-BT is not downloading. Restarting torrent.",
+							$"DOME-BT is not downloading. Restarting attempt: {restartAttempt}",
 							hash
 						});
 
-						StopTorrent(hash);
-						StartTorrent(hash);
+						switch (restartAttempt++)
+						{
+							case 1:
+								StopTorrent(hash);
+								StartTorrent(hash);
+								break;
+
+							case 2:
+								StopTorrent(hash);
+								ReloadTorrent(hash);
+								StartTorrent(hash);
+								break;
+
+							default:
+								Restart();
+								break;
+						}
 
 						changeTime = DateTime.Now;
 					}
