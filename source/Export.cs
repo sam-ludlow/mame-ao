@@ -143,6 +143,12 @@ namespace Spludlow.MameAO
 
 		public static void MachineRoms(string targetDirectory)
 		{
+			if (Globals.Core.Name == "fbneo")
+			{
+				MachineRomsFbNeo(targetDirectory);
+				return;
+			}
+
 			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, name, description FROM machine ORDER BY machine.name");
 			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT machine_id, sha1, name, merge FROM rom WHERE sha1 IS NOT NULL");
 
@@ -241,6 +247,66 @@ namespace Spludlow.MameAO
 			}
 
 			Globals.Reports.SaveHtmlReport(manifestTable, title);
+		}
+
+		public static void MachineRomsFbNeo(string targetDirectory)
+		{
+			Tools.ConsoleHeading(1, new string[] { "FBNeo Export", targetDirectory });
+
+			DataTable datafileTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [name] FROM [datafile] ORDER BY [name]");
+			foreach (DataRow row in datafileTable.Rows)
+				Directory.CreateDirectory(Path.Combine(targetDirectory, (string)row["name"]));
+
+			DataTable machineTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0],
+				"SELECT datafile.name AS datafile_name, machine.name AS machine_name, machine.machine_id FROM datafile INNER JOIN machine ON datafile.datafile_id = machine.datafile_id ORDER BY datafile.name, machine.name");
+
+			DataTable romTable = Database.ExecuteFill(Globals.Core.ConnectionStrings[0],
+				"SELECT rom.machine_id, rom.name, rom.crc, rom.sha1 FROM rom WHERE ((rom.crc IS NOT NULL) AND (rom.merge IS NULL)) ORDER BY rom.machine_id, rom.name");
+
+			foreach (DataRow machineRow in machineTable.Rows)
+			{
+				string datafile_name = (string)machineRow["datafile_name"];
+				string machine_name = (string)machineRow["machine_name"];
+				long machine_id = (long)machineRow["machine_id"];
+
+				DataRow[] romRows = romTable.Select($"machine_id = {machine_id}");
+
+				if (romRows.Length == 0)
+					continue;
+
+				if (!romRows.All(row => (row.Field<string>("sha1") ?? "").Length == 40))
+				{
+					Console.WriteLine($"Unknown SHA1:\t{datafile_name}\t{machine_name}");
+					continue;
+				}
+
+				if (!romRows.All(row => Globals.RomHashStore.Exists(row.Field<string>("sha1")) == true))
+				{
+					Console.WriteLine($"Missing SHA1:\t{datafile_name}\t{machine_name}");
+					continue;
+				}
+
+				string zipFilename = Path.Combine(targetDirectory, datafile_name, machine_name + ".zip");
+				Console.WriteLine(zipFilename);
+				File.Delete(zipFilename);
+
+				using (var zipFile = ZipFile.Open(zipFilename, ZipArchiveMode.Create))
+				{
+					foreach (DataRow row in romRows)
+					{
+						string name = (string)row["name"];
+						string sha1 = (string)row["sha1"];
+						string filename = Globals.RomHashStore.Filename(sha1);
+
+						var entry = zipFile.CreateEntry(name);
+						entry.LastWriteTime = MagicModifiedDate;
+
+						using (var fileStream = File.OpenRead(filename))
+							using (var zipStream = entry.Open())
+								fileStream.CopyTo(zipStream);
+					}
+				}
+			}
 		}
 
 		public static void MachineDisks(string targetDirectory)
