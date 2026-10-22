@@ -1817,6 +1817,8 @@ namespace Spludlow.MameAO
 						machine.isbios
 					FROM
 						machine
+					WHERE
+						machine.isbios IS NULL
 					ORDER BY
 						machine.ao_type,
 						machine.name;
@@ -1835,8 +1837,12 @@ namespace Spludlow.MameAO
 				{
 					DataView typeView = new DataView(table);
 					typeView.RowFilter = $"[type] = '{type}' AND [snap] = 0";
-					string reportName = $"{type} Snap Coverage";
-					SaveHtmlReport(Tools.DataTableFromView(typeView, reportName), reportName);
+
+					if (typeView.Count > 0)
+					{
+						string reportName = $"{type} Snap Coverage";
+						SaveHtmlReport(Tools.DataTableFromView(typeView, reportName), reportName);
+					}
 				}
 
 				return;

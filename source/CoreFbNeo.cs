@@ -335,7 +335,9 @@ namespace Spludlow.MameAO
 				{
 					string datafile_name = (string)datafileRow["name"];
 					foreach (DataRow machineRow in dataSet.Tables["machine"].Select($"datafile_id = {(long)datafileRow["datafile_id"]}"))
-						machineRow["ao_type"] = datafile_name;
+					{
+						machineRow["ao_type"] = machineRow.Field<string>("isbios") == "yes" ? "device" : datafile_name;
+					}
 				}
 
 				var sha1Lookup = HashLookupGetWeb();
@@ -590,7 +592,7 @@ namespace Spludlow.MameAO
 			{
 				using (SQLiteCommand command = new SQLiteCommand(
 					"SELECT [rom].* FROM [datafile] INNER JOIN [machine] ON [datafile].[datafile_id] = [machine].[datafile_id] INNER JOIN [rom] ON [machine].[machine_id] = [rom].[machine_id] " +
-					"WHERE ([datafile].[name] = @datafile_name AND [machine].[name] = @machine_name);", connection))
+					"WHERE ([datafile].[name] = @datafile_name AND [machine].[name] = @machine_name AND [crc] IS NOT NULL);", connection))
 				{
 					command.Parameters.AddWithValue("@datafile_name", datafile_name);
 					command.Parameters.AddWithValue("@machine_name", name);
