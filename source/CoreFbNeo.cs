@@ -1214,9 +1214,6 @@ namespace Spludlow.MameAO
 				{
 					foreach (var zipEntry in zipArchive.Entries)
 					{
-						if (zipEntry.FullName.Contains("/") == true)
-							throw new ApplicationException($"Did not expect directory in ZIP {zipFilename} {zipEntry.FullName}");
-
 						byte[] data;
 						using (var stream = zipEntry.Open())
 						{
@@ -1230,7 +1227,11 @@ namespace Spludlow.MameAO
 						string crc32 = Tools.CRC32Hex(data);
 						string sha1 = Tools.SHA1Hex(data);
 
-						string key = $"{datafile_name}\t{machine_name}\t{zipEntry.FullName}\t{data.Length}\t{crc32}".ToLower();
+						string clone_name = null;
+						if (zipEntry.FullName.Contains("/") == true)
+							clone_name = Path.GetDirectoryName(zipEntry.FullName);
+
+						string key = $"{datafile_name}\t{clone_name ?? machine_name}\t{zipEntry.Name}\t{data.Length}\t{crc32}".ToLower();
 
 						if (lookup.ContainsKey(key) == true)
 						{
