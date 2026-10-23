@@ -5,6 +5,7 @@ using System.Data.SqlClient;
 using System.IO;
 using System.Linq;
 using System.Net;
+using System.Text;
 using System.Xml.Linq;
 
 using Newtonsoft.Json.Linq;
@@ -43,7 +44,12 @@ namespace Spludlow.MameAO
 			}
 
 			using (SqlConnection connection = new SqlConnection($"{serverConnectionString}Database='{databaseName}';"))
-				return DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game, Path.GetDirectoryName(Path.GetDirectoryName(directory)));
+			{
+				DatishMSSQLPayloads(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game, Path.GetDirectoryName(Path.GetDirectoryName(directory)));
+				DatishMSSQLPayloadsSearch(connection, coreName, version, xmlJsonPayloads_datafile, xmlJsonPayloads_game, Path.GetDirectoryName(Path.GetDirectoryName(directory)));
+			}
+
+			return 0;
 		}
 
 		/// <summary>
@@ -540,6 +546,197 @@ namespace Spludlow.MameAO
 			Console.WriteLine("...done");
 
 			Tools.ConsolePrintMemory();
+
+			return 0;
+		}
+
+		private static int DatishMSSQLPayloadsSearch(
+			SqlConnection connection,
+			string coreName,
+			string version,
+			Dictionary<string, string[]> xmlJsonPayloads_datafile,
+			Dictionary<string, string[]> xmlJsonPayloads_game,
+			string serverDirectory)
+		{
+
+			DataTable searchTable = Database.ExecuteFill(connection, @"
+				SELECT
+					CONCAT(datafile.name, '@', game.name) AS [key],
+					game.name,
+					game.game_id,
+					game.sourcefile,
+					game.description,
+					game.year,
+					game.manufacturer,
+					game.cloneof,
+					game.romof,
+					game.comment,
+					game.sampleof,
+					game.isbios,
+					datafile.name AS [type],
+					driver.status,
+					video.type AS video_type,
+					video.orientation,
+					video.width,
+					video.height,
+					video.aspectx,
+					video.aspecty
+				FROM
+					(
+						(
+							datafile
+							INNER JOIN game ON datafile.datafile_id = game.datafile_id
+						)
+						LEFT JOIN driver ON game.game_id = driver.game_id
+					)
+					LEFT JOIN video ON game.game_id = video.game_id
+				ORDER BY
+					datafile.name,
+					game.name;
+			");
+
+			searchTable.TableName = "game_search_payload";
+			searchTable.PrimaryKey = new DataColumn[] { searchTable.Columns["key"] };
+
+			//
+			// Build line payloads
+			//
+			DataTable snapTable = Snap.LoadSnapIndex(Path.Combine(serverDirectory, "snap"), coreName);
+
+			foreach (string name in new string[] { "xml", "json", "html", "html_card" })
+				searchTable.Columns.Add(name, typeof(string));
+
+			string[] columnNames = new string[] { "name", "description", "year", "manufacturer", "cloneof", "romof" };
+
+			foreach (DataRow row in searchTable.Rows)
+			{
+				string datafile_name = (string)row["type"];
+
+				StringBuilder item;
+
+				//
+				// Table row
+				//
+				item = new StringBuilder();
+				item.Append("<tr>");
+
+				foreach (string columnName in columnNames)
+				{
+					DataColumn column = searchTable.Columns[columnName];
+					item.Append("<td>");
+					if (row.IsNull(column) == false)
+					{
+						switch (columnName)
+						{
+							case "name":
+							case "cloneof":
+							case "romof":
+								item.Append($"<a href=\"/{coreName}/{datafile_name}/{row[column]}\">{row[column]}</a>");
+								break;
+							default:
+								item.Append(WebUtility.HtmlEncode(Convert.ToString(row[column])));
+								break;
+						}
+					}
+
+					item.Append("</td>");
+				}
+
+				item.Append("</tr>");
+				row["html"] = item.ToString();
+
+				//
+				// Div card
+				//
+				string machine_name = (string)row["name"];
+				string machine_description = (string)row["description"];
+				string machine_year = row.IsNull("year") ? "" : (string)row["year"];
+				string machine_manufacturer = row.IsNull("manufacturer") ? "" : (string)row["manufacturer"];
+				bool machine_isdevice = row.Field<string>("isbios") == "yes";
+
+				string cardClass = "card";	// machine_isdevice == true ? "card" : $"card-{((string)row["status"])[0]}{((string)row["emulation"])[0]}";
+
+				DataRow snapRow = snapTable?.Rows.Find($"{datafile_name}\\{machine_name}");
+
+				item = new StringBuilder();
+				item.Append($"<div class=\"{cardClass}\">");
+
+				item.Append($"<div class=\"card-thumb\"><a href=\"/{coreName}/{datafile_name}/{machine_name}\" class=\"card-link\">");
+				if (snapRow != null)
+				{
+					item.Append($"<img src=\"/{coreName}/{datafile_name}/{machine_name}.jpg\" alt=\"{machine_description}\" loading=\"lazy\" class=\"card-img\" />");
+				}
+				else
+				{
+					if (machine_isdevice == true)
+						item.Append("<img src=\"/images/device.jpg\" alt=\"device\" class=\"card-img\" />");
+					else
+						item.Append("<p>NO SNAP</p>");
+				}
+
+				item.Append("</a></div>");
+
+				item.Append("<div class=\"card-body\">");
+				item.Append($"<div class=\"card-name\">{machine_name}</div>");
+				item.Append($"<div class=\"card-description\">{machine_description}</div>");
+				item.Append($"<div class=\"card-year\">{machine_year}</div>");
+				item.Append($"<div class=\"card-manufacturer\">{machine_manufacturer}</div>");
+				item.Append("</div>");
+
+				item.Append("</div>");
+				row["html_card"] = item.ToString();
+
+				//
+				// Machine Type
+				//
+				//if (row.Field<string>("isbios") == "yes")
+				//	row["type"] = "device";
+
+				//
+				// Status
+				//
+				//if (machine_isdevice == false)
+				//	row["ao_status"] = MachineAoStatusLookup[$"{(string)row["status"]}-{(string)row["emulation"]}"];
+
+			}
+
+			//
+			// Insert database table
+			//
+			Tools.SetDataTableStringLengths(searchTable);
+
+			Operations.MakeMSSQLPayloadsInsert(connection, searchTable);
+
+			//
+			// Create indexes
+			//
+
+			Database.ExecuteNonQuery(connection, @"
+				CREATE FULLTEXT INDEX ON [game_search_payload]
+				(
+					[name],
+					[description],
+					[year],
+					[manufacturer]
+				)
+				KEY INDEX [PK_game_search_payload]
+				ON [ao_catalog]
+				WITH CHANGE_TRACKING AUTO;
+			");
+
+			Database.ExecuteNonQuery(connection, @"
+				CREATE NONCLUSTERED INDEX [IX_game_search_payload_type_description]
+				ON [game_search_payload]
+				(
+					[type],
+					[description]
+				)
+				INCLUDE (
+					[html],
+					[html_card]
+				);
+			");
+
 
 			return 0;
 		}
