@@ -292,6 +292,34 @@ namespace Spludlow.MameAO
 			return year_fixed;
 		}
 
+		public static int ParseFixYearFbNeo(string year)
+		{
+			string yearFix = year;
+
+			if (yearFix.Contains("+") == true)
+				yearFix = yearFix.Substring(0, 4);
+
+			if (yearFix.Contains("-") == true)
+			{
+				string[] parts = yearFix.Split('-');
+
+				if (parts[1].Length == 2)
+					yearFix = parts[0].Substring(0, 2) + parts[1];
+				else
+					yearFix = parts[1];
+			}
+
+			yearFix = Regex.Replace(yearFix, @"\D", "?");
+
+			if (yearFix.Length > 4)
+				yearFix = yearFix.Substring(0, 4);
+
+			if (yearFix.Length != 4)
+				yearFix = "????";
+
+			return ParseFixYear(yearFix);
+		}
+
 		public static long ParseMameSize(DataRow row)
 		{
 			string size = row.Field<string>("size") ?? "0";

@@ -327,6 +327,8 @@ namespace Spludlow.MameAO
 					}
 				}
 
+				dataSet.Tables["machine"].Columns.Add("ismechanical", typeof(string));
+
 				Cores.AddAoMetaData(dataSet, Globals.AssemblyVersion);
 
 				Cores.AddExtraAoData(dataSet, Globals.AssemblyVersion);

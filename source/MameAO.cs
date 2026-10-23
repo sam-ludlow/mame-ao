@@ -828,92 +828,99 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 				}
 			}
 
-			//	TODO bodged in for now
-			if (Globals.Core.Name == "fbneo")
-			{
-				string commandName = CoreFbNeo.PlaceFbNeo(Globals.Core, line);
-
-				if (commandName != null)
-				{
-					if (Globals.Settings.Options["SnapHome"] == "Yes")
-						Snap.CollectSnaps(commandName);
-
-					Globals.PhoneHome.Ready();
-
-					Mame.RunMame(Path.Combine(Globals.Core.Directory, "fbneo64.exe"), $"{commandName} -w");
-				}
-
-				return commandName;
-			}
-
-			if (Globals.Core.Name == "pinball-visual")
-			{
-				string vpxName = CorePinballVisual.PlacePinball(Globals.Core, line);
-
-				Globals.PhoneHome.Ready();
-
-				Mame.RunMame(Path.Combine(Globals.Core.Directory, "VPinballX64.exe"), $"-play \"tables\\{vpxName}\"");
-
-				return line;
-			}
+			string core = Globals.Core.Name;
+			arguments = null;
 
 			parts = args.Arguments(3, true);
-
-			machine = parts[0];
 
 			if (parts[parts.Length - 1][0] == '-')
 			{
 				arguments = parts[parts.Length - 1];
-				if (parts.Length == 3)
-					software = parts[1];
+				parts = parts.Take(parts.Length - 1).ToArray();
 			}
-			else
+
+			int index = parts[0].LastIndexOf("@");
+			if (index != -1)
 			{
-				if (parts.Length == 2)
-					software = parts[1];
+				core = parts[0].Substring(index + 1);
+				parts[0] = parts[0].Substring(0, index);
 			}
+
+			if (parts.Length != 1 && parts.Length != 2)
+				throw new ApplicationException($"Bad line parts count: {parts.Length}");
+
+			machine = parts[0];
+			software = parts.Length > 1 ? parts[1] : "";
 
 			machine = machine.ToLower();
 			software = software.ToLower();
 
-			string core = Globals.Core.Name;
-			if (machine.Contains("@") == true)
-			{
-				string[] atParts = machine.Split('@');
-				machine = atParts[0];
-				core = atParts[1];
-			}
-
 			string softwareList = null;
-			if (software.Contains("@") == true)
+			if (software != null)
 			{
-				string[] atParts = software.Split('@');
-				software = atParts[0];
-				softwareList = atParts[1];
+				index = software.IndexOf("@");
+				if (index != -1)
+				{
+					softwareList = software.Substring(index + 1);
+					software = software.Substring(0, index);
+				}
 			}
 
 			Cores.EnableCore(core, null);
 
-			Place.PlaceAssets(Globals.Core, machine, software);
+			switch (Globals.Core.Name)
+			{
+				case "mame":
+				case "hbmame":
+					if (Globals.Settings.Options["SnapHome"] == "Yes")
+						Snap.CollectSnaps(machine);
 
-			if (softwareList != null)
-				software = Globals.Core.GetRequiredMedia(machine, softwareList, software);
+					Place.PlaceAssets(Globals.Core, machine, software);
 
-			if (Globals.Settings.Options["Cheats"] == "Yes")
-				arguments += " -cheat";
+					if (softwareList != null)
+						software = Globals.Core.GetRequiredMedia(machine, softwareList, software);
 
-			if (Globals.Settings.Options["SnapNative"] == "Yes")
-				arguments += " -snapview native";
+					if (Globals.Settings.Options["Cheats"] == "Yes")
+						arguments += " -cheat";
 
-			if (Globals.Settings.Options["Window"] == "Yes")
-				arguments += " -window";
+					if (Globals.Settings.Options["SnapNative"] == "Yes")
+						arguments += " -snapview native";
 
-			if (Globals.Settings.Options["SnapHome"] == "Yes")
-				Snap.CollectSnaps(machine);
+					if (Globals.Settings.Options["Window"] == "Yes")
+						arguments += " -window";
 
-			Globals.PhoneHome.Ready();
+					Globals.PhoneHome.Ready();
 
-			Mame.RunMame(Path.Combine(Globals.Core.Directory, $"{Globals.Core.Name}.exe"), $"{machine} {software} {arguments}");
+					Mame.RunMame(Path.Combine(Globals.Core.Directory, $"{Globals.Core.Name}.exe"), $"{machine} {software} {arguments}");
+					break;
+
+				case "fbneo":
+					if (Globals.Settings.Options["SnapHome"] == "Yes")
+						Snap.CollectSnaps(machine);
+
+					machine = CoreFbNeo.PlaceFbNeo(Globals.Core, machine);
+					if (machine != null)
+					{
+						if (Globals.Settings.Options["Window"] == "Yes")
+							arguments += " -w";
+
+						Globals.PhoneHome.Ready();
+
+						Mame.RunMame(Path.Combine(Globals.Core.Directory, "fbneo64.exe"), $"{machine} {arguments}");
+					}
+					break;
+
+				case "pinball-visual":
+					machine = CorePinballVisual.PlacePinball(Globals.Core, machine);
+
+					Globals.PhoneHome.Ready();
+
+					Mame.RunMame(Path.Combine(Globals.Core.Directory, "VPinballX64.exe"), $"-play \"tables\\{machine}\"");
+					break;
+
+				default:
+					throw new ApplicationException("Bad core");
+			}
 
 			return machine;
 		}

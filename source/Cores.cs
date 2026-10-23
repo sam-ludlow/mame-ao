@@ -378,8 +378,9 @@ namespace Spludlow.MameAO
 						machineRow["ao_status"] = driverRows[0].Table.Columns.Contains("emulation") == true ?
 						OperationsMameish.MachineAoStatusLookup[$"{(string)driverRows[0]["status"]}-{(string)driverRows[0]["emulation"]}"] : "";
 
-					if (machineRow.IsNull("year") == false && softwarelistTable != null)	//	fbneo bodge
-						machineRow["ao_year"] = Tools.ParseFixYear((string)machineRow["year"]);
+					string year = machineRow.Field<string>("year");
+					if (year != null)
+						machineRow["ao_year"] = softwarelistTable != null ? Tools.ParseFixYear(year) : Tools.ParseFixYearFbNeo(year);
 				}
 			}
 

@@ -2132,22 +2132,28 @@ namespace Spludlow.MameAO
 
 		public void Report_IYEAR()
 		{
-			var machineConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]);
-			var softwareConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[1]);
-
-			DataTable machineTable = Database.ExecuteFill(machineConnection, "SELECT [year] FROM [machine] WHERE ([isdevice] = 'no') GROUP BY [year] ORDER BY [year]");
-			DataTable softwareTable = Database.ExecuteFill(softwareConnection, "SELECT [year] FROM [software] GROUP BY [year] ORDER BY [year]");
-
-			List<string> yearStrings = new List<string>();
-
-			foreach (var table in new DataTable[] { machineTable, softwareTable })
+			DataTable[] tables;
+			switch (Globals.Core.Name)
 			{
-				foreach (string year in table.Rows.Cast<DataRow>().Select(row => (string)row["year"]))
-					if (yearStrings.Contains(year) == false)
-						yearStrings.Add(year);
+				case "fbneo":
+					tables = new DataTable[] { Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT DISTINCT [year] FROM [machine] WHERE [year] IS NOT NULL") };
+					break;
 
+				default:
+					tables = new DataTable[] {
+						Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT DISTINCT [year] FROM [machine] WHERE [year] IS NOT NULL"),
+						Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT DISTINCT [year] FROM [software] WHERE [year] IS NOT NULL"),
+					};
+					break;
 			}
 
+			List<string> yearStrings = new List<string>();
+			foreach (var table in tables)
+			{
+				foreach (string year in table.Rows.Cast<DataRow>().Select(row => ((string)row["year"]).Trim()))
+					if (yearStrings.Contains(year) == false)
+						yearStrings.Add(year);
+			}
 			yearStrings.Sort();
 
 			DataTable resultTable = Tools.MakeDataTable(
@@ -2157,7 +2163,7 @@ namespace Spludlow.MameAO
 
 			foreach (string yearString in yearStrings)
 			{
-				int year = Tools.ParseFixYear(yearString);
+				int year = Globals.Core.Name == "fbneo" ? Tools.ParseFixYearFbNeo(yearString) : Tools.ParseFixYear(yearString);
 
 				resultTable.Rows.Add(yearString, year);
 			}
