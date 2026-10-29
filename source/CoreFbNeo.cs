@@ -555,6 +555,9 @@ namespace Spludlow.MameAO
 				if (romRows.Any() == false || sha1NotKnown == true)
 					continue;
 
+				if (romRows.All(row => Globals.RomHashStore.Exists(row.Field<string>("sha1")) == true))
+					continue;
+
 				Place.StartBitTorrent();    //	TODO tidy up
 
 				var btFile = BitTorrent.SoftwareRom(core.Name, datafile_name, name);
