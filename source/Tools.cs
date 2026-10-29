@@ -720,14 +720,14 @@ namespace Spludlow.MameAO
 			return total;
 		}
 
-		public static void LinkFiles(string[][] linkTargetFilenames)
+		public static void LinkFiles(Dictionary<string, string> targetFilenameSourceFilenames)
 		{
 			StringBuilder batch = new StringBuilder();
 
-			for (int index = 0; index < linkTargetFilenames.Length; ++index)
+			foreach (var targetFilenameSorceFilename in targetFilenameSourceFilenames)
 			{
-				string link = linkTargetFilenames[index][0];
-				string target = linkTargetFilenames[index][1];
+				string link = targetFilenameSorceFilename.Key;
+				string source = targetFilenameSorceFilename.Value;
 
 				//	Escape cmd special characters, may be more ?
 				link = link.Replace("%", "%%");
@@ -736,7 +736,7 @@ namespace Spludlow.MameAO
 				batch.Append('\"');
 				batch.Append(link);
 				batch.Append("\" \"");
-				batch.Append(target);
+				batch.Append(source);
 				batch.Append('\"');
 				batch.AppendLine();
 			}

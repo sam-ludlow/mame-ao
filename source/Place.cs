@@ -563,58 +563,103 @@ namespace Spludlow.MameAO
 			}
 		}
 
-		public static int PlaceAssetFiles(DataRow[] assetRows, HashStore hashStore, string targetDirectory, string filenameAppend, string[] info)
+		public static int PlaceAssetFiles(IEnumerable<DataRow> assetRows, HashStore hashStore, string targetDirectory, string filenameAppend, string[] info)
+		{
+			return PlaceAssetFiles(assetRows, hashStore, targetDirectory, filenameAppend, info,
+				Globals.LinkingEnabled == true ? PlaceMethod.Link : PlaceMethod.Copy);
+		}
+
+		public static int PlaceAssetFiles(IEnumerable<DataRow> assetRows, HashStore hashStore, string targetDirectory, string filenameAppend, string[] info, PlaceMethod placeMethod)
 		{
 			int missingCount = 0;
 
-			List<string[]> targetStoreFilenames = new List<string[]>();
+			//
+			// Files
+			//
+			Dictionary<string, string> targetFilenameSourceFilenames = new Dictionary<string, string>();
 
 			DateTime when = DateTime.Now;
 
 			foreach (DataRow row in assetRows)
 			{
 				string name = (string)row["name"];
-				string sha1 = (string)row["sha1"];
+				string sha1 = row.Field<string>("sha1") ?? "";
 
-				string targetFilename = Path.Combine(targetDirectory, name);
-				if (filenameAppend != null)
-					targetFilename += filenameAppend;
+				bool fileExists = false;
+				bool have = sha1.Length == 0 ? false : hashStore.Exists(sha1);
 
-				bool fileExists = File.Exists(targetFilename);
-				bool have = hashStore.Exists(sha1);
+				string targetFilename = name;
+
+				if (placeMethod == PlaceMethod.Copy || placeMethod == PlaceMethod.Link)
+				{
+					targetFilename = Path.Combine(targetDirectory, name);
+					if (filenameAppend != null)
+						targetFilename += filenameAppend;
+
+					fileExists = File.Exists(targetFilename);
+				}
+
 				bool place = fileExists == false && have == true;
 
 				if (have == false)
 					++missingCount;
 
-				if (place == true)
-					targetStoreFilenames.Add(new string[] { targetFilename, hashStore.Filename(sha1) });
+				if (placeMethod == PlaceMethod.Zip && row.Field<string>("merge") != null)
+					place = false;
+
+				if (place == true && targetFilenameSourceFilenames.ContainsKey(targetFilename) == false)
+					targetFilenameSourceFilenames.Add(targetFilename, hashStore.Filename(sha1));
 
 				Globals.WorkerTaskReport.Tables["Place"].Rows.Add(when, info[0], info[1], info[2], sha1, place, have, name);
 			}
 
-			PlaceFiles(targetStoreFilenames.ToArray());
+			//
+			// Directories
+			//
+			if (placeMethod == PlaceMethod.Copy || placeMethod == PlaceMethod.Link)
+			{
+				var directories = new HashSet<string>();
+				foreach (string targetFilename in targetFilenameSourceFilenames.Keys)
+					directories.Add(Path.GetDirectoryName(targetFilename));
+
+				foreach (string directory in directories)
+					Directory.CreateDirectory(directory);
+			}
+
+			//
+			// Place
+			//
+			switch (placeMethod)
+			{
+				case PlaceMethod.Copy:
+					foreach (var targetFilenameSourceFilename in targetFilenameSourceFilenames)
+						File.Copy(targetFilenameSourceFilename.Value, targetFilenameSourceFilename.Key, true);
+					break;
+
+				case PlaceMethod.Link:
+					Tools.LinkFiles(targetFilenameSourceFilenames);
+					break;
+
+				case PlaceMethod.Zip:
+					string zipFilename = targetDirectory + ".zip";
+					Directory.CreateDirectory(Path.GetDirectoryName(zipFilename));
+					File.Delete(zipFilename);
+					Console.Write($"Make ZIP {zipFilename} ...");
+					using (var zipFile = ZipFile.Open(zipFilename, ZipArchiveMode.Create))
+					{
+						foreach (var targetFilenameSorceFilename in targetFilenameSourceFilenames)
+							zipFile.CreateEntryFromFile(targetFilenameSorceFilename.Value, targetFilenameSorceFilename.Key);
+					}
+					Console.WriteLine("...done");
+					break;
+
+				default:
+					throw new ApplicationException($"Unknown place method: {placeMethod}");
+
+			}
 
 			return missingCount;
 		}
-		private static void PlaceFiles(string[][] targetStoreFilenames)
-		{
-			HashSet<string> directories = new HashSet<string>();
-			foreach (string[] targetStoreFilename in targetStoreFilenames)
-				directories.Add(Path.GetDirectoryName(targetStoreFilename[0]));
 
-			foreach (string directory in directories)
-				Directory.CreateDirectory(directory);
-
-			if (Globals.LinkingEnabled == true)
-			{
-				Tools.LinkFiles(targetStoreFilenames);
-			}
-			else
-			{
-				foreach (string[] targetStoreFilename in targetStoreFilenames)
-					File.Copy(targetStoreFilename[1], targetStoreFilename[0], true);
-			}
-		}
 	}
 }

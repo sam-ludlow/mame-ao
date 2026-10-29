@@ -342,63 +342,7 @@ namespace Spludlow.MameAO
 					}
 				}
 
-				var sha1Lookup = HashLookupGetWeb();
-
-				Console.Write("Setting SHA1 ...");
-
-				var rowLookups = Operations.PerformanceDictionaries(dataSet);
-
-				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Rows)
-				{
-					long datafile_id = (long)datafileRow["datafile_id"];
-					string datafile_name = (string)datafileRow["name"];
-					foreach (DataRow machineRow in rowLookups["machine"][datafile_id])
-					{
-						long machine_id = (long)machineRow["machine_id"];
-						string machine_name = (string)machineRow["name"];
-
-						List<string> machines_names = new List<string>();
-
-						string romof = machine_name;
-						while (romof != null)
-						{
-							machines_names.Add(romof);
-							var rows = rowLookups["machine"][datafile_id].Where(row => (string)row["name"] == romof).ToArray();
-							romof = null;
-							if (rows.Length == 1)
-								romof = rows[0].IsNull("romof") ? null : (string)rows[0]["romof"];
-						}
-
-						foreach (DataRow romRow in rowLookups["rom"][machine_id])
-						{
-							if (romRow.IsNull("crc") == true)
-								continue;
-
-							string rom_name = (string)romRow["name"];
-							string size = Int64.Parse((string)romRow["size"]).ToString();
-							string crc = (string)romRow["crc"];
-							string merge = romRow.Field<string>("merge");
-
-							string key = $"{datafile_name}\t{machine_name}\t{rom_name}\t{size}\t{crc}".ToLower();
-
-							if (sha1Lookup.ContainsKey(key) == true)
-							{
-								romRow["sha1"] = sha1Lookup[key];
-							}
-
-							if (machines_names.Count > 1 && merge != null)
-							{
-								foreach (string romof_name in machines_names.Skip(1))
-								{
-									key = $"{datafile_name}\t{romof_name}\t{merge}\t{size}\t{crc}".ToLower();
-									if (sha1Lookup.ContainsKey(key) == true)
-										romRow["sha1"] = sha1Lookup[key];
-								}
-							}
-						}
-					}
-				}
-				Console.WriteLine("... done");
+				HashLookupSetDataSet(dataSet);
 
 				Console.Write($"Creating SQLite database {sqlLiteFilename} ...");
 				Database.DataSet2SQLite("fbneo", _ConnectionString, dataSet);
@@ -550,8 +494,6 @@ namespace Spludlow.MameAO
 			if (parts.Length != 2)
 				throw new ApplicationException("Bad Line");
 
-			Place._BtStarted = false;	//	TODO tidy up
-
 			string datafile_name = parts[1];
 			string machine_name = parts[0];
 
@@ -559,12 +501,13 @@ namespace Spludlow.MameAO
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
-			HashSet<string> machine_names = new HashSet<string>();
+			Dictionary<string, IEnumerable<DataRow>> machineNameRomRows = new Dictionary<string, IEnumerable<DataRow>>();
 			string machine_description = null;
 
 			string romof = machine_name;
 			while (romof != null)
 			{
+				DataTable machineTable;
 				using (SQLiteCommand command = new SQLiteCommand(
 					"SELECT [machine].[machine_id], [machine].[description], [machine].[romof] FROM [datafile] INNER JOIN [machine] ON [datafile].[datafile_id] = [machine].[datafile_id] " +
 					"WHERE ([machine].[name] = @machine_name AND [datafile].[name] = @datafile_name)", connection))
@@ -572,118 +515,82 @@ namespace Spludlow.MameAO
 					command.Parameters.AddWithValue("@datafile_name", datafile_name);
 					command.Parameters.AddWithValue("@machine_name", romof);
 
-					DataTable machineTable = Database.ExecuteFill(command);
-
-					if (machineTable.Rows.Count == 0)
-						throw new ApplicationException($"Machine not found {datafile_name} / {machine_name}");
-
-					machine_names.Add(romof);
-
-					if (romof == machine_name)
-						machine_description = (string)machineTable.Rows[0]["description"];
-
-					romof = machineTable.Rows[0].Field<string>("romof");
+					machineTable = Database.ExecuteFill(command);
 				}
-			}
 
-			Tools.ConsoleHeading(1, new string[] { machine_description, String.Join(", ", machine_names), core.Directory });
+				if (machineTable.Rows.Count == 0)
+					throw new ApplicationException($"Machine not found {datafile_name} / {machine_name}");
 
-			int zipCount = 0;
-
-			foreach (string name in machine_names)
-			{
+				DataTable romTable;
 				using (SQLiteCommand command = new SQLiteCommand(
 					"SELECT [rom].* FROM [datafile] INNER JOIN [machine] ON [datafile].[datafile_id] = [machine].[datafile_id] INNER JOIN [rom] ON [machine].[machine_id] = [rom].[machine_id] " +
 					"WHERE ([datafile].[name] = @datafile_name AND [machine].[name] = @machine_name AND [crc] IS NOT NULL);", connection))
 				{
 					command.Parameters.AddWithValue("@datafile_name", datafile_name);
-					command.Parameters.AddWithValue("@machine_name", name);
+					command.Parameters.AddWithValue("@machine_name", romof);
 
-					DataTable romTable = Database.ExecuteFill(command);
-
-					if (romTable.Rows.Count == 0)
-						throw new ApplicationException($"No machine roms found {datafile_name} / {name}");
-
-					string[] info = new string[] { "fbneo", datafile_name, name };
-
-					bool sha1NotKnown = false;
-					bool downloadRequired = false;
-					foreach (DataRow romRow in romTable.Rows)
-					{
-						string sha1 = romRow.Field<string>("sha1") ?? "";
-
-						if (sha1 == "")
-						{
-							sha1NotKnown = true;
-							break;
-						}
-
-						if (Globals.RomHashStore.Exists(sha1) == false)
-						{
-							downloadRequired = true;
-							break;
-						}
-					}
-
-					if (sha1NotKnown == true)
-					{
-						Console.WriteLine($"!!! SHA1 not known, can not use:\t{name}");
-						continue;
-					}
-
-					if (downloadRequired == true)
-					{
-						Place.StartBitTorrent();	//	TODO tidy up
-
-						var btFile = BitTorrent.SoftwareRom(core.Name, datafile_name, name);
-						if (btFile != null)
-							Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
-					}
-
-					bool complete = true;
-					foreach (DataRow row in romTable.Rows)
-					{
-						if (row.IsNull("merge") == false)
-							continue;
-
-						if (Globals.RomHashStore.Exists(row.Field<string>("sha1")) == false)
-						{
-							complete = false;
-							break;
-						}
-					}
-					if (complete == false)
-					{
-						Console.WriteLine($"!!! Dont have assets, can not use:\t{name}");
-						continue;
-					}
-
-					string romDirectory = Path.Combine(core.Directory, "roms", datafile_name, name);
-					string zipFilename = romDirectory + ".zip";
-					File.Delete(zipFilename);
-
-					DateTime when = DateTime.Now;
-					using (var zipFile = ZipFile.Open(zipFilename, ZipArchiveMode.Create))
-					{
-						foreach (DataRow row in romTable.Rows)
-						{
-							if (row.IsNull("merge") == false)
-								continue;
-
-							string rom_name = (string)row["name"];
-							string sha1 = (string)row["sha1"];
-
-							zipFile.CreateEntryFromFile(Globals.RomHashStore.Filename(sha1), rom_name);
-
-							Globals.WorkerTaskReport.Tables["Place"].Rows.Add(when, info[0], info[1], info[2], sha1, true, true, name);
-						}
-					}
-
-					++zipCount;
+					romTable = Database.ExecuteFill(command);
 				}
+
+				machineNameRomRows.Add(romof, romTable.AsEnumerable());
+
+				if (romof == machine_name)
+					machine_description = (string)machineTable.Rows[0]["description"];
+
+				romof = machineTable.Rows[0].Field<string>("romof");
 			}
 
-			if (zipCount != machine_names.Count)
+			Tools.ConsoleHeading(1, new string[] { machine_description, String.Join(", ", machineNameRomRows.Keys), core.Directory });
+
+			Place._BtStarted = false;   //	TODO tidy up
+
+			foreach (string name in machineNameRomRows.Keys)
+			{
+				IEnumerable<DataRow> romRows = machineNameRomRows[name];
+
+				string[] info = new string[] { "fbneo", datafile_name, name };
+
+				bool sha1NotKnown = romRows.Any(row => row.Field<string>("sha1") == null);
+
+				if (romRows.Any() == false || sha1NotKnown == true)
+					continue;
+
+				Place.StartBitTorrent();    //	TODO tidy up
+
+				var btFile = BitTorrent.SoftwareRom(core.Name, datafile_name, name);
+				if (btFile != null)
+					Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
+			}
+
+			int missingCount = 0;
+
+			foreach (string name in machineNameRomRows.Keys)
+			{
+				IEnumerable<DataRow> romRows = machineNameRomRows[name];
+
+				string[] info = new string[] { "fbneo", datafile_name, name };
+
+				if (romRows.Any() == false)
+					continue;
+
+				bool sha1NotKnown = romRows.Any(row => row.Field<string>("sha1") == null);
+
+				if (sha1NotKnown == true)
+				{
+					Console.WriteLine($"!!! SHA1 not known, can not use:\t{name}");
+					++missingCount;
+					continue;
+				}
+
+				string romDirectory = Path.Combine(core.Directory, "roms", datafile_name, name);
+
+				missingCount += Place.PlaceAssetFiles(romRows, Globals.RomHashStore, romDirectory, null, info, PlaceMethod.Zip);
+			}
+
+			if (Globals.Settings.Options["PlaceReport"] == "Yes")
+				Globals.Reports.SaveHtmlReport(Globals.WorkerTaskReport, $"Place Assets {machine_name} {datafile_name}");
+
+			if (missingCount > 0)
 			{
 				Console.WriteLine($"Missing assets not running fbneo:\t{machine_name}");
 				return null;
@@ -916,10 +823,8 @@ namespace Spludlow.MameAO
 
 
 
-		DataRow ICore.GetMachine(string machine_name)
-		{
-			throw new NotImplementedException();
-		}
+		DataRow ICore.GetMachine(string machine_name) => Cores.GetMachine(_ConnectionString, machine_name);
+
 
 		DataRow[] ICore.GetMachineDeviceRefs(string machine_name)
 		{
@@ -1042,6 +947,66 @@ namespace Spludlow.MameAO
 
 		//	UtilSaveHashLookup(lookupFilename, lookup);
 		//}
+
+		public static void HashLookupSetDataSet(DataSet dataSet)
+		{
+			var sha1Lookup = HashLookupGetWeb();
+
+			var rowLookups = Operations.PerformanceDictionaries(dataSet);
+
+			Console.Write("Setting SHA1 ...");
+			foreach (DataRow datafileRow in dataSet.Tables["datafile"].Rows)
+			{
+				long datafile_id = (long)datafileRow["datafile_id"];
+				string datafile_name = (string)datafileRow["name"];
+				foreach (DataRow machineRow in rowLookups["machine"][datafile_id])
+				{
+					long machine_id = (long)machineRow["machine_id"];
+					string machine_name = (string)machineRow["name"];
+
+					List<string> machines_names = new List<string>();
+
+					string romof = machine_name;
+					while (romof != null)
+					{
+						machines_names.Add(romof);
+						var rows = rowLookups["machine"][datafile_id].Where(row => (string)row["name"] == romof).ToArray();
+						romof = null;
+						if (rows.Length == 1)
+							romof = rows[0].IsNull("romof") ? null : (string)rows[0]["romof"];
+					}
+
+					foreach (DataRow romRow in rowLookups["rom"][machine_id])
+					{
+						if (romRow.IsNull("crc") == true)
+							continue;
+
+						string rom_name = (string)romRow["name"];
+						string size = Int64.Parse((string)romRow["size"]).ToString();
+						string crc = (string)romRow["crc"];
+						string merge = romRow.Field<string>("merge");
+
+						string key = $"{datafile_name}\t{machine_name}\t{rom_name}\t{size}\t{crc}".ToLower();
+
+						if (sha1Lookup.ContainsKey(key) == true)
+						{
+							romRow["sha1"] = sha1Lookup[key];
+						}
+
+						if (machines_names.Count > 1 && merge != null)
+						{
+							foreach (string romof_name in machines_names.Skip(1))
+							{
+								key = $"{datafile_name}\t{romof_name}\t{merge}\t{size}\t{crc}".ToLower();
+								if (sha1Lookup.ContainsKey(key) == true)
+									romRow["sha1"] = sha1Lookup[key];
+							}
+						}
+					}
+				}
+			}
+			Console.WriteLine("... done");
+		}
 
 		public static Dictionary<string, string> HashLookupGetWeb()
 		{

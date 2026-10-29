@@ -52,15 +52,22 @@ namespace Spludlow.MameAO
 				table.Rows[index].Delete();
 				table.AcceptChanges();
 
-				string arguments = $"{machine_name} -verifyroms";   //	Can't verifyroms {software}
-
 				Tools.ConsoleHeading(2, new string[] { $"START Test {profile} machine:{machine_name} software:{software}",
-					arguments,
 					$"Remaining tests {count}, Remaining rows {table.Rows.Count}" });
 
-				Place.PlaceAssets(Globals.Core, machine_name, software);
+				int exitCode;
 
-				int exitCode = RunMame(arguments);
+				switch (Globals.Core.Name)
+				{
+					case "fbneo":
+						exitCode = CoreFbNeo.PlaceFbNeo(Globals.Core, $"{machine_name}@{profile}@fbneo") == null ? -1 : 0;
+						break;
+
+					default:
+						Place.PlaceAssets(Globals.Core, machine_name, software);
+						exitCode = RunMame($"{machine_name} -verifyroms");
+						break;
+				}
 
 				Tools.ConsoleHeading(2, new string[] { $"END Test {profile} {machine_name}", $"Exit Code {exitCode}" });
 

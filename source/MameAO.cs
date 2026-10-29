@@ -21,6 +21,13 @@ namespace Spludlow.MameAO
 		Support,
 	};
 
+	public enum PlaceMethod
+	{
+		Copy,
+		Link,
+		Zip,
+	}
+
 	public class DataQueryProfile
 	{
 		public string Key;
@@ -199,17 +206,17 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			//
 
 			string linkFilename = Path.Combine(Globals.RootDirectory, @"_LINK_TEST.txt");
-			string targetFilename = Path.Combine(Globals.RootDirectory, @"_TARGET_TEST.txt");
+			string sourceFilename = Path.Combine(Globals.RootDirectory, @"_SOURCE_TEST.txt");
 
 			File.Delete(linkFilename);
-			File.WriteAllText(targetFilename, "TEST");
+			File.WriteAllText(sourceFilename, "TEST");
 
-			Tools.LinkFiles(new string[][] { new string[] { linkFilename, targetFilename } });
+			Tools.LinkFiles(new Dictionary<string, string>() { { linkFilename, sourceFilename } });
 
 			Globals.LinkingEnabled = File.Exists(linkFilename);
 
 			File.Delete(linkFilename);
-			File.Delete(targetFilename);
+			File.Delete(sourceFilename);
 
 			if (Globals.LinkingEnabled == false)
 				Tools.ConsoleHeading(3, "!!! You can save a lot of disk space by enabling symbolic links, see the README.");
