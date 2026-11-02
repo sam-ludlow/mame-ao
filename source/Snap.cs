@@ -265,6 +265,7 @@ namespace Spludlow.MameAO
 				existingTable = Tools.TextTableReadFile(indexFilename);
 
 			int count = 0;
+			int newCount = 0;
 			string[] filenames = Directory.GetFiles(directory, "*.png", SearchOption.AllDirectories);
 			foreach (string filename in filenames)
 			{
@@ -282,16 +283,21 @@ namespace Spludlow.MameAO
 				{
 					using (Image image = Image.FromFile(filename))
 					{
-						string propertyItems = String.Join(", ",
-								image.PropertyItems.Where(item => item.Type == 2)
-								.Select(item => item.Id + ":" + new string(item.Value.Select(b => (b >= 32 && b <= 126) ? (char)b : ' ').ToArray()).Trim())
-							);
+						var propertyItems = image.PropertyItems.Where(item => item.Type == 2).Select(item => {
+
+							string id = Tools.ImagePropertyTags.ContainsKey(item.Id) ? Tools.ImagePropertyTags[item.Id] : item.Id.ToString("X4");
+							string value = new string(item.Value.Select(b => b >= 32 && b <= 126 ? (char)b : ' ').ToArray()).Trim();
+
+							return $"{id}:{value}";
+						});
 
 						string pixelHash = Tools.SHA1Hex(GetPixelData(image));
 
 						table.Rows.Add(name, info.Length, info.LastWriteTime,
 							image.Width, image.Height, image.HorizontalResolution, image.VerticalResolution,
-							image.Palette.Entries.LongLength, image.PixelFormat.ToString(), propertyItems, pixelHash);
+							image.Palette.Entries.LongLength, image.PixelFormat.ToString(), String.Join(", ", propertyItems), pixelHash);
+
+						++newCount;
 					}
 				}
 				else
@@ -302,6 +308,8 @@ namespace Spludlow.MameAO
 				if ((count++ % 4096) == 0)
 					Console.WriteLine($"{count}/{filenames.Length}");
 			}
+
+			Console.WriteLine($"Index Complete - new:{newCount}\texisting:{count - newCount}\ttotal:{count}");
 
 			File.Delete(indexFilename);
 			File.WriteAllText(indexFilename, Tools.TextTable(table), Encoding.UTF8);

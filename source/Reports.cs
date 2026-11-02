@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.Diagnostics;
+using System.Drawing;
 using System.IO;
 using System.Linq;
 using System.Net;
@@ -191,6 +192,13 @@ namespace Spludlow.MameAO
 				Code = "SNAPUNK",
 				Text = "Snap Unknown",
 				Decription = "What snaps are not in the database. Find bulk renames.",
+			},
+			new ReportType(){
+				Key = "snap-meta",
+				Group = "interesting",
+				Code = "SNAPMETA",
+				Text = "Snap Meta data",
+				Decription = "Look in the PNG metadata.",
 			},
 			new ReportType(){
 				Key = "machine-type",
@@ -1968,14 +1976,21 @@ namespace Spludlow.MameAO
 
 			HashSet<string> databaseNames = new HashSet<string>();
 
-			var machineConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]);
-			var softwareConnection = new SQLiteConnection(Globals.Core.ConnectionStrings[1]);
+			switch (Globals.Core.Name)
+			{
+				case "fbneo":
+					foreach (DataRow row in Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [datafile].[name], [machine].[name] FROM datafile INNER JOIN machine ON datafile.datafile_id = machine.datafile_id WHERE ([machine].[isbios] IS NULL)").Rows)
+						databaseNames.Add($"{(string)row[0]}\\{(string)row[1]}");
+					break;
 
-			foreach (DataRow row in Database.ExecuteFill(machineConnection, "SELECT [name] from [machine] WHERE [isdevice] = 'no'").Rows)
-				databaseNames.Add((string)row["name"]);
+				default:
+					foreach (DataRow row in Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [name] from [machine] WHERE ([isdevice] = 'no')").Rows)
+						databaseNames.Add((string)row[0]);
 
-			foreach (DataRow row in Database.ExecuteFill(softwareConnection, "SELECT [softwarelist].[name] AS softwarelist_name, [software].[name] AS software_name FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id").Rows)
-				databaseNames.Add((string)row["softwarelist_name"] + @"\" + (string)row["software_name"]);
+					foreach (DataRow row in Database.ExecuteFill(Globals.Core.ConnectionStrings[1], "SELECT [softwarelist].[name], [software].[name] FROM softwarelist INNER JOIN software ON softwarelist.softwarelist_id = software.softwarelist_id").Rows)
+						databaseNames.Add($"{(string)row[0]}\\{(string)row[1]}");
+					break;
+			}
 
 			DataTable resultTable = snapTable.Clone();
 			resultTable.TableName = "Unkown Snaps";
@@ -1993,14 +2008,70 @@ namespace Spludlow.MameAO
 
 			SaveHtmlReport(Tools.DataTableFromView(view, resultTable.TableName), resultTable.TableName);
 
-			//StringBuilder commands = new StringBuilder();
-			//foreach (DataRowView rowView in view)
-			//{
-			//	string key = (string)rowView.Row["Key"];
-			//	commands.AppendLine($"del {snapDirectory}\\{Globals.Core.Name}\\png\\{key}.png");
-			//	commands.AppendLine($"del {snapDirectory}\\{Globals.Core.Name}\\jpg\\{key}.jpg");
-			//}
-			//Tools.PopText(commands.ToString());
+			StringBuilder commands = new StringBuilder();
+			foreach (DataRowView rowView in view)
+			{
+				string key = (string)rowView.Row["Key"];
+				commands.AppendLine($"del {snapDirectory}\\{Globals.Core.Name}\\png\\{key}.png");
+				commands.AppendLine($"del {snapDirectory}\\{Globals.Core.Name}\\jpg\\{key}.jpg");
+			}
+			Tools.PopText(commands.ToString());
+		}
+
+		public void Report_SNAPMETA()
+		{
+			if (Globals.Config.ContainsKey("ServerPath") == false)
+				throw new ApplicationException("You must have ServerPath set in _config.txt");
+
+			string snapDirectory = Path.Combine(Globals.Config["ServerPath"], "snap");
+
+			DataTable snapTable = Snap.LoadSnapIndex(snapDirectory, Globals.Core.Name);
+
+			if (snapTable == null)
+				throw new ApplicationException("Snap index not available");
+
+			string pngDirectory = Path.Combine(snapDirectory, Globals.Core.Name, "png");
+
+			//pngDirectory += "\\arcade";
+
+			DataTable resultTable = Tools.MakeDataTable("Snap Meta",
+				"Name	Id		Type	Len		Value",
+				"String	String	Int16	Int32	String");
+
+			foreach (string filename in Directory.GetFiles(pngDirectory, "*.png", SearchOption.AllDirectories))
+			{
+				Console.WriteLine(filename);
+				using (Image image = Image.FromFile(filename))
+				{
+					string name = filename.Substring(pngDirectory.Length + 1);
+					name = name.Substring(0, name.Length - 4);
+
+					foreach (var item in image.PropertyItems)
+					{
+						string id = Tools.ImagePropertyTags.ContainsKey(item.Id) ? Tools.ImagePropertyTags[item.Id] : item.Id.ToString("X4");
+
+						string value;
+
+						switch (item.Type)
+						{
+							case 2:
+								value = new string(item.Value.Select(b => b >= 32 && b <= 126 ? (char)b : ' ').ToArray()).Trim();
+								break;
+
+							default:
+								value = BitConverter.ToString(item.Value).Replace("-", "").ToLower();
+								break;
+						}
+
+						resultTable.Rows.Add(name, id, item.Type, item.Len, value);
+					}
+
+					//if (resultTable.Rows.Count == 100)
+					//	break;
+				}
+			}
+
+			SaveHtmlReport(resultTable, resultTable.TableName);
 		}
 
 		public void Report_IMTYPE()
