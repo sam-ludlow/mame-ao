@@ -342,7 +342,7 @@ namespace Spludlow.MameAO
 					}
 				}
 
-				HashLookupSetDataSet(dataSet);
+				HashLookupSetDataSet(dataSet, HashLookupGetWeb());
 
 				Console.Write($"Creating SQLite database {sqlLiteFilename} ...");
 				Database.DataSet2SQLite("fbneo", _ConnectionString, dataSet);
@@ -914,50 +914,17 @@ namespace Spludlow.MameAO
 			throw new NotImplementedException();
 		}
 
-		//public static void UtilImportXmlHashLookup(string lookupFilename, string xmlFilename)
-		//{
-		//	var lookup = new Dictionary<string, string>();
-
-		//	var datafilesElement = XElement.Load(xmlFilename, LoadOptions.None);
-
-		//	foreach (var datafileElement in datafilesElement.Elements())
-		//	{
-		//		string datafile_name = datafileElement.Attribute("name").Value;
-
-		//		//	TODO: samples
-		//		if (datafile_name == "samples")
-		//			continue;
-
-		//		Console.WriteLine(datafile_name);
-
-		//		foreach (var machineElement in datafileElement.Elements())
-		//		{
-		//			string machine_name = machineElement.Attribute("name").Value;
-
-		//			foreach (var romElement in machineElement.Elements("rom"))
-		//			{
-		//				string rom_name = romElement.Attribute("name").Value;
-		//				long rom_size = Int64.Parse(romElement.Attribute("size").Value);
-		//				string rom_crc = romElement.Attribute("crc").Value;
-		//				string rom_sha1 = romElement.Attribute("sha1").Value;
-
-		//				string key = $"{datafile_name}\t{machine_name}\t{rom_name}\t{rom_size}\t{rom_crc}".ToLower();
-
-		//				lookup.Add(key, rom_sha1);
-		//			}
-		//		}
-		//	}
-
-		//	UtilSaveHashLookup(lookupFilename, lookup);
-		//}
-
-		public static void HashLookupSetDataSet(DataSet dataSet)
+		public static string HashLookupMakeKey(string datafile_name, string machine_name, string rom_name, string size, string crc)
 		{
-			var sha1Lookup = HashLookupGetWeb();
+			return $"{datafile_name}\t{machine_name}\t{rom_name}\t{size}\t{crc}".ToLower();
+		}
 
+		public static void HashLookupSetDataSet(DataSet dataSet, Dictionary<string, string> lookup)
+		{
 			var rowLookups = Operations.PerformanceDictionaries(dataSet);
 
 			Console.Write("Setting SHA1 ...");
+
 			foreach (DataRow datafileRow in dataSet.Tables["datafile"].Rows)
 			{
 				long datafile_id = (long)datafileRow["datafile_id"];
@@ -989,26 +956,85 @@ namespace Spludlow.MameAO
 						string crc = (string)romRow["crc"];
 						string merge = romRow.Field<string>("merge");
 
-						string key = $"{datafile_name}\t{machine_name}\t{rom_name}\t{size}\t{crc}".ToLower();
+						string key = HashLookupMakeKey(datafile_name, machine_name, rom_name, size, crc);
 
-						if (sha1Lookup.ContainsKey(key) == true)
-						{
-							romRow["sha1"] = sha1Lookup[key];
-						}
+						if (lookup.ContainsKey(key) == true && String.IsNullOrEmpty(lookup[key]) == false)
+							romRow["sha1"] = lookup[key];
 
 						if (machines_names.Count > 1 && merge != null)
 						{
 							foreach (string romof_name in machines_names.Skip(1))
 							{
-								key = $"{datafile_name}\t{romof_name}\t{merge}\t{size}\t{crc}".ToLower();
-								if (sha1Lookup.ContainsKey(key) == true)
-									romRow["sha1"] = sha1Lookup[key];
+								key = HashLookupMakeKey(datafile_name, romof_name, merge, size, crc);
+
+								if (lookup.ContainsKey(key) == true && String.IsNullOrEmpty(lookup[key]) == false)
+									romRow["sha1"] = lookup[key];
 							}
 						}
 					}
 				}
 			}
+
 			Console.WriteLine("... done");
+		}
+
+		private static void HashLookupUpdateDatabase(Dictionary<string, string> lookup)
+		{
+			DataSet dataSet = new DataSet();
+			using (SQLiteConnection connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]))
+			{
+				foreach (string tableName in new string[] { "subsets", "subset", "datafile", "machine", "rom" })
+				{
+					DataTable table = Database.ExecuteFill(connection, $"SELECT * FROM [{tableName}]");
+					table.TableName = tableName;
+					dataSet.Tables.Add(table);
+				}
+			}
+
+			var wantedRomIds = dataSet.Tables["rom"].Select("[crc] IS NOT NULL AND [sha1] IS NULL").Cast<DataRow>().Select(row => (long)row["rom_id"]).ToHashSet();
+
+			HashLookupSetDataSet(dataSet, lookup);
+
+			Console.Write("update sha1 in database ...");
+			using (SQLiteConnection connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]))
+			{
+				using (SQLiteCommand command = new SQLiteCommand("UPDATE [rom] SET [sha1] = @sha1 WHERE [rom_id] = @rom_id", connection))
+				{
+					command.Parameters.Add("@sha1", DbType.String);
+					command.Parameters.Add("@rom_id", DbType.Int64);
+
+					connection.Open();
+
+					SQLiteTransaction transaction = connection.BeginTransaction();
+					try
+					{
+						foreach (DataRow romRow in dataSet.Tables["rom"].Select("[sha1] IS NOT NULL"))
+						{
+							long rom_id = (long)romRow["rom_id"];
+							if (wantedRomIds.Contains(rom_id) == false)
+								continue;
+
+							string sha1 = (string)romRow["sha1"];
+
+							command.Parameters["@sha1"].Value = sha1;
+							command.Parameters["@rom_id"].Value = rom_id;
+							command.ExecuteNonQuery();
+						}
+
+						transaction.Commit();
+					}
+					catch
+					{
+						transaction.Rollback();
+						throw;
+					}
+					finally
+					{
+						connection.Close();
+					}
+				}
+			}
+			Console.WriteLine("...done");
 		}
 
 		public static Dictionary<string, string> HashLookupGetWeb()
@@ -1043,7 +1069,8 @@ namespace Spludlow.MameAO
 						string key = line.Substring(0, index);
 						string sha1 = line.Substring(index + 1);
 
-						lookup.Add(key, sha1);
+						if (sha1 != "")
+							lookup.Add(key, sha1);
 					}
 				}
 			}
@@ -1051,124 +1078,12 @@ namespace Spludlow.MameAO
 			return lookup;
 		}
 
-		public static void HashLookupLoad(string filename)
-		{
-			var lookup = HashLookupGetDatabase();
-
-			var romIdLookup = HashLookupRomIdLookup();
-			var sha1RomIdUpdates = new Dictionary<long[], string>();
-
-			using (var reader = new StreamReader(filename, Encoding.UTF8))
-			{
-				string line;
-				while ((line = reader.ReadLine()) != null)
-				{
-					int index = line.LastIndexOf("\t");
-					string key = line.Substring(0, index);
-					string sha1 = line.Substring(index + 1);
-
-					if (lookup.ContainsKey(key) == true)
-					{
-						if (String.IsNullOrEmpty(lookup[key]) == true)
-						{
-							lookup[key] = sha1;
-							sha1RomIdUpdates.Add(romIdLookup[key].ToArray(), sha1);
-						}
-						else
-						{
-							if (lookup[key] != sha1)
-								throw new ApplicationException($"SHA1 mismatch {key}\t'{lookup[key]}'\t'{sha1}'");
-						}
-					}
-					else
-					{
-						Console.WriteLine($"Merge existing not in database: {key}");
-					}
-				}
-			}
-
-			HashLookupUpdateDatabase(sha1RomIdUpdates);
-		}
-
-		private static Dictionary<string, HashSet<long>> HashLookupRomIdLookup()
-		{
-			var romIdLookup = new Dictionary<string, HashSet<long>>();
-			using (SQLiteConnection connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]))
-			{
-				DataTable table = Database.ExecuteFill(connection, @"
-					SELECT [datafile].[name], [machine].[name], [rom].[name], [rom].[size], [rom].[crc], [rom].[rom_id]
-					FROM [datafile] INNER JOIN [machine] ON [datafile].[datafile_id] = [machine].[datafile_id]
-					INNER JOIN [rom] ON [machine].[machine_id] = [rom].[machine_id]
-					WHERE ([rom].[crc] IS NOT NULL);
-				");
-
-				foreach (DataRow row in table.Rows)
-				{
-					string key = $"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\t{row[4]}".ToLower();
-					if (romIdLookup.ContainsKey(key) == false)
-						romIdLookup.Add(key, new HashSet<long>());
-
-					romIdLookup[key].Add(row.Field<long>(5));
-				}
-			}
-
-			return romIdLookup;
-		}
-
-		private static void HashLookupUpdateDatabase(Dictionary<long[], string> sha1RomIdUpdates)
-		{
-			if (sha1RomIdUpdates.Count == 0)
-				return;
-
-			Console.Write("update sha1 in database ...");
-			using (SQLiteConnection connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]))
-			{
-				using (SQLiteCommand command = new SQLiteCommand("UPDATE [rom] SET [sha1] = @sha1 WHERE [rom_id] = @rom_id", connection))
-				{
-					command.Parameters.Add("@sha1", DbType.String);
-					command.Parameters.Add("@rom_id", DbType.Int64);
-
-					connection.Open();
-
-					SQLiteTransaction transaction = connection.BeginTransaction();
-					try
-					{
-						foreach (var pair in sha1RomIdUpdates)
-						{
-							foreach (var rom_id in pair.Key)
-							{
-								command.Parameters["@sha1"].Value = pair.Value;
-								command.Parameters["@rom_id"].Value = rom_id;
-								command.ExecuteNonQuery();
-							}
-						}
-
-						transaction.Commit();
-					}
-					catch
-					{
-						transaction.Rollback();
-						throw;
-					}
-					finally
-					{
-						connection.Close();
-					}
-				}
-			}
-			Console.WriteLine("...done");
-		}
-
-
 		public static void HashLookupLearn(string importDirectory)
 		{
 			if (Globals.Core.Name != "fbneo")
 				throw new ApplicationException("Learn is for fbneo only");
 
 			string datafile_name = Path.GetFileName(importDirectory);
-
-			var romIdLookup = HashLookupRomIdLookup();
-			var sha1RomIdUpdates = new Dictionary<long[], string>();
 
 			var lookup = HashLookupGetDatabase();
 
@@ -1201,7 +1116,7 @@ namespace Spludlow.MameAO
 						if (zipEntry.FullName.Contains("/") == true)
 							clone_name = Path.GetDirectoryName(zipEntry.FullName);
 
-						string key = $"{datafile_name}\t{clone_name ?? machine_name}\t{zipEntry.Name}\t{data.Length}\t{crc32}".ToLower();
+						string key = HashLookupMakeKey(datafile_name, clone_name ?? machine_name, zipEntry.Name, data.Length.ToString(), crc32);
 
 						if (lookup.ContainsKey(key) == true)
 						{
@@ -1210,8 +1125,6 @@ namespace Spludlow.MameAO
 								lookup[key] = sha1;
 								Console.WriteLine($"Learn\t{key}");
 								++set_count;
-
-								sha1RomIdUpdates.Add(romIdLookup[key].ToArray(), sha1);
 							}
 							else
 							{
@@ -1231,10 +1144,12 @@ namespace Spludlow.MameAO
 
 			Console.WriteLine($"Learn {datafile_name} SET:{set_count} GOT:{got_count} NOT:{not_count}");
 
-			HashLookupUpdateDatabase(sha1RomIdUpdates);
-
 			if (set_count > 0)
+			{
+				HashLookupUpdateDatabase(lookup);
+
 				Globals.Core.AllSHA1(Globals.AllSHA1);
+			}
 				
 			lookup = HashLookupGetDatabase();
 			HashLookupReport(lookup);
@@ -1287,7 +1202,7 @@ namespace Spludlow.MameAO
 
 				foreach (DataRow row in table.Rows)
 				{
-					string key = $"{row[0]}\t{row[1]}\t{row[2]}\t{row[3]}\t{row[4]}".ToLower();
+					string key = HashLookupMakeKey((string)row[0], (string)row[1], (string)row[2], (string)row[3], (string)row[4]);
 					if (lookup.ContainsKey(key) == false)
 						lookup.Add(key, row.Field<string>(5) ?? "");
 					//else
