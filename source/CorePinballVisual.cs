@@ -36,6 +36,8 @@ namespace Spludlow.MameAO
 		private string _ConnectionVisualPinball = null;
 		private string _ConnectionPinMAME = null;
 
+		public PinMame _PinMame = null;
+
 
 		void ICore.Initialize(string directory, string version)
 		{
@@ -45,6 +47,9 @@ namespace Spludlow.MameAO
 
 			if (version != "0")
 				_Version = version;
+
+			_PinMame = new PinMame();
+			_PinMame.Initialize(Path.Combine(Path.GetDirectoryName(_RootDirectory), "pinmame"), null);
 		}
 
 		private void InitializeConnections()
@@ -53,8 +58,37 @@ namespace Spludlow.MameAO
 			_ConnectionPinMAME = Database.MakeSQLiteConnectionString(Path.Combine(_CoreDirectory, "_pinmame.sqlite"));
 		}
 
+		public static string LatestLocalVersion(string directory)
+		{
+			List<Version> versions = new List<Version>();
+
+			foreach (string versionDirectory in Directory.GetDirectories(directory))
+			{
+				string name = Path.GetFileName(versionDirectory);
+
+				if (!File.Exists(Path.Combine(versionDirectory, "PinMAME.exe")))
+					continue;
+
+				if (!Version.TryParse(name, out Version version))
+					throw new ApplicationException($"Invalid version: {name}");
+
+				versions.Add(version);
+			}
+
+			if (versions.Count == 0)
+				throw new ApplicationException($"No versions found in '{directory}'.");
+
+			string latestVersion = versions.Max().ToString();
+
+			Console.WriteLine($"LatestLocalVersion\t{directory}\t{latestVersion}");
+
+			return latestVersion;
+		}
+
 		int ICore.Get()
 		{
+			int result = _PinMame.Get();
+
 			string url = _Version == null ?
 				"https://api.github.com/repos/vpinball/vpinball/releases/latest" :
 				$"https://api.github.com/repos/vpinball/vpinball/releases/tags/mame{_Version}";
@@ -66,8 +100,6 @@ namespace Spludlow.MameAO
 
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 			Directory.CreateDirectory(_CoreDirectory);
-
-			int result = 0;
 
 			//	Extracts to dir then install DXSETUP.exe
 			//	DirectX End-User Runtimes (June 2010)
@@ -102,77 +134,16 @@ namespace Spludlow.MameAO
 			}
 
 			//
-			// PinMAME & VPinMAME
-			//
-			string vPinMAMECommonDirectory = Path.Combine(_CoreDirectory, "VPinMAME");
-			Directory.CreateDirectory(vPinMAMECommonDirectory);
-
-			release = JsonConvert.DeserializeObject<dynamic>(Tools.FetchTextCached("https://api.github.com/repos/vpinball/pinmame/releases/latest") ?? throw new ApplicationException("Unable to get pinmame release"));
-			string pinMameVersion = (string)release.tag_name;
-
-			releaseAssets = ((JArray)release.assets).Where(token => ((string)token["name"]).StartsWith("PinMAME-sc-") && ((string)token["name"]).EndsWith("-win-x64.zip")).ToArray();
-			if (releaseAssets.Length != 1)
-				throw new ApplicationException($"Did not find single PinMAME asset in release: {releaseAssets.Length}");
-			string pinMameBinariesUrl = (string)releaseAssets[0]["browser_download_url"];
-			string pinMameBinariesFilename = Path.Combine(vPinMAMECommonDirectory, Path.GetFileName(pinMameBinariesUrl));
-			if (File.Exists(Path.Combine(vPinMAMECommonDirectory, "PinMAME.exe")) == false)
-			{
-				Console.Write($"Downloading {pinMameBinariesUrl} {pinMameBinariesFilename} ...");
-				Tools.Download(pinMameBinariesUrl, pinMameBinariesFilename);
-				Console.WriteLine("...done");
-
-				foreach (string filename in Directory.GetFiles(vPinMAMECommonDirectory, "*.txt"))
-					File.Delete(filename);
-
-				Console.Write($"Extracting {pinMameBinariesFilename} {vPinMAMECommonDirectory} ...");
-				ZipFile.ExtractToDirectory(pinMameBinariesFilename, vPinMAMECommonDirectory);
-				Console.WriteLine("...done");
-
-				result = 1;
-			}
-			else
-			{
-				if (File.Exists(pinMameBinariesFilename) == false)
-					throw new ApplicationException($"PinMAME version mismatch uninstall COM (Setup64.exe) then remove directory: {vPinMAMECommonDirectory}");
-			}
-
-			//	TODO: refactor duplication - above & below
-
-			releaseAssets = ((JArray)release.assets).Where(token => ((string)token["name"]).StartsWith("VPinMAME-sc-") && ((string)token["name"]).EndsWith("-win-x64.zip")).ToArray();
-			if (releaseAssets.Length != 1)
-				throw new ApplicationException($"Did not find single VPinMAME asset in release: {releaseAssets.Length}");
-			string vPinMameBinariesUrl = (string)releaseAssets[0]["browser_download_url"];
-			string vPinMameBinariesFilename = Path.Combine(vPinMAMECommonDirectory, Path.GetFileName(vPinMameBinariesUrl));
-			if (File.Exists(Path.Combine(vPinMAMECommonDirectory, "Setup64.exe")) == false)
-			{
-				Console.Write($"Downloading {vPinMameBinariesUrl} {vPinMameBinariesFilename} ...");
-				Tools.Download(vPinMameBinariesUrl, vPinMameBinariesFilename);
-				Console.WriteLine("...done");
-
-				foreach (string filename in Directory.GetFiles(vPinMAMECommonDirectory, "*.txt"))
-					File.Delete(filename);
-
-				Console.Write($"Extracting {vPinMameBinariesFilename} {vPinMAMECommonDirectory} ...");
-				ZipFile.ExtractToDirectory(vPinMameBinariesFilename, vPinMAMECommonDirectory);
-				Console.WriteLine("...done");
-
-				result = 1;
-			}
-			else
-			{
-				if (File.Exists(vPinMameBinariesFilename) == false)
-					throw new ApplicationException($"PinMAME version mismatch uninstall COM (Setup64.exe) then remove directory: {vPinMAMECommonDirectory}");
-			}
-
-			//
 			//	TODO: run COM installer or tell user to ???
 			//
 
 
-			// TODO - needs init (github, dirs)
-			//BitTorrent.Initialize();
-			//BitTorrent.EnableCore("pinball");
-			//BitTorrent.EnableCore("pinmame");
+			//	TODO: Better
+			if (BitTorrent.DomeInfo() == null)
+				BitTorrent.Start();
+			BitTorrent.WaitReady();
+			BitTorrent.EnableCore("pinball");
+			BitTorrent.EnableCore("pinmame");
 
 			//
 			// DAT
@@ -216,19 +187,11 @@ namespace Spludlow.MameAO
 
 		void ICore.Xml()
 		{
-			if (_Version == null)   //	TODO
-				_Version = "v10.8.0-2051-28dd6c3";
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
-			string exeFilename = Path.Combine(_CoreDirectory, "VPinMAME", "PinMAME.exe");
-			string xmlFilename = Path.Combine(_CoreDirectory, "VPinMAME", "_pinmame.xml");
-
-			if (File.Exists(xmlFilename) == false)
-			{
-				Console.Write("Extract PinMAME XML ...");
-				Mame.ExtractXML(exeFilename, xmlFilename, "-listxml");
-				Console.WriteLine("...done");
-			}
+			_PinMame.Xml();
 
 			string[] directories = Directory.GetDirectories(_CoreDirectory).Where(dir => Path.GetFileName(dir).StartsWith("_dat_")).ToArray();
 			if (directories.Length != 1)
@@ -249,8 +212,8 @@ namespace Spludlow.MameAO
 
 		void ICore.MSSql(string serverConnectionString, string[] databaseNames)
 		{
-			if (_Version == null)   //	TODO
-				_Version = "v10.8.0-2051-28dd6c3";
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
 			DataSet dataSet;
@@ -262,7 +225,7 @@ namespace Spludlow.MameAO
 			Database.DataSet2MSSQL(dataSet, serverConnectionString, databaseNames[0]);
 			Database.MakeForeignKeys(serverConnectionString, databaseNames[0]);
 
-			string filename = Path.Combine(_CoreDirectory, "VPinMAME", "_pinmame.xml");
+			string filename = Path.Combine(_PinMame._CoreDirectory, "_pinmame.xml");
 			if (File.Exists(filename) == false)
 				throw new ApplicationException($"Did not find one PinMAME XML {filename}");
 			dataSet = PinMameDataSet(filename);
@@ -317,8 +280,8 @@ namespace Spludlow.MameAO
 
 		void ICore.SQLite()
 		{
-			if (_Version == null)   //	TODO
-				_Version = "v10.8.0-2051-28dd6c3";
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
 			Tools.ConsoleHeading(1, new string[] { "SQLite Visual Pinball", _Version, _CoreDirectory });
@@ -337,7 +300,7 @@ namespace Spludlow.MameAO
 
 			name = "pinmame";
 
-			string filename = Path.Combine(_CoreDirectory, "VPinMAME", "_pinmame.xml");
+			string filename = Path.Combine(_PinMame._CoreDirectory, "_pinmame.xml");
 			if (File.Exists(filename) == false)
 				throw new ApplicationException($"Did not find one PinMAME XML {filename}");
 			dataSet = PinMameDataSet(filename);
@@ -353,8 +316,8 @@ namespace Spludlow.MameAO
 
 			//	TODO version bump check
 
-			if (_Version == null)   //	TODO
-				_Version = "v10.8.0-2051-28dd6c3";
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
 			Tools.ConsoleHeading(1, new string[] { "SQLite Visual Pinball", _Version, _CoreDirectory });
@@ -383,7 +346,7 @@ namespace Spludlow.MameAO
 
 			if (File.Exists(sqliteFilename) == false)
 			{
-				string filename = Path.Combine(_CoreDirectory, "VPinMAME", "_pinmame.xml");
+				string filename = Path.Combine(_PinMame._CoreDirectory, "_pinmame.xml");
 				if (File.Exists(filename) == false)
 					throw new ApplicationException($"Did not find one PinMAME XML {filename}");
 				dataSet = PinMameDataSet(filename);
@@ -397,8 +360,8 @@ namespace Spludlow.MameAO
 
 		void ICore.AllSHA1(HashSet<string> hashSet)
 		{
-			if (_Version == null)   //	TODO
-				_Version = "v10.8.0-2051-28dd6c3";
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 
 			InitializeConnections();
@@ -551,7 +514,7 @@ namespace Spludlow.MameAO
 						Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
 				}
 
-				string romsDirectory = Path.Combine(core.Directory, "VPinMAME", "roms", game_name);
+				string romsDirectory = Path.Combine(((CorePinballVisual)core)._PinMame._CoreDirectory, "roms", game_name);
 
 				Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, romsDirectory, null, info);
 			}

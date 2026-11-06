@@ -108,7 +108,7 @@ namespace Spludlow.MameAO
 
 		public static ICore Core = null;
 
-		public static string[] CoreNames = new string[] { "mame", "hbmame", "fbneo" };
+		public static string[] CoreNames = new string[] { "mame", "hbmame", "fbneo", "pinball-visual" };
 	}
 
 	public class MameAOProcessor
@@ -846,23 +846,32 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 				parts[0] = parts[0].Substring(0, index);
 			}
 
-			if (parts.Length != 1 && parts.Length != 2)
-				throw new ApplicationException($"Bad line parts count: {parts.Length}");
-
-			machine = parts[0];
-			software = parts.Length > 1 ? parts[1] : "";
-
-			machine = machine.ToLower();
-			software = software.ToLower();
-
 			string softwareList = null;
-			if (software != null)
+
+			//	TODO: Better
+			if (core == "pinball-visual")
 			{
-				index = software.IndexOf("@");
-				if (index != -1)
+				machine = line;
+			}
+			else
+			{
+				if (parts.Length != 1 && parts.Length != 2)
+					throw new ApplicationException($"Bad line parts count: {parts.Length}");
+
+				machine = parts[0];
+				software = parts.Length > 1 ? parts[1] : "";
+
+				machine = machine.ToLower();
+				software = software.ToLower();
+
+				if (software != null)
 				{
-					softwareList = software.Substring(index + 1);
-					software = software.Substring(0, index);
+					index = software.IndexOf("@");
+					if (index != -1)
+					{
+						softwareList = software.Substring(index + 1);
+						software = software.Substring(0, index);
+					}
 				}
 			}
 
