@@ -1124,6 +1124,46 @@ namespace Spludlow.MameAO
 			}
 		}
 
+		public static string LatestVersionGitTagName(string directory, string exeFilename)
+		{
+			Dictionary<Version, string> versions = new Dictionary<Version, string>();
+
+			foreach (string versionDirectory in Directory.GetDirectories(directory))
+			{
+				if (File.Exists(Path.Combine(versionDirectory, exeFilename)) == false)
+					continue;
+
+				string name = Path.GetFileName(versionDirectory);
+
+				if (name.StartsWith("v") == false)
+					throw new ApplicationException($"Version expect v: {name}");
+
+				name = name.Substring(1);
+
+				int index = name.IndexOf("-");
+				if (index == -1)
+					throw new ApplicationException($"Version expect hypen: {name}");
+
+				name = name.Substring(0, index);
+
+				if (!Version.TryParse(name, out Version version))
+					throw new ApplicationException($"Invalid version: {name}");
+
+				versions.Add(version, Path.GetFileName(versionDirectory));
+			}
+
+			if (versions.Count == 0)
+				return null;
+
+			var latestVersion = versions.Keys.Cast<Version>().Max();
+
+			return versions[latestVersion];
+		}
+
+		//	VPinballX64
+
+		// not used ???
+
 		public static void DataFileMoveHeader(DataSet dataSet)
 		{
 			DataTable headerTable = dataSet.Tables["header"];

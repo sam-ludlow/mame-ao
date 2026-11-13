@@ -10,7 +10,12 @@ namespace Spludlow.MameAO
 	public class Place
 	{
 		public static bool _BtStarted;
+
 		public static void StartBitTorrent()
+		{
+			StartBitTorrent(null);
+		}
+		public static void StartBitTorrent(string[] coreNames)
 		{
 			if (_BtStarted == true)
 				return;
@@ -20,7 +25,7 @@ namespace Spludlow.MameAO
 
 			BitTorrent.WaitReady();
 
-			BitTorrent.EnableCore(Globals.Core.Name);
+			BitTorrent.EnableCore(coreNames ?? new string[] { Globals.Core.Name });
 
 			_BtStarted = true;
 		}

@@ -1,10 +1,13 @@
-﻿using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using System;
-using System.Collections.Generic;
+﻿using System;
+using System.Diagnostics;
 using System.IO;
 using System.IO.Compression;
 using System.Linq;
+
+using Microsoft.Win32;
+
+using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 
 namespace Spludlow.MameAO
 {
@@ -27,29 +30,14 @@ namespace Spludlow.MameAO
 
 		public static string LatestLocalVersion(string directory)
 		{
-			List<Version> versions = new List<Version>();
+			string version = Tools.LatestVersionGitTagName(directory, "PinMAME.exe");
 
-			foreach (string versionDirectory in Directory.GetDirectories(directory))
-			{
-				string name = Path.GetFileName(versionDirectory);
-
-				if (!File.Exists(Path.Combine(versionDirectory, "PinMAME.exe")))
-					continue;
-
-				if (!Version.TryParse(name, out Version version))
-					throw new ApplicationException($"Invalid version: {name}");
-
-				versions.Add(version);
-			}
-
-			if (versions.Count == 0)
+			if (version == null)
 				throw new ApplicationException($"No versions found in '{directory}'.");
 
-			string latestVersion = versions.Max().ToString();
+			Console.WriteLine($"Version:\t{directory}\t{version}");
 
-			Console.WriteLine($"LatestLocalVersion\t{directory}\t{latestVersion}");
-
-			return latestVersion;
+			return version;
 		}
 
 		public int Get()
@@ -109,6 +97,89 @@ namespace Spludlow.MameAO
 				Console.Write("Extract PinMAME XML ...");
 				Mame.ExtractXML(exeFilename, xmlFilename, "-listxml");
 				Console.WriteLine("...done");
+			}
+		}
+
+		public void Check()
+		{
+			if (_Version == null)
+				_Version = LatestLocalVersion(_RootDirectory);
+			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
+
+			Tools.ConsoleHeading(1, new string[] { "PinMAME", _CoreDirectory });
+
+			bool ready = false;
+			while (ready == false)
+			{
+				if (IsComInstalled() == true)
+				{
+					string configDirectory = ConfigDirectory();
+
+					if (configDirectory == _CoreDirectory)
+					{
+						Console.WriteLine("PinMAME Install Good.");
+						ready = true;
+					}
+					else
+					{
+						Console.WriteLine($"!!! PinMAME old version in use. Run installer to remove from directory then quit:\t{configDirectory}");
+						RunSetup(configDirectory);
+					}
+				}
+				else
+				{
+					Console.WriteLine($"!!! PinMAME not found. Run installer to install from directory then quit:\t{_CoreDirectory}");
+					RunSetup(_CoreDirectory);
+				}
+			}
+		}
+
+		public bool IsComInstalled()
+		{
+			return Type.GetTypeFromProgID("VPinMAME.Controller") != null;
+		}
+
+		public string ConfigDirectory()
+		{
+			using (var registryKey = Registry.CurrentUser.OpenSubKey(@"Software\Freeware\Visual PinMame\globals"))
+			{
+				if (registryKey == null)
+					return null;
+				
+				var value = registryKey.GetValue("rompath");
+
+				if (value == null)
+					return null;
+
+				return Path.GetDirectoryName((string)value);
+			}
+		}
+
+		public bool RunSetup(string directory)
+		{
+			string exeFilename = Path.Combine(directory, "Setup64.exe");
+
+			if (File.Exists(exeFilename) == false)
+				throw new ApplicationException("Pinmame setup exe is missing");
+
+			var startInfo = new ProcessStartInfo
+			{
+				FileName = exeFilename,
+				WorkingDirectory = directory,
+				UseShellExecute = true,
+				Verb = "runas"
+			};
+
+			try
+			{
+				var process = Process.Start(startInfo);
+				process.WaitForExit();
+				return true;
+			}
+			catch (Exception e)
+			{
+				Console.WriteLine(e.ToString());
+				return false;
 			}
 		}
 	}

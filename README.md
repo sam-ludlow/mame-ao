@@ -81,23 +81,21 @@ Enable FBNeo from the about page or use the command `.core fbneo`. Only works wi
 ![MAME-AO using FBNeo](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-fbneo.png)
 
 ## Visual Pinball
+Enable Visual Pinball from the about page or use the command `.core pinball-visual`. Only works with BitTorrent, DOME-BT will restart to enable new core.
+
 This is currently **Preliminary**, the UI machine pages are broken, follow the instructions carefully.
 
-### Pinball Prerequisites
+### Visual Pinball Prerequisites
 - Install the DirectX runtimes https://www.microsoft.com/en-US/download/details.aspx?id=35
-- Configure DOME-BT `mame-ao\_BT\_config.txt` must contain line (TAB after cores) `cores	mame, pinmame, pinball` and restart DOME-BT
-- First time only run the COM installer after enabling core in MAME-AO `.core pinball-visual` run the installer here `mame-ao\pinball-visual\v10.8.0-2051-28dd6c3\VPinMAME\Setup64.exe` accept all defaults
+- First time you have to run the COM installer, MAME-AO will launch the PinMAME setup for you
 
-### Enable Pinball
-In the MAME-AO command line enter `.core pinball-visual`
-
-### Pinball UI Workaround
+### Visual Pinball UI Workaround
 The UI is not ready yet to get list of tables goto http://localhost:12380/reports/sql and paste in this command
 ```
 SELECT machine.name AS [table], rom.name AS variant, datafile.name || '@' || machine.name || '@' || rom.name AS [command_line treble-click to select then copy] FROM datafile
 INNER JOIN machine ON datafile.datafile_id = machine.datafile_id
 INNER JOIN rom ON machine.machine_id = rom.machine_id
-WHERE (datafile.name = 'Visual Pinball [VPX08] PinMame Tables' AND rom.name LIKE '%.vpx')
+WHERE (datafile.name = 'Visual Pinball [VPX08] PinMame Tables' AND (rom.name LIKE '%.vpx' OR rom.name LIKE '%.vpt'))
 ORDER BY machine.name, rom.name;
 ```
 Swap out `Visual Pinball [VPX08] PinMame Tables` for other table sets.

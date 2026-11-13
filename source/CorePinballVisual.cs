@@ -38,6 +38,8 @@ namespace Spludlow.MameAO
 
 		public PinMame _PinMame = null;
 
+		private string[] _BitTorrentCoreNames = new string[] { "pinball", "pinmame" };
+
 
 		void ICore.Initialize(string directory, string version)
 		{
@@ -60,29 +62,14 @@ namespace Spludlow.MameAO
 
 		public static string LatestLocalVersion(string directory)
 		{
-			List<Version> versions = new List<Version>();
+			string version = Tools.LatestVersionGitTagName(directory, "VPinballX64.exe");
 
-			foreach (string versionDirectory in Directory.GetDirectories(directory))
-			{
-				string name = Path.GetFileName(versionDirectory);
-
-				if (!File.Exists(Path.Combine(versionDirectory, "PinMAME.exe")))
-					continue;
-
-				if (!Version.TryParse(name, out Version version))
-					throw new ApplicationException($"Invalid version: {name}");
-
-				versions.Add(version);
-			}
-
-			if (versions.Count == 0)
+			if (version == null)
 				throw new ApplicationException($"No versions found in '{directory}'.");
 
-			string latestVersion = versions.Max().ToString();
+			Console.WriteLine($"Version:\t{directory}\t{version}");
 
-			Console.WriteLine($"LatestLocalVersion\t{directory}\t{latestVersion}");
-
-			return latestVersion;
+			return version;
 		}
 
 		int ICore.Get()
@@ -100,10 +87,6 @@ namespace Spludlow.MameAO
 
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
 			Directory.CreateDirectory(_CoreDirectory);
-
-			//	Extracts to dir then install DXSETUP.exe
-			//	DirectX End-User Runtimes (June 2010)
-			//	https://www.microsoft.com/en-us/download/details.aspx?id=8109
 
 			JToken[] releaseAssets;
 
@@ -134,16 +117,14 @@ namespace Spludlow.MameAO
 			}
 
 			//
-			//	TODO: run COM installer or tell user to ???
+			//	BitTorrent
 			//
-
-
-			//	TODO: Better
 			if (BitTorrent.DomeInfo() == null)
 				BitTorrent.Start();
+
 			BitTorrent.WaitReady();
-			BitTorrent.EnableCore("pinball");
-			BitTorrent.EnableCore("pinmame");
+
+			BitTorrent.EnableCore(_BitTorrentCoreNames);
 
 			//
 			// DAT
@@ -312,10 +293,6 @@ namespace Spludlow.MameAO
 
 		void ICore.SQLiteAo()
 		{
-			//	TODO dup of above with extras, need refactor
-
-			//	TODO version bump check
-
 			if (_Version == null)
 				_Version = LatestLocalVersion(_RootDirectory);
 			_CoreDirectory = Path.Combine(_RootDirectory, _Version);
@@ -325,12 +302,20 @@ namespace Spludlow.MameAO
 			DataSet dataSet;
 			string name;
 			string sqliteFilename;
+			string connectionString;
 
 			name = "pinball-visual";
 			sqliteFilename = Path.Combine(_CoreDirectory, $"_{name}.sqlite");
+			connectionString = Database.MakeSQLiteConnectionString(sqliteFilename);
 
-			if (File.Exists(sqliteFilename) == false)
-			{
+			if (File.Exists(sqliteFilename) == false || (Cores.GetAoMetaDataAssemblyVersion(connectionString) != Globals.AssemblyVersion))
+			{ 
+				if (File.Exists(sqliteFilename) == true)
+				{
+					Console.WriteLine($"Replace Visual Pinball SQLite database old version {sqliteFilename}");
+					File.Delete(sqliteFilename);
+				}
+
 				string[] directories = Directory.GetDirectories(_CoreDirectory).Where(dir => Path.GetFileName(dir).StartsWith("_dat_") == true).ToArray();
 				if (directories.Length != 1)
 					throw new ApplicationException($"Did not find one _dat_ directory {directories.Length} {_CoreDirectory}");
@@ -338,14 +323,21 @@ namespace Spludlow.MameAO
 
 				Cores.AddAoMetaData(dataSet, Globals.AssemblyVersion);
 
-				Database.DataSet2SQLite(name, Database.MakeSQLiteConnectionString(sqliteFilename), dataSet);
+				Database.DataSet2SQLite(name, connectionString, dataSet);
 			}
 
 			name = "pinmame";
 			sqliteFilename = Path.Combine(_CoreDirectory, $"_{name}.sqlite");
+			connectionString = Database.MakeSQLiteConnectionString(sqliteFilename);
 
-			if (File.Exists(sqliteFilename) == false)
+			if (File.Exists(sqliteFilename) == false || (Cores.GetAoMetaDataAssemblyVersion(connectionString) != Globals.AssemblyVersion))
 			{
+				if (File.Exists(sqliteFilename) == true)
+				{
+					Console.WriteLine($"Replace Visual Pinball SQLite database old version {sqliteFilename}");
+					File.Delete(sqliteFilename);
+				}
+
 				string filename = Path.Combine(_PinMame._CoreDirectory, "_pinmame.xml");
 				if (File.Exists(filename) == false)
 					throw new ApplicationException($"Did not find one PinMAME XML {filename}");
@@ -353,7 +345,7 @@ namespace Spludlow.MameAO
 
 				Cores.AddAoMetaData(dataSet, Globals.AssemblyVersion);
 
-				Database.DataSet2SQLite(name, Database.MakeSQLiteConnectionString(Path.Combine(_CoreDirectory, $"_{name}.sqlite")), dataSet);
+				Database.DataSet2SQLite(name, connectionString, dataSet);
 			}
 		}
 
@@ -383,14 +375,18 @@ namespace Spludlow.MameAO
 			string machine_name = parts[1];
 			string vpxName = parts[2];
 
-			SQLiteConnection connectionVisualPinball = new SQLiteConnection(core.ConnectionStrings[0]);
-			SQLiteConnection connectionPinMAME = new SQLiteConnection(core.ConnectionStrings[1]);
-
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
 			string[] info;
 			long machine_id;
 			string machine_description;
+
+			//
+			// VisualPinball
+			//
+			CorePinballVisual corePinballVisual = (CorePinballVisual)core;
+
+			SQLiteConnection connectionVisualPinball = new SQLiteConnection(core.ConnectionStrings[0]);
 
 			using (SQLiteCommand command = new SQLiteCommand(
 				"SELECT machine.machine_id, machine.description FROM datafile INNER JOIN machine ON datafile.datafile_id = machine.datafile_id " +
@@ -432,8 +428,12 @@ namespace Spludlow.MameAO
 
 			info = new string[] { "pinball table", datafile_name, machine_name };
 
+			Place._BtStarted = false;   //	TODO tidy up
+
 			if (downloadRequired == true)
 			{
+				Place.StartBitTorrent(corePinballVisual._BitTorrentCoreNames);    //	TODO tidy up
+
 				var btFile = BitTorrent.SoftwareRom(core.Name, datafile_name, machine_name);
 				if (btFile != null)
 					Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
@@ -443,6 +443,17 @@ namespace Spludlow.MameAO
 
 			Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, tablesDirectory, null, info);
 
+			//
+			// PinMAME
+			//
+			PinMame corePinMAME = ((CorePinballVisual)core)._PinMame;
+			corePinMAME.Check();
+
+			SQLiteConnection connectionPinMAME = new SQLiteConnection(core.ConnectionStrings[1]);
+
+			//
+			// Extract VBS for PinMAME
+			//
 			var pinmameGames = new HashSet<string>();
 
 			foreach (DataRow romRow in romTable.Rows)
@@ -466,6 +477,9 @@ namespace Spludlow.MameAO
 					pinmameGames.Add(pinmameGame);
 			}
 
+			//
+			// Place PinMAME
+			//
 			if (pinmameGames.Count > 0)
 			{
 				var parentNames = String.Join(", ", pinmameGames.Select(game => $"'{game}'"));
@@ -509,12 +523,14 @@ namespace Spludlow.MameAO
 
 				if (downloadRequired == true)
 				{
+					Place.StartBitTorrent(corePinballVisual._BitTorrentCoreNames);    //	TODO tidy up
+
 					var btFile = BitTorrent.MachineRom("pinmame", game_name);
 					if (btFile != null)
 						Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
 				}
 
-				string romsDirectory = Path.Combine(((CorePinballVisual)core)._PinMame._CoreDirectory, "roms", game_name);
+				string romsDirectory = Path.Combine(corePinMAME._CoreDirectory, "roms", game_name);
 
 				Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, romsDirectory, null, info);
 			}

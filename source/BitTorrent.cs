@@ -328,27 +328,30 @@ namespace Spludlow.MameAO
 
 		public static void EnableCore(string coreName)
 		{
+			EnableCore(new string[] { coreName });
+		}
+
+		public static void EnableCore(string[] coreNames)
+		{
 			dynamic info = JsonConvert.DeserializeObject<dynamic>(Tools.Query($"{ClientUrl}/api/info"));
 
-			List<string> btCores = ((JArray)info.cores).ToObject<List<string>>();
+			List<string> cores = ((JArray)info.cores).ToObject<List<string>>();
 
-			if (btCores.Contains(coreName) == true)
+			var required = coreNames.Where(name => !cores.Contains(name)).ToList();
+
+			if (required.Count == 0)
 				return;
 
-			btCores.Add(coreName);
-			string value = String.Join(", ", btCores);
+			cores.AddRange(required);
 
-			string filename = Path.Combine(Globals.BitTorrentDirectory, "_config.txt");
-			var dictionary = Tools.LoadDictionary(filename);
+			string configFilename = Path.Combine(Globals.BitTorrentDirectory, "_config.txt");
+			var configs = Tools.LoadDictionary(configFilename);
 
-			if (dictionary.ContainsKey("cores") == false)
-				dictionary.Add("cores", value);
-			else
-				dictionary["cores"] = value;
+			configs["cores"] = String.Join(", ", cores);
+			
+			Tools.SaveDictionary(configFilename, configs);
 
-			Tools.SaveDictionary(filename, dictionary);
-
-			Tools.ConsoleHeading(2, new string[] { "Restarting BOME-BT to enable core, configuration updated.", filename });
+			Tools.ConsoleHeading(2, new string[] { "Restarting BOME-BT to enable core, configuration updated.", configFilename, String.Join(", ", coreNames) + " => " + String.Join(", ", cores) });
 
 			Restart();
 		}

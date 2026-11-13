@@ -624,7 +624,7 @@
 			html += '</table><hr />';
 
 			// Cores
-			html += `<h2>Emulator Cores</h2><table><tr><th>Name</th><th>Status</th></tr><p>Must use BitTorrent for non MAME.</p>`;
+			html += `<h2>Emulator Cores</h2><table><tr><th>Name</th><th>Status</th></tr><p>Must use BitTorrent for non MAME. Pinball UI machines is not ready yet, see the README.</p>`;
 
 			_info.cores.forEach((core_name) => {
                 let coreStatus = core_name === _info.core_name ? `Currently running version: ${_info.core_version}` : `<button type="submit" onclick="runCommand('.core ${core_name}'); return false;">Enable ${core_name}</button>`;
