@@ -449,7 +449,7 @@ namespace Spludlow.MameAO
 			{
 				string name = (string)romRow["name"];
 
-				if (name.EndsWith(".vpx") == false)
+				if (name.EndsWith(".vpx") == false && name.EndsWith(".vpt") == false)
 					continue;
 
 				string vpxFilename = Path.Combine(tablesDirectory, name);

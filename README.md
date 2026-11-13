@@ -1,5 +1,5 @@
 # mame-ao
-Easiest way to use MAME & HBMAME. Automatic download and setup of all files from GitHub, BitTorrent, and archive.org on the fly.
+Easiest way to use MAME, HBMAME & FBNeo. Automatic download and setup of all files from GitHub, BitTorrent, and archive.org on the fly.
 
 ![MAME-AO UI](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-ui.png)
 
@@ -12,7 +12,7 @@ Easiest way to use MAME & HBMAME. Automatic download and setup of all files from
 - perform option 1 OR 2 below
 - click image to start machine
 
-NOTE: First time it has to extract MAME's data, this will take a moment, next time it will start quickly, version bumps in MAME or MAME-AO will trigger further data initializations.
+NOTE: First time it has to process the emulator data, this will take a moment, next time it will start quickly, version bumps in MAME or MAME-AO will trigger further data initializations.
 
 ## Virus Detected
 This software can be falsely reported as malicious software. 
@@ -75,6 +75,11 @@ Enable HBMAME from the about page or use the command `.core hbmame`. Only works 
 
 ![MAME-AO using HBMAME](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-hbmame.png)
 
+## FBNeo - FinalBurn Neo
+Enable FBNeo from the about page or use the command `.core fbneo`. Only works with BitTorrent, DOME-BT will restart to enable new core.
+
+![MAME-AO using FBNeo](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-fbneo.png)
+
 ## Visual Pinball
 This is currently **Preliminary**, the UI machine pages are broken, follow the instructions carefully.
 
@@ -100,13 +105,6 @@ Swap out `Visual Pinball [VPX08] PinMame Tables` for other table sets.
 You can treble-click click the last column to select then copy then paste into the MAME-AO command line.
 
 ![MAME-AO Visual Pinball UI Workaround](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-visual-pinball-ui-workaround.png)
-
-### Note on Pinball torrents
-As there are not as many seeders for the pinball stuff you may struggle to download if DOME-BT is not using UPnP or port-mapping with your router.
-
-You may be better off downloading the torrents manually and then importing into MAME-AO. You need all of `PinMAME` and only need these `Visual Pinball` tables for now, use command `.import C:\tmp\Visual Pinball [VPX08] PinMame Tables`. Ensure you enable pinball core in MAME-AO first.
-
-Get the magnets by clicking on the `Visual Pinball` & `PinMAME` links on the MAME-AO torrents page http://localhost:12380/bittorrent
 
 ## Symbolic Links - Save disk space
 When MAME-AO downloads assets it keeps them in a "hash store", this makes keeping account of them very simple, you don’t have to keep grooming a bunch of ZIP files.
