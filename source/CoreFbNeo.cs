@@ -47,10 +47,12 @@ namespace Spludlow.MameAO
 		{
 			//	https://github.com/finalburnneo/FBNeo/blob/master/src/burner/win32/main.cpp
 
-			_LookupSystemListInfo = new Dictionary<string, string>()	//	19
+			_LookupSystemListInfo = new Dictionary<string, string>()	//	21
 			{
+				{ "32x",		"" },
 				{ "arcade",     "" },
 				{ "astrocade",  "" },
+				{ "atari2600",	"" },
 				{ "channelf",   "" },
 				{ "coleco",     "" },
 				{ "fds",        "" },
@@ -72,10 +74,12 @@ namespace Spludlow.MameAO
 			_LookupSystemListInfo = _LookupSystemListInfo.ToDictionary(x => x.Key, x => string.IsNullOrEmpty(x.Value) ? x.Key : x.Value);
 
 
-			_LookupSystemPrefix = new Dictionary<string, string>()	//	19
+			_LookupSystemPrefix = new Dictionary<string, string>()	//	21
 			{
+				{ "32x",        "s32x_" },
 				{ "arcade",     "" },
 				{ "astrocade",  "astro_" },
+				{ "atari2600",  "a26_" },
 				{ "channelf",   "chf_" },
 				{ "coleco",     "cv_" },
 				{ "fds",        "fds_" },
@@ -103,13 +107,12 @@ namespace Spludlow.MameAO
 			_RootDirectory = directory;
 			Directory.CreateDirectory(_RootDirectory);
 
-			_Version = null;    //	Always use latest
+			if (version != "0")
+				_Version = version;
 		}
 
 		int ICore.Get()
 		{
-			//TODO:	dont auto bumnp (new command to bump)
-
 			string releasesJson = Tools.FetchTextCached("https://api.github.com/repos/finalburnneo/FBNeo/releases") ?? throw new ApplicationException("Unanle to get core's github releases");
 
 			dynamic releases = JsonConvert.DeserializeObject<dynamic>(releasesJson);
@@ -1262,6 +1265,45 @@ namespace Spludlow.MameAO
 				result.AppendLine($"{pair.Key}\t{(pair.Value[0] == 0 ? "" : pair.Value[0].ToString())}\t{pair.Value[1]}\t{pair.Value[2]}");
 
 			Tools.PopText(result.ToString());
+		}
+
+		public static void UtilGetSystemsFromGit()
+		{
+			string main = Tools.FetchTextCached("https://raw.githubusercontent.com/finalburnneo/FBNeo/refs/heads/master/src/burner/win32/main.cpp");
+
+			string look = "if (_tcscmp(szName, _T(\"-listinfo";
+
+			List<string> list = new List<string>();
+
+			using (var reader = new StringReader(main))
+			{
+				string line;
+				while ((line = reader.ReadLine()) != null)
+				{
+					line = line.Trim();
+					if (line.StartsWith(look) == false)
+						continue;
+
+					line = line.Substring(look.Length);
+					line = line.Substring(0, line.IndexOf('"'));
+
+					if (line.Length == 0)
+						line = "arcadeonly";
+
+					if (line.EndsWith("only") == false)
+						continue;
+
+					line = line.Substring(0, line.Length - 4);
+
+					Console.WriteLine(line);
+
+					list.Add(line);
+				}
+			}
+
+			list.Sort();
+
+			Tools.PopText(list);
 		}
 
 	}
