@@ -122,6 +122,7 @@ namespace Spludlow.MameAO
 					}
 					else
 					{
+						//	TODO: check configDirectory setup is there
 						Console.WriteLine($"!!! PinMAME old version in use. Run installer to remove from directory then quit:\t{configDirectory}");
 						RunSetup(configDirectory);
 					}

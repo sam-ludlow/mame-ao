@@ -26,7 +26,7 @@ namespace Spludlow.MameAO
 
 		Dictionary<string, string> ICore.SoftwareListDescriptions => throw new NotImplementedException();
 
-		Dictionary<string, string[]> ICore.Filters => throw new NotImplementedException();
+		Dictionary<string, string[]> ICore.Filters { get => _Filters; }
 
 
 		private string _Version = null;
@@ -36,9 +36,13 @@ namespace Spludlow.MameAO
 		private string _ConnectionVisualPinball = null;
 		private string _ConnectionPinMAME = null;
 
+		private Dictionary<string, string[]> _Filters = null;
+
 		public PinMame _PinMame = null;
 
 		private string[] _BitTorrentCoreNames = new string[] { "pinball", "pinmame" };
+
+		private List<DataQueryProfile> _DataQueryProfiles = new List<DataQueryProfile>();
 
 
 		void ICore.Initialize(string directory, string version)
@@ -323,8 +327,31 @@ namespace Spludlow.MameAO
 
 				Cores.AddAoMetaData(dataSet, Globals.AssemblyVersion);
 
+				//Cores.AddExtraAoData(dataSet, Globals.AssemblyVersion);
+				DataTable machineTable = dataSet.Tables["machine"];
+				machineTable.Columns.Add("ao_rom_count", typeof(int));
+				machineTable.Columns.Add("ao_disk_count", typeof(int));
+				machineTable.Columns.Add("ao_softwarelist_count", typeof(int));
+				machineTable.Columns.Add("ao_driver_status", typeof(string));
+				machineTable.Columns.Add("ao_input_coins", typeof(int));
+				machineTable.Columns.Add("ao_type", typeof(string));
+				machineTable.Columns.Add("ao_status", typeof(string));
+				machineTable.Columns.Add("ao_year", typeof(int));
+				machineTable.Columns.Add("ao_players", typeof(int));
+
+				foreach (DataRow datafileRow in dataSet.Tables["datafile"].Rows)
+				{
+					string datafile_name = (string)datafileRow["name"];
+					foreach (DataRow machineRow in dataSet.Tables["machine"].Select($"datafile_id = {(long)datafileRow["datafile_id"]}"))
+					{
+						machineRow["ao_type"] = datafile_name;
+					}
+				}
+
 				Database.DataSet2SQLite(name, connectionString, dataSet);
 			}
+
+			_Filters = Cores.GetFilters(connectionString);
 
 			name = "pinmame";
 			sqliteFilename = Path.Combine(_CoreDirectory, $"_{name}.sqlite");
@@ -720,7 +747,7 @@ namespace Spludlow.MameAO
 
 		DataTable ICore.QueryMachines(string profile, int offset, int limit, string search, string manufacturer, string[] status, string[] display, string[] players, string[] control, bool? mechanical, bool? clone, string order, string sort)
 		{
-			throw new NotImplementedException();
+			return Cores.QueryMachines(_ConnectionVisualPinball, profile, offset, limit, search, manufacturer, status, display, players, control, mechanical, clone, order, sort);
 		}
 
 		DataTable ICore.QuerySoftware(string softwarelist_name, int offset, int limit, string search, string publisher, string order, string sort, string favorites_machine)
@@ -735,7 +762,47 @@ namespace Spludlow.MameAO
 
 		List<DataQueryProfile> ICore.GetDataQueryProfiles()
 		{
-			throw new NotImplementedException();
+			if (_DataQueryProfiles.Count == 0)
+			{
+				var table = Database.ExecuteFill(_ConnectionVisualPinball, @"
+					SELECT
+						datafile.name,
+						datafile.description,
+						COUNT(DISTINCT machine.machine_id) AS machine_count
+					FROM
+						datafile
+						INNER JOIN machine
+							ON datafile.datafile_id = machine.datafile_id
+						INNER JOIN rom
+							ON machine.machine_id = rom.machine_id
+					WHERE
+						(rom.name LIKE '%.vpx' OR rom.name LIKE '%.vpt')
+					GROUP BY
+						datafile.name
+					HAVING
+						(datafile.name LIKE 'Visual Pinball [VP%' AND datafile.name LIKE '%pinmame%')
+					ORDER BY
+						datafile.name;
+				");
+
+				foreach (DataRow row in table.Rows)
+				{
+					string name = row.Field<string>("name");
+					string description = row.Field<string>("description");
+
+					_DataQueryProfiles.Add(new DataQueryProfile()
+					{
+						Key = name,
+						Text = name.Substring(0, 1).ToUpper() + name.Substring(1),
+						Decription = description,
+					});
+				}
+
+				_DataQueryProfiles.Add(new DataQueryProfile() { Key = "everything", Text = "Everything", Decription = "Every Machine" });
+				_DataQueryProfiles.Add(new DataQueryProfile() { Key = "favorites", Text = "Favorites", Decription = "Favorite Machines" });
+			}
+
+			return _DataQueryProfiles;
 		}
 
 		public static void UtilTestFindPinMameGameName()
