@@ -219,7 +219,7 @@
 					return {
 						text: profile.text,
 						title: profile.description,
-						href: `/machines/${profile.key}`,
+						href: `/machines/${encodeURIComponent(profile.key)}`,
 					};
 				});
 			}
@@ -1277,7 +1277,8 @@
 				switch (_info.core_name) {
                     case 'fbneo':
 						return `href="#" onclick="runCommand('${result.name}@${result.ao_type}@${_info.core_name}'); return false;"`;
-						break;
+					case 'pinball-visual':
+						return `href="#" onclick="runCommand('${result.name}@${result.ao_type}@${_info.core_name}'); return false;"`;
 					default:
 						return result.ao_softwarelist_count > 0 ?
 							`href="${_baseUrl}/machines/${profile}/${result.name}"` :
@@ -1289,7 +1290,8 @@
 				switch (_info.core_name) {
                     case 'fbneo':
 						return `https://data.spludlow.co.uk/fbneo/${result.ao_type}/${result.name}`;
-						break;
+					case 'pinball-visual':
+						return '';
                     default:
 						return `https://data.spludlow.co.uk/${_info.core_name}/machine/${result.name}`;
 				}

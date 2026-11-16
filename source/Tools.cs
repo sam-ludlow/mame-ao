@@ -254,6 +254,11 @@ namespace Spludlow.MameAO
 		{
 			PopText(TextTable(table));
 		}
+
+		public static void PopText(DataTable table, IEnumerable<DataRow> rows)
+		{
+			PopText(TextTable(table, rows));
+		}
 		public static void PopText(IEnumerable<string> lines)
 		{
 			StringBuilder text = new StringBuilder();
@@ -335,6 +340,10 @@ namespace Spludlow.MameAO
 
 		public static string TextTable(DataTable table)
 		{
+			return TextTable(table, table.Rows.Cast<DataRow>());
+		}
+		public static string TextTable(DataTable table, IEnumerable<DataRow> rows)
+		{
 			StringBuilder result = new StringBuilder();
 
 			foreach (DataColumn column in table.Columns)
@@ -358,7 +367,7 @@ namespace Spludlow.MameAO
 			}
 			result.AppendLine();
 
-			foreach (DataRow row in table.Rows)
+			foreach (DataRow row in rows)
 			{
 				foreach (DataColumn column in table.Columns)
 				{

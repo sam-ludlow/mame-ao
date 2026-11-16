@@ -358,6 +358,9 @@ namespace Spludlow.MameAO
 
 			string profile = context.Request.QueryString["profile"] ?? throw new ApplicationException("profile not passed");
 
+			//	TODO: Fix properly - double encoding ???
+			profile = Uri.UnescapeDataString(profile);
+
 			int offset = 0;
 			qs = context.Request.QueryString["offset"];
 			if (qs != null)

@@ -852,6 +852,8 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 			if (core == "pinball-visual")
 			{
 				machine = line;
+				if (machine.EndsWith("@" + core))
+					machine = machine.Substring(0, machine.Length - (core.Length + 1));
 			}
 			else
 			{

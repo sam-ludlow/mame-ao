@@ -395,12 +395,19 @@ namespace Spludlow.MameAO
 		public static string PlacePinball(ICore core, string line)
 		{
 			string[] parts = line.Split('@');
-			if (parts.Length != 3)
-				throw new ApplicationException("Bad Line");
+			if (parts.Length != 2 && parts.Length != 3)
+				throw new ApplicationException("Bad Pinball Line");
 
-			string datafile_name = parts[0];
-			string machine_name = parts[1];
-			string vpxName = parts[2];
+			string vpx_name = null;
+			string machine_name = parts[0];
+			string datafile_name = parts[1];
+
+			if (parts.Length == 3)
+			{
+				vpx_name = parts[0];
+				machine_name = parts[1];
+				datafile_name = parts[2];
+			}
 
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
@@ -490,18 +497,24 @@ namespace Spludlow.MameAO
 				if (name.EndsWith(".vpx") == false && name.EndsWith(".vpt") == false)
 					continue;
 
+				if (vpx_name == null)
+				{
+					Console.WriteLine($"Using table:\t{name}");
+					vpx_name = name;
+				}
+
 				string vpxFilename = Path.Combine(tablesDirectory, name);
 				string vbsFilename = Path.Combine(tablesDirectory, Path.GetFileNameWithoutExtension(name) + ".vbs");
 
-				if (vpxName == null)
-					vpxName = name;
-
-				if (File.Exists(vbsFilename) == false)
+				if (File.Exists(vpxFilename) == true && File.Exists(vbsFilename) == false)
 					ExtractVbs(core.Directory, vpxFilename);
 
-				string pinmameGame = FindPinMameGameName(vbsFilename);
-				if (pinmameGame != null)
-					pinmameGames.Add(pinmameGame);
+				if (File.Exists(vbsFilename) == true)
+				{
+					string pinmameGame = FindPinMameGameName(vbsFilename);
+					if (pinmameGame != null)
+						pinmameGames.Add(pinmameGame);
+				}
 			}
 
 			//
@@ -562,7 +575,7 @@ namespace Spludlow.MameAO
 				Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, romsDirectory, null, info);
 			}
 
-			return Path.Combine(machine_name, vpxName);
+			return Path.Combine(machine_name, vpx_name);
 		}
 
 		public static bool ExtractVbs(string exeDirectory, string vpxFilename)
@@ -777,23 +790,85 @@ namespace Spludlow.MameAO
 							ON machine.machine_id = rom.machine_id
 					WHERE
 						(rom.name LIKE '%.vpx' OR rom.name LIKE '%.vpt')
+						AND (datafile.name != 'Visual Pinball Miscellaneous')
 					GROUP BY
-						datafile.name
-					HAVING
-						(datafile.name LIKE 'Visual Pinball [VP%' AND datafile.name LIKE '%pinmame%')
-					ORDER BY
 						datafile.name;
 				");
+
+				table.Columns.Add("engine", typeof(string));
+				table.Columns.Add("version", typeof(double));
+				table.Columns.Add("type", typeof(string));
+				table.Columns.Add("pinmame", typeof(bool));
 
 				foreach (DataRow row in table.Rows)
 				{
 					string name = row.Field<string>("name");
+
+					int index;
+
+					string engine = name;
+					index = engine.IndexOf("[");
+					engine = engine.Substring(index + 1);
+					index = engine.IndexOf("]");
+					engine = engine.Substring(0, index);
+					row["engine"] = engine;
+
+					if (engine.StartsWith("VP9") == false && engine.StartsWith("VPX") == false)
+						continue;
+
+					//	TODO fix sort will break at 10.10
+					string version = engine;
+					if (version == "VPX0-VPX06")
+						version = "VPX06";
+
+					if (version.EndsWith("x") && version.StartsWith("VP9"))
+						version = $"VP9.{version.Substring(3, 1)}";
+
+					if (version == "VP9")
+						version = "VP9.0";
+
+					if (version.StartsWith("VPX"))
+						version = $"10.{Int32.Parse(version.Substring(3, 2))}";
+
+					if (version.StartsWith("VP"))
+						version = version.Substring(2);
+
+					row["version"] = Double.Parse(version);
+
+					string type = name;
+					index = type.IndexOf("] ");
+					type = type.Substring(index + 2);
+
+					row["type"] = type;
+
+					row["pinmame"] = name.ToLower().Contains("pinmame");
+				}
+
+				var rows = table.Select("[version] IS NOT NULL AND [version] >= 10", "[version] DESC, [pinmame] DESC, [type]"); //	 AND [pinmame] = 1
+
+				//Tools.PopText(table, rows);
+				//Tools.PopText(rows.Select(r => (string)r["type"]).Distinct().OrderBy(t => t));
+
+				foreach (DataRow row in rows)
+				{
+					string name = row.Field<string>("name");
 					string description = row.Field<string>("description");
+					string type = row.Field<string>("type");
+					string version = row.Field<double>("version").ToString();
+
+					type = type.Replace("PinMame Tables", "MAME").Trim();
+					type = type.Replace("Recreated Tables", "RECR").Trim();
+					type = type.Replace("Original Tables", "ORIG").Trim();
+
+					type = type.Replace("[", "");
+					type = type.Replace("]", "").Trim();
+
+					string text = type == "" ? version : $"{version} {type}";
 
 					_DataQueryProfiles.Add(new DataQueryProfile()
 					{
 						Key = name,
-						Text = name.Substring(0, 1).ToUpper() + name.Substring(1),
+						Text = text,
 						Decription = description,
 					});
 				}

@@ -83,26 +83,11 @@ Enable FBNeo from the about page or use the command `.core fbneo`. Only works wi
 ## Visual Pinball
 Enable Visual Pinball from the about page or use the command `.core pinball-visual`. Only works with BitTorrent, DOME-BT will restart to enable new core.
 
-This is currently **Preliminary**, the UI machine pages are broken, follow the instructions carefully.
+![MAME-AO using Visual Pinball](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-visual-pinball.png)
 
 ### Visual Pinball Prerequisites
 - Install the DirectX runtimes https://www.microsoft.com/en-US/download/details.aspx?id=35
 - First time you have to run the COM installer, MAME-AO will launch the PinMAME setup for you
-
-### Visual Pinball UI Workaround
-The UI is not ready yet to get list of tables goto http://localhost:12380/reports/sql and paste in this command
-```
-SELECT machine.name AS [table], rom.name AS variant, datafile.name || '@' || machine.name || '@' || rom.name AS [command_line treble-click to select then copy] FROM datafile
-INNER JOIN machine ON datafile.datafile_id = machine.datafile_id
-INNER JOIN rom ON machine.machine_id = rom.machine_id
-WHERE (datafile.name = 'Visual Pinball [VPX08] PinMame Tables' AND (rom.name LIKE '%.vpx' OR rom.name LIKE '%.vpt'))
-ORDER BY machine.name, rom.name;
-```
-Swap out `Visual Pinball [VPX08] PinMame Tables` for other table sets.
-
-You can treble-click click the last column to select then copy then paste into the MAME-AO command line.
-
-![MAME-AO Visual Pinball UI Workaround](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-visual-pinball-ui-workaround.png)
 
 ## Symbolic Links - Save disk space
 When MAME-AO downloads assets it keeps them in a "hash store", this makes keeping account of them very simple, you don’t have to keep grooming a bunch of ZIP files.
