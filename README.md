@@ -68,24 +68,27 @@ NOTE: MAME-AO application is 32 bit to keep RAM usage down.
 ## Reporting issues
 https://github.com/sam-ludlow/mame-ao/issues
 
-## HBMAME - HomeBrew MAME
-Enable HBMAME from the about page or use the command `.core hbmame`. Only works with BitTorrent, DOME-BT will restart to enable new core.
+## Other Emulators
+You can use other emulators (cores) not just MAME. Change on aboput page http://localhost:12380/about. Give it a moment, DOME-BT will restart to enable new core.
 
 ![MAME-AO About page Emulator Cores](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-about-emulator-cores.png)
 
+### HBMAME - HomeBrew MAME
+Derivative of MAME containing various hacks and homebrews.
+
 ![MAME-AO using HBMAME](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-hbmame.png)
 
-## FBNeo - FinalBurn Neo
-Enable FBNeo from the about page or use the command `.core fbneo`. Only works with BitTorrent, DOME-BT will restart to enable new core.
+### FBNeo - FinalBurn Neo
+Emulator for arcade games & select consoles.
 
 ![MAME-AO using FBNeo](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-fbneo.png)
 
-## Visual Pinball
-Enable Visual Pinball from the about page or use the command `.core pinball-visual`. Only works with BitTorrent, DOME-BT will restart to enable new core.
+### Visual Pinball
+An open source pinball table editor and simulator.
 
 ![MAME-AO using Visual Pinball](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-visual-pinball.png)
 
-### Visual Pinball Prerequisites
+#### Visual Pinball Prerequisites
 - Install the DirectX runtimes https://www.microsoft.com/en-US/download/details.aspx?id=35
 - First time you have to run the COM installer, MAME-AO will launch the PinMAME setup for you
 
