@@ -92,6 +92,13 @@ An open source pinball table editor and simulator.
 - Install the DirectX runtimes https://www.microsoft.com/en-US/download/details.aspx?id=35
 - First time you have to run the COM installer, MAME-AO will launch the PinMAME setup for you
 
+##### Visual Pinball - VPinMAME COM Installer
+If PinMAME is required MAME-AO will launch the setup.
+![VPinMAME Install](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-vpinmame-install.png)
+
+You may be asked to uninstall, if the directory has changed or a version bump.
+![VPinMAME UnInstall](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-vpinmame-uninstall.png)
+
 ## Symbolic Links - Save disk space
 When MAME-AO downloads assets it keeps them in a "hash store", this makes keeping account of them very simple, you don’t have to keep grooming a bunch of ZIP files.
 
