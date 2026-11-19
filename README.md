@@ -93,7 +93,7 @@ An open source pinball table editor and simulator.
 - First time you have to run the COM installer, MAME-AO will launch the PinMAME setup for you
 
 ##### Visual Pinball - VPinMAME COM Installer
-If PinMAME is required MAME-AO will launch the setup.
+If PinMAME is required MAME-AO will launch the setup. Choose all the defaults.
 ![VPinMAME Install](https://raw.githubusercontent.com/sam-ludlow/mame-ao/main/images/mame-ao-vpinmame-install.png)
 
 You may be asked to uninstall, if the directory has changed or a version bump.

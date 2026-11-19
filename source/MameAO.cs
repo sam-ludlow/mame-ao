@@ -794,6 +794,13 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 						CoreFbNeo.HashLookupSave();
 						return null;
 
+					case ".learnfetch":
+						parts = args.Arguments(2);
+						if (parts.Length != 2)
+							throw new ApplicationException($"Usage: {parts[0]} <directory>");
+						CoreFbNeo.HashLookupFetch(parts[1]);
+						return null;
+
 					case ".core":
 						parts = args.Arguments(3);
 						if (parts.Length != 2 && parts.Length != 3)

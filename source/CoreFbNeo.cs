@@ -1155,7 +1155,7 @@ namespace Spludlow.MameAO
 			}
 				
 			lookup = HashLookupGetDatabase();
-			HashLookupReport(lookup);
+			HashLookupReport(lookup, null);
 		}
 
 		public static void HashLookupSave()
@@ -1167,8 +1167,7 @@ namespace Spludlow.MameAO
 			Directory.CreateDirectory(targetDirectory);
 
 			var lookup = HashLookupGetDatabase();
-
-			HashLookupReport(lookup);
+			HashLookupReport(lookup, null);
 
 			string filename = Path.Combine(targetDirectory, $"{Globals.Core.Version}.txt");
 			string filenameZip = Path.Combine(targetDirectory, $"{Globals.Core.Version}.zip");
@@ -1188,6 +1187,15 @@ namespace Spludlow.MameAO
 			File.WriteAllText(Path.Combine(targetDirectory, "latest.txt"), Globals.Core.Version, Encoding.ASCII);
 
 			Console.WriteLine($"FBNeo SHA1 Lookup saved: {targetDirectory}");
+		}
+
+		public static void HashLookupFetch(string directory)
+		{
+			if (Globals.Core.Name != "fbneo")
+				throw new ApplicationException("Learn is for fbneo only");
+
+			var lookup = HashLookupGetDatabase();
+			HashLookupReport(lookup, directory);
 		}
 
 		private static Dictionary<string, string> HashLookupGetDatabase()
@@ -1216,20 +1224,21 @@ namespace Spludlow.MameAO
 			return lookup;
 		}
 
-		public static void HashLookupReport(Dictionary<string, string> lookup)
+		public static void HashLookupReport(Dictionary<string, string> lookup, string directory)
 		{
+			var connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]);
+
 			var gameDescriptionLookup = new Dictionary<string, string>();
-			using (var connection = new SQLiteConnection(Globals.Core.ConnectionStrings[0]))
+			using (var adapter = new SQLiteDataAdapter("SELECT datafile.[name], machine.[name], machine.description FROM datafile " +
+				"INNER JOIN machine ON datafile.datafile_id = machine.datafile_id ORDER BY datafile.[name], machine.[name];", connection))
 			{
-				using (var adapter = new SQLiteDataAdapter("SELECT datafile.[name], machine.[name], machine.description FROM datafile " +
-					"INNER JOIN machine ON datafile.datafile_id = machine.datafile_id ORDER BY datafile.[name], machine.[name];", connection))
-				{
-					var table = new DataTable();
-					adapter.Fill(table);
-					foreach (DataRow row in table.Rows)
-						gameDescriptionLookup.Add($"{row[0]}\t{row[1]}", row.Field<string>(2));
-				}
+				var table = new DataTable();
+				adapter.Fill(table);
+				foreach (DataRow row in table.Rows)
+					gameDescriptionLookup.Add($"{row[0]}\t{row[1]}", row.Field<string>(2));
 			}
+
+			HashSet<string> missing = new HashSet<string>();
 
 			StringBuilder result = new StringBuilder();
 
@@ -1238,7 +1247,6 @@ namespace Spludlow.MameAO
 			foreach (var pair in lookup)
 			{
 				string[] parts = pair.Key.Split('\t');
-
 				string system = parts[0];
 				string machine = parts[1];
 
@@ -1251,10 +1259,59 @@ namespace Spludlow.MameAO
 				{
 					systemCounts[system][0] += 1;
 					result.AppendLine(pair.Key + "\t" + gameDescriptionLookup[$"{system}\t{machine}"]);
+
+					missing.Add($"{system}\t{machine}");
 				}
 			}
 
 			Tools.PopText(result.ToString());
+
+			result.Length = 0;
+
+			if (directory != null && missing.Count > 0)
+			{
+				var cloneLookup = new Dictionary<string, string>();
+				using (var adapter = new SQLiteDataAdapter("SELECT datafile.name, machine.name, machine.cloneof FROM datafile INNER JOIN machine ON datafile.datafile_id = machine.datafile_id WHERE (machine.cloneof IS NOT NULL)", connection))
+				{
+					var table = new DataTable();
+					adapter.Fill(table);
+					foreach (DataRow row in table.Rows)
+						cloneLookup.Add($"{row[0]}\t{row[1]}", (string)row[2]);
+				}
+
+				foreach (var part in missing)
+				{
+					string[] parts = part.Split('\t');
+					string system = parts[0];
+					string machine = parts[1];
+
+					if (UtilLolsDownload(machine, system, directory) == false)
+					{
+						string parent = cloneLookup[$"{system}\t{machine}"];
+
+						if (parent != null)
+						{
+							if (UtilLolsDownload(parent, system, directory) == true)
+							{
+								string filenameParent = Path.Combine(directory, system, parent + ".zip");
+								string filename = Path.Combine(directory, system, machine + ".zip");
+
+								File.Delete(filename);
+								File.Copy(filenameParent, filename);
+
+								result.AppendLine($"{system}\t{machine}\t{parent}");
+							}
+						}
+					}
+					else
+					{
+						result.AppendLine($"{system}\t{machine}");
+					}
+				}
+			}
+
+			if (result.Length > 0)
+				Tools.PopText(result.ToString());
 
 			result.Length = 0;
 
@@ -1306,5 +1363,46 @@ namespace Spludlow.MameAO
 			Tools.PopText(list);
 		}
 
+		public static bool UtilLolsDownload(string game, string system, string directory)
+		{
+			TimeSpan cachePeriod = TimeSpan.FromHours(2);
+
+			string urlTemplate = @"https://lolroms.com/Arcade/FBNeo%201.0.0.03/@system/@game.7z";
+
+			string url = urlTemplate.Replace("@system", system).Replace("@game", game);
+
+			string filename = Path.Combine(directory, system, game + ".zip");
+			
+			Directory.CreateDirectory(Path.GetDirectoryName(filename));
+
+			if (File.Exists(filename) == false || (DateTime.Now - File.GetLastWriteTime(filename) > cachePeriod))
+			{
+				File.Delete(filename);
+
+				string filename7zip = filename + ".7z";
+
+				File.Delete(filename7zip);
+				Tools.Download(url, filename7zip);
+
+				using (TempDirectory tempDir = new TempDirectory())
+				{
+					try
+					{
+						Tools.ExtractToDirectory7Zip(filename7zip, tempDir.Path);
+						ZipFile.CreateFromDirectory(tempDir.Path, filename);
+					}
+					catch (ApplicationException)
+					{
+						File.WriteAllBytes(filename, new byte[0]);
+					}
+				}
+
+				File.Delete(filename7zip);
+			}
+
+			FileInfo info = new FileInfo(filename);
+			return info.Length > 0;
+		}
+ 
 	}
 }
