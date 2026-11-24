@@ -933,7 +933,18 @@ $$ | \_/ $$ |$$ |  $$ |$$ | \_/ $$ |$$$$$$$$\       $$ |  $$ | $$$$$$  |
 
 					Globals.PhoneHome.Ready();
 
-					Mame.RunMame(Path.Combine(Globals.Core.Directory, "VPinballX64.exe"), $"-play \"tables\\{machine}\"");
+					string machineDirectory = Path.GetDirectoryName(machine);
+					string tableDirectory = Path.GetDirectoryName(machineDirectory);
+					string tempDirectory = Path.Combine(tableDirectory, "_run");
+
+					if (Directory.Exists(tempDirectory) == true)
+						Directory.Delete(tempDirectory, true);
+					Tools.CopyDirectory(machineDirectory, tempDirectory);
+					Console.WriteLine($"{machineDirectory} => {tempDirectory}");
+
+					Mame.RunMame(Path.Combine(Globals.Core.Directory, "VPinballX64.exe"), $"-play \"tables\\_run\\{Path.GetFileName(machine)}\"");
+
+					Directory.Delete(tempDirectory, true);
 					break;
 
 				default:

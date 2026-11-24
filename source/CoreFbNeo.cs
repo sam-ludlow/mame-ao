@@ -1096,6 +1096,10 @@ namespace Spludlow.MameAO
 
 			foreach (string zipFilename in Directory.GetFiles(importDirectory, "*.zip"))
 			{
+				var fileInfo = new FileInfo(zipFilename);
+				if (fileInfo.Length == 0)
+					continue;
+
 				string machine_name = Path.GetFileNameWithoutExtension(zipFilename);
 
 				using (var zipArchive = ZipFile.OpenRead(zipFilename))
@@ -1285,12 +1289,14 @@ namespace Spludlow.MameAO
 					string system = parts[0];
 					string machine = parts[1];
 
+					string key = $"{system}\t{machine}";
+
 					if (UtilLolsDownload(machine, system, directory) == false)
 					{
-						string parent = cloneLookup[$"{system}\t{machine}"];
-
-						if (parent != null)
+						if (cloneLookup.ContainsKey(key) == true)
 						{
+							string parent = cloneLookup[key];
+
 							if (UtilLolsDownload(parent, system, directory) == true)
 							{
 								string filenameParent = Path.Combine(directory, system, parent + ".zip");
@@ -1299,13 +1305,13 @@ namespace Spludlow.MameAO
 								File.Delete(filename);
 								File.Copy(filenameParent, filename);
 
-								result.AppendLine($"{system}\t{machine}\t{parent}");
+								result.AppendLine($"{key}\t{parent}");
 							}
 						}
 					}
 					else
 					{
-						result.AppendLine($"{system}\t{machine}");
+						result.AppendLine(key);
 					}
 				}
 			}
@@ -1369,10 +1375,13 @@ namespace Spludlow.MameAO
 
 			string urlTemplate = @"https://lolroms.com/Arcade/FBNeo%201.0.0.03/@system/@game.7z";
 
+			string filename = Path.Combine(directory, system, game + ".zip");
+
+			if (system == "atari2600")
+				system = "a2600";
+
 			string url = urlTemplate.Replace("@system", system).Replace("@game", game);
 
-			string filename = Path.Combine(directory, system, game + ".zip");
-			
 			Directory.CreateDirectory(Path.GetDirectoryName(filename));
 
 			if (File.Exists(filename) == false || (DateTime.Now - File.GetLastWriteTime(filename) > cachePeriod))

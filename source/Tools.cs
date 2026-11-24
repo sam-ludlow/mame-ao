@@ -470,6 +470,20 @@ namespace Spludlow.MameAO
 			return sb.ToString();
 		}
 
+		public static void CopyDirectory(string sourceDir, string destinationDir)
+		{
+			Directory.CreateDirectory(destinationDir);
+
+			foreach (string file in Directory.GetFiles(sourceDir, "*", SearchOption.AllDirectories))
+			{
+				string relativePath = file.Substring(sourceDir.Length + 1);
+				string destinationFile = Path.Combine(destinationDir, relativePath);
+
+				Directory.CreateDirectory(Path.GetDirectoryName(destinationFile));
+				File.Copy(file, destinationFile);
+			}
+		}
+
 		public static bool IsASCII(string text)
 		{
 			foreach (char c in text)

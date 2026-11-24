@@ -473,7 +473,7 @@ namespace Spludlow.MameAO
 					Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
 			}
 
-			string tablesDirectory = Path.Combine(core.Directory, "tables", machine_name);
+			string tablesDirectory = @"\\?\" + Path.Combine(core.Directory, "tables", machine_name);
 
 			Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, tablesDirectory, null, info);
 
@@ -538,7 +538,10 @@ namespace Spludlow.MameAO
 				DataTable gameTable = Database.ExecuteFill(connectionPinMAME, $"SELECT * FROM [game] WHERE ([game].[name] = '{game_name}')");
 
 				if (gameTable.Rows.Count == 0)
-					throw new ApplicationException($"Game not found {game_name}");
+				{
+					Console.WriteLine($"!!! PinMAME not found {game_name}");
+					continue;
+				}
 
 				long game_id = (long)gameTable.Rows[0]["game_id"];
 
@@ -575,30 +578,45 @@ namespace Spludlow.MameAO
 				Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, romsDirectory, null, info);
 			}
 
-			return Path.Combine(machine_name, vpx_name);
+			return Path.Combine(tablesDirectory, vpx_name);
 		}
 
-		public static bool ExtractVbs(string exeDirectory, string vpxFilename)
+		public static bool ExtractVbs(string exeDirectory, string tableFilename)
 		{
-			ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(exeDirectory, "VPinballX64.exe"))
+			string vbsFilename = Path.Combine(Path.GetDirectoryName(tableFilename), Path.GetFileNameWithoutExtension(tableFilename) + ".vbs");
+
+			using (TempDirectory tempDir = new TempDirectory())
 			{
-				WorkingDirectory = exeDirectory,
-				Arguments = $"-extractvbs \"{vpxFilename}\"",
-				UseShellExecute = false,
-			};
+				string extention = Path.GetExtension(tableFilename);
 
-			using (Process process = new Process())
-			{
-				process.StartInfo = startInfo;
+				string tempTable = Path.Combine(tempDir.Path, "temp" + extention);
+				string tempVbs = Path.Combine(tempDir.Path, "temp" + ".vbs");
 
-				process.Start();
-				process.WaitForExit();
+				File.Copy(tableFilename, tempTable);
 
-				if (process.ExitCode != 0)
-					Console.WriteLine($"VPinballX64 extractvbs Bad exit code {process.ExitCode}");
+				ProcessStartInfo startInfo = new ProcessStartInfo(Path.Combine(exeDirectory, "VPinballX64.exe"))
+				{
+					WorkingDirectory = exeDirectory,
+					Arguments = $"-extractvbs \"{tempTable}\"",
+					UseShellExecute = false,
+				};
 
-				return process.ExitCode == 0;
+				using (Process process = new Process())
+				{
+					process.StartInfo = startInfo;
+
+					process.Start();
+					process.WaitForExit();
+
+					if (process.ExitCode != 0)
+						Console.WriteLine($"VPinballX64 extractvbs Bad exit code {process.ExitCode}");
+				}
+
+				if (File.Exists(tempVbs) == true)
+					File.Copy(tempVbs, vbsFilename);
 			}
+
+			return File.Exists(vbsFilename);
 		}
 
 		public static string FindPinMameGameName(string vbsFilename)
@@ -790,15 +808,15 @@ namespace Spludlow.MameAO
 							ON machine.machine_id = rom.machine_id
 					WHERE
 						(rom.name LIKE '%.vpx' OR rom.name LIKE '%.vpt')
-						AND (datafile.name != 'Visual Pinball Miscellaneous')
+						AND (datafile.name LIKE '%[VP%')
 					GROUP BY
 						datafile.name;
 				");
 
 				table.Columns.Add("engine", typeof(string));
-				table.Columns.Add("version", typeof(double));
+				table.Columns.Add("version", typeof(string));
+				table.Columns.Add("versionSort", typeof(string));
 				table.Columns.Add("type", typeof(string));
-				table.Columns.Add("pinmame", typeof(bool));
 
 				foreach (DataRow row in table.Rows)
 				{
@@ -813,38 +831,55 @@ namespace Spludlow.MameAO
 					engine = engine.Substring(0, index);
 					row["engine"] = engine;
 
-					if (engine.StartsWith("VP9") == false && engine.StartsWith("VPX") == false)
-						continue;
-
-					//	TODO fix sort will break at 10.10
 					string version = engine;
+
+					//	duplicate "PinMame Tables" in version	Visual Pinball [VP1-VP6] PinMame Tables, Visual Pinball [VP6] PinMame Tables
+
+					if (version == "VP1-VP6")
+						version = "VP6";
+
+					if (version == "VP1-VP7")
+						version = "VP7";
+
 					if (version == "VPX0-VPX06")
 						version = "VPX06";
 
 					if (version.EndsWith("x") && version.StartsWith("VP9"))
-						version = $"VP9.{version.Substring(3, 1)}";
-
-					if (version == "VP9")
-						version = "VP9.0";
+						version = $"VP9.{Int32.Parse(version.Substring(3, 1))}";
 
 					if (version.StartsWith("VPX"))
 						version = $"10.{Int32.Parse(version.Substring(3, 2))}";
 
+					if (version.Contains(".") == false)
+						version = $"{version}.0";
+
 					if (version.StartsWith("VP"))
 						version = version.Substring(2);
 
-					row["version"] = Double.Parse(version);
+					int[] versionParts = version.Split('.').Select(v => Int32.Parse(v)).ToArray();
+					if (versionParts.Length != 2)
+						throw new ApplicationException("Bad version parts");
+
+					row["version"] = version;
+					row["versionSort"] = $"{versionParts[0]:0000}.{versionParts[1]:0000}";
 
 					string type = name;
 					index = type.IndexOf("] ");
 					type = type.Substring(index + 2);
 
-					row["type"] = type;
+					type = type.Replace("[", "");
+					type = type.Replace("]", "");
 
-					row["pinmame"] = name.ToLower().Contains("pinmame");
+					type = type.Replace("Original Tables", "ORIG");
+					type = type.Replace("PinMame Tables", "MAME");
+					type = type.Replace("PuP-Pack Tables", "PUP");
+					type = type.Replace("Recreated Tables", "REC");
+					type = type.Replace("VR Tables", "VR");
+
+					row["type"] = type.Trim();
 				}
 
-				var rows = table.Select("[version] IS NOT NULL AND [version] >= 10", "[version] DESC, [pinmame] DESC, [type]"); //	 AND [pinmame] = 1
+				var rows = table.Select(null, "[versionSort] DESC, [type]");
 
 				//Tools.PopText(table, rows);
 				//Tools.PopText(rows.Select(r => (string)r["type"]).Distinct().OrderBy(t => t));
@@ -854,21 +889,15 @@ namespace Spludlow.MameAO
 					string name = row.Field<string>("name");
 					string description = row.Field<string>("description");
 					string type = row.Field<string>("type");
-					string version = row.Field<double>("version").ToString();
+					string version = row.Field<string>("version");
 
-					type = type.Replace("PinMame Tables", "MAME").Trim();
-					type = type.Replace("Recreated Tables", "RECR").Trim();
-					type = type.Replace("Original Tables", "ORIG").Trim();
-
-					type = type.Replace("[", "");
-					type = type.Replace("]", "").Trim();
-
-					string text = type == "" ? version : $"{version} {type}";
+					if (version.StartsWith("10.") == false)
+						continue;
 
 					_DataQueryProfiles.Add(new DataQueryProfile()
 					{
 						Key = name,
-						Text = text,
+						Text = $"{version} {type}",
 						Decription = description,
 					});
 				}
@@ -882,42 +911,72 @@ namespace Spludlow.MameAO
 
 		public static void UtilTestFindPinMameGameName()
 		{
-			string directory = @"C:\tmp\Visual Pinball [VPX08] PinMame Tables";
+			string directory = @"\\?\C:\tmp\Visual Pinball (2026-07-15)\Visual Pinball [VPX08] PinMame Tables";
+
 			string exeDirectory = @"C:\GIT\mame-ao\bin\Debug\pinball-visual\v10.8.0-2051-28dd6c3";
 
 			DataTable table = Tools.MakeDataTable(
-				"Found	VPS",
+				"Found	Table",
 				"String	String");
 
-			foreach (string tableDirectory  in Directory.GetDirectories(directory))
+			foreach (string zipFilename in Directory.GetFiles(directory, "*.zip"))
 			{
-				foreach (string vpxFilename in Directory.GetFiles(tableDirectory, "*.vpx"))
+				string zipDirectory = Path.Combine(directory, Path.GetFileNameWithoutExtension(zipFilename));
+
+				if (Directory.Exists(zipDirectory) == false)
+					Tools.ZipFileExtractToDirectory(zipFilename, zipDirectory);
+
+				foreach (string tableFilename in Directory.GetFiles(zipDirectory, "*", SearchOption.AllDirectories))
 				{
-					string vbsFilename = Path.Combine(Path.GetDirectoryName(vpxFilename), Path.GetFileNameWithoutExtension(vpxFilename) + ".vbs");
+					string extention = Path.GetExtension(tableFilename).ToLower();
+					if (extention != ".vpx" && extention != ".vpt")
+						continue;
 
-					Console.WriteLine(vbsFilename);
-
+					string vbsFilename = Path.Combine(Path.GetDirectoryName(tableFilename), Path.GetFileNameWithoutExtension(tableFilename) + ".vbs");
+	
 					if (File.Exists(vbsFilename) == false)
 					{
-						if (ExtractVbs(exeDirectory, vpxFilename) == false)
-							continue;
+						if (ExtractVbs(exeDirectory, tableFilename) == false)
+							Console.WriteLine("bad\t" + vbsFilename);
+						else
+							Console.WriteLine("extract\t" + vbsFilename);
+					}
+					else
+					{
+						Console.WriteLine("have\t" + vbsFilename);
 					}
 
-					string found;
+					string found = "";
 
-					try
+					if (File.Exists(vbsFilename) == true)
 					{
-						found = FindPinMameGameName(vbsFilename);
-					}
-					catch (Exception e)
-					{
-						Tools.PopText(e.Message + Environment.NewLine + File.ReadAllText(vbsFilename));
-						throw;
+						string pinmameFilename = Path.Combine(Path.GetDirectoryName(tableFilename), Path.GetFileNameWithoutExtension(tableFilename) + ".pinmame.txt");
+
+						if (File.Exists(pinmameFilename) == true)
+						{
+							found = File.ReadAllText(pinmameFilename);
+
+							Console.WriteLine("\tfound\t" + found);
+						}
+						else
+						{
+							try
+							{
+								found = FindPinMameGameName(vbsFilename);
+
+								Console.WriteLine("\tfind\t" + found);
+
+								File.WriteAllText(pinmameFilename, found);
+							}
+							catch (Exception e)
+							{
+								Tools.PopText(e.Message + Environment.NewLine + File.ReadAllText(vbsFilename));
+								throw;
+							}
+						}
 					}
 
 					table.Rows.Add(found, vbsFilename);
-
-					Console.WriteLine("\t" + found);
 				}
 			}
 
