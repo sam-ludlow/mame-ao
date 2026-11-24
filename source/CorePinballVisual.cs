@@ -475,6 +475,13 @@ namespace Spludlow.MameAO
 
 			string tablesDirectory = @"\\?\" + Path.Combine(core.Directory, "tables", machine_name);
 
+			foreach (DataRow romRow in romTable.Rows)
+			{
+				string name = (string)romRow["name"];
+				if (name.Contains("/") == true)
+					romRow["name"] = name.Replace('/', '\\');
+			}
+
 			Place.PlaceAssetFiles(romTable.Rows.Cast<DataRow>().ToArray(), Globals.RomHashStore, tablesDirectory, null, info);
 
 			//
@@ -884,6 +891,8 @@ namespace Spludlow.MameAO
 				//Tools.PopText(table, rows);
 				//Tools.PopText(rows.Select(r => (string)r["type"]).Distinct().OrderBy(t => t));
 
+				bool allVersions = Globals.Settings.Options["PinballAllVersions"] == "Yes";
+
 				foreach (DataRow row in rows)
 				{
 					string name = row.Field<string>("name");
@@ -891,7 +900,7 @@ namespace Spludlow.MameAO
 					string type = row.Field<string>("type");
 					string version = row.Field<string>("version");
 
-					if (version.StartsWith("10.") == false)
+					if (allVersions == false && version.StartsWith("10.") == false)
 						continue;
 
 					_DataQueryProfiles.Add(new DataQueryProfile()
