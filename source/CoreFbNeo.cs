@@ -483,7 +483,7 @@ namespace Spludlow.MameAO
 			_ConnectionString = Database.MakeSQLiteConnectionString(sqlLiteFilename);
 
 			Console.Write($"Load all database SHA1 ...");
-			Cores.AllSHA1(hashSet, _ConnectionString, new string[] { "rom" });
+			Cores.AllSHA1(hashSet, _ConnectionString, new string[] { "rom", "disk" });
 			Console.WriteLine("...done");
 		}
 
@@ -505,7 +505,10 @@ namespace Spludlow.MameAO
 			Globals.WorkerTaskReport = Reports.PlaceReportTemplate();
 
 			Dictionary<string, IEnumerable<DataRow>> machineNameRomRows = new Dictionary<string, IEnumerable<DataRow>>();
+			Dictionary<string, IEnumerable<DataRow>> machineNameDiskRows = new Dictionary<string, IEnumerable<DataRow>>();
 			string machine_description = null;
+
+			DateTime when = DateTime.Now;
 
 			string romof = machine_name;
 			while (romof != null)
@@ -534,8 +537,21 @@ namespace Spludlow.MameAO
 
 					romTable = Database.ExecuteFill(command);
 				}
+				if (romTable.Rows.Count > 0)
+					machineNameRomRows.Add(romof, romTable.AsEnumerable());
 
-				machineNameRomRows.Add(romof, romTable.AsEnumerable());
+				DataTable diskTable;
+				using (SQLiteCommand command = new SQLiteCommand(
+					"SELECT [disk].* FROM [datafile] INNER JOIN [machine] ON [datafile].[datafile_id] = [machine].[datafile_id] INNER JOIN DISK ON [machine].[machine_id] = [disk].[machine_id] " +
+					"WHERE ([datafile].[name] = @datafile_name AND [machine].[name] = @machine_name AND [sha1] IS NOT NULL);", connection))
+				{
+					command.Parameters.AddWithValue("@datafile_name", datafile_name);
+					command.Parameters.AddWithValue("@machine_name", romof);
+
+					diskTable = Database.ExecuteFill(command);
+				}
+				if (diskTable.Rows.Count > 0)
+					machineNameDiskRows.Add(romof, diskTable.AsEnumerable());
 
 				if (romof == machine_name)
 					machine_description = (string)machineTable.Rows[0]["description"];
@@ -547,29 +563,74 @@ namespace Spludlow.MameAO
 
 			Place._BtStarted = false;   //	TODO tidy up
 
+			//
+			// Download ROM
+			//
 			foreach (string name in machineNameRomRows.Keys)
 			{
 				IEnumerable<DataRow> romRows = machineNameRomRows[name];
 
 				string[] info = new string[] { "fbneo", datafile_name, name };
 
-				bool sha1NotKnown = romRows.Any(row => row.Field<string>("sha1") == null);
+				bool download = false;
 
-				if (romRows.Any() == false || sha1NotKnown == true)
-					continue;
+				foreach (DataRow romRow in romRows)
+				{
+					string sha1 = romRow.Field<string>("sha1");
 
-				if (romRows.All(row => Globals.RomHashStore.Exists(row.Field<string>("sha1")) == true))
-					continue;
+					bool required = false;
+					if (sha1 != null && Globals.RomHashStore.Exists(sha1) == false)
+					{
+						required = true;
+						download = true;
+					}
 
-				Place.StartBitTorrent();    //	TODO tidy up
+					Globals.WorkerTaskReport.Tables["Require"].Rows.Add(when, info[0], info[1], info[2], sha1, required, name);
+				}
 
-				var btFile = BitTorrent.SoftwareRom(core.Name, datafile_name, name);
-				if (btFile != null)
-					Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
+				if (download == true)
+				{
+					Place.StartBitTorrent();    //	TODO tidy up
+
+					var btFile = BitTorrent.SoftwareRom(core.Name, datafile_name, name);
+					if (btFile != null)
+						Place.DownloadImportFiles(btFile.Filename, btFile.Length, info);
+				}
+			}
+
+			//
+			// Download DISK
+			//
+			foreach (string name in machineNameDiskRows.Keys)
+			{
+				IEnumerable<DataRow> diskRows = machineNameDiskRows[name];
+
+				string[] info = new string[] { "fbneo disk", datafile_name, name };
+
+				foreach (DataRow diskRow in diskRows)
+				{
+					string disk_name = (string)diskRow["name"];
+					string sha1 = (string)diskRow["sha1"];
+					bool required = Globals.DiskHashStore.Exists(sha1) == false;
+
+					Globals.WorkerTaskReport.Tables["Require"].Rows.Add(when, info[0], info[1], info[2], sha1, required, name);
+
+					if (required == true)
+					{
+						Place.StartBitTorrent();    //	TODO tidy up
+
+						var btFile = BitTorrent.SoftwareDisk(core.Name, datafile_name, name, disk_name);
+						if (btFile != null)
+							Place.DownloadImportDisk(btFile.Filename, btFile.Length, sha1, info);
+					}
+				}
 			}
 
 			int missingCount = 0;
 
+			//
+			// Place ROM
+			//
 			foreach (string name in machineNameRomRows.Keys)
 			{
 				IEnumerable<DataRow> romRows = machineNameRomRows[name];
@@ -591,6 +652,38 @@ namespace Spludlow.MameAO
 				string romDirectory = Path.Combine(core.Directory, "roms", datafile_name, name);
 
 				missingCount += Place.PlaceAssetFiles(romRows, Globals.RomHashStore, romDirectory, null, info, PlaceMethod.Zip);
+			}
+
+			//
+			// Place DISK
+			//
+			foreach (string name in machineNameDiskRows.Keys)
+			{
+				IEnumerable<DataRow> diskRows = machineNameDiskRows[name];
+
+				string[] info = new string[] { "fbneo disk", datafile_name, name };
+
+				Dictionary<string, string> targetFilenameSourceFilenames = new Dictionary<string, string>();
+
+				foreach (DataRow diskRow in diskRows)
+				{
+					string disk_name = (string)diskRow["name"];
+					string sha1 = (string)diskRow["sha1"];
+					bool have = Globals.DiskHashStore.Exists(sha1);
+					string filename = Path.Combine(core.Directory, "support", "hdd", _LookupSystemPrefix[datafile_name] + name, disk_name + ".chd");
+					bool place = have == true && File.Exists(filename) == false;
+
+					if (have == false)
+						++missingCount;
+
+					Globals.WorkerTaskReport.Tables["Place"].Rows.Add(when, info[0], info[1], info[2], sha1, place, have, name);
+
+					if (place == true)
+						targetFilenameSourceFilenames.Add(filename, Globals.DiskHashStore.Filename(sha1));
+				}
+
+				if (targetFilenameSourceFilenames.Count > 0)
+					Place.PlaceFiles(targetFilenameSourceFilenames, null, Globals.LinkingEnabled == true ? PlaceMethod.Link : PlaceMethod.Copy);
 			}
 
 			if (Globals.Settings.Options["PlaceReport"] == "Yes")

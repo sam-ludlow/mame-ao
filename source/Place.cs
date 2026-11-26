@@ -424,7 +424,7 @@ namespace Spludlow.MameAO
 			return 0;
 		}
 
-		private static bool DownloadImportDisk(string urlOrFilename, long length, string expectedSha1, string[] info)
+		public static bool DownloadImportDisk(string urlOrFilename, long length, string expectedSha1, string[] info)
 		{
 			string tempFilename = Path.Combine(Globals.TempDirectory, DateTime.Now.ToString("s").Replace(":", "-") + "_" + expectedSha1 + ".chd");
 
@@ -570,8 +570,7 @@ namespace Spludlow.MameAO
 
 		public static int PlaceAssetFiles(IEnumerable<DataRow> assetRows, HashStore hashStore, string targetDirectory, string filenameAppend, string[] info)
 		{
-			return PlaceAssetFiles(assetRows, hashStore, targetDirectory, filenameAppend, info,
-				Globals.LinkingEnabled == true ? PlaceMethod.Link : PlaceMethod.Copy);
+			return PlaceAssetFiles(assetRows, hashStore, targetDirectory, filenameAppend, info, Globals.LinkingEnabled == true ? PlaceMethod.Link : PlaceMethod.Copy);
 		}
 
 		public static int PlaceAssetFiles(IEnumerable<DataRow> assetRows, HashStore hashStore, string targetDirectory, string filenameAppend, string[] info, PlaceMethod placeMethod)
@@ -618,9 +617,13 @@ namespace Spludlow.MameAO
 				Globals.WorkerTaskReport.Tables["Place"].Rows.Add(when, info[0], info[1], info[2], sha1, place, have, name);
 			}
 
-			//
-			// Directories
-			//
+			PlaceFiles(targetFilenameSourceFilenames, targetDirectory, placeMethod);
+
+			return missingCount;
+		}
+
+		public static void PlaceFiles(Dictionary<string, string> targetFilenameSourceFilenames, string targetDirectory, PlaceMethod placeMethod)
+		{
 			if (placeMethod == PlaceMethod.Copy || placeMethod == PlaceMethod.Link)
 			{
 				var directories = new HashSet<string>();
@@ -631,9 +634,6 @@ namespace Spludlow.MameAO
 					Directory.CreateDirectory(directory);
 			}
 
-			//
-			// Place
-			//
 			switch (placeMethod)
 			{
 				case PlaceMethod.Copy:
@@ -662,8 +662,6 @@ namespace Spludlow.MameAO
 					throw new ApplicationException($"Unknown place method: {placeMethod}");
 
 			}
-
-			return missingCount;
 		}
 
 	}

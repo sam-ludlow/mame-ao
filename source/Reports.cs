@@ -1056,7 +1056,7 @@ namespace Spludlow.MameAO
 				DataRow[] diskRows = new DataRow[0];
 				if (diskTable != null)
 				{
-					diskTable.Select($"machine_id = {machine_id}");
+					diskRows = diskTable.Select($"machine_id = {machine_id}");
 					foreach (DataRow diskRow in diskRows)
 					{
 						string sha1 = (string)diskRow["sha1"];
@@ -1234,14 +1234,14 @@ namespace Spludlow.MameAO
 				HashStore = Globals.RomHashStore,
 				SHA1s = new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [rom] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"]))
 			});
+			infos.Add(new SummaryInfo()
+			{
+				Name = "Machine Disk",
+				HashStore = Globals.DiskHashStore,
+				SHA1s = new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"]))
+			});
 			if (Globals.Core.Name != "fbneo")
 			{
-				infos.Add(new SummaryInfo()
-				{
-					Name = "Machine Disk",
-					HashStore = Globals.DiskHashStore,
-					SHA1s = new HashSet<string>(Database.ExecuteFill(Globals.Core.ConnectionStrings[0], "SELECT [sha1] FROM [disk] WHERE [sha1] IS NOT NULL").Rows.Cast<DataRow>().Select(row => (string)row["sha1"]))
-				});
 				infos.Add(new SummaryInfo()
 				{
 					Name = "Software Rom",
